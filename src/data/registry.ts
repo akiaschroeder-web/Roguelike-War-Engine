@@ -27,6 +27,8 @@ export const PACKS: ContentPack[] = [];
 export const ART_IDS = new Set<string>();
 export const ART_ALIASES: Record<string, string> = {};
 export const ART_VARIANTS: Record<string, string[]> = {};
+/** Boss id -> the template that boss is a form of. */
+export const BOSS_AS_TEMPLATE: Record<string, string> = {};
 
 const index = <T extends { id: string }>(target: Record<string, T>, list: T[]) => {
   for (const x of list) target[x.id] = x;
@@ -52,6 +54,39 @@ export function installPack(p: ContentPack): void {
   for (const id of p.artIds) ART_IDS.add(id);
   Object.assign(ART_ALIASES, p.artAliases);
   Object.assign(ART_VARIANTS, p.artVariants ?? {});
+  Object.assign(BOSS_AS_TEMPLATE, p.bossAsTemplate ?? {});
+
+  // Every unit is recruitable: bosses, villains and enemy creatures become templates too.
+  for (const b of p.bosses) {
+    if (TEMPLATES[b.id] || BOSS_AS_TEMPLATE[b.id]) continue;
+    addTemplate({
+      id: b.id, name: b.name, title: b.title, race: b.race, classId: b.classId, size: b.size ?? 1, stats: { ...b.stats },
+      weapons: [...b.weapons], skill: b.skill, glyph: b.glyph, home: b.home, rare: true,
+      bio: `${b.title}. ${b.quote}`,
+    });
+  }
+  for (const e of p.enemies) {
+    if (TEMPLATES[e.id]) continue;
+    const cls = CLASSES[e.classId];
+    if (!cls) continue;
+    addTemplate({
+      id: e.id, name: e.name, title: 'Recruit', race: e.race, classId: e.classId, size: e.size ?? 1,
+      stats: { ...cls.base, ...(e.stats ?? {}) }, weapons: [...e.weapons], skill: e.skill,
+      glyph: e.glyph ?? e.name.slice(0, 2).toUpperCase(), home: REGION_IDS.find((r) => p.rosters[r]?.includes(e.id)) ?? REGION_IDS[0],
+      generic: true, monster: true, bio: `A ${e.name} that has sworn itself to your banner.`,
+    });
+  }
+  for (const [a, b] of p.exclusivePairs ?? []) {
+    for (const [x, y] of [[a, b], [b, a]]) {
+      const t = TEMPLATES[x];
+      if (t && !t.exclusiveWith?.includes(y)) t.exclusiveWith = [...(t.exclusiveWith ?? []), y];
+    }
+  }
+}
+
+function addTemplate(t: UnitTemplate) {
+  TEMPLATES[t.id] = t;
+  TEMPLATE_LIST.push(t);
 }
 
 installPack(OCARINA);

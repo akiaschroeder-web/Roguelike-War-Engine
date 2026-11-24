@@ -155,8 +155,10 @@ export interface UnitTemplate {
   home: WorldId;
   /** Generic units can be recruited many times and get small stat variance. */
   generic?: boolean;
-  /** Only recruitable by monster armies (e.g. Ganondorf's). */
+  /** A monster unit (Ganondorf's army sees these more often in recruitment). */
   monster?: boolean;
+  /** Bosses and villains: offered less often in recruitment. */
+  rare?: boolean;
   /** Cannot be in the same army as these template ids. */
   exclusiveWith?: string[];
 }

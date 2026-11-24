@@ -23,6 +23,10 @@ export interface ContentPack {
   artIds: string[];
   /** id -> id whose art it reuses. */
   artAliases: Record<string, string>;
+  /** Boss ids that are another form of an existing template (not recruited separately). */
+  bossAsTemplate?: Record<string, string>;
+  /** Template ids that can't serve in the same army (forms of the same person). */
+  exclusivePairs?: [string, string][];
   /** id -> several art ids; each unit picks one. */
   artVariants?: Record<string, string[]>;
 }

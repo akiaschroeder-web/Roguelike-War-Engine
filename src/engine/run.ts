@@ -1,5 +1,5 @@
 import {
-  ACCESSORIES, BOSSES, bossPool, COMMANDERS, PERMANENT_ITEMS, REGION_IDS, TEMPLATE_LIST, TEMPLATES, WEAPONS,
+  ACCESSORIES, BOSS_AS_TEMPLATE, BOSSES, bossPool, COMMANDERS, PERMANENT_ITEMS, REGION_IDS, TEMPLATE_LIST, TEMPLATES, WEAPONS,
 } from '../data/registry';
 import { createBattle } from './battle';
 import { canWield, type LevelUp } from './combat';
@@ -12,8 +12,6 @@ export const ROWS_PER_REGION = 7; // last row is the regional boss
 export { ARMY_CAPACITY, DEPLOY_CAPACITY };
 
 const ownedTemplateUnique = (id: string) => !!TEMPLATES[id] && !TEMPLATES[id].generic;
-/** Ganondorf is a commander-only unit; villains aren't in the template list. */
-const COMMANDER_ONLY = new Set(['ganondorf']);
 
 function withRng<T>(run: Run, fn: (rng: RNG) => T): T {
   const rng = new RNG(run.rngState);
@@ -145,7 +143,13 @@ export function ownedUniques(run: Run): Set<string> {
 }
 
 function bossFor(run: Run, rng: RNG, node: MapNode): BossDef {
-  const exclude = run.commanderId === 'ganondorf' ? new Set(['ganondorfBoss', 'ganon']) : new Set<string>();
+  // Bosses who serve in your army (or another form of them) don't fight you.
+  const have = new Set(run.roster.map((u) => u.templateId));
+  const exclude = new Set<string>();
+  for (const b of Object.values(BOSSES)) {
+    const t = TEMPLATES[BOSS_AS_TEMPLATE[b.id] ?? b.id];
+    if (t && (have.has(t.id) || t.exclusiveWith?.some((id) => have.has(id)))) exclude.add(b.id);
+  }
   let pool = bossPool(node.world).filter((b) => !exclude.has(b.id));
   if (!pool.length) pool = Object.values(BOSSES).filter((b) => !exclude.has(b.id));
   if (node.type === 'boss') {
@@ -210,20 +214,34 @@ export function startBattle(run: RunWithEvent, uids: string[]): void {
 
 function conflicts(run: Run, t: UnitTemplate): boolean {
   const have = new Set(run.roster.map((u) => u.templateId));
-  return !!t.exclusiveWith?.some((id) => have.has(id));
+  return !!t.exclusiveWith?.some((id) => have.has(id))
+    || run.roster.some((u) => u.templateId && TEMPLATES[u.templateId]?.exclusiveWith?.includes(t.id));
 }
 
 export function recruitOffers(run: Run, rng: RNG, world: WorldId): string[] {
   const have = new Set(run.roster.map((u) => u.templateId));
-  const named = TEMPLATE_LIST.filter((t) => !t.generic && !COMMANDER_ONLY.has(t.id) && !have.has(t.id)
+  // Every unit is in the pool. Named characters (heroes, villains, bosses) join once;
+  // generic soldiers and creatures can join many times.
+  const available = TEMPLATE_LIST.filter((t) => !t.generic && !have.has(t.id)
     && !run.fallen.some((f) => f.templateId === t.id) && !conflicts(run, t));
-  const fresh = named.filter((t) => !run.seenHeroes.includes(t.id));
-  const pool = fresh.length >= 2 ? fresh : named;
-  const local = rng.shuffle(pool.filter((t) => t.home === world));
-  const other = rng.shuffle(pool.filter((t) => t.home !== world));
-  const generics = rng.shuffle(TEMPLATE_LIST.filter((t) => t.generic && (!t.monster || run.bonus === 'monsters')));
+  const fresh = available.filter((t) => !run.seenHeroes.includes(t.id));
+  const pool = fresh.length >= 2 ? fresh : available;
+  const heroes = pool.filter((t) => !t.rare);
+  const rares = rng.shuffle(pool.filter((t) => t.rare));
+  const local = rng.shuffle(heroes.filter((t) => t.home === world));
+  const other = rng.shuffle(heroes.filter((t) => t.home !== world));
   const offers = [...local.slice(0, 1), ...other].slice(0, 2).map((t) => t.id);
-  while (offers.length < 3 && generics.length) offers.push(generics.shift()!.id);
+  // Bosses and villains turn up now and then (more often deeper in).
+  if (rares.length && rng.chance(Math.min(60, 20 + run.act * 8))) {
+    if (offers.length >= 2) offers[1] = rares[0].id;
+    else offers.push(rares[0].id);
+  }
+  const generics = TEMPLATE_LIST.filter((t) => t.generic);
+  const monsterWeight = run.bonus === 'monsters' ? 3 : 1;
+  while (offers.length < 3 && generics.length) {
+    const pick = rng.weighted(generics.map((t) => [t, t.monster ? monsterWeight : 2] as [UnitTemplate, number]));
+    if (!offers.includes(pick.id)) offers.push(pick.id);
+  }
   return offers;
 }
 

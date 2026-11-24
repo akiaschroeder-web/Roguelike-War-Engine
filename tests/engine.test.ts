@@ -268,13 +268,36 @@ describe('run flow', () => {
     expect(run.battle!.units.filter((u) => u.team === 'player').length).toBe(8);
   });
 
-  it('never offers Link and Young Link together, and gates monsters', () => {
+  it('never offers Link and Young Link together', () => {
     const run = newRun(3, 'link');
-    for (let s = 0; s < 30; s++) {
-      const offers = recruitOffers(run, new RNG(s), 'kokiriForest');
-      expect(offers).not.toContain('youngLink');
-      expect(offers.some((id) => TEMPLATES[id].monster)).toBe(false);
+    for (let s = 0; s < 40; s++) expect(recruitOffers(run, new RNG(s), 'kokiriForest')).not.toContain('youngLink');
+  });
+
+  it('every unit is in the recruitment pool, including villains, bosses and creatures', () => {
+    for (const id of ['ganondorf', 'ganon', 'twinrova', 'queenGohma', 'bongoBongo', 'darkLink', 'phantomGanon', 'keese', 'octorok', 'ironKnuckleNabooru']) {
+      expect(TEMPLATES[id], id).toBeDefined();
     }
+    expect(TEMPLATES.ganondorfBoss).toBeUndefined(); // same person as the Ganondorf template
+    const run = newRun(3, 'zelda');
+    run.act = 6;
+    const seen = new Set<string>();
+    for (let s = 0; s < 400; s++) recruitOffers(run, new RNG(s), 'hyruleCastle').forEach((id) => seen.add(id));
+    expect(seen.has('ganondorf')).toBe(true);
+    expect([...seen].some((id) => TEMPLATES[id].rare)).toBe(true);
+    expect([...seen].some((id) => TEMPLATES[id].monster)).toBe(true);
+  });
+
+  it('forms of the same person exclude each other, and recruited bosses stop appearing as bosses', () => {
+    const run = newRun(7, 'ganondorf') as RunWithEvent;
+    for (let s = 0; s < 60; s++) expect(recruitOffers(run, new RNG(s), 'hyruleCastle')).not.toContain('ganon');
+    // Ganondorf's army never faces Ganondorf or Ganon.
+    advanceRegion(run, 'hyruleCastle');
+    const boss = run.map.nodes.find((n) => n.type === 'boss')!;
+    run.currentNodeId = run.map.nodes.find((n) => n.next.includes(boss.id))!.id;
+    enterNode(run, boss.id);
+    if (run.event?.type === 'deploy') startBattle(run, run.roster.map((u) => u.uid));
+    const b = run.battle!.units.find((u) => u.isBoss)!;
+    expect(['ganondorfBoss', 'ganon']).not.toContain(b.bossId);
   });
 
   it('shop purchases apply', () => {

@@ -28,4 +28,9 @@ export const OCARINA: ContentPack = {
   artIds: ART_IDS,
   artAliases: ART_ALIASES,
   artVariants: ART_VARIANTS,
+  bossAsTemplate: { ganondorfBoss: 'ganondorf', phantomGanonMounted: 'phantomGanon' },
+  exclusivePairs: [
+    ['link', 'youngLink'], ['zelda', 'sheik'], ['ganondorf', 'ganon'], ['nabooru', 'ironKnuckleNabooru'],
+    ['twinrova', 'koume'], ['twinrova', 'kotake'],
+  ],
 };

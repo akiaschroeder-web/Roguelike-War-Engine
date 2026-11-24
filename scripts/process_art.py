@@ -70,6 +70,12 @@ ENTRIES = {
     "moblin": ("moblin.png", (0.21, 0.15, 0.35)),
     "ironKnuckle": ("ironKnuckle.webp", (0.44, 0.34, 0.42)),
     "queenGohma": ("queenGohma.png", (0.54, 0.31, 0.50)),
+    # Batch 4 (bosses)
+    "kingDodongo": ("kingDodongo.webp", (0.16, 0.30, 0.30)),
+    "barinade": ("barinade.png", (0.50, 0.30, 0.45)),
+    "volvagia": ("volvagia.webp", (0.14, 0.30, 0.22)),
+    "morpha": ("morpha.png", (0.72, 0.78, 0.42)),
+    "bongoBongo": ("bongoBongo.png", (0.49, 0.48, 0.50)),
 }
 
 

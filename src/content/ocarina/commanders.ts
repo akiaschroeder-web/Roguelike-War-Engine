@@ -20,6 +20,6 @@ export const COMMANDERS: (CommanderDef & { pendingGear: string[] })[] = [
     bonusText: 'Earn 25% additional Rupees from battles.',
     startingItems: ['gerudoLongbow'], pendingGear: ['Gerudo Buckler', 'Gerudo Sandals'] },
   { heroId: 'ganondorf', armyName: 'Army of Darkness', units: ['moblin', 'stalfos', 'lizalfos'], bonus: 'monsters',
-    bonusText: 'Monster recruitment is enabled from the start.',
+    bonusText: 'Monsters answer his call: they turn up far more often in recruitment.',
     pendingGear: [] },
 ];
