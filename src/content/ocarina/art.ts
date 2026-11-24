@@ -5,8 +5,6 @@ export { ART_IDS } from './artManifest';
 
 export const ART_ALIASES: Record<string, string> = {
   ganondorfBoss: 'ganondorf',
-  clubMoblin: 'moblin',
-  fireKeese: 'keese',
   // Generic soldiers of the same army can share a look:
   hyruleKnight: 'hyruleSoldier',
   hyruleCavalry: 'hyruleSoldier',
@@ -14,7 +12,6 @@ export const ART_ALIASES: Record<string, string> = {
   biggoron: 'goronWarrior',
   medigoron: 'goronWarrior',
   zoraMystic: 'zoraWarrior',
-  gibdo: 'redead',
 };
 
 /** Generic units that pick one of several looks (stable per unit). */

@@ -99,6 +99,10 @@ ENTRIES = {
     "anubis": ("anubis.webp", (0.50, 0.16, 0.60)),
     "redead": ("redead.webp", (0.47, 0.14, 0.30)),
     "wallmaster": ("wallmaster.webp", (0.50, 0.45, 0.85)),
+    "fireKeese": ("fireKeese.png", (0.50, 0.48, 0.55)),
+    "iceKeese": ("iceKeese.png", (0.55, 0.62, 0.50)),
+    "gibdo": ("gibdo.webp", (0.48, 0.08, 0.70)),
+    "clubMoblin": ("clubMoblin.webp", (0.48, 0.22, 0.45)),
 }
 
 
