@@ -1,5 +1,5 @@
 import type {
-  AccessoryDef, BossDef, ClassDef, CommanderDef, EnemyArchetype, PermanentItemDef, RaceDef, SkillDef, UnitTemplate, WeaponDef, WorldDef,
+  GearDef, ItemDef, BossDef, ClassDef, CommanderDef, EnemyArchetype, PermanentItemDef, RaceDef, SkillDef, UnitTemplate, WeaponDef, WorldDef,
 } from '../engine/types';
 
 /** A content pack: one game's worth of characters, regions and equipment. */
@@ -9,7 +9,8 @@ export interface ContentPack {
   races: RaceDef[];
   classes: ClassDef[];
   weapons: WeaponDef[];
-  accessories: AccessoryDef[];
+  gear: GearDef[];
+  items: ItemDef[];
   permanentItems: PermanentItemDef[];
   skills: SkillDef[];
   regions: WorldDef[];

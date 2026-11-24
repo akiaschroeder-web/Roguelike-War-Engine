@@ -1,6 +1,6 @@
 import { RACES } from '../data/registry';
 import { INF, MOVE_COSTS } from './rules';
-import { effectiveStats, moveTypeOf } from './units';
+import { canSwim, effectiveStats, moveTypeOf } from './units';
 import type { Battle, Pos, Terrain, Unit } from './types';
 
 // Units occupy a size×size footprint anchored at (x, y), its top-left tile.
@@ -45,7 +45,7 @@ export function tileCost(b: Battle, unit: Unit, t: Terrain): number {
   let c = MOVE_COSTS[mt][t];
   if (mt === 'fixed') return INF;
   const race = RACES[unit.race];
-  if (t === 'water' && race?.swims) c = 1;
+  if (t === 'water' && canSwim(unit)) c = 1;
   if (t === 'forest' && (race?.forestWalker || forestFriend(b, unit))) c = 1;
   if (t === 'wall' && unit.skills.includes('spectralPassage')) c = 2;
   return c;

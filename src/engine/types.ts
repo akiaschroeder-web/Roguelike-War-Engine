@@ -84,19 +84,26 @@ export interface WeaponDef {
 
 export type Rarity = 'common' | 'uncommon' | 'rare' | 'epic' | 'legendary' | 'mythic';
 
-export interface AccessoryDef {
+export type GearSlotKind = 'shield' | 'head' | 'body' | 'hands' | 'feet' | 'accessory';
+/** Equipment slots on a unit. Accessories have two slots. */
+export type GearSlot = 'shield' | 'head' | 'body' | 'hands' | 'feet' | 'acc1' | 'acc2';
+export const GEAR_SLOTS: GearSlot[] = ['shield', 'head', 'body', 'hands', 'feet', 'acc1', 'acc2'];
+
+export interface GearDef {
   id: string;
   name: string;
+  slot: GearSlotKind;
   rarity: Rarity;
   price: number;
-  stats: Partial<Stats> & { hit?: number; avoid?: number; crit?: number };
+  /** block = % chance to halve a hit's damage (shields). */
+  stats: Partial<Stats> & { hit?: number; avoid?: number; crit?: number; block?: number };
   desc: string;
   /** Engine-implemented special effects. */
-  effects?: AccessoryEffect[];
+  effects?: GearEffect[];
   unique?: boolean;
 }
 
-export type AccessoryEffect =
+export type GearEffect =
   | 'surviveOnce' // Triforce of Courage
   | 'desperation' // Triforce of Power: +25% damage below half HP
   | 'crestAura' // Royal Family Crest: adjacent allies +5 hit
@@ -104,7 +111,37 @@ export type AccessoryEffect =
   | 'giantEye' // +20 hit vs size 2+
   | 'mountedAvoid' // +10 avoid while mounted
   | 'forestRegen' // +2 HP/turn in forests
-  | 'lightAura'; // adjacent allies recover 3 HP per turn
+  | 'lightAura' // adjacent allies recover 3 HP per turn
+  | 'lavaImmune' // Goron Tunic: no lava damage
+  | 'swim' // Zora Tunic / scales: can enter deep water
+  | 'critGuard'; // Stalfos Shield: crits deal ×2 instead of ×3
+
+export type ItemKind = 'heal' | 'fullHeal' | 'fairy' | 'bomb' | 'stun';
+
+/** Consumables carried in a unit's 6-slot pack. */
+export interface ItemDef {
+  id: string;
+  name: string;
+  kind: ItemKind;
+  rarity: Rarity;
+  price: number;
+  /** Heal amount or damage. */
+  power: number;
+  /** Uses per stack (e.g. Lon Lon Milk has 2 servings, Bombs come in 3s). */
+  uses: number;
+  /** Targeted items: range from the user, and blast radius around the target tile. */
+  minRange?: number;
+  maxRange?: number;
+  radius?: number;
+  desc: string;
+}
+
+export interface PackItem {
+  id: string;
+  uses: number;
+}
+
+export const PACK_SIZE = 6;
 
 export interface PermanentItemDef {
   id: string;
@@ -193,7 +230,8 @@ export interface CommanderDef {
   units: string[]; // template ids, excluding the commander
   bonus: CommanderBonus;
   bonusText: string;
-  startingItems?: string[]; // accessory / permanent item ids
+  /** Weapons, gear and items handed out to the army at the start (commander first). */
+  startingItems?: string[];
 }
 
 export type CommanderBonus = 'extraTreasure' | 'healing' | 'forging' | 'postBattleHeal' | 'rupees' | 'monsters';
@@ -226,7 +264,10 @@ export interface Unit {
   hp: number;
   /** Carried weapons; index 0 is equipped. */
   weapons: string[];
-  accessory?: string;
+  gear: Partial<Record<GearSlot, string>>;
+  pack: PackItem[];
+  /** Turns left stunned (skips its action). */
+  stunned?: number;
   skills: SkillId[];
   glyph: string;
   /** Enemy archetype id (used for shared art). */

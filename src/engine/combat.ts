@@ -1,8 +1,8 @@
-import { CLASSES, WEAPONS } from '../data/registry';
+import { CLASSES, ITEMS, WEAPONS } from '../data/registry';
 import { keyOf, terrainAt, unitDist } from './grid';
 import type { RNG } from './rng';
 import { isMagical, TERRAIN_BONUS, TRIANGLE } from './rules';
-import { accessoryBonus, effectiveStats, gainXp, hasEffect, unitTags } from './units';
+import { effectiveStats, gainXp, gearBonus, hasEffect, unitTags } from './units';
 import type { Battle, Pos, StatKey, Unit, WeaponDef } from './types';
 
 export interface SideForecast {
@@ -15,6 +15,8 @@ export interface SideForecast {
   attacks: number;
   triangle: -1 | 0 | 1;
   effective: boolean;
+  /** Chance the target's shield halves each hit. */
+  block: number;
 }
 
 export interface Forecast {
@@ -33,7 +35,8 @@ export interface Strike {
   targetHp: number;
   byHp: number;
   killed: boolean;
-  saved?: boolean;
+  blocked?: boolean;
+  saved?: 'triforce' | 'fairy';
 }
 
 export interface LevelUp {
@@ -48,6 +51,15 @@ export interface CombatResult {
   deaths: string[];
   xp: { uid: string; amount: number }[];
   levelUps: LevelUp[];
+}
+
+/** A Bottled Fairy in the pack revives a unit at 50% HP (consumed). */
+export function useFairy(u: Unit): boolean {
+  const i = u.pack.findIndex((p) => ITEMS[p.id]?.kind === 'fairy');
+  if (i < 0) return false;
+  u.pack.splice(i, 1);
+  u.hp = Math.max(1, Math.ceil((u.stats.hp * (ITEMS.fairy?.power ?? 50)) / 100));
+  return true;
 }
 
 export const weaponDef = (id: string | null | undefined): WeaponDef | undefined => (id ? WEAPONS[id] : undefined);
@@ -132,14 +144,14 @@ export function situational(b: Battle, u: Unit, pos: Pos, foe: Unit, initiating:
 function sideStats(b: Battle, atk: Unit, atkPos: Pos, def: Unit, defPos: Pos, initiating: boolean, weapon: WeaponDef | undefined, foeWeapon: WeaponDef | undefined): SideForecast {
   const d = unitDist({ ...atk, ...atkPos }, { ...def, ...defPos });
   if (!weapon || weapon.type === 'staff' || !canReach(weapon, d)) {
-    return { uid: atk.uid, weaponId: weapon?.id ?? null, canAttack: false, dmg: 0, hit: 0, crit: 0, attacks: 0, triangle: 0, effective: false };
+    return { uid: atk.uid, weaponId: weapon?.id ?? null, canAttack: false, dmg: 0, hit: 0, crit: 0, attacks: 0, triangle: 0, effective: false, block: 0 };
   }
   const as = effectiveStats(atk);
   const ds = effectiveStats(def);
   const am = situational(b, atk, atkPos, def, initiating);
   const dm = situational(b, def, defPos, atk, !initiating);
-  const ab = accessoryBonus(atk);
-  const db = accessoryBonus(def);
+  const ab = gearBonus(atk);
+  const db = gearBonus(def);
   const terrain = TERRAIN_BONUS[b.tiles[keyOf(b, defPos.x, defPos.y)]];
   const tri = triangleOf(weapon, foeWeapon);
   const magical = isMagical(weapon.type);
@@ -163,7 +175,7 @@ function sideStats(b: Battle, atk: Unit, atkPos: Pos, def: Unit, defPos: Pos, in
 
   let attacks = atkSpd - defSpd >= 4 ? 2 : 1;
   if (weapon.brave && initiating) attacks *= 2;
-  return { uid: atk.uid, weaponId: weapon.id, canAttack: true, dmg, hit, crit, attacks, triangle: tri, effective };
+  return { uid: atk.uid, weaponId: weapon.id, canAttack: true, dmg, hit, crit, attacks, triangle: tri, effective, block: Math.min(80, db.block) };
 }
 
 /** The defender counters with the first carried weapon that reaches. */
@@ -227,15 +239,18 @@ export function resolveCombat(b: Battle, attacker: Unit, defender: Unit, rng: RN
     if (by.hp <= 0 || target.hp <= 0) break;
     const hit = rng.chance(side.hit);
     const crit = hit && rng.chance(side.crit);
-    let dmg = hit ? side.dmg * (crit ? 3 : 1) : 0;
+    let dmg = hit ? side.dmg * (crit ? (hasEffect(target, 'critGuard') ? 2 : 3) : 1) : 0;
+    const blocked = hit && dmg > 0 && side.block > 0 && rng.chance(side.block);
+    if (blocked) dmg = Math.floor(dmg / 2);
     dmg = Math.min(dmg, target.hp);
-    let saved = false;
+    let saved: Strike['saved'];
     if (dmg >= target.hp && hasEffect(target, 'surviveOnce') && !target.survivedOnce) {
       target.survivedOnce = true;
       dmg = target.hp - 1;
-      saved = true;
+      saved = 'triforce';
     }
     target.hp -= dmg;
+    if (target.hp <= 0 && useFairy(target)) saved = 'fairy';
     if (dmg > 0) dealt.add(by.uid);
     let heal = 0;
     if (dmg > 0 && by.skills.includes('lifesteal')) {
@@ -243,7 +258,7 @@ export function resolveCombat(b: Battle, attacker: Unit, defender: Unit, rng: RN
       by.hp += heal;
     }
     const killed = target.hp <= 0;
-    strikes.push({ by: by.uid, target: target.uid, hit, crit, dmg, heal, targetHp: target.hp, byHp: by.hp, killed, saved });
+    strikes.push({ by: by.uid, target: target.uid, hit, crit, dmg, heal, targetHp: target.hp, byHp: by.hp, killed, blocked, saved });
     if (killed) {
       by.kills++;
       deaths.push(target.uid);

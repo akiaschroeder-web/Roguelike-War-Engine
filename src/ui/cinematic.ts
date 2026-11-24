@@ -157,7 +157,8 @@ export function playCinematic(opts: CinematicOptions): Promise<void> {
         pop(s.by, `+${s.heal}`, 'heal');
         setHp(s.by, s.byHp, byUnit.stats.hp);
       }
-      if (s.saved) banner('TRIFORCE OF COURAGE!');
+      if (s.blocked) setTimeout(() => pop(s.target, 'BLOCK', 'miss'), 120);
+      if (s.saved) banner(s.saved === 'fairy' ? 'A FAIRY REVIVES THEM!' : 'TRIFORCE OF COURAGE!');
       await lunge;
       if (s.killed) {
         await anim(target, [{ opacity: 1, filter: 'brightness(1)' }, { opacity: 1, filter: 'brightness(4)', offset: 0.2 }, { opacity: 0, transform: 'translateY(30px)', filter: 'brightness(1)' }], 650, 'ease-in');

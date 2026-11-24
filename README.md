@@ -29,7 +29,8 @@ npm test           # engine tests + AI-vs-AI battle simulations
 - **Terrain:** lava (Gorons and fliers are immune), deep water (Zora and fliers only) and forts. Kokiri ignore forest penalties.
 - **Attrition:** HP carries over between battles. Camps and Great Fairy Fountains heal, and fountains can revive the fallen. Permadeath otherwise; losing the commander ends the run.
 - **Encounters:** battle, elite, recruitment, merchant, camp, Great Fairy Fountain, treasure and regional boss.
-- **Gear:** one accessory slot per unit, plus the Spiritual Stones, Medallions and Triforce pieces. Permanent stat items include Heart Containers and gems. Bosses drop their gear, and a convoy holds spare equipment.
+- **Gear:** shield, head, body, hands, feet and two accessory slots per unit (shields block, and do nothing with a two-handed weapon; Goron/Zora Tunics grant lava immunity and swimming). Includes masks, tunics, the Spiritual Stones, Medallions and Triforce pieces. Bosses drop their gear, and a convoy holds spare equipment.
+- **6-slot pack:** potions, Lon Lon Milk, Bottled Fairies (auto-revive), Bombs, Bombchus and Deku Nuts (stun), usable in battle with the Item action.
 - **Deployment:** army capacity is 12 and deployment capacity is 8.
 
 ## Portraits
@@ -50,8 +51,7 @@ tests/               Vitest suite
 
 ## Not built yet (from the design doc)
 
-- Full equipment slots (head, body, hands, feet, shield, 2 accessories, mount) and the 6-slot pack
-- Consumables and tools
+- Mounts and the mount slot; tools (Hookshot traversal, Lens of Truth…) and the remaining consumables (Magic Beans, Fire/Ice Fruit…)
 - STA/MP resources and techniques
 - Songs and Great Fairy spells, elemental arrows
 - Status effects, elements, weather, fog of war, destructible terrain

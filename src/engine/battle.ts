@@ -1,9 +1,9 @@
-import { bossPool, RACES, rosterFor, worldDef } from '../data/registry';
+import { bossPool, rosterFor, worldDef } from '../data/registry';
 import { footprint, keyOf, unitDist } from './grid';
 import { generateMap } from './mapgen';
 import { RNG } from './rng';
 import { LAVA_DAMAGE_PCT, TERRAIN_BONUS } from './rules';
-import { hasEffect, makeEnemy, moveTypeOf, prepareForBattle } from './units';
+import { hasEffect, isLavaImmune, makeEnemy, prepareForBattle } from './units';
 import type { Battle, BossDef, NodeType, Objective, Team, Unit, WorldId } from './types';
 
 export interface BattleSetup {
@@ -111,6 +111,12 @@ export function startPhase(b: Battle, team: Team): TurnStartEvent[] {
     u.moved = false;
     u.acted = false;
     u.movedDist = 0;
+    if (u.stunned) {
+      // Stunned units lose this phase's action.
+      u.stunned--;
+      u.moved = u.acted = true;
+      events.push({ uid: u.uid, heal: 0, damage: 0, source: 'stunned' });
+    }
     const max = u.stats.hp;
     const tiles = footprint(u.x, u.y, u.size).map((p) => b.tiles[keyOf(b, p.x, p.y)]);
     const anchor = tiles[0];
@@ -127,7 +133,7 @@ export function startPhase(b: Battle, team: Team): TurnStartEvent[] {
       if (hasEffect(a, 'lightAura') && unitDist(u, a) <= 1) { flat += 3; sources.push('Light Medallion'); }
     }
     let damage = 0;
-    if (tiles.includes('lava') && !RACES[u.race]?.lavaImmune && moveTypeOf(u) !== 'flying') {
+    if (tiles.includes('lava') && !isLavaImmune(u)) {
       damage = Math.min(u.hp - 1, Math.ceil((max * LAVA_DAMAGE_PCT) / 100));
       u.hp -= damage;
     }

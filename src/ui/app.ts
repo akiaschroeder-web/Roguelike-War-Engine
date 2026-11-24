@@ -1,17 +1,18 @@
-import { ACCESSORIES, CLASSES, COMMANDERS, PERMANENT_ITEMS, REGION_IDS, TEMPLATE_LIST, TEMPLATES, WEAPONS, worldDef } from '../data/registry';
+import { GEAR, ITEMS, CLASSES, COMMANDERS, PERMANENT_ITEMS, REGION_IDS, TEMPLATE_LIST, TEMPLATES, WEAPONS, worldDef } from '../data/registry';
 import { canWield, type LevelUp } from '../engine/combat';
 import { randomSeed } from '../engine/rng';
 import {
   ARMY_CAPACITY, DEPLOY_CAPACITY, advanceRegion, availableNodes, buy, campDrill, campRest, campTrain, currentNode, depthOf, enterNode,
   equipFromConvoy, finishBattle, fountainBless, fountainHeal, fountainRevive, isRegionComplete, loadMeta, loadRun, newRun, offerRegions,
-  recruit, recruitLevel, saveMeta, saveRun, stashAccessory, stashWeapon, startBattle, takeTreasure, weaponPrice,
+  recruit, recruitLevel, saveMeta, saveRun, canTake, priceOf, stashGear, stashItem, stashWeapon, useItemOutside, type ItemKindTag, startBattle, takeTreasure, weaponPrice,
   type Meta, type Reward, type RunEvent, type RunWithEvent,
 } from '../engine/run';
 import { equip } from '../engine/combat';
-import type { MapNode, NodeType, Unit } from '../engine/types';
+import { GEAR_SLOTS, PACK_SIZE, type GearSlot, type MapNode, type NodeType, type Unit } from '../engine/types';
+import { slotFor } from '../engine/units';
 import { BattleView } from './battleView';
 import {
-  confirmDialog, esc, hpBar, itemLine, itemName, modal, showLevelUps, templateCard, token, unitDetails,
+  confirmDialog, esc, hpBar, itemLine, itemName, modal, SLOT_ICONS, SLOT_LABELS, showLevelUps, templateCard, token, unitDetails,
 } from './components';
 
 const NODE_INFO: Record<NodeType, { icon: string; label: string; desc: string }> = {
@@ -134,7 +135,8 @@ export class App {
                 <div class="army-tokens">${army.map((a) => `<span title="${esc(a.name)}">${token({ home: a.home, glyph: a.glyph, team: 'player', portraitId: a.id }, 30)}</span>`).join('')}
                   <span class="dim small">${army.map((a) => esc(a.name)).join(', ')}</span></div>
                 <div class="small"><span class="badge gold">Bonus</span> ${esc(c.bonusText)}</div>
-                ${c.pendingGear?.length ? `<div class="dim small">Starting gear coming with the equipment update: ${esc(c.pendingGear.join(', '))}</div>` : ''}
+                ${c.startingItems?.length ? `<div class="small"><span class="dim">Starting gear:</span> ${c.startingItems.map((id) => esc(itemName(id))).join(', ')}</div>` : ''}
+                ${c.pendingGear?.length ? `<div class="dim small">Coming later: ${esc(c.pendingGear.join(', '))}</div>` : ''}
               </div>`)}</div>`;
           }).join('')}</div>
           <div class="sticky-bar">${chosen
@@ -233,8 +235,21 @@ export class App {
       <h3>Equipment</h3>
       <div class="equip-list">${u.weapons.map((id, i) => `<div class="equip-row"><span>${esc(WEAPONS[id]?.name ?? id)}${i === 0 ? ' <span class="badge eq">E</span>' : ''}</span>
         <span>${i > 0 ? `<button class="btn small" data-k="equip" data-id="${id}">Equip</button>` : ''}${u.weapons.length > 1 ? `<button class="btn small" data-k="stash" data-id="${id}">To convoy</button>` : ''}</span></div>`).join('')}
-        ${u.accessory ? `<div class="equip-row"><span>◇ ${esc(itemName(u.accessory))}</span><button class="btn small" data-k="unacc">To convoy</button></div>` : '<div class="dim small">No accessory.</div>'}
       </div>
+      <h3>Gear</h3>
+      <div class="equip-list">${GEAR_SLOTS.map((slot) => {
+        const id = u.gear[slot];
+        return `<div class="equip-row"><span><span class="dim">${SLOT_ICONS[slot]} ${SLOT_LABELS[slot]}</span> ${id ? esc(itemName(id)) : '<span class="dim">—</span>'}${
+          id && slot === 'shield' && WEAPONS[u.weapons[0]]?.twoHanded ? ' <span class="badge">inactive: two-handed weapon</span>' : ''}</span>
+          ${id ? `<button class="btn small" data-k="ungear" data-slot="${slot}">To convoy</button>` : ''}</div>`;
+      }).join('')}</div>
+      <h3>Pack <span class="dim small">${u.pack.length}/${PACK_SIZE}</span></h3>
+      <div class="equip-list">${u.pack.length ? u.pack.map((p, i) => {
+        const def = ITEMS[p.id];
+        const healable = def && (def.kind === 'heal' || def.kind === 'fullHeal') && u.hp < u.stats.hp;
+        return `<div class="equip-row"><span>${esc(def?.name ?? p.id)}${p.uses > 1 ? ` ×${p.uses}` : ''} <span class="dim small">${esc(def?.desc ?? '')}</span></span>
+          <span>${healable ? `<button class="btn small" data-k="use" data-i="${i}">Use</button>` : ''}<button class="btn small" data-k="unpack" data-i="${i}">To convoy</button></span></div>`;
+      }).join('') : '<div class="dim small">Empty. Buy potions, bombs and Deku Nuts from merchants.</div>'}</div>
       ${t ? `<p class="bio">${esc(t.bio)}</p>` : ''}
       <button class="btn primary" data-close>Close</button>`, { dismissable: true });
     m.el.addEventListener('click', (e) => {
@@ -242,7 +257,9 @@ export class App {
       if (!k) return;
       if (k.dataset.k === 'equip') equip(u, k.dataset.id!);
       if (k.dataset.k === 'stash') stashWeapon(run, uid, k.dataset.id!);
-      if (k.dataset.k === 'unacc') stashAccessory(run, uid);
+      if (k.dataset.k === 'ungear') stashGear(run, uid, k.dataset.slot as GearSlot);
+      if (k.dataset.k === 'unpack') stashItem(run, uid, Number(k.dataset.i));
+      if (k.dataset.k === 'use') useItemOutside(run, uid, Number(k.dataset.i));
       this.save();
       m.close();
       rerender();
@@ -253,7 +270,7 @@ export class App {
   private convoyModal(rerender: () => void) {
     const run = this.run!;
     const m = modal(`<h2>Convoy</h2>
-      <p class="dim small">Spare weapons and accessories. Give them to a unit to use them.</p>
+      <p class="dim small">Spare weapons, gear and items. Give them to a unit to use them.</p>
       <div class="shop-list">${run.convoy.length ? run.convoy.map((id, i) => `<div class="shop-item">${itemLine(id)}<button class="btn small" data-k="give" data-i="${i}">Give…</button></div>`).join('') : '<div class="dim">Empty.</div>'}</div>
       <button class="btn primary" data-close>Close</button>`, { dismissable: true });
     m.el.addEventListener('click', async (e) => {
@@ -262,7 +279,7 @@ export class App {
       const i = Number(k.dataset.i);
       const id = run.convoy[i];
       m.close();
-      const uid = await this.unitPicker(`Give ${esc(itemName(id))} to…`, (u) => !WEAPONS[id] || canWield(u, WEAPONS[id]), (u) => this.itemPreview(u, id));
+      const uid = await this.unitPicker(`Give ${esc(itemName(id))} to…`, (u) => canTake(u, id), (u) => this.itemPreview(u, id));
       if (uid && equipFromConvoy(run, i, uid)) this.save();
       rerender();
       this.convoyModal(rerender);
@@ -271,7 +288,12 @@ export class App {
 
   private itemPreview(u: Unit, id: string): string {
     if (WEAPONS[id]) return `Carrying ${u.weapons.length}/5${canWield(u, WEAPONS[id]) ? '' : ' · cannot wield'}`;
-    if (ACCESSORIES[id]) return u.accessory ? `Replaces ${esc(itemName(u.accessory))}` : 'No accessory';
+    const g = GEAR[id];
+    if (g) {
+      const slot = slotFor(u, g.slot);
+      return u.gear[slot] ? `Replaces ${esc(itemName(u.gear[slot]!))}` : `${SLOT_LABELS[slot]} slot empty`;
+    }
+    if (ITEMS[id]) return u.pack.length >= PACK_SIZE ? 'Pack full: goes to convoy' : `Pack ${u.pack.length}/${PACK_SIZE}`;
     const p = PERMANENT_ITEMS[id];
     if (p) return `${p.stat.toUpperCase()} ${u.stats[p.stat]} → ${u.stats[p.stat] + p.amount}`;
     return '';
@@ -508,8 +530,8 @@ export class App {
     const run = this.run!;
     const ev = run.event as EventOf<'shop'>;
     const render = () => {
-      const row = (kind: 'weapon' | 'accessory' | 'permanent', id: string, price: number) => {
-        const sold = ev.sold.includes(`${kind}:${id}`);
+      const row = (kind: ItemKindTag, id: string, price: number) => {
+        const sold = kind !== 'item' && ev.sold.includes(`${kind}:${id}`);
         return `<div class="shop-item ${sold ? 'sold' : ''}"><div>${itemLine(id)}</div><button class="btn small" data-nav="buy" data-kind="${kind}" data-id="${id}" ${sold || run.rupees < price ? 'disabled' : ''}>${sold ? 'Sold' : `₹${price}`}</button></div>`;
       };
       this.setScreen(`
@@ -519,7 +541,8 @@ export class App {
             <h1>Merchant</h1>
             <p class="dim center-text">“Welcome! Buy somethin’, will ya?”${run.bonus === 'forging' ? ' <span class="badge gold">Goron discount −25% on weapons</span>' : ''}</p>
             <h3>Weapons</h3><div class="shop-list">${ev.weapons.map((id) => row('weapon', id, weaponPrice(run, id))).join('')}</div>
-            <h3>Accessories</h3><div class="shop-list">${ev.accessories.map((id) => row('accessory', id, ACCESSORIES[id].price)).join('') || '<div class="dim">None in stock.</div>'}</div>
+            <h3>Gear</h3><div class="shop-list">${ev.gear.map((id) => row('gear', id, GEAR[id].price)).join('') || '<div class="dim">None in stock.</div>'}</div>
+            <h3>Items <span class="dim small">restocked: buy as many as you like</span></h3><div class="shop-list">${ev.items.map((id) => row('item', id, priceOf(run, 'item', id))).join('') || '<div class="dim">None in stock.</div>'}</div>
             <h3>Permanent upgrades</h3><div class="shop-list">${ev.permanents.map((id) => row('permanent', id, PERMANENT_ITEMS[id].price)).join('')}</div>
             <div class="center-text"><button class="btn primary big" data-nav="leave">Leave</button></div>
           </div>
@@ -528,9 +551,9 @@ export class App {
       this.on({
         ...this.common(render),
         buy: async (el) => {
-          const kind = el.dataset.kind as 'weapon' | 'accessory' | 'permanent';
+          const kind = el.dataset.kind as ItemKindTag;
           const id = el.dataset.id!;
-          const uid = await this.unitPicker(`Give ${esc(itemName(id))} to…`, (u) => kind !== 'weapon' || canWield(u, WEAPONS[id]), (u) => this.itemPreview(u, id));
+          const uid = await this.unitPicker(`Give ${esc(itemName(id))} to…`, (u) => canTake(u, id), (u) => this.itemPreview(u, id));
           if (uid && buy(run, kind, id, uid)) { this.save(); render(); }
         },
         leave: () => this.finishEvent(),
@@ -612,7 +635,7 @@ export class App {
   private treasureScreen() {
     const run = this.run!;
     const ev = run.event as EventOf<'treasure'>;
-    const label = (r: Reward) => (r.kind === 'weapon' ? 'Weapon' : r.kind === 'accessory' ? 'Accessory' : 'Permanent upgrade');
+    const label = (r: Reward) => ({ weapon: 'Weapon', gear: 'Gear', item: 'Item', permanent: 'Permanent upgrade' })[r.kind];
     this.setScreen(`
       ${this.topBar()}
       <div class="page">
@@ -627,7 +650,7 @@ export class App {
       take: async (el) => {
         const i = Number(el.dataset.i);
         const r = ev.rewards[i];
-        const uid = await this.unitPicker(`Give ${esc(itemName(r.id))} to…`, (u) => r.kind !== 'weapon' || canWield(u, WEAPONS[r.id]), (u) => this.itemPreview(u, r.id));
+        const uid = await this.unitPicker(`Give ${esc(itemName(r.id))} to…`, (u) => canTake(u, r.id), (u) => this.itemPreview(u, r.id));
         if (!uid) return;
         if (takeTreasure(run, i, uid)) this.finishEvent();
       },

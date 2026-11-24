@@ -1,12 +1,12 @@
 import {
-  ACCESSORIES, BOSS_AS_TEMPLATE, BOSSES, bossPool, COMMANDERS, PERMANENT_ITEMS, REGION_IDS, TEMPLATE_LIST, TEMPLATES, WEAPONS,
+  GEAR, ITEMS, BOSS_AS_TEMPLATE, BOSSES, bossPool, COMMANDERS, PERMANENT_ITEMS, REGION_IDS, TEMPLATE_LIST, TEMPLATES, WEAPONS,
 } from '../data/registry';
 import { createBattle } from './battle';
 import { canWield, type LevelUp } from './combat';
 import { RNG } from './rng';
 import { ARMY_CAPACITY, DEPLOY_CAPACITY } from './rules';
-import { gainXp, makeHero, rollLevelUp } from './units';
-import type { BossDef, CommanderDef, MapNode, NodeType, Rarity, Run, RunMap, Unit, UnitTemplate, WorldId } from './types';
+import { addToPack, gainXp, makeHero, rollLevelUp, slotFor } from './units';
+import type { BossDef, CommanderDef, GearSlot, MapNode, NodeType, Rarity, Run, RunMap, Unit, UnitTemplate, WorldId } from './types';
 
 export const ROWS_PER_REGION = 7; // last row is the regional boss
 export { ARMY_CAPACITY, DEPLOY_CAPACITY };
@@ -33,7 +33,7 @@ export function newRun(seed: number, commanderId: string): RunWithEvent {
   const region = home === 'hyruleCastle' ? 'hyruleField' : home;
   const run: RunWithEvent = {
     seed, rngState: 0, act: 1, region, regionsVisited: [region], map: { rows: 0, nodes: [] }, currentNodeId: null,
-    roster: [], fallen: [], rupees: 200, convoy: [...(cmd.startingItems ?? [])], commanderId: cmd.heroId, bonus: cmd.bonus,
+    roster: [], fallen: [], rupees: 200, convoy: [], commanderId: cmd.heroId, bonus: cmd.bonus,
     stats: { battles: 0, kills: 0, recruits: 0 }, seenHeroes: [cmd.heroId], bossesFought: [], uidCounter: 0,
   };
   const commander = makeHero(cmd.heroId, nextUid(run), 1, rng);
@@ -42,6 +42,12 @@ export function newRun(seed: number, commanderId: string): RunWithEvent {
   for (const id of cmd.units) {
     run.roster.push(makeHero(id, nextUid(run), 1, rng));
     if (ownedTemplateUnique(id)) run.seenHeroes.push(id);
+  }
+  // Starting gear: the commander first, then whoever can use it; otherwise the convoy.
+  run.convoy = [];
+  for (const id of cmd.startingItems ?? []) {
+    const taker = run.roster.find((u) => canTake(u, id) && (kindOf(id) !== 'gear' || !u.gear[slotFor(u, GEAR[id].slot)]));
+    if (!taker || !give(run, id, taker.uid)) run.convoy.push(id);
   }
   run.map = generateRegionMap(rng, run.act, region);
   run.rngState = rng.state;
@@ -110,15 +116,17 @@ export function depthOf(run: Run, node: MapNode): number {
 
 // ───────────────────────── Events ─────────────────────────
 
-export type Reward =
-  | { kind: 'weapon'; id: string }
-  | { kind: 'accessory'; id: string }
-  | { kind: 'permanent'; id: string };
+export type ItemKindTag = 'weapon' | 'gear' | 'item' | 'permanent';
+export type Reward = { kind: ItemKindTag; id: string };
+
+export function kindOf(id: string): ItemKindTag | null {
+  return WEAPONS[id] ? 'weapon' : GEAR[id] ? 'gear' : ITEMS[id] ? 'item' : PERMANENT_ITEMS[id] ? 'permanent' : null;
+}
 
 export type RunEvent =
   | { type: 'deploy'; nodeId: string }
   | { type: 'recruit'; offers: string[] }
-  | { type: 'shop'; weapons: string[]; accessories: string[]; permanents: string[]; sold: string[] }
+  | { type: 'shop'; weapons: string[]; gear: string[]; items: string[]; permanents: string[]; sold: string[] }
   | { type: 'camp' }
   | { type: 'fountain' }
   | { type: 'treasure'; rewards: Reward[]; rupees: number }
@@ -138,8 +146,8 @@ const raritiesFor = (act: number) => RARITY_BY_REGION[Math.min(act, RARITY_BY_RE
 
 /** Unique items already owned (equipped or in the convoy). */
 export function ownedUniques(run: Run): Set<string> {
-  const ids = [...run.convoy, ...run.roster.flatMap((u) => [...u.weapons, u.accessory ?? ''])];
-  return new Set(ids.filter((id) => WEAPONS[id]?.unique || ACCESSORIES[id]?.unique));
+  const ids = [...run.convoy, ...run.roster.flatMap((u) => [...u.weapons, ...Object.values(u.gear)])];
+  return new Set(ids.filter((id) => WEAPONS[id]?.unique || GEAR[id]?.unique));
 }
 
 function bossFor(run: Run, rng: RNG, node: MapNode): BossDef {
@@ -178,9 +186,10 @@ export function enterNode(run: RunWithEvent, nodeId: string): void {
       case 'shop': {
         const rar = raritiesFor(run.act);
         const weapons = rng.shuffle(Object.values(WEAPONS).filter((w) => !w.unique && rar.includes(w.rarity))).slice(0, 5).map((w) => w.id);
-        const accessories = rng.shuffle(Object.values(ACCESSORIES).filter((a) => !a.unique && rar.includes(a.rarity))).slice(0, 2).map((a) => a.id);
+        const gear = rng.shuffle(Object.values(GEAR).filter((a) => !a.unique && rar.includes(a.rarity))).slice(0, 4).map((a) => a.id);
+        const items = rng.shuffle(Object.values(ITEMS).filter((i) => rar.includes(i.rarity) || i.rarity === 'common')).slice(0, 4).map((i) => i.id);
         const permanents = rng.shuffle(Object.keys(PERMANENT_ITEMS)).slice(0, 2);
-        run.event = { type: 'shop', weapons, accessories, permanents, sold: [] };
+        run.event = { type: 'shop', weapons, gear, items, permanents, sold: [] };
         break;
       }
       case 'camp':
@@ -249,7 +258,8 @@ function treasureRewards(run: Run, rng: RNG): Reward[] {
   const rar = raritiesFor(run.act + 1);
   const owned = ownedUniques(run);
   const pool: Reward[] = [
-    ...Object.values(ACCESSORIES).filter((a) => rar.includes(a.rarity) && !owned.has(a.id)).map((a) => ({ kind: 'accessory' as const, id: a.id })),
+    ...Object.values(GEAR).filter((a) => rar.includes(a.rarity) && !owned.has(a.id)).map((a) => ({ kind: 'gear' as const, id: a.id })),
+    ...Object.values(ITEMS).filter((i) => i.rarity !== 'common').map((i) => ({ kind: 'item' as const, id: i.id })),
     ...Object.values(WEAPONS).filter((w) => rar.includes(w.rarity) && w.type !== 'natural' && !owned.has(w.id) && w.id !== 'fairyLight').map((w) => ({ kind: 'weapon' as const, id: w.id })),
     ...Object.keys(PERMANENT_ITEMS).map((id) => ({ kind: 'permanent' as const, id })),
   ];
@@ -374,11 +384,24 @@ export function giveWeapon(run: Run, id: string, uid: string | null): boolean {
   return true;
 }
 
-export function giveAccessory(run: Run, id: string, uid: string | null): boolean {
+/** Equip a gear piece in its slot; whatever was there goes to the convoy. */
+export function giveGear(run: Run, id: string, uid: string | null): boolean {
   const u = uid ? run.roster.find((x) => x.uid === uid) : undefined;
+  const def = GEAR[id];
+  if (!def) return false;
   if (!u) { run.convoy.push(id); return true; }
-  if (u.accessory) run.convoy.push(u.accessory);
-  u.accessory = id;
+  const slot = slotFor(u, def.slot);
+  const old = u.gear[slot];
+  if (old) run.convoy.push(old);
+  u.gear[slot] = id;
+  return true;
+}
+
+/** Put a consumable in a unit's pack, or the convoy if the pack is full. */
+export function giveItem(run: Run, id: string, uid: string | null, uses?: number): boolean {
+  const u = uid ? run.roster.find((x) => x.uid === uid) : undefined;
+  if (!ITEMS[id]) return false;
+  if (!u || !addToPack(u, id, uses)) run.convoy.push(id);
   return true;
 }
 
@@ -391,12 +414,30 @@ export function usePermanent(run: Run, id: string, uid: string): boolean {
   return true;
 }
 
-/** Equip something from the convoy onto a unit. */
+/** Give any kind of thing to a unit (or the convoy when uid is null). */
+export function give(run: Run, id: string, uid: string | null): boolean {
+  switch (kindOf(id)) {
+    case 'weapon': return giveWeapon(run, id, uid);
+    case 'gear': return giveGear(run, id, uid);
+    case 'item': return giveItem(run, id, uid);
+    case 'permanent': return uid ? usePermanent(run, id, uid) : false;
+    default: return false;
+  }
+}
+
+/** Can this unit take this thing right now? */
+export function canTake(u: Unit, id: string): boolean {
+  if (WEAPONS[id]) return canWield(u, WEAPONS[id]);
+  return !!kindOf(id);
+}
+
+/** Equip or hand something from the convoy to a unit. */
 export function equipFromConvoy(run: Run, index: number, uid: string): boolean {
   const id = run.convoy[index];
   if (!id) return false;
-  const ok = WEAPONS[id] ? giveWeapon(run, id, uid) : ACCESSORIES[id] ? giveAccessory(run, id, uid) : false;
-  if (ok) run.convoy.splice(run.convoy.indexOf(id), 1);
+  run.convoy.splice(index, 1);
+  const ok = give(run, id, uid);
+  if (!ok) run.convoy.splice(index, 0, id);
   return ok;
 }
 
@@ -410,23 +451,54 @@ export function stashWeapon(run: Run, uid: string, weaponId: string): boolean {
   return true;
 }
 
-export function stashAccessory(run: Run, uid: string): boolean {
+export function stashGear(run: Run, uid: string, slot: GearSlot): boolean {
   const u = run.roster.find((x) => x.uid === uid);
-  if (!u?.accessory) return false;
-  run.convoy.push(u.accessory);
-  u.accessory = undefined;
+  const id = u?.gear[slot];
+  if (!u || !id) return false;
+  run.convoy.push(id);
+  delete u.gear[slot];
   return true;
 }
 
-export function buy(run: RunWithEvent, kind: 'weapon' | 'accessory' | 'permanent', id: string, uid: string | null): boolean {
+export function stashItem(run: Run, uid: string, index: number): boolean {
+  const u = run.roster.find((x) => x.uid === uid);
+  const p = u?.pack[index];
+  if (!u || !p) return false;
+  u.pack.splice(index, 1);
+  // Back to the convoy as whole bundles (leftover single uses are lost).
+  const bundles = Math.max(1, Math.floor(p.uses / (ITEMS[p.id]?.uses ?? 1)));
+  for (let i = 0; i < bundles; i++) run.convoy.push(p.id);
+  return true;
+}
+
+/** Use a healing item from the pack outside battle. */
+export function useItemOutside(run: Run, uid: string, index: number): number {
+  const u = run.roster.find((x) => x.uid === uid);
+  const p = u?.pack[index];
+  const def = p && ITEMS[p.id];
+  if (!u || !p || !def || (def.kind !== 'heal' && def.kind !== 'fullHeal') || u.hp >= u.stats.hp) return 0;
+  const amount = Math.min(def.kind === 'fullHeal' ? u.stats.hp : def.power, u.stats.hp - u.hp);
+  u.hp += amount;
+  if (--p.uses <= 0) u.pack.splice(index, 1);
+  return amount;
+}
+
+export function priceOf(run: Run, kind: ItemKindTag, id: string): number {
+  if (kind === 'weapon') return weaponPrice(run, id);
+  if (kind === 'gear') return GEAR[id].price;
+  if (kind === 'item') return ITEMS[id].price;
+  return PERMANENT_ITEMS[id].price;
+}
+
+export function buy(run: RunWithEvent, kind: ItemKindTag, id: string, uid: string | null): boolean {
   const ev = run.event;
-  if (ev?.type !== 'shop' || ev.sold.includes(`${kind}:${id}`)) return false;
-  const price = kind === 'weapon' ? weaponPrice(run, id) : kind === 'accessory' ? ACCESSORIES[id].price : PERMANENT_ITEMS[id].price;
+  // Consumables can be bought repeatedly; everything else once.
+  if (ev?.type !== 'shop' || (kind !== 'item' && ev.sold.includes(`${kind}:${id}`))) return false;
+  const price = priceOf(run, kind, id);
   if (run.rupees < price) return false;
-  const ok = kind === 'weapon' ? giveWeapon(run, id, uid) : kind === 'accessory' ? giveAccessory(run, id, uid) : uid ? usePermanent(run, id, uid) : false;
-  if (!ok) return false;
+  if (!give(run, id, uid)) return false;
   run.rupees -= price;
-  ev.sold.push(`${kind}:${id}`);
+  if (kind !== 'item') ev.sold.push(`${kind}:${id}`);
   return true;
 }
 
@@ -486,8 +558,7 @@ export function takeTreasure(run: RunWithEvent, index: number | null, uid: strin
   } else {
     const r = ev.rewards[index];
     if (!r) return false;
-    const ok = r.kind === 'weapon' ? giveWeapon(run, r.id, uid) : r.kind === 'accessory' ? giveAccessory(run, r.id, uid) : uid ? usePermanent(run, r.id, uid) : false;
-    if (!ok) return false;
+    if (!give(run, r.id, uid)) return false;
   }
   run.event = undefined;
   return true;
@@ -524,7 +595,7 @@ export function saveRun(run: RunWithEvent | null): void {
 export function loadRun(): RunWithEvent | null {
   try {
     const raw = storage()?.getItem(RUN_KEY);
-    return raw ? (JSON.parse(raw) as RunWithEvent) : null;
+    return raw ? migrateRun(JSON.parse(raw) as RunWithEvent) : null;
   } catch {
     return null;
   }
@@ -543,4 +614,29 @@ export function saveMeta(m: Meta): void {
   try {
     storage()?.setItem(META_KEY, JSON.stringify(m));
   } catch { /* ignore */ }
+}
+
+/** Bring saves from older versions up to date (single accessory slot, no pack). */
+export function migrateRun(run: RunWithEvent): RunWithEvent {
+  const fix = (u: Unit & { accessory?: string }) => {
+    u.gear ??= {};
+    u.pack ??= [];
+    if (u.accessory) {
+      u.gear.acc1 = u.accessory;
+      delete u.accessory;
+    }
+  };
+  run.roster.forEach(fix);
+  run.fallen.forEach(fix);
+  run.battle?.units.forEach(fix);
+  run.battle?.fallen.forEach(fix);
+  const ev = run.event as (RunEvent & { accessories?: string[] }) | undefined;
+  if (ev?.type === 'shop') {
+    ev.gear ??= ev.accessories ?? [];
+    ev.items ??= [];
+  }
+  if (ev?.type === 'treasure') {
+    for (const r of ev.rewards) if ((r.kind as string) === 'accessory') r.kind = 'gear';
+  }
+  return run;
 }

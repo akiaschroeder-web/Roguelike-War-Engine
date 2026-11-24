@@ -2,7 +2,7 @@ import { ART_ALIASES, ART_IDS, ART_VARIANTS } from './art';
 import { CLASSES } from './classes';
 import { COMMANDERS } from './commanders';
 import { BOSSES, ENEMIES, REGION_BOSSES, ROSTERS } from './enemies';
-import { ACCESSORIES, PERMANENT_ITEMS, SKILLS } from './items';
+import { GEAR, ITEMS, PERMANENT_ITEMS, SKILLS } from './items';
 import { RACES } from './races';
 import { REGIONS } from './regions';
 import { TEMPLATES } from './units';
@@ -15,7 +15,8 @@ export const OCARINA: ContentPack = {
   races: RACES,
   classes: CLASSES,
   weapons: WEAPONS,
-  accessories: ACCESSORIES,
+  gear: GEAR,
+  items: ITEMS,
   permanentItems: PERMANENT_ITEMS,
   skills: SKILLS,
   regions: REGIONS,

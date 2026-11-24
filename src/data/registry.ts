@@ -5,13 +5,14 @@
 import { OCARINA } from '../content/ocarina';
 import type { ContentPack } from '../content/types';
 import type {
-  AccessoryDef, BossDef, ClassDef, CommanderDef, EnemyArchetype, PermanentItemDef, RaceDef, SkillDef, UnitTemplate, WeaponDef, WorldDef, WorldId,
+  GearDef, ItemDef, BossDef, ClassDef, CommanderDef, EnemyArchetype, PermanentItemDef, RaceDef, SkillDef, UnitTemplate, WeaponDef, WorldDef, WorldId,
 } from '../engine/types';
 
 export const RACES: Record<string, RaceDef> = {};
 export const CLASSES: Record<string, ClassDef> = {};
 export const WEAPONS: Record<string, WeaponDef> = {};
-export const ACCESSORIES: Record<string, AccessoryDef> = {};
+export const GEAR: Record<string, GearDef> = {};
+export const ITEMS: Record<string, ItemDef> = {};
 export const PERMANENT_ITEMS: Record<string, PermanentItemDef> = {};
 export const SKILLS: Record<string, SkillDef> = {};
 export const WORLDS: Record<string, WorldDef> = {};
@@ -39,7 +40,8 @@ export function installPack(p: ContentPack): void {
   index(RACES, p.races);
   index(CLASSES, p.classes);
   index(WEAPONS, p.weapons);
-  index(ACCESSORIES, p.accessories);
+  index(GEAR, p.gear);
+  index(ITEMS, p.items);
   index(PERMANENT_ITEMS, p.permanentItems);
   index(SKILLS, p.skills);
   index(WORLDS, p.regions);

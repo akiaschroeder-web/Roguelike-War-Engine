@@ -1,4 +1,5 @@
-import { BOSSES, worldDef } from '../data/registry';
+import { BOSSES, ITEMS, worldDef } from '../data/registry';
+import { canUse, isTargeted, targetTiles, useItem } from '../engine/items';
 import { planAction } from '../engine/ai';
 import { checkResult, moveUnit, objectiveText, spawnReinforcements, startPhase, type TurnStartEvent } from '../engine/battle';
 import {
@@ -13,7 +14,7 @@ import type { Battle, Pos, Unit } from '../engine/types';
 import { animationsEnabled, playCinematic, setAnimationsEnabled, type SideInfo } from './cinematic';
 import { esc, hpBar, modal, showLevelUps, sleep, token, unitDetails, weaponLine } from './components';
 
-type Mode = 'idle' | 'select' | 'action' | 'attack' | 'heal' | 'canto' | 'busy' | 'over';
+type Mode = 'idle' | 'select' | 'action' | 'attack' | 'heal' | 'items' | 'itemTarget' | 'canto' | 'busy' | 'over';
 
 const TERRAIN_GLYPH: Record<string, string> = {
   plain: '', forest: '♣', mountain: '▲', water: '≈', wall: '▦', fort: '⌂', lava: '♨',
@@ -27,6 +28,7 @@ export class BattleView {
   private moves: Moves | null = null;
   private pending: Unit | null = null;
   private weaponChoice: string | null = null;
+  private itemIndex: number | null = null;
   private hover: Pos | null = null;
   private inspect = new Set<string>();
   private showDanger = false;
@@ -153,7 +155,7 @@ export class BattleView {
       el.classList.toggle('selected', this.sel === u);
       el.classList.toggle('enemy', u.team === 'enemy');
       el.classList.toggle('big', u.size > 1);
-      el.innerHTML = `<div class="u-body">${token(u, Math.round(this.tile * u.size * (u.size > 1 ? 0.86 : 0.78)))}</div>${hpBar(u.hp, u.stats.hp)}`;
+      el.innerHTML = `<div class="u-body">${token(u, Math.round(this.tile * u.size * (u.size > 1 ? 0.86 : 0.78)))}</div>${hpBar(u.hp, u.stats.hp)}${u.stunned ? '<i class="stun-mark">💫</i>' : ''}`;
     }
   }
 
@@ -230,6 +232,16 @@ export class BattleView {
       for (const t of this.validTargets()) for (const f of footprint(t.x, t.y, t.size)) add(keyOf(b, f.x, f.y), this.mode === 'attack' ? 'tgt' : 'tgt hl');
       if (this.pending) for (const f of footprint(this.pending.x, this.pending.y, this.pending.size)) add(keyOf(b, f.x, f.y), 'pending');
     }
+    if (this.mode === 'itemTarget' && this.sel && this.itemIndex !== null) {
+      const def = ITEMS[this.sel.pack[this.itemIndex]?.id];
+      if (def) {
+        const tiles = targetTiles(b, this.sel, def);
+        for (const t of tiles) add(keyOf(b, t.x, t.y), def.kind === 'stun' ? 'hl' : 'atk');
+        if (this.hover && tiles.some((t) => t.x === this.hover!.x && t.y === this.hover!.y)) {
+          for (const t of tilesInRange(b, this.hover, 0, def.radius ?? 0)) add(keyOf(b, t.x, t.y), 'pending');
+        }
+      }
+    }
     if (this.sel) for (const f of footprint(this.sel.x, this.sel.y, this.sel.size)) add(keyOf(b, f.x, f.y), 'sel');
     if (this.hover) add(keyOf(b, this.hover.x, this.hover.y), 'hov');
 
@@ -246,6 +258,8 @@ export class BattleView {
       html = this.forecastHtml(forecast(b, this.sel, this.sel, this.pending, this.weaponChoice ?? undefined));
     } else if (this.mode === 'heal' && this.sel && this.pending) {
       html = this.healHtml(this.sel, this.pending);
+    } else if ((this.mode === 'items' || this.mode === 'itemTarget') && this.sel) {
+      html = this.itemsHtml(this.sel);
     } else {
       const u = (this.hover ? unitAt(b, this.hover.x, this.hover.y) : undefined) ?? this.sel ?? undefined;
       html = u ? unitDetails(u) : `<div class="dim small help">
@@ -282,6 +296,7 @@ export class BattleView {
           <div class="fc-row"><span>Dmg</span><b>${s.dmg}${s.attacks > 1 ? ` ×${s.attacks}` : ''}</b></div>
           <div class="fc-row"><span>Hit</span><b>${s.hit}%</b></div>
           <div class="fc-row"><span>Crit</span><b>${s.crit}%</b></div>
+          ${s.block ? `<div class="fc-row dim small"><span>Foe blocks</span><b>${s.block}%</b></div>` : ''}
           <div class="fc-row dim small"><span>Foe HP after</span><b>${after}${after === 0 ? ' ☠' : ''}</b></div>`
         : '<div class="fc-none">Cannot counter</div>'}
       </div>`;
@@ -290,6 +305,19 @@ export class BattleView {
       ? `<div class="weapon-switch">${options.map((w) => `<button class="btn small ${w.id === fc.attacker.weaponId ? 'on' : ''}" data-act="weapon" data-w="${w.id}">${esc(w.name)}</button>`).join('')}</div>` : '';
     return `<div class="forecast"><div class="fc-title">Combat Forecast</div>${switcher}<div class="fc-cols">${side(a, fc.attacker, d)}${side(d, fc.defender, a)}</div>
       <button class="btn primary wide" data-act="confirm">Attack ${esc(d.name)}</button></div>`;
+  }
+
+  private itemsHtml(u: Unit): string {
+    const rows = u.pack.map((p, i) => {
+      const def = ITEMS[p.id];
+      const usable = canUse(u, i);
+      const on = this.mode === 'itemTarget' && this.itemIndex === i;
+      return `<button class="item-row ${on ? 'on' : ''}" data-act="useitem" data-i="${i}" ${usable ? '' : 'disabled'}>
+        <b>${esc(def?.name ?? p.id)}${p.uses > 1 ? ` ×${p.uses}` : ''}</b><span class="dim small">${esc(def?.desc ?? '')}${
+          def?.kind === 'fairy' ? '' : !usable ? ' (already at full HP)' : ''}</span></button>`;
+    }).join('');
+    const hint = this.mode === 'itemTarget' ? '<p class="small">Tap a highlighted square to throw it. The blast area is shown in gold.</p>' : '';
+    return `<div class="forecast"><div class="fc-title">Pack</div>${hint}<div class="item-list">${rows}</div></div>`;
   }
 
   private healHtml(healer: Unit, t: Unit): string {
@@ -315,10 +343,13 @@ export class BattleView {
       html = `
         ${this.attackTargets(this.sel).length ? '<button class="btn primary" data-act="attack">Attack</button>' : ''}
         ${this.healTargets(this.sel).length ? '<button class="btn primary" data-act="heal">Heal</button>' : ''}
+        ${this.sel.pack.some((_, i) => canUse(this.sel!, i)) ? '<button class="btn" data-act="items">Item</button>' : ''}
         <button class="btn" data-act="wait">Wait</button>
         <button class="btn" data-act="undo">Undo Move</button>`;
     } else if (m === 'attack' || m === 'heal') {
       html = `<button class="btn" data-act="back">Back</button><span class="dim small">Pick a ${m === 'attack' ? 'target' : 'wounded ally'}.</span>`;
+    } else if (m === 'items' || m === 'itemTarget') {
+      html = `<button class="btn" data-act="back">Back</button><span class="dim small">${m === 'items' ? 'Choose an item. Using one ends this unit\'s turn.' : 'Choose where to throw it.'}</span>`;
     } else if (m === 'canto') {
       html = `<button class="btn primary" data-act="stay">Stay</button><span class="dim small">Vanishing Act: move up to 3 more spaces.</span>`;
     } else if (m === 'busy') {
@@ -378,7 +409,7 @@ export class BattleView {
     switch (this.mode) {
       case 'select': this.deselect(); break;
       case 'action': void this.action('undo'); break;
-      case 'attack': case 'heal': void this.action('back'); break;
+      case 'attack': case 'heal': case 'items': case 'itemTarget': void this.action('back'); break;
       case 'idle': this.inspect.clear(); this.renderAll(); break;
     }
   }
@@ -443,6 +474,12 @@ export class BattleView {
         return;
       }
       this.deselect();
+      return;
+    }
+
+    if (this.mode === 'itemTarget' && this.sel && this.itemIndex !== null) {
+      const def = ITEMS[this.sel.pack[this.itemIndex]?.id];
+      if (def && targetTiles(b, this.sel, def).some((t) => t.x === p.x && t.y === p.y)) await this.doItem(this.sel, this.itemIndex, p);
       return;
     }
 
@@ -529,10 +566,28 @@ export class BattleView {
         this.renderPanel();
         return;
       case 'back':
-        this.mode = 'action';
+        this.mode = this.mode === 'itemTarget' ? 'items' : 'action';
         this.pending = null;
+        this.itemIndex = null;
         this.renderAll();
         return;
+      case 'items':
+        this.mode = 'items';
+        this.itemIndex = null;
+        this.renderAll();
+        return;
+      case 'useitem': {
+        const u = this.sel;
+        const i = Number(el?.dataset.i);
+        const def = u && ITEMS[u.pack[i]?.id];
+        if (!u || !def || !canUse(u, i)) return;
+        if (isTargeted(def)) {
+          this.mode = 'itemTarget';
+          this.itemIndex = i;
+          this.renderAll();
+        } else await this.doItem(u, i);
+        return;
+      }
       case 'wait':
         if (this.sel) await this.finishUnit(this.sel);
         return;
@@ -572,6 +627,7 @@ export class BattleView {
     this.origin = null;
     this.pending = null;
     this.weaponChoice = null;
+    this.itemIndex = null;
     this.mode = 'idle';
     this.renderAll();
     if (await this.checkEnd()) return;
@@ -661,7 +717,8 @@ export class BattleView {
       } else this.float(tg, 'MISS', 'miss');
       this.setHpBar(s.target, s.targetHp, tg.stats.hp);
       if (s.heal) { this.float(by, `+${s.heal}`, 'heal'); this.setHpBar(s.by, s.byHp, by.stats.hp); }
-      if (s.saved) this.float(tg, 'TRIFORCE!', 'heal');
+      if (s.saved) this.float(tg, s.saved === 'fairy' ? 'FAIRY!' : 'TRIFORCE!', 'heal');
+      if (s.blocked) this.float(tg, 'BLOCK', 'miss');
       this.addLog(`<b class="${by.team}">${esc(by.name)}</b> ${!s.hit ? 'misses' : s.crit ? 'CRITS' : 'hits'} ${esc(tg.name)}${s.hit ? ` for ${s.dmg}` : ''}.`);
       await sleep(s.crit ? 420 : 320);
       this.els.board.classList.remove('shake');
@@ -674,6 +731,44 @@ export class BattleView {
     this.renderAll();
     await this.levelUps(res.levelUps);
     return res.deaths.includes(def.uid);
+  }
+
+  private async doItem(u: Unit, index: number, at?: Pos) {
+    this.mode = 'busy';
+    this.renderActions();
+    const rng = new RNG(this.b.rngState);
+    const res = useItem(this.b, u, index, rng, at);
+    this.b.rngState = rng.state;
+    if (!res) { this.mode = 'action'; this.renderAll(); return; }
+    this.addLog(`<b class="${u.team}">${esc(u.name)}</b> uses ${esc(res.item.name)}.`);
+    if (at && res.item.kind === 'bomb') {
+      const blast = document.createElement('div');
+      blast.className = 'blast';
+      this.posStyle(blast, at.x - (res.item.radius ?? 0), at.y - (res.item.radius ?? 0));
+      blast.style.setProperty('--s', String(1 + 2 * (res.item.radius ?? 0)));
+      this.els.units.appendChild(blast);
+      this.els.board.classList.add('shake');
+      setTimeout(() => { blast.remove(); this.els.board.classList.remove('shake'); }, 500);
+    }
+    for (const h of res.heals) this.float(u, `+${h.amount}`, 'heal');
+    for (const h of res.hits) {
+      const t = this.unitById(h.uid);
+      if (!t) continue;
+      this.float(t, String(h.dmg), 'dmg');
+      this.setHpBar(h.uid, h.hp, t.stats.hp);
+      if (h.saved) setTimeout(() => this.float(t, 'FAIRY!', 'heal'), 350);
+      if (h.killed) { this.unitEls.get(h.uid)?.classList.add('dying'); this.addLog(`☠ ${esc(t.name)} has fallen.`); }
+    }
+    for (const id of res.stunned) {
+      const t = this.unitById(id);
+      if (t) this.float(t, 'STUN', 'miss');
+    }
+    if (res.stunned.length) this.addLog(`${res.stunned.length} enemy${res.stunned.length > 1 ? 'ies' : 'y'} stunned!`.replace('enemyies', 'enemies'));
+    await sleep(650);
+    this.itemIndex = null;
+    this.renderAll();
+    await this.levelUps(res.levelUps);
+    await this.finishUnit(u);
   }
 
   private async doHeal(healer: Unit, t: Unit, staffId?: string) {
@@ -695,6 +790,7 @@ export class BattleView {
     for (const ev of events) {
       const u = this.b.units.find((x) => x.uid === ev.uid);
       if (!u) continue;
+      if (ev.source === 'stunned') this.float(u, 'STUNNED', 'miss');
       if (ev.damage) this.float(u, `-${ev.damage}`, 'dmg');
       if (ev.heal) setTimeout(() => this.float(u, `+${ev.heal}`, 'heal'), ev.damage ? 400 : 0);
     }

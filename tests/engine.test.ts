@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
-  ACCESSORIES, BOSSES, CLASSES, COMMANDERS, ENEMIES, PERMANENT_ITEMS, RACES, REGION_BOSSES, REGION_IDS, ROSTERS, SKILLS, TEMPLATE_LIST, TEMPLATES, WEAPONS, WORLDS,
+  GEAR, ITEMS, BOSSES, CLASSES, COMMANDERS, ENEMIES, PERMANENT_ITEMS, RACES, REGION_BOSSES, REGION_IDS, ROSTERS, SKILLS, TEMPLATE_LIST, TEMPLATES, WEAPONS, WORLDS,
 } from '../src/data/registry';
 import { planAction } from '../src/engine/ai';
 import { checkResult, createBattle, moveUnit, spawnReinforcements, startPhase } from '../src/engine/battle';
@@ -11,7 +11,9 @@ import { RNG } from '../src/engine/rng';
 import {
   advanceRegion, availableNodes, buy, enterNode, finishBattle, newRun, offerRegions, recruit, recruitOffers, startBattle, type RunWithEvent,
 } from '../src/engine/run';
-import { gainXp, makeEnemy, makeHero } from '../src/engine/units';
+import { effectiveStats, gainXp, makeEnemy, makeHero } from '../src/engine/units';
+import { canUse, useItem } from '../src/engine/items';
+import { migrateRun } from '../src/engine/run';
 import type { Battle, Team, Unit } from '../src/engine/types';
 
 const rng = () => new RNG(1);
@@ -53,7 +55,8 @@ describe('content integrity', () => {
       for (const id of ROSTERS[r]) expect(ENEMIES[id], id).toBeDefined();
       for (const id of REGION_BOSSES[r]) expect(BOSSES[id], id).toBeDefined();
     }
-    for (const b of Object.values(BOSSES)) for (const d of b.drops ?? []) expect(WEAPONS[d] ?? ACCESSORIES[d], d).toBeDefined();
+    for (const b of Object.values(BOSSES)) for (const d of b.drops ?? []) expect(WEAPONS[d] ?? GEAR[d], d).toBeDefined();
+    for (const c of COMMANDERS) for (const id of c.startingItems ?? []) expect(WEAPONS[id] ?? GEAR[id] ?? ITEMS[id], id).toBeDefined();
     expect(COMMANDERS.length).toBe(6);
     for (const c of COMMANDERS) {
       expect(TEMPLATES[c.heroId]).toBeDefined();
@@ -149,7 +152,7 @@ describe('combat', () => {
   it('kills remove the unit and the Triforce of Courage saves once', () => {
     const b = emptyBattle();
     const hero = place(makeHero('link', 'l', 1, rng()), 0, 0);
-    hero.accessory = 'triforceCourage';
+    hero.gear.acc1 = 'triforceCourage';
     hero.hp = 1;
     const brute = place(makeEnemy(ENEMIES.dinolfos, 'hyruleField', 20, 'z', rng()), 1, 0);
     b.units = [hero, brute];
@@ -303,12 +306,110 @@ describe('run flow', () => {
   it('shop purchases apply', () => {
     const run = newRun(4, 'nabooru') as RunWithEvent;
     run.rupees = 5000;
-    run.event = { type: 'shop', weapons: ['gerudoScimitar'], accessories: ['gerudoJewel'], permanents: ['powerGem'], sold: [] };
+    run.event = { type: 'shop', weapons: ['gerudoScimitar'], gear: ['gerudoJewel'], items: ['redPotion'], permanents: ['powerGem'], sold: [] };
     const u = run.roster[0];
     const str = u.stats.str;
     expect(buy(run, 'permanent', 'powerGem', u.uid)).toBe(true);
     expect(u.stats.str).toBe(str + 2);
-    expect(buy(run, 'accessory', 'gerudoJewel', u.uid)).toBe(true);
-    expect(u.accessory).toBe('gerudoJewel');
+    expect(buy(run, 'gear', 'gerudoJewel', u.uid)).toBe(true);
+    expect(Object.values(u.gear)).toContain('gerudoJewel');
+    // Consumables can be bought more than once.
+    expect(buy(run, 'item', 'redPotion', u.uid)).toBe(true);
+    expect(buy(run, 'item', 'redPotion', u.uid)).toBe(true);
+    expect(u.pack.find((p) => p.id === 'redPotion')?.uses).toBe(2);
+  });
+});
+
+describe('equipment and items', () => {
+  it('gear adds stats, and a shield does nothing with a two-handed weapon', () => {
+    const u = makeHero('link', 'l', 1, rng());
+    const def = u.stats.def;
+    u.gear.shield = 'hylianShield';
+    u.gear.body = 'kokiriTunic';
+    expect(effectiveStats(u).def).toBe(def + 4 + 1);
+    u.weapons = ['giantsKnife'];
+    expect(effectiveStats(u).def).toBe(def + 1);
+  });
+
+  it('shields can block, halving damage', () => {
+    const b = emptyBattle();
+    const knight = place(makeHero('link', 'k', 1, rng()), 1, 0);
+    knight.gear.shield = 'ironKnuckleShield';
+    const foe = place(makeEnemy(ENEMIES.dinolfos, 'hyruleField', 10, 'f', rng()), 0, 0);
+    b.units = [knight, foe];
+    expect(forecast(b, foe, foe, knight).attacker.block).toBe(35);
+    let blocked = false;
+    for (let s = 0; s < 40 && !blocked; s++) {
+      knight.hp = knight.stats.hp;
+      blocked = resolveCombat(b, foe, knight, new RNG(s)).strikes.some((x) => x.blocked);
+      if (!b.units.includes(knight)) b.units.push(knight);
+    }
+    expect(blocked).toBe(true);
+  });
+
+  it('a Bottled Fairy revives its holder once', () => {
+    const b = emptyBattle();
+    const hero = place(makeHero('saria', 's', 1, rng()), 0, 0);
+    hero.pack = [{ id: 'fairy', uses: 1 }];
+    hero.hp = 1;
+    const brute = place(makeEnemy(ENEMIES.dinolfos, 'hyruleField', 20, 'z', rng()), 1, 0);
+    b.units = [hero, brute];
+    let saved = false;
+    for (let s = 0; s < 60 && !saved; s++) saved = resolveCombat(b, brute, hero, new RNG(s)).strikes.some((x) => x.saved === 'fairy');
+    expect(saved).toBe(true);
+    expect(hero.pack.length).toBe(0);
+    expect(hero.hp).toBeGreaterThan(1);
+  });
+
+  it('potions heal, bombs blast enemies in the radius, Deku Nuts stun', () => {
+    const b = emptyBattle();
+    const u = place(makeHero('link', 'l', 1, rng()), 0, 0);
+    u.pack = [{ id: 'redPotion', uses: 1 }, { id: 'bomb', uses: 3 }, { id: 'dekuNut', uses: 3 }];
+    const e1 = place(makeEnemy(ENEMIES.stalchild, 'hyruleField', 1, 'a', rng()), 3, 0);
+    const e2 = place(makeEnemy(ENEMIES.stalchild, 'hyruleField', 1, 'b', rng()), 3, 1);
+    const far = place(makeEnemy(ENEMIES.stalchild, 'hyruleField', 1, 'c', rng()), 6, 0);
+    b.units = [u, e1, e2, far];
+    expect(canUse(u, 0)).toBe(false); // full HP
+    u.hp -= 10;
+    useItem(b, u, 0, rng());
+    expect(u.hp).toBe(u.stats.hp);
+    expect(u.pack[0].id).toBe('bomb');
+    const hp1 = e1.hp, hp2 = e2.hp, hpFar = far.hp;
+    useItem(b, u, 0, rng(), { x: 3, y: 0 });
+    expect(e1.hp).toBe(Math.max(0, hp1 - 10));
+    expect(e2.hp).toBe(Math.max(0, hp2 - 10));
+    expect(far.hp).toBe(hpFar);
+    expect(u.pack[0].uses).toBe(2);
+    expect(useItem(b, u, 0, rng(), { x: 6, y: 0 })).toBeNull(); // out of range
+    useItem(b, u, 1, rng(), { x: 2, y: 0 });
+    expect(e1.stunned).toBe(1);
+    expect(e2.stunned ?? 0).toBe(0); // two spaces from the impact: outside the radius
+    // Stunned enemies lose their next phase.
+    startPhase(b, 'enemy');
+    expect(e1.acted).toBe(true);
+    expect(e2.acted).toBe(false);
+  });
+
+  it('commanders start with their gear', () => {
+    const z = newRun(2, 'zelda');
+    const cmd = z.roster[0];
+    expect(cmd.gear.shield).toBe('hylianShield');
+    expect(cmd.gear.body).toBe('soldierArmor');
+    expect(cmd.pack).toEqual([{ id: 'redPotion', uses: 2 }]); // two potions stack in one slot
+    const d = newRun(2, 'darunia');
+    expect(d.roster[0].pack).toEqual([{ id: 'bomb', uses: 6 }]);
+    const r = newRun(2, 'ruto');
+    expect(Object.values(r.roster[0].gear)).toEqual(expect.arrayContaining(['zoraTunic', 'silverScale']));
+  });
+
+  it('migrates old saves with a single accessory', () => {
+    const run = newRun(4, 'link') as RunWithEvent & { roster: (Unit & { accessory?: string })[] };
+    const u = run.roster[0] as Unit & { accessory?: string };
+    (u as unknown as { gear?: unknown }).gear = undefined;
+    (u as unknown as { pack?: unknown }).pack = undefined;
+    u.accessory = 'kokiriCharm';
+    migrateRun(run);
+    expect(u.gear.acc1).toBe('kokiriCharm');
+    expect(u.pack).toEqual([]);
   });
 });

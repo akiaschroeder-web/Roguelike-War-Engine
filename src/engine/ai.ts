@@ -1,7 +1,7 @@
 import { attackWeapons, expectedDamage, forecast, healAmount, healWeapons } from './combat';
 import { computeMoves, distanceField, footDist, keyOf, posOf, unitDist, type Moves } from './grid';
 import { LAVA_DAMAGE_PCT, TERRAIN_BONUS } from './rules';
-import { RACES } from '../data/registry';
+import { isLavaImmune } from './units';
 import type { Battle, Pos, Unit } from './types';
 
 export interface AIPlan {
@@ -17,7 +17,7 @@ export function planAction(b: Battle, unit: Unit): AIPlan {
   const moves = computeMoves(b, unit, unit.ai === 'stationary' ? 0 : undefined);
   const foes = b.units.filter((u) => u.team !== unit.team);
   const friends = b.units.filter((u) => u.team === unit.team && u !== unit);
-  const lavaPenalty = (k: number) => (b.tiles[k] === 'lava' && !RACES[unit.race]?.lavaImmune ? LAVA_DAMAGE_PCT / 4 : 0);
+  const lavaPenalty = (k: number) => (b.tiles[k] === 'lava' && !isLavaImmune(unit) ? LAVA_DAMAGE_PCT / 4 : 0);
 
   // Healing
   let bestHeal: { score: number; dest: number; target: Unit; w: string } | null = null;
@@ -73,7 +73,7 @@ function approach(b: Battle, unit: Unit, moves: Moves, goals: Unit[]): AIPlan {
   let bestScore = Infinity;
   for (const [k, info] of moves.reach) {
     if (field[k] === Infinity) continue;
-    const lava = b.tiles[k] === 'lava' && !RACES[unit.race]?.lavaImmune ? 3 : 0;
+    const lava = b.tiles[k] === 'lava' && !isLavaImmune(unit) ? 3 : 0;
     const score = field[k] + info.cost * 0.01 + lava;
     if (score < bestScore) {
       bestScore = score;

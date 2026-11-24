@@ -1,12 +1,94 @@
-import type { AccessoryDef, PermanentItemDef, Rarity, SkillDef } from '../../engine/types';
+import type { GearDef, GearSlotKind, ItemDef, PermanentItemDef, Rarity, SkillDef } from '../../engine/types';
 
 const PRICE: Record<Rarity, number> = { common: 200, uncommon: 350, rare: 600, epic: 1000, legendary: 1600, mythic: 2600 };
-const a = (id: string, name: string, rarity: Rarity, stats: AccessoryDef['stats'], desc: string, extra: Partial<AccessoryDef> = {}): AccessoryDef =>
-  ({ id, name, rarity, price: PRICE[rarity], stats, desc, ...extra });
+const a = (id: string, name: string, rarity: Rarity, stats: GearDef['stats'], desc: string, extra: Partial<GearDef> = {}): GearDef =>
+  ({ id, name, slot: 'accessory', rarity, price: PRICE[rarity], stats, desc, ...extra });
+const gs = (slot: GearSlotKind) => (id: string, name: string, rarity: Rarity, stats: GearDef['stats'], desc: string, extra: Partial<GearDef> = {}): GearDef =>
+  ({ id, name, slot, rarity, price: PRICE[rarity], stats, desc, ...extra });
+const shield = gs('shield'), head = gs('head'), body = gs('body'), hands = gs('hands'), feet = gs('feet');
 
-// One accessory slot per unit for now. Effects that depend on systems not
-// built yet (elements, MP, status effects) are noted as "coming later".
-export const ACCESSORIES: AccessoryDef[] = [
+// Equipment from the design doc. Effects that depend on systems not built yet
+// (elements, MP, forced movement, fog) are noted as "coming later" in the text.
+export const GEAR: GearDef[] = [
+  // ── Shields (block = chance to halve a hit; no effect with a two-handed weapon) ──
+  shield('dekuShield', 'Deku Shield', 'common', { def: 2, block: 10 }, '+2 DEF, 10% block.'),
+  shield('hylianShield', 'Hylian Shield', 'rare', { def: 4, block: 20 }, '+4 DEF, 20% block.'),
+  shield('mirrorShield', 'Mirror Shield', 'legendary', { def: 3, res: 6, block: 25 }, '+3 DEF, +6 RES, 25% block.'),
+  shield('soldierShield', 'Hyrule Soldier Shield', 'common', { def: 2, block: 15 }, '+2 DEF, 15% block.'),
+  shield('royalGuardShield', 'Royal Guard Shield', 'rare', { def: 5, block: 25 }, '+5 DEF, 25% block.'),
+  shield('stalfosShield', 'Stalfos Shield', 'uncommon', { def: 3, block: 20 }, '+3 DEF, 20% block; critical hits against you deal ×2 instead of ×3.', { effects: ['critGuard'] }),
+  shield('gerudoBuckler', 'Gerudo Buckler', 'rare', { def: 2, block: 25 }, '+2 DEF, 25% block.'),
+  shield('ironKnuckleShield', 'Iron Knuckle Greatshield', 'epic', { def: 7, block: 35, spd: -1 }, '+7 DEF, 35% block, −1 SPD.'),
+  shield('dodongoShield', 'Dodongo Scale Shield', 'rare', { def: 4, block: 20 }, '+4 DEF, 20% block.'),
+  shield('sageShield', 'Sacred Sage Shield', 'legendary', { def: 4, res: 5, block: 30 }, '+4 DEF, +5 RES, 30% block.'),
+  // ── Head (masks included) ──
+  head('soldierHelmet', 'Hyrule Soldier Helmet', 'common', { def: 2 }, '+2 DEF.'),
+  head('royalGuardHelmet', 'Royal Guard Helmet', 'rare', { def: 3, res: 1 }, '+3 DEF, +1 RES.'),
+  head('gerudoHeadband', 'Gerudo Headband', 'uncommon', { skl: 2 }, '+2 SKL.'),
+  head('gerudoVeil', 'Gerudo Veil', 'uncommon', { avoid: 10 }, '+10 Avoid.'),
+  head('sheikahWrap', 'Sheikah Face Wrap', 'rare', { spd: 2 }, '+2 SPD.'),
+  head('zoraCrown', 'Zora Royal Crown', 'epic', { mag: 3, res: 2 }, '+3 MAG, +2 RES.'),
+  head('princessTiara', "Princess's Tiara", 'legendary', { mag: 4, res: 3 }, '+4 MAG, +3 RES.'),
+  head('ironKnuckleHelmet', 'Iron Knuckle Helmet', 'epic', { def: 5, spd: -2 }, '+5 DEF, −2 SPD.'),
+  head('stalfosHelmet', 'Stalfos Helmet', 'rare', { def: 3 }, '+3 DEF.'),
+  head('keatonMask', 'Keaton Mask', 'uncommon', { lck: 2 }, '+2 LCK.'),
+  head('skullMask', 'Skull Mask', 'uncommon', { res: 2 }, '+2 RES.'),
+  head('spookyMask', 'Spooky Mask', 'rare', { avoid: 10 }, '+10 Avoid.'),
+  head('bunnyHood', 'Bunny Hood', 'rare', { mov: 1 }, '+1 MOV.'),
+  head('goronMask', 'Goron Mask', 'uncommon', { def: 2 }, '+2 DEF.'),
+  head('zoraMask', 'Zora Mask', 'uncommon', { res: 2 }, '+2 RES.'),
+  head('gerudoMask', 'Gerudo Mask', 'uncommon', { skl: 2 }, '+2 SKL.'),
+  head('maskOfTruth', 'Mask of Truth', 'legendary', { hit: 15, skl: 2 }, '+15 Hit, +2 SKL. (Revealing hidden things comes with fog of war.)'),
+  head('pgMask', 'Phantom Ganon Mask', 'legendary', { mag: 3, res: 3 }, '+3 MAG, +3 RES.', { unique: true }),
+  head('gohmaHelm', 'Gohma Carapace Helm', 'rare', { def: 3 }, '+3 DEF.', { unique: true }),
+  head('volvagiaCrown', "Volvagia's Crown", 'legendary', { str: 3, mag: 3 }, '+3 STR, +3 MAG; immune to lava.', { effects: ['lavaImmune'], unique: true }),
+  head('bongoEye', "Bongo Bongo's Eye", 'legendary', { hit: 20 }, '+20 Hit.', { unique: true }),
+  // ── Body (tunics and armor) ──
+  body('kokiriTunic', 'Kokiri Tunic', 'common', { def: 1, spd: 1 }, '+1 DEF, +1 SPD.'),
+  body('goronTunic', 'Goron Tunic', 'rare', { def: 3, res: 2 }, '+3 DEF, +2 RES; immune to lava.', { effects: ['lavaImmune'] }),
+  body('zoraTunic', 'Zora Tunic', 'rare', { def: 2, res: 3 }, '+2 DEF, +3 RES; can swim through deep water.', { effects: ['swim'] }),
+  body('soldierArmor', 'Hyrule Soldier Armor', 'common', { def: 3, spd: -1 }, '+3 DEF, −1 SPD.'),
+  body('royalKnightArmor', 'Royal Knight Armor', 'rare', { def: 6, spd: -2 }, '+6 DEF, −2 SPD.'),
+  body('gerudoGarb', 'Gerudo Battle Garb', 'uncommon', { def: 2, spd: 2 }, '+2 DEF, +2 SPD.'),
+  body('gerudoEliteArmor', 'Gerudo Elite Armor', 'epic', { def: 4, skl: 2 }, '+4 DEF, +2 SKL.'),
+  body('sheikahSuit', 'Sheikah Bodysuit', 'rare', { def: 2, spd: 3 }, '+2 DEF, +3 SPD.'),
+  body('zoraGarb', 'Zora Royal Garb', 'rare', { res: 3, mag: 2 }, '+3 RES, +2 MAG.'),
+  body('sageRobes', 'Sage Robes', 'rare', { res: 4, mag: 2 }, '+4 RES, +2 MAG.'),
+  body('royalDress', 'Royal Hylian Dress', 'epic', { res: 5, mag: 3 }, '+5 RES, +3 MAG.'),
+  body('ironKnuckleArmor', 'Iron Knuckle Armor', 'legendary', { def: 10, spd: -4, mov: -1 }, '+10 DEF, −4 SPD, −1 MOV.'),
+  body('stalfosArmor', 'Stalfos Armor', 'rare', { def: 5 }, '+5 DEF.'),
+  body('dodongoArmor', 'Dodongo Hide Armor', 'rare', { def: 4 }, '+4 DEF; immune to lava.', { effects: ['lavaImmune'] }),
+  body('ganondorfArmor', "Ganondorf's Armor", 'legendary', { def: 6, res: 4, str: 2 }, '+6 DEF, +4 RES, +2 STR.', { unique: true }),
+  body('phantomArmor', 'Phantom Armor', 'epic', { def: 3, res: 4 }, '+3 DEF, +4 RES.'),
+  body('twinrovaRobes', 'Twinrova Robes', 'legendary', { res: 6, mag: 4 }, '+6 RES, +4 MAG.', { unique: true }),
+  body('volvagiaArmor', 'Volvagia Scale Armor', 'legendary', { def: 6, res: 3 }, '+6 DEF, +3 RES; immune to lava.', { effects: ['lavaImmune'], unique: true }),
+  body('morphaArmor', 'Morpha Membrane Armor', 'epic', { res: 4 }, '+4 RES; can swim through deep water.', { effects: ['swim'], unique: true }),
+  body('shadowTunic', 'Shadow Tunic', 'legendary', { spd: 4, res: 3 }, '+4 SPD, +3 RES.', { unique: true }),
+  // ── Hands ──
+  hands('goronBracelet', "Goron's Bracelet", 'uncommon', { str: 2, con: 2 }, '+2 STR, +2 CON.'),
+  hands('silverGauntlets', 'Silver Gauntlets', 'epic', { str: 4, con: 4 }, '+4 STR, +4 CON.'),
+  hands('goldenGauntlets', 'Golden Gauntlets', 'legendary', { str: 6, con: 6 }, '+6 STR, +6 CON.'),
+  hands('gerudoGloves', 'Gerudo Gloves', 'uncommon', { skl: 2 }, '+2 SKL.'),
+  hands('sheikahWraps', 'Sheikah Hand Wraps', 'rare', { spd: 2, crit: 5 }, '+2 SPD, +5 Crit.'),
+  hands('archerGloves', 'Royal Archer Gloves', 'rare', { hit: 10 }, '+10 Hit.'),
+  hands('forgingGloves', 'Goron Forging Gloves', 'rare', { con: 3 }, '+3 CON.'),
+  hands('ironKnuckleGauntlets', 'Iron Knuckle Gauntlets', 'epic', { str: 3, def: 3, spd: -1 }, '+3 STR, +3 DEF, −1 SPD.'),
+  hands('phantomGauntlets', 'Phantom Gauntlets', 'epic', { mag: 3, res: 2 }, '+3 MAG, +2 RES.'),
+  hands('bongoGrasp', "Bongo Bongo's Grasp", 'legendary', { str: 5 }, '+5 STR.', { unique: true }),
+  // ── Feet ──
+  feet('kokiriBoots', 'Kokiri Boots', 'common', { avoid: 5 }, '+5 Avoid.'),
+  feet('ironBoots', 'Iron Boots', 'rare', { def: 4, spd: -3, mov: -1 }, '+4 DEF, −3 SPD, −1 MOV.'),
+  feet('hoverBoots', 'Hover Boots', 'epic', { mov: 1, avoid: -10 }, '+1 MOV, −10 Avoid. (Crossing gaps comes with hazard terrain.)'),
+  feet('soldierBoots', 'Hyrule Soldier Boots', 'common', { def: 1 }, '+1 DEF.'),
+  feet('cavalryBoots', 'Royal Cavalry Boots', 'uncommon', { mov: 1 }, '+1 MOV.'),
+  feet('gerudoSandals', 'Gerudo Sandals', 'uncommon', { spd: 1, avoid: 5 }, '+1 SPD, +5 Avoid.'),
+  feet('sheikahBoots', 'Sheikah Boots', 'rare', { mov: 1, avoid: 10 }, '+1 MOV, +10 Avoid.'),
+  feet('goronBoots', 'Goron Stone Boots', 'rare', { def: 3 }, '+3 DEF.'),
+  feet('zoraFins', 'Zora Swimming Fins', 'rare', { spd: 1 }, '+1 SPD; can swim through deep water.', { effects: ['swim'] }),
+  feet('phantomBoots', 'Phantom Boots', 'legendary', { mov: 1, avoid: 10 }, '+1 MOV, +10 Avoid.'),
+  // ── Accessories ──
+  a('silverScale', 'Silver Scale', 'uncommon', {}, 'Can swim through deep water.', { effects: ['swim'] }),
+  a('goldenScale', 'Golden Scale', 'rare', { spd: 1 }, '+1 SPD; can swim through deep water.', { effects: ['swim'] }),
   a('gerudoJewel', 'Gerudo Jewel', 'uncommon', { skl: 2, lck: 1 }, '+2 SKL, +1 LCK.'),
   a('kokiriCharm', 'Kokiri Charm', 'uncommon', { lck: 2 }, '+2 LCK.'),
   a('goronRubyPendant', 'Goron Ruby Pendant', 'rare', { str: 2 }, '+2 STR. (Fire resistance coming with elements.)'),
@@ -47,6 +129,21 @@ export const PERMANENT_ITEMS: PermanentItemDef[] = [
   { id: 'resistanceSeed', name: 'Resistance Seed', price: 400, stat: 'res', amount: 2, desc: 'Permanently +2 RES.' },
   { id: 'luckyRing', name: 'Lucky Ring Fragment', price: 300, stat: 'lck', amount: 2, desc: 'Permanently +2 LCK.' },
   { id: 'goddessPlume', name: 'Goddess Plume', price: 900, stat: 'mov', amount: 1, desc: 'Permanently +1 MOV.' },
+];
+
+// Consumables for the 6-slot pack.
+const it = (id: string, name: string, kind: ItemDef['kind'], rarity: Rarity, price: number, power: number, uses: number, desc: string, extra: Partial<ItemDef> = {}): ItemDef =>
+  ({ id, name, kind, rarity, price, power, uses, desc, ...extra });
+export const ITEMS: ItemDef[] = [
+  it('redPotion', 'Red Potion', 'heal', 'common', 150, 20, 1, 'Restores 20 HP.'),
+  it('lonLonMilk', 'Lon Lon Milk', 'heal', 'common', 160, 12, 2, 'Restores 12 HP. Two servings.'),
+  it('hyruleRation', 'Hyrule Castle Ration', 'heal', 'common', 70, 8, 1, 'Restores 8 HP.'),
+  it('zoraWater', 'Zora Spring Water', 'heal', 'uncommon', 110, 6, 2, 'Restores 6 HP. Two uses.'),
+  it('bluePotion', 'Blue Potion', 'fullHeal', 'rare', 450, 0, 1, 'Fully restores HP.'),
+  it('fairy', 'Bottled Fairy', 'fairy', 'epic', 650, 50, 1, 'Automatic: when the holder would fall, revives them with 50% HP.'),
+  it('bomb', 'Bombs', 'bomb', 'common', 220, 10, 3, 'Thrown 1–3 spaces: 10 damage to every enemy within 1 space of the target.', { minRange: 1, maxRange: 3, radius: 1 }),
+  it('bombchu', 'Bombchu', 'bomb', 'rare', 380, 12, 2, 'Runs 2–6 spaces: 12 damage to every enemy within 1 space of the target.', { minRange: 2, maxRange: 6, radius: 1 }),
+  it('dekuNut', 'Deku Nuts', 'stun', 'common', 160, 0, 3, 'Thrown 1–2 spaces: stuns enemies within 1 space of the target for a turn.', { minRange: 1, maxRange: 2, radius: 1 }),
 ];
 
 export const SKILLS: SkillDef[] = [

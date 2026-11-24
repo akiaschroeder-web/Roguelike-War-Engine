@@ -1,4 +1,5 @@
-import { ACCESSORIES, artFor, CLASSES, PERMANENT_ITEMS, raceOf, skillDef, WEAPONS, worldDef } from '../data/registry';
+import { GEAR, ITEMS, artFor, CLASSES, PERMANENT_ITEMS, raceOf, skillDef, WEAPONS, worldDef } from '../data/registry';
+import { GEAR_SLOTS, PACK_SIZE } from '../engine/types';
 import type { LevelUp } from '../engine/combat';
 import { effectiveStats, XP_PER_LEVEL } from '../engine/units';
 import type { StatKey, Unit, UnitTemplate, WeaponDef } from '../engine/types';
@@ -16,6 +17,26 @@ export const WEAPON_ICONS: Record<string, string> = {
   sword: '🗡', lance: '⟋', axe: '🪓', hammer: '🔨', dagger: '🔪', gauntlet: '✊', bow: '🏹', sling: '•',
   boomerang: '🪃', hookshot: '⛓', magic: '✦', staff: '✚', natural: '✶',
 };
+
+export const SLOT_LABELS: Record<string, string> = {
+  shield: 'Shield', head: 'Head', body: 'Body', hands: 'Hands', feet: 'Feet', accessory: 'Accessory', acc1: 'Accessory', acc2: 'Accessory',
+};
+export const SLOT_ICONS: Record<string, string> = {
+  shield: '🛡', head: '⛑', body: '👕', hands: '🧤', feet: '👢', accessory: '◇', acc1: '◇', acc2: '◇',
+};
+export const ITEM_ICONS: Record<string, string> = { heal: '🧪', fullHeal: '🧪', fairy: '🧚', bomb: '💣', stun: '🌰' };
+
+export function packLine(u: Unit): string {
+  if (!u.pack.length) return '';
+  return `<div class="pack-line small"><span class="dim">Pack ${u.pack.length}/${PACK_SIZE}:</span> ${u.pack
+    .map((p) => `${ITEM_ICONS[ITEMS[p.id]?.kind] ?? ''} ${esc(ITEMS[p.id]?.name ?? p.id)}${p.uses > 1 ? ` ×${p.uses}` : ''}`).join(' · ')}</div>`;
+}
+
+export function gearLine(u: Unit): string {
+  const worn = GEAR_SLOTS.filter((s) => u.gear[s]);
+  if (!worn.length) return '';
+  return `<div class="gear-line small">${worn.map((s) => `<span title="${esc(GEAR[u.gear[s]!]?.desc ?? '')}">${SLOT_ICONS[s]} ${esc(GEAR[u.gear[s]!]?.name ?? '')}</span>`).join(' ')}</div>`;
+}
 
 export const RARITY_COLORS: Record<string, string> = {
   common: '#b8b4c8', uncommon: '#6fd08a', rare: '#5aa8ff', epic: '#c07aff', legendary: '#ffb84a', mythic: '#ff6a8a',
@@ -43,8 +64,8 @@ export function token(u: TokenLike | Unit, size = 40): string {
   const t: TokenLike = 'uid' in u ? { home: u.home, glyph: u.glyph, team: u.team, isBoss: u.isBoss, isCommander: u.isCommander, portraitId: portraitIdOf(u), seed: u.uid } : u;
   const w = worldDef(t.home);
   const art = artFor(t.portraitId, t.seed);
-  const img = art ? `<img src="portraits/${esc(art)}.png" alt="" draggable="false" onerror="this.remove()">` : '';
-  return `<span class="token ${t.team}" style="--wc:${w.color};--sz:${size}px"><b>${esc(t.glyph)}</b>${img}${
+  const img = art ? `<img src="portraits/${esc(art)}.png" alt="" draggable="false" onerror="this.parentNode.classList.remove('has-img');this.remove()">` : '';
+  return `<span class="token ${t.team}${art ? ' has-img' : ''}" style="--wc:${w.color};--sz:${size}px"><b>${esc(t.glyph)}</b>${img}${
     t.isBoss ? '<i class="crown">♛</i>' : t.isCommander ? '<i class="crown star">★</i>' : ''
   }</span>`;
 }
@@ -65,15 +86,17 @@ export function weaponLine(w: WeaponDef, opts: { equipped?: boolean } = {}): str
 export function itemLine(id: string): string {
   const w = WEAPONS[id];
   if (w) return weaponLine(w) + (w.desc ? `<div class="dim small">${esc(w.desc)}</div>` : '');
-  const a = ACCESSORIES[id];
-  if (a) return `<span><b style="color:${RARITY_COLORS[a.rarity]}">◇ ${esc(a.name)}</b> <span class="dim">${esc(a.desc)}</span></span>`;
+  const a = GEAR[id];
+  if (a) return `<span><b style="color:${RARITY_COLORS[a.rarity]}">${SLOT_ICONS[a.slot]} ${esc(a.name)}</b> <span class="badge">${SLOT_LABELS[a.slot]}</span> <span class="dim">${esc(a.desc)}</span></span>`;
+  const it = ITEMS[id];
+  if (it) return `<span><b style="color:${RARITY_COLORS[it.rarity]}">${ITEM_ICONS[it.kind]} ${esc(it.name)}</b> <span class="badge">Item${it.uses > 1 ? ` ×${it.uses}` : ''}</span> <span class="dim">${esc(it.desc)}</span></span>`;
   const p = PERMANENT_ITEMS[id];
   if (p) return `<span><b>❤ ${esc(p.name)}</b> <span class="dim">${esc(p.desc)}</span></span>`;
   return esc(id);
 }
 
 export function itemName(id: string): string {
-  return WEAPONS[id]?.name ?? ACCESSORIES[id]?.name ?? PERMANENT_ITEMS[id]?.name ?? id;
+  return WEAPONS[id]?.name ?? GEAR[id]?.name ?? ITEMS[id]?.name ?? PERMANENT_ITEMS[id]?.name ?? id;
 }
 
 export function statGrid(u: Unit): string {
@@ -115,7 +138,9 @@ export function unitDetails(u: Unit): string {
       ${hpBar(u.hp, u.stats.hp)}
       ${statGrid(u)}
       <div class="ud-weapons">${u.weapons.map((id, i) => (WEAPONS[id] ? `<div>${weaponLine(WEAPONS[id], { equipped: i === 0 })}</div>` : '')).join('')}</div>
-      ${u.accessory ? `<div class="small">${itemLine(u.accessory)}</div>` : ''}
+      ${gearLine(u)}
+      ${packLine(u)}
+      ${u.stunned ? '<div class="small"><span class="badge red">Stunned</span> loses its next action</div>' : ''}
       ${u.skills.map(skillLine).join('')}
     </div>`;
 }

@@ -398,3 +398,19 @@ p { margin: 8px 0; }
 .cine.skipping { opacity: 0; transition: opacity 0.15s; }
 @media (max-width: 700px) { .cine-stage { height: 70vh; border-radius: 0; } .cine-plate { font-size: 11px; padding: 6px; } .cine-name b { font-size: 13px; } .cine-banner { font-size: 18px; } .cine-pop { font-size: 22px; } }
 @media (prefers-reduced-motion: reduce) { .cine-pop { animation-duration: 0.01s; } }
+
+/* ───── Gear & items ───── */
+.gear-line, .pack-line { display: flex; flex-wrap: wrap; gap: 4px 10px; }
+.gear-line span { background: var(--panel2); border-radius: 5px; padding: 1px 6px; }
+.item-list { display: flex; flex-direction: column; gap: 4px; }
+.item-row { display: flex; flex-direction: column; gap: 2px; text-align: left; padding: 6px 8px; border-radius: 8px; border: 1px solid var(--line);
+  background: var(--panel2); color: var(--text); font: inherit; cursor: pointer; }
+.item-row:hover:not([disabled]) { border-color: var(--accent); }
+.item-row.on { border-color: var(--gold); box-shadow: 0 0 0 1px var(--gold); }
+.item-row[disabled] { opacity: 0.45; cursor: not-allowed; }
+.stun-mark { position: absolute; top: -4px; right: -2px; font-style: normal; font-size: calc(var(--t) * 0.35); animation: bob 0.8s infinite; pointer-events: none; }
+.blast { position: absolute; left: 0; top: 0; width: calc(var(--s) * var(--t)); height: calc(var(--s) * var(--t)); pointer-events: none; z-index: 4;
+  transform: translate(calc(var(--x) * var(--t)), calc(var(--y) * var(--t)));
+  background: radial-gradient(circle, #fff6c0 0%, #ffb84a 35%, #ff4a1a88 60%, transparent 72%); animation: boom 0.5s ease-out forwards; }
+@keyframes boom { from { opacity: 1; filter: brightness(1.6); } to { opacity: 0; filter: brightness(1); } }
+.token.has-img > b { visibility: hidden; }
