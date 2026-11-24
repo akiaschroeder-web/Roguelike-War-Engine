@@ -77,6 +77,8 @@ ENTRIES = {
     "morpha": ("morpha.png", (0.72, 0.78, 0.42)),
     "bongoBongo": ("bongoBongo.png", (0.49, 0.48, 0.50)),
     "malon": ("malon.png", (0.50, 0.14, 0.42)),
+    "greatFairy": ("greatFairy.webp", (0.22, 0.44, 0.24)),
+    "phantomGanon": ("phantomGanon.png", (0.63, 0.24, 0.30)),
 }
 
 
