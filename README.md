@@ -9,6 +9,7 @@ npm install
 npm run dev        # http://localhost:5173
 npm run build      # static build in dist/
 npm test           # engine tests + AI-vs-AI battle simulations
+npx vitest run --config vitest.sim.config.ts   # balance probe: auto-plays regions 1-2 for every commander
 ```
 
 ## What's in it

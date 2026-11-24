@@ -26,8 +26,15 @@ export interface BattleSetup {
 
 /** Enemy level for a given depth. Keeps climbing in endless mode. */
 export function enemyLevelFor(depth: number, nodeType: NodeType): number {
-  const base = 1 + Math.floor(depth * 0.8);
-  return base + (nodeType === 'elite' ? 1 : nodeType === 'boss' ? 2 : 0);
+  // Gentle in the first region, then climbing faster and faster forever.
+  const base = 1 + Math.floor(depth * 0.45 + Math.max(0, depth - 14) * 0.2 + Math.max(0, depth - 35) * 0.2);
+  return base + (nodeType === 'elite' || nodeType === 'boss' ? 1 : 0);
+}
+
+/** Extra levels for bosses and leaders, phased in after the first region. */
+function bossBonus(depth: number, nodeType: NodeType): number {
+  const tier = depth < 7 ? 0 : depth < 14 ? 1 : 2;
+  return tier + (nodeType === 'boss' && depth >= 7 ? 1 : 0);
 }
 
 export function createBattle(setup: BattleSetup): Battle {
@@ -47,9 +54,9 @@ export function createBattle(setup: BattleSetup): Battle {
   }
 
   // Enemy count grows slowly with depth so the endless run keeps escalating.
-  let enemyCount = Math.min(16, Math.max(3, Math.round(pc * 0.9 + setup.depth / 3)));
+  let enemyCount = Math.min(16, Math.max(3, Math.round(pc * (setup.depth < 3 ? 0.75 : 0.9) + setup.depth / 3)));
   if (setup.nodeType === 'elite') enemyCount += 1;
-  if (setup.nodeType === 'boss') enemyCount += 2;
+  if (setup.nodeType === 'boss') enemyCount += setup.depth < 7 ? 0 : 2;
   if (objective.type === 'survive') enemyCount = Math.max(3, enemyCount - 2);
   if (setup.trials?.includes('swarm')) enemyCount += 2;
 
@@ -77,6 +84,8 @@ export function createBattle(setup: BattleSetup): Battle {
   const style = setup.nodeType === 'siege' ? { ...world.map, walls: world.map.walls + 6, forts: world.map.forts + 2, water: 'moat' as const } : world.map;
   const map = generateMap(rng, width, height, style, playerSizes, enemySizes, bossSize);
   placeObjective(rng, map, objective, playerSizes, enemySizes);
+  // First-region bosses don't get a healing fort to sit on.
+  if (setup.depth < 7 && map.bossSpawn && objective.type !== 'seize') map.tiles[map.bossSpawn.y * map.width + map.bossSpawn.x] = 'plain';
 
   let uid = 0;
   const units: Unit[] = setup.roster.map((u, i) => ({ ...prepareForBattle(u), x: map.playerSpawns[i].x, y: map.playerSpawns[i].y }));
@@ -100,13 +109,18 @@ export function createBattle(setup: BattleSetup): Battle {
   }
 
   if (leader && map.bossSpawn) {
-    const boss = makeEnemyFromTemplate(leader.id, level + (setup.nodeType === 'boss' ? 3 : 2), `e${uid++}`, rng, { boss: true });
+    const boss = makeEnemyFromTemplate(leader.id, level + 1 + bossBonus(setup.depth, setup.nodeType), `e${uid++}`, rng, { boss: true });
     boss.x = map.bossSpawn.x;
     boss.y = map.bossSpawn.y;
     units.push(boss);
   } else if (bossDef && map.bossSpawn) {
-    const bossLevel = level + (setup.nodeType === 'boss' ? 2 : 1);
+    const bossLevel = level + bossBonus(setup.depth, setup.nodeType);
     const boss = makeEnemy(bossDef, setup.world, bossLevel, `e${uid++}`, rng, { boss: true });
+    if (setup.depth < 7) {
+      // First-region bosses are a little gentler.
+      for (const k of ['str', 'mag', 'skl', 'spd', 'def', 'res'] as const) boss.stats[k] = Math.round(boss.stats[k] * 0.8);
+      boss.stats.hp = boss.hp = Math.round(boss.stats.hp * 0.85);
+    }
     boss.x = map.bossSpawn.x;
     boss.y = map.bossSpawn.y;
     units.push(boss);
@@ -142,6 +156,9 @@ export function createBattle(setup: BattleSetup): Battle {
         : { kind: 'noLoss', rupees: 80 + setup.depth * 10, item: rng.pick(['bluePotion', 'fairy', 'greenPotion', 'bombchu', 'staminaPotion']) }
       : undefined,
   };
+  battle.bossTier = setup.depth < 7 ? 0 : setup.depth < 14 ? 1 : 2;
+  // First-region bosses and leaders hold their ground instead of hunting your Commander.
+  if (battle.bossTier === 0) for (const u of units) if (u.isBoss) u.ai = 'stationary';
   decorateField(battle, rng, setup.nodeType);
   if (setup.trials?.includes('mist')) battle.fog = true;
   battle.rngState = rng.state;

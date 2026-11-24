@@ -194,6 +194,7 @@ function sideStats(
   if (weapon.pierce) defense = Math.floor(defense * (1 - weapon.pierce));
   let dmg = Math.max(0, power - defense);
   if (hasEffect(atk, 'desperation') && atk.hp < atk.stats.hp / 2) dmg = Math.floor(dmg * 1.25);
+  if (atk.isBoss && atk.team === 'enemy' && (b.bossTier ?? 2) < 2) dmg = Math.floor(dmg * (b.bossTier === 0 ? 0.7 : 0.85)); // early bosses hit softer
   if (def.buffs?.some((x) => x.barrier)) dmg = 0; // Nayru's Love
 
   const atkSpd = as.spd + am.spd - Math.max(0, weapon.weight - as.con);

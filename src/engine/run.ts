@@ -163,6 +163,11 @@ export function ownedUniques(run: Run): Set<string> {
   return new Set(ids.filter((id) => WEAPONS[id]?.unique || GEAR[id]?.unique));
 }
 
+function bossPower(b: BossDef): number {
+  const s = b.stats;
+  return s.hp + 2 * (Math.max(s.str, s.mag) + s.def + s.res + s.spd) + 20 * ((b.size ?? 1) - 1);
+}
+
 function bossFor(run: Run, rng: RNG, node: MapNode): BossDef {
   // Not canon: anyone can be a boss, even someone already in your army.
   // After the free-for-all point, bosses come from every region.
@@ -170,7 +175,12 @@ function bossFor(run: Run, rng: RNG, node: MapNode): BossDef {
   if (!pool.length) pool = Object.values(BOSSES);
   if (node.type === 'boss') {
     const fresh = pool.filter((b) => !run.bossesFought.includes(b.id));
-    return fresh[0] ?? rng.pick(pool);
+    const choices = fresh.length ? fresh : pool;
+    // The first regional boss is the region's weakest; tougher ones come later.
+    const graded = [...choices].sort((a, b) => bossPower(a) - bossPower(b));
+    if (run.act === 1) return graded[0];
+    if (run.act === 2) return rng.pick(graded.slice(0, Math.max(1, Math.ceil(graded.length / 2))));
+    return rng.pick(choices);
   }
   return rng.pick(pool);
 }
@@ -415,6 +425,13 @@ export function finishBattle(run: RunWithEvent): BattleSummary {
       return { ...next, moved: false, acted: false, kills: 0, movedDist: 0, survivedOnce: false, statuses: [], buffs: [], mp: next.stats.mp, sta: next.stats.sta, faroreMark: undefined, cooldowns: {} };
     });
   run.fallen.push(...fallen.map((u) => ({ ...u, hp: 0 })));
+  // Victory experience for everyone who fought and lived (bigger for tougher fights).
+  if (won) {
+    const bonus = { boss: 40, elite: 30, siege: 30, ambush: 25 }[b.nodeType as string] ?? 20;
+    withRng(run, (rng) => {
+      for (const u of run.roster) if (survivors.has(u.uid)) gainXp(u, bonus, rng);
+    });
+  }
 
   let rupees = 0;
   const drops: string[] = [];

@@ -517,6 +517,8 @@ export interface Battle {
   /** Items and Rupees found during the battle (handed out afterwards). */
   loot?: string[];
   bonusRupees?: number;
+  /** 0 in the first region (bosses and leaders hit softer), rising later. */
+  bossTier?: number;
   /** Command Points for orders this battle. */
   cp?: number;
   cpMax?: number;
