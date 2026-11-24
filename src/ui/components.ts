@@ -1,4 +1,5 @@
-import { GEAR, ITEMS, artFor, CLASSES, PERMANENT_ITEMS, raceOf, skillDef, WEAPONS, worldDef } from '../data/registry';
+import { ABILITIES, GEAR, ITEMS, artFor, CLASSES, PERMANENT_ITEMS, raceOf, skillDef, WEAPONS, worldDef } from '../data/registry';
+import { STATUS_INFO } from '../engine/status';
 import { GEAR_SLOTS, PACK_SIZE } from '../engine/types';
 import type { LevelUp } from '../engine/combat';
 import { effectiveStats, XP_PER_LEVEL } from '../engine/units';
@@ -30,6 +31,15 @@ export function packLine(u: Unit): string {
   if (!u.pack.length) return '';
   return `<div class="pack-line small"><span class="dim">Pack ${u.pack.length}/${PACK_SIZE}:</span> ${u.pack
     .map((p) => `${ITEM_ICONS[ITEMS[p.id]?.kind] ?? ''} ${esc(ITEMS[p.id]?.name ?? p.id)}${p.uses > 1 ? ` ×${p.uses}` : ''}`).join(' · ')}</div>`;
+}
+
+export const ABILITY_ICONS: Record<string, string> = { spell: '✦', song: '♪', arrow: '➶', personal: '★' };
+
+export function abilitiesLine(u: Unit): string {
+  const defs = u.abilities.map((id) => ABILITIES[id]).filter((d) => d && d.kind !== 'personal');
+  if (!defs.length) return '';
+  return `<div class="pack-line small"><span class="dim">Magic:</span> ${defs
+    .map((d) => `<span title="${esc(d.desc)}">${ABILITY_ICONS[d.kind]} ${esc(d.name)}${d.implemented ? '' : ' <span class="badge soon">coming</span>'}</span>`).join(' · ')}</div>`;
 }
 
 export function gearLine(u: Unit): string {
@@ -140,7 +150,10 @@ export function unitDetails(u: Unit): string {
       <div class="ud-weapons">${u.weapons.map((id, i) => (WEAPONS[id] ? `<div>${weaponLine(WEAPONS[id], { equipped: i === 0 })}</div>` : '')).join('')}</div>
       ${gearLine(u)}
       ${packLine(u)}
-      ${u.stunned ? '<div class="small"><span class="badge red">Stunned</span> loses its next action</div>' : ''}
+      ${u.stats.mp > 0 ? `<div class="ud-row small"><span>MP <b>${u.mp}</b>/${u.stats.mp}</span></div><div class="mpbar"><div class="fill" style="width:${Math.max(0, Math.min(100, (u.mp / u.stats.mp) * 100))}%"></div></div>` : ''}
+      ${u.statuses.map((st) => `<div class="small"><span class="badge red">${STATUS_INFO[st.kind].icon} ${STATUS_INFO[st.kind].name}</span> <span class="dim">${STATUS_INFO[st.kind].desc} (${st.turns} turn${st.turns > 1 ? 's' : ''})</span></div>`).join('')}
+      ${u.buffs.map((bf) => `<div class="small"><span class="badge eq">✦ ${esc(bf.name)}</span> <span class="dim">${bf.barrier ? 'Negates all damage' : Object.entries(bf.stats ?? {}).map(([k, v]) => `+${v} ${STAT_LABELS[k]}`).join(', ')} (${bf.turns} turn${bf.turns > 1 ? 's' : ''})</span></div>`).join('')}
+      ${abilitiesLine(u)}
       ${u.skills.map(skillLine).join('')}
     </div>`;
 }

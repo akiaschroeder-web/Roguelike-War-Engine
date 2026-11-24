@@ -31,6 +31,8 @@ npm test           # engine tests + AI-vs-AI battle simulations
 - **Encounters:** battle, elite, recruitment, merchant, camp, Great Fairy Fountain, treasure and regional boss.
 - **Gear:** shield, head, body, hands, feet and two accessory slots per unit (shields block, and do nothing with a two-handed weapon; Goron/Zora Tunics grant lava immunity and swimming). Includes masks, tunics, the Spiritual Stones, Medallions and Triforce pieces. Bosses drop their gear, and a convoy holds spare equipment.
 - **6-slot pack:** potions, Lon Lon Milk, Bottled Fairies (auto-revive), Bombs, Bombchus and Deku Nuts (stun), usable in battle with the Item action.
+- **Magic:** units have MP (refilled each battle; Green Potions, Magic Jars and Magic Containers). Great Fairy spells (Din's Fire, Farore's Wind, Nayru's Love), songs played on an ocarina or harp (Zelda's Lullaby, Saria's Song, Sun's Song, Song of Storms), and Fire/Ice/Light Arrows chosen in the forecast. Learned from items, sheet music and Great Fairy Fountains.
+- **Status effects and elements:** fire weapons can Burn, ice can Freeze, lightning can Shock, nature can Poison; Deku Nuts and Sun's Song Stun. Song of Storms brings rain (no burning, stronger water and lightning).
 - **Deployment:** army capacity is 12 and deployment capacity is 8.
 
 ## Portraits
@@ -52,9 +54,9 @@ tests/               Vitest suite
 ## Not built yet (from the design doc)
 
 - Mounts and the mount slot; tools (Hookshot traversal, Lens of Truth…) and the remaining consumables (Magic Beans, Fire/Ice Fruit…)
-- STA/MP resources and techniques
-- Songs and Great Fairy spells, elemental arrows
-- Status effects, elements, weather, fog of war, destructible terrain
+- Stamina and physical techniques
+- Warp songs, Epona's Song and Song of Time; curses, confusion and the remaining statuses
+- Fog of war, destructible terrain, fire spreading
 - Supports, mounts and transformations (Twinrova fusion, Ganon)
 - Weapon durability and the Blacksmith
 - Army stats and resources (supplies, materials, command points, morale)

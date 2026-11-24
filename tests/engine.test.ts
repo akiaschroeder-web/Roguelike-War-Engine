@@ -13,6 +13,8 @@ import {
 } from '../src/engine/run';
 import { effectiveStats, gainXp, makeEnemy, makeHero } from '../src/engine/units';
 import { canUse, useItem } from '../src/engine/items';
+import { castAbility } from '../src/engine/abilities';
+import { fountainTeach, useItemOutside } from '../src/engine/run';
 import { migrateRun } from '../src/engine/run';
 import type { Battle, Team, Unit } from '../src/engine/types';
 
@@ -382,12 +384,13 @@ describe('equipment and items', () => {
     expect(u.pack[0].uses).toBe(2);
     expect(useItem(b, u, 0, rng(), { x: 6, y: 0 })).toBeNull(); // out of range
     useItem(b, u, 1, rng(), { x: 2, y: 0 });
-    expect(e1.stunned).toBe(1);
-    expect(e2.stunned ?? 0).toBe(0); // two spaces from the impact: outside the radius
+    expect(e1.statuses).toEqual([{ kind: 'stun', turns: 1 }]);
+    expect(e2.statuses).toEqual([]); // two spaces from the impact: outside the radius
     // Stunned enemies lose their next phase.
     startPhase(b, 'enemy');
     expect(e1.acted).toBe(true);
     expect(e2.acted).toBe(false);
+    expect(e1.statuses).toEqual([]); // wore off
   });
 
   it('commanders start with their gear', () => {
@@ -411,5 +414,100 @@ describe('equipment and items', () => {
     migrateRun(run);
     expect(u.gear.acc1).toBe('kokiriCharm');
     expect(u.pack).toEqual([]);
+  });
+});
+
+describe('magic and status effects', () => {
+  it('statuses tick: burn and poison never kill, freeze and stun cost a turn', () => {
+    const b = emptyBattle();
+    const u = place(makeEnemy(ENEMIES.stalchild, 'hyruleField', 1, 'a', rng()), 0, 0);
+    b.units = [u];
+    u.hp = 2;
+    u.statuses = [{ kind: 'burn', turns: 2 }, { kind: 'poison', turns: 3 }];
+    startPhase(b, 'enemy');
+    expect(u.hp).toBe(1);
+    expect(u.acted).toBe(false);
+    u.statuses = [{ kind: 'freeze', turns: 1 }];
+    startPhase(b, 'enemy');
+    expect(u.acted).toBe(true);
+    expect(u.statuses).toEqual([]);
+  });
+
+  it('elemental weapons can burn, and damage thaws frozen targets', () => {
+    const b = emptyBattle();
+    const witch = place(makeHero('koume', 'k', 5, rng()), 0, 0);
+    const foe = place(makeEnemy(ENEMIES.moblin, 'hyruleField', 15, 'm', rng()), 1, 0);
+    b.units = [witch, foe];
+    let burned = false;
+    for (let s = 0; s < 60 && !burned; s++) {
+      foe.hp = foe.stats.hp; witch.hp = witch.stats.hp; foe.statuses = [];
+      burned = resolveCombat(b, witch, foe, new RNG(s)).strikes.some((x) => x.statuses?.includes('burn'));
+      if (!b.units.includes(foe)) b.units.push(foe);
+      if (!b.units.includes(witch)) b.units.push(witch);
+    }
+    expect(burned).toBe(true);
+    // Frozen units can't counter.
+    foe.statuses = [{ kind: 'freeze', turns: 1 }];
+    expect(forecast(b, witch, witch, foe).defender.canAttack).toBe(false);
+  });
+
+  it("Din's Fire, Nayru's Love, Farore's Wind and songs", () => {
+    const b = emptyBattle();
+    const fairy = place(makeHero('greatFairy', 'g', 5, rng()), 4, 3);
+    expect(fairy.abilities).toEqual(expect.arrayContaining(['dinsFire', 'nayrusLove', 'faroresWind', 'greatFairysBlessing']));
+    const near = place(makeEnemy(ENEMIES.stalchild, 'hyruleField', 1, 'n', rng()), 7, 3);
+    const far = place(makeEnemy(ENEMIES.stalchild, 'hyruleField', 1, 'f', rng()), 11, 3);
+    b.units = [fairy, near, far];
+    const mp = fairy.mp;
+    const hpNear = near.hp, hpFar = far.hp;
+    castAbility(b, fairy, 'dinsFire', rng());
+    expect(near.hp).toBeLessThan(hpNear);
+    expect(far.hp).toBe(hpFar);
+    expect(fairy.mp).toBe(mp - 8);
+    castAbility(b, fairy, 'nayrusLove', rng());
+    expect(forecast(b, near, near, fairy).attacker.dmg).toBe(0);
+    castAbility(b, fairy, 'faroresWind', rng());
+    fairy.x = 0; fairy.y = 0;
+    castAbility(b, fairy, 'faroresWind', rng());
+    expect({ x: fairy.x, y: fairy.y }).toEqual({ x: 4, y: 3 });
+
+    const saria = place(makeHero('saria', 's', 1, rng()), 1, 1);
+    const ally = place(makeHero('link', 'l', 1, rng()), 2, 1);
+    ally.statuses = [{ kind: 'poison', turns: 3 }];
+    b.units = [saria, ally];
+    const spd = effectiveStats(ally).spd;
+    expect(castAbility(b, saria, 'sariasSong', rng())).not.toBeNull();
+    expect(effectiveStats(ally).spd).toBe(spd + 2);
+    // Songs need an instrument.
+    saria.weapons = saria.weapons.filter((w) => w !== 'fairyOcarina');
+    expect(castAbility(b, saria, 'sariasSong', rng())).toBeNull();
+  });
+
+  it('elemental arrows add might and cost MP', () => {
+    const b = emptyBattle();
+    const archer = place(makeHero('hyruleArcher', 'a', 5, rng()), 0, 0);
+    archer.abilities.push('lightArrow');
+    archer.stats.mp = archer.mp = 10;
+    const ghoul = place(makeEnemy(ENEMIES.redead, 'kakarikoGraveyard', 5, 'r', rng()), 2, 0);
+    b.units = [archer, ghoul];
+    const plain = forecast(b, archer, archer, ghoul).attacker.dmg;
+    const lit = forecast(b, archer, archer, ghoul, undefined, 'lightArrow').attacker;
+    expect(lit.effective).toBe(true);
+    expect(lit.dmg).toBeGreaterThan(plain);
+    resolveCombat(b, archer, ghoul, rng(), undefined, 'lightArrow');
+    expect(archer.mp).toBe(6);
+  });
+
+  it('learning from sheet music and the Great Fairy', () => {
+    const run = newRun(8, 'link') as RunWithEvent;
+    const link = run.roster[0];
+    expect(link.weapons).toContain('fairyOcarina');
+    link.pack.push({ id: 'sheetStorms', uses: 1 });
+    expect(useItemOutside(run, link.uid, link.pack.length - 1)).toBe(true);
+    expect(link.abilities).toContain('songOfStorms');
+    run.event = { type: 'fountain' };
+    const id = fountainTeach(run, link.uid);
+    expect(['dinsFire', 'faroresWind', 'nayrusLove']).toContain(id);
+    expect(link.abilities).toContain(id);
   });
 });

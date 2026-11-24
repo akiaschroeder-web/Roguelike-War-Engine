@@ -3,6 +3,7 @@ import { footprint, keyOf, unitDist } from './grid';
 import { generateMap } from './mapgen';
 import { RNG } from './rng';
 import { LAVA_DAMAGE_PCT, TERRAIN_BONUS } from './rules';
+import { tickStatuses } from './status';
 import { hasEffect, isLavaImmune, makeEnemy, prepareForBattle } from './units';
 import type { Battle, BossDef, NodeType, Objective, Team, Unit, WorldId } from './types';
 
@@ -105,18 +106,21 @@ export interface TurnStartEvent {
 export function startPhase(b: Battle, team: Team): TurnStartEvent[] {
   b.phase = team;
   if (team === 'enemy') b.interceptUsed = false;
+  if (team === 'player' && b.weather) {
+    b.weather.turns--;
+    if (b.weather.turns <= 0) b.weather = undefined;
+  }
   const events: TurnStartEvent[] = [];
   const mine = b.units.filter((u) => u.team === team);
   for (const u of mine) {
     u.moved = false;
     u.acted = false;
     u.movedDist = 0;
-    if (u.stunned) {
-      // Stunned units lose this phase's action.
-      u.stunned--;
-      u.moved = u.acted = true;
-      events.push({ uid: u.uid, heal: 0, damage: 0, source: 'stunned' });
-    }
+    // Statuses: damage over time, lost turns (freeze/stun), countdowns.
+    const tick = tickStatuses(u);
+    if (tick.lostTurn) u.moved = u.acted = true;
+    if (tick.damage || tick.lostTurn) events.push({ uid: u.uid, heal: 0, damage: tick.damage, source: tick.lostTurn ?? 'status' });
+    if (hasEffect(u, 'mpRegen')) u.mp = Math.min(u.stats.mp, u.mp + 2);
     const max = u.stats.hp;
     const tiles = footprint(u.x, u.y, u.size).map((p) => b.tiles[keyOf(b, p.x, p.y)]);
     const anchor = tiles[0];

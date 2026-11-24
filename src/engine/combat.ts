@@ -1,9 +1,10 @@
-import { CLASSES, ITEMS, WEAPONS } from '../data/registry';
+import { ABILITIES, CLASSES, ITEMS, WEAPONS } from '../data/registry';
+import { clearStatus, hasStatus, rollElement, statusMods, weatherMight } from './status';
 import { keyOf, terrainAt, unitDist } from './grid';
 import type { RNG } from './rng';
 import { isMagical, TERRAIN_BONUS, TRIANGLE } from './rules';
 import { effectiveStats, gainXp, gearBonus, hasEffect, unitTags } from './units';
-import type { Battle, Pos, StatKey, Unit, WeaponDef } from './types';
+import type { AbilityDef, Battle, Element, Pos, StatKey, StatusKind, Unit, WeaponDef } from './types';
 
 export interface SideForecast {
   uid: string;
@@ -17,6 +18,9 @@ export interface SideForecast {
   effective: boolean;
   /** Chance the target's shield halves each hit. */
   block: number;
+  /** Elemental arrow used (initiating bow attacks only). */
+  arrowId: string | null;
+  element?: Element;
 }
 
 export interface Forecast {
@@ -37,6 +41,10 @@ export interface Strike {
   killed: boolean;
   blocked?: boolean;
   saved?: 'triforce' | 'fairy';
+  /** Statuses inflicted by this hit. */
+  statuses?: StatusKind[];
+  /** The target's ice shattered. */
+  thawed?: boolean;
 }
 
 export interface LevelUp {
@@ -70,7 +78,7 @@ export function weaponOf(u: Unit): WeaponDef {
 }
 
 export function canWield(u: Unit, w: WeaponDef): boolean {
-  return w.type === 'natural' || !!CLASSES[u.classId]?.weapons.includes(w.type);
+  return w.type === 'natural' || w.type === 'instrument' || !!CLASSES[u.classId]?.weapons.includes(w.type);
 }
 
 export function canReach(w: WeaponDef, d: number): boolean {
@@ -79,7 +87,7 @@ export function canReach(w: WeaponDef, d: number): boolean {
 
 /** Offensive weapons the unit can use at distance d (equipped first). */
 export function attackWeapons(u: Unit, d: number): WeaponDef[] {
-  return u.weapons.map((id) => WEAPONS[id]).filter((w) => w && w.type !== 'staff' && canWield(u, w) && canReach(w, d));
+  return u.weapons.map((id) => WEAPONS[id]).filter((w) => w && w.type !== 'staff' && w.type !== 'instrument' && canWield(u, w) && canReach(w, d));
 }
 
 export function healWeapons(u: Unit, d: number): WeaponDef[] {
@@ -88,7 +96,7 @@ export function healWeapons(u: Unit, d: number): WeaponDef[] {
 
 /** Widest offensive range (for threat displays and AI). */
 export function maxAttackRange(u: Unit): { min: number; max: number } | null {
-  const ws = u.weapons.map((id) => WEAPONS[id]).filter((w) => w && w.type !== 'staff' && canWield(u, w));
+  const ws = u.weapons.map((id) => WEAPONS[id]).filter((w) => w && w.type !== 'staff' && w.type !== 'instrument' && canWield(u, w));
   if (!ws.length) return null;
   return { min: Math.min(...ws.map((w) => w.minRange)), max: Math.max(...ws.map((w) => w.maxRange)) };
 }
@@ -141,10 +149,14 @@ export function situational(b: Battle, u: Unit, pos: Pos, foe: Unit, initiating:
   return m;
 }
 
-function sideStats(b: Battle, atk: Unit, atkPos: Pos, def: Unit, defPos: Pos, initiating: boolean, weapon: WeaponDef | undefined, foeWeapon: WeaponDef | undefined): SideForecast {
+function sideStats(
+  b: Battle, atk: Unit, atkPos: Pos, def: Unit, defPos: Pos, initiating: boolean,
+  weapon: WeaponDef | undefined, foeWeapon: WeaponDef | undefined, arrow?: AbilityDef,
+): SideForecast {
   const d = unitDist({ ...atk, ...atkPos }, { ...def, ...defPos });
-  if (!weapon || weapon.type === 'staff' || !canReach(weapon, d)) {
-    return { uid: atk.uid, weaponId: weapon?.id ?? null, canAttack: false, dmg: 0, hit: 0, crit: 0, attacks: 0, triangle: 0, effective: false, block: 0 };
+  const helpless = !initiating && (hasStatus(atk, 'freeze') || hasStatus(atk, 'stun'));
+  if (!weapon || weapon.type === 'staff' || weapon.type === 'instrument' || !canReach(weapon, d) || helpless) {
+    return { uid: atk.uid, weaponId: weapon?.id ?? null, canAttack: false, dmg: 0, hit: 0, crit: 0, attacks: 0, triangle: 0, effective: false, block: 0, arrowId: null };
   }
   const as = effectiveStats(atk);
   const ds = effectiveStats(def);
@@ -156,26 +168,30 @@ function sideStats(b: Battle, atk: Unit, atkPos: Pos, def: Unit, defPos: Pos, in
   const tri = triangleOf(weapon, foeWeapon);
   const magical = isMagical(weapon.type);
   const tags = unitTags(def);
-  const effective = !!weapon.effective?.some((t) => tags.includes(t));
+  const effective = !![...(weapon.effective ?? []), ...(arrow?.effective ?? [])].some((t) => tags.includes(t));
+  const element = arrow?.element ?? weapon.element;
+  const sa = statusMods(atk);
+  const sd = statusMods(def);
 
-  let might = weapon.might * (effective ? 2 : 1);
+  let might = (weapon.might + (arrow?.might ?? 0)) * (effective ? 2 : 1) + weatherMight(b, element);
   if (atk.skills.includes('heavyForging') && weapon.twoHanded) might += 2;
   const power = (magical ? as.mag + am.mag : as.str + am.str) + might + tri + am.dmg;
-  let defense = magical ? ds.res + dm.res : ds.def + dm.def + terrain.def;
+  let defense = magical ? ds.res + dm.res : Math.max(0, ds.def + dm.def + sd.def) + terrain.def;
   if (weapon.pierce) defense = Math.floor(defense * (1 - weapon.pierce));
   let dmg = Math.max(0, power - defense);
   if (hasEffect(atk, 'desperation') && atk.hp < atk.stats.hp / 2) dmg = Math.floor(dmg * 1.25);
+  if (def.buffs?.some((x) => x.barrier)) dmg = 0; // Nayru's Love
 
   const atkSpd = as.spd + am.spd - Math.max(0, weapon.weight - as.con);
   const defW = foeWeapon ?? weapon;
   const defSpd = ds.spd + dm.spd - Math.max(0, (foeWeapon ? defW.weight : 0) - ds.con);
-  const hit = clamp(weapon.hit + (as.skl + am.skl) * 2 + Math.floor(as.lck / 2) + tri * 15 + am.hit + ab.hit
+  const hit = clamp(weapon.hit + (as.skl + am.skl) * 2 + Math.floor(as.lck / 2) + tri * 15 + am.hit + ab.hit + sa.hit
     - (Math.max(0, defSpd) * 2 + ds.lck + terrain.avoid + dm.avoid + db.avoid));
   const crit = clamp(weapon.crit + Math.floor((as.skl + am.skl) / 2) + am.crit + ab.crit - ds.lck);
 
   let attacks = atkSpd - defSpd >= 4 ? 2 : 1;
   if (weapon.brave && initiating) attacks *= 2;
-  return { uid: atk.uid, weaponId: weapon.id, canAttack: true, dmg, hit, crit, attacks, triangle: tri, effective, block: Math.min(80, db.block) };
+  return { uid: atk.uid, weaponId: weapon.id, canAttack: true, dmg, hit, crit, attacks, triangle: tri, effective, block: Math.min(80, db.block), arrowId: arrow?.id ?? null, element };
 }
 
 /** The defender counters with the first carried weapon that reaches. */
@@ -184,16 +200,22 @@ export function counterWeapon(def: Unit, d: number): WeaponDef | undefined {
 }
 
 /** Preview `attacker` (standing at `from`, using `weaponId`) attacking `defender`. */
-export function forecast(b: Battle, attacker: Unit, from: Pos, defender: Unit, weaponId?: string): Forecast {
+export function forecast(b: Battle, attacker: Unit, from: Pos, defender: Unit, weaponId?: string, arrowId?: string): Forecast {
   const defPos = { x: defender.x, y: defender.y };
   const d = unitDist(attacker, defender, from);
   const aw = (weaponId ? weaponDef(weaponId) : undefined) ?? attackWeapons(attacker, d)[0];
   const dw = counterWeapon(defender, d);
+  const arrow = arrowId && aw?.type === 'bow' && arrowOptions(attacker).some((a) => a.id === arrowId) ? ABILITIES[arrowId] : undefined;
   return {
-    attacker: sideStats(b, attacker, from, defender, defPos, true, aw, dw),
+    attacker: sideStats(b, attacker, from, defender, defPos, true, aw, dw, arrow),
     defender: sideStats(b, defender, defPos, attacker, from, false, dw, aw),
     distance: d,
   };
+}
+
+/** Elemental arrows this unit knows and can afford right now. */
+export function arrowOptions(u: Unit): AbilityDef[] {
+  return u.abilities.map((id) => ABILITIES[id]).filter((a) => a?.kind === 'arrow' && a.implemented && u.mp >= a.mp);
 }
 
 export function expectedDamage(s: SideForecast): number {
@@ -214,10 +236,11 @@ function killUnit(b: Battle, u: Unit) {
 }
 
 /** Resolve a full exchange. Mutates the battle (HP, deaths, XP, level-ups). */
-export function resolveCombat(b: Battle, attacker: Unit, defender: Unit, rng: RNG, weaponId?: string): CombatResult {
-  const fc = forecast(b, attacker, attacker, defender, weaponId);
-  // Using a weapon equips it.
+export function resolveCombat(b: Battle, attacker: Unit, defender: Unit, rng: RNG, weaponId?: string, arrowId?: string): CombatResult {
+  const fc = forecast(b, attacker, attacker, defender, weaponId, arrowId);
+  // Using a weapon equips it; elemental arrows cost MP once per combat.
   if (fc.attacker.weaponId) equip(attacker, fc.attacker.weaponId);
+  if (fc.attacker.arrowId) attacker.mp -= ABILITIES[fc.attacker.arrowId].mp;
 
   type Swing = [Unit, Unit, SideForecast];
   const A: Swing = [attacker, defender, fc.attacker];
@@ -258,7 +281,13 @@ export function resolveCombat(b: Battle, attacker: Unit, defender: Unit, rng: RN
       by.hp += heal;
     }
     const killed = target.hp <= 0;
-    strikes.push({ by: by.uid, target: target.uid, hit, crit, dmg, heal, targetHp: target.hp, byHp: by.hp, killed, blocked, saved });
+    let thawed = false;
+    let statuses: StatusKind[] | undefined;
+    if (!killed && dmg > 0) {
+      if (hasStatus(target, 'freeze')) { clearStatus(target, 'freeze'); thawed = true; }
+      statuses = rollElement(b, by, target, side.element, rng);
+    }
+    strikes.push({ by: by.uid, target: target.uid, hit, crit, dmg, heal, targetHp: target.hp, byHp: by.hp, killed, blocked, saved, statuses, thawed });
     if (killed) {
       by.kills++;
       deaths.push(target.uid);

@@ -414,3 +414,11 @@ p { margin: 8px 0; }
   background: radial-gradient(circle, #fff6c0 0%, #ffb84a 35%, #ff4a1a88 60%, transparent 72%); animation: boom 0.5s ease-out forwards; }
 @keyframes boom { from { opacity: 1; filter: brightness(1.6); } to { opacity: 0; filter: brightness(1); } }
 .token.has-img > b { visibility: hidden; }
+.mpbar { height: 4px; background: #0008; border-radius: 3px; overflow: hidden; margin: 0 0 4px; }
+.mpbar .fill { height: 100%; background: linear-gradient(90deg, #3a8aff, #6ad0ff); }
+.weather { color: #8ac8ff; }
+.cine-status { position: absolute; top: 44%; left: 50%; transform: translateX(-50%); font: 16px 'Press Start 2P', monospace; color: #ffcf6a; text-shadow: 0 2px 0 #000; animation: cinePop 1s ease-out forwards; pointer-events: none; z-index: 3; }
+.unit.barrier .u-body { filter: drop-shadow(0 0 6px #7ad8ff) drop-shadow(0 0 3px #b0f0ff); }
+.blast.fire { background: radial-gradient(circle, #fff1b0 0%, #ff8a2a 40%, #ff3a1a88 62%, transparent 72%); }
+.phase-banner.song { color: #8affc8; }
+.tile.area::after { background: #9ad8ff40; box-shadow: inset 0 0 0 1px #d0f0ffaa; }

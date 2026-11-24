@@ -6,7 +6,7 @@ import type { CommanderDef } from '../../engine/types';
 export const COMMANDERS: (CommanderDef & { pendingGear: string[] })[] = [
   { heroId: 'link', armyName: "Hero's Expedition", units: ['navi', 'malon', 'hyruleSoldier'], bonus: 'extraTreasure',
     bonusText: 'Treasure encounters offer one additional reward choice.',
-    startingItems: ['dekuShield', 'kokiriTunic'], pendingGear: ['Fairy Ocarina'] },
+    startingItems: ['dekuShield', 'kokiriTunic', 'fairyOcarina'], pendingGear: [] },
   { heroId: 'zelda', armyName: 'Royal Resistance', units: ['impa', 'hyruleKnight', 'hyruleArcher'], bonus: 'healing',
     bonusText: 'Healing abilities restore 20% additional HP.',
     startingItems: ['hylianShield', 'soldierArmor', 'redPotion', 'redPotion'], pendingGear: [] },

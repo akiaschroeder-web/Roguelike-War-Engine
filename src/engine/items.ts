@@ -4,6 +4,7 @@ import { ITEMS } from '../data/registry';
 import { useFairy, type LevelUp } from './combat';
 import { footDist, inBounds, tilesInRange } from './grid';
 import type { RNG } from './rng';
+import { addStatus } from './status';
 import { gainXp } from './units';
 import type { Battle, ItemDef, Pos, Unit } from './types';
 
@@ -12,6 +13,7 @@ export interface ItemResult {
   heals: { uid: string; amount: number }[];
   hits: { uid: string; dmg: number; hp: number; killed: boolean; saved?: 'fairy' }[];
   stunned: string[];
+  mp?: number;
   levelUps: LevelUp[];
 }
 
@@ -19,7 +21,10 @@ export interface ItemResult {
 export function canUse(u: Unit, index: number): boolean {
   const def = ITEMS[u.pack[index]?.id];
   if (!def || def.kind === 'fairy') return false;
-  if (def.kind === 'heal' || def.kind === 'fullHeal') return u.hp < u.stats.hp;
+  if (def.kind === 'heal') return u.hp < u.stats.hp;
+  if (def.kind === 'fullHeal') return u.hp < u.stats.hp || u.mp < u.stats.mp;
+  if (def.kind === 'mp') return u.mp < u.stats.mp;
+  if (def.kind === 'learn') return false; // learned from the unit screen, outside battle
   return true;
 }
 
@@ -57,7 +62,13 @@ export function useItem(b: Battle, u: Unit, index: number, rng: RNG, at?: Pos): 
   if (def.kind === 'heal' || def.kind === 'fullHeal') {
     const amount = Math.min(def.kind === 'fullHeal' ? u.stats.hp : def.power, u.stats.hp - u.hp);
     u.hp += amount;
+    if (def.kind === 'fullHeal') u.mp = u.stats.mp;
     res.heals.push({ uid: u.uid, amount });
+    xp = 5;
+  } else if (def.kind === 'mp') {
+    const amount = Math.min(def.power, u.stats.mp - u.mp);
+    u.mp += amount;
+    res.mp = amount;
     xp = 5;
   } else if (def.kind === 'bomb') {
     for (const e of blastVictims(b, u, def, at!)) {
@@ -77,7 +88,7 @@ export function useItem(b: Battle, u: Unit, index: number, rng: RNG, at?: Pos): 
     }
   } else if (def.kind === 'stun') {
     for (const e of blastVictims(b, u, def, at!)) {
-      e.stunned = Math.max(e.stunned ?? 0, 1);
+      addStatus(e, 'stun', 1);
       res.stunned.push(e.uid);
       xp += 6;
     }

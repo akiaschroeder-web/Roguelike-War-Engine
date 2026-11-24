@@ -1,5 +1,6 @@
 import { ART_ALIASES, ART_IDS, ART_VARIANTS } from './art';
 import { CLASSES } from './classes';
+import { ABILITIES } from './magic';
 import { COMMANDERS } from './commanders';
 import { BOSSES, ENEMIES, REGION_BOSSES, ROSTERS } from './enemies';
 import { GEAR, ITEMS, PERMANENT_ITEMS, SKILLS } from './items';
@@ -17,6 +18,7 @@ export const OCARINA: ContentPack = {
   weapons: WEAPONS,
   gear: GEAR,
   items: ITEMS,
+  abilities: ABILITIES,
   permanentItems: PERMANENT_ITEMS,
   skills: SKILLS,
   regions: REGIONS,

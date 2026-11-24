@@ -1,10 +1,10 @@
-import { GEAR, ITEMS, CLASSES, COMMANDERS, PERMANENT_ITEMS, REGION_IDS, TEMPLATE_LIST, TEMPLATES, WEAPONS, worldDef } from '../data/registry';
+import { ABILITIES, GEAR, ITEMS, CLASSES, COMMANDERS, PERMANENT_ITEMS, REGION_IDS, TEMPLATE_LIST, TEMPLATES, WEAPONS, worldDef } from '../data/registry';
 import { canWield, type LevelUp } from '../engine/combat';
 import { randomSeed } from '../engine/rng';
 import {
   ARMY_CAPACITY, DEPLOY_CAPACITY, advanceRegion, availableNodes, buy, campDrill, campRest, campTrain, currentNode, depthOf, enterNode,
   equipFromConvoy, finishBattle, fountainBless, fountainHeal, fountainRevive, isRegionComplete, loadMeta, loadRun, newRun, offerRegions,
-  recruit, recruitLevel, saveMeta, saveRun, canTake, priceOf, stashGear, stashItem, stashWeapon, useItemOutside, type ItemKindTag, startBattle, takeTreasure, weaponPrice,
+  recruit, recruitLevel, saveMeta, saveRun, canTake, canUseOutside, fountainTeach, unlearnedFairySpells, priceOf, stashGear, stashItem, stashWeapon, useItemOutside, type ItemKindTag, startBattle, takeTreasure, weaponPrice,
   type Meta, type Reward, type RunEvent, type RunWithEvent,
 } from '../engine/run';
 import { equip } from '../engine/combat';
@@ -246,9 +246,10 @@ export class App {
       <h3>Pack <span class="dim small">${u.pack.length}/${PACK_SIZE}</span></h3>
       <div class="equip-list">${u.pack.length ? u.pack.map((p, i) => {
         const def = ITEMS[p.id];
-        const healable = def && (def.kind === 'heal' || def.kind === 'fullHeal') && u.hp < u.stats.hp;
+        const usable = canUseOutside(u, i);
+        const label = def?.kind === 'learn' ? 'Learn' : 'Use';
         return `<div class="equip-row"><span>${esc(def?.name ?? p.id)}${p.uses > 1 ? ` ×${p.uses}` : ''} <span class="dim small">${esc(def?.desc ?? '')}</span></span>
-          <span>${healable ? `<button class="btn small" data-k="use" data-i="${i}">Use</button>` : ''}<button class="btn small" data-k="unpack" data-i="${i}">To convoy</button></span></div>`;
+          <span>${usable ? `<button class="btn small" data-k="use" data-i="${i}">${label}</button>` : ''}<button class="btn small" data-k="unpack" data-i="${i}">To convoy</button></span></div>`;
       }).join('') : '<div class="dim small">Empty. Buy potions, bombs and Deku Nuts from merchants.</div>'}</div>
       ${t ? `<p class="bio">${esc(t.bio)}</p>` : ''}
       <button class="btn primary" data-close>Close</button>`, { dismissable: true });
@@ -609,6 +610,7 @@ export class App {
           <div class="choice-grid">
             <button class="choice" data-nav="heal"><b>❀ Healing</b><span>Fully restore the HP of your entire army.</span></button>
             <button class="choice" data-nav="bless"><b>✧ Blessing</b><span>One unit receives a random permanent enhancement.</span></button>
+            <button class="choice" data-nav="teach"><b>✦ Magic</b><span>The Great Fairy teaches a unit one of her spells: Din's Fire, Farore's Wind or Nayru's Love.</span></button>
             <button class="choice" data-nav="revive" ${canRevive ? '' : 'disabled'}><b>☥ Revival</b><span>${run.fallen.length ? 'Bring one fallen ally back at full HP.' : 'No fallen allies.'}</span></button>
           </div>
         </div>
@@ -623,6 +625,14 @@ export class App {
         const id = fountainBless(run, uid);
         this.save();
         const m = modal(`<div class="center-text"><h2>Blessing received</h2><p>${id ? itemLine(id) : ''}</p><button class="btn primary" data-ok>Thank you</button></div>`);
+        m.el.addEventListener('click', (e) => { if ((e.target as HTMLElement).closest('[data-ok]')) { m.close(); this.finishEvent(); } });
+      },
+      teach: async () => {
+        const uid = await this.unitPicker('Who receives the Great Fairy\'s magic?', (u) => unlearnedFairySpells(u).length > 0, (u) => `MP ${u.stats.mp} · ${unlearnedFairySpells(u).length} spell(s) left to learn`);
+        if (!uid) return;
+        const id = fountainTeach(run, uid);
+        this.save();
+        const m = modal(`<div class="center-text"><h2>A new spell!</h2><p><b>${esc(id ? ABILITIES[id].name : '')}</b></p><p class="dim">${esc(id ? ABILITIES[id].desc : '')}</p><button class="btn primary" data-ok>Thank you</button></div>`);
         m.el.addEventListener('click', (e) => { if ((e.target as HTMLElement).closest('[data-ok]')) { m.close(); this.finishEvent(); } });
       },
       revive: async () => {

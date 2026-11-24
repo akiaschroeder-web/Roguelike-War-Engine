@@ -6,7 +6,43 @@ export type WorldId = string;
 export type WeaponType =
   | 'sword' | 'lance' | 'axe' | 'hammer' | 'dagger' | 'gauntlet'
   | 'bow' | 'sling' | 'boomerang' | 'hookshot'
-  | 'magic' | 'staff' | 'natural';
+  | 'magic' | 'staff' | 'natural' | 'instrument';
+
+export type Element = 'fire' | 'ice' | 'lightning' | 'water' | 'light' | 'dark' | 'nature';
+
+export type StatusKind = 'burn' | 'freeze' | 'shock' | 'poison' | 'stun';
+
+export interface Status {
+  kind: StatusKind;
+  turns: number;
+}
+
+/** A timed bonus (songs, spells). `barrier` negates all damage while active. */
+export interface Buff {
+  id: string;
+  name: string;
+  turns: number;
+  stats?: Partial<Record<StatKey | 'mov', number>>;
+  barrier?: boolean;
+}
+
+export type AbilityKind = 'spell' | 'song' | 'arrow' | 'personal';
+
+/** Spells, songs, elemental arrows and once-per-battle personal abilities. */
+export interface AbilityDef {
+  id: string;
+  name: string;
+  kind: AbilityKind;
+  mp: number;
+  desc: string;
+  /** Arrows: added might, element, and effectiveness. */
+  might?: number;
+  element?: Element;
+  effective?: string[];
+  /** Personal abilities: usable once per battle. */
+  oncePerBattle?: boolean;
+  implemented: boolean;
+}
 
 /**
  * foot/armor/cavalry/flying are standard; `fixed` never moves (e.g. the Great
@@ -75,6 +111,10 @@ export interface WeaponDef {
   /** Strikes twice when initiating combat. */
   brave?: boolean;
   twoHanded?: boolean;
+  /** Element: may inflict a status (fire burns, ice freezes, lightning shocks, nature poisons). */
+  element?: Element;
+  /** Instruments: MP discount on songs. */
+  songDiscount?: number;
   /** Healing power multiplier for staves (e.g. 1.5 = +50%). */
   healBonus?: number;
   desc?: string;
@@ -114,9 +154,10 @@ export type GearEffect =
   | 'lightAura' // adjacent allies recover 3 HP per turn
   | 'lavaImmune' // Goron Tunic: no lava damage
   | 'swim' // Zora Tunic / scales: can enter deep water
-  | 'critGuard'; // Stalfos Shield: crits deal ×2 instead of ×3
+  | 'critGuard' // Stalfos Shield: crits deal ×2 instead of ×3
+  | 'mpRegen'; // +2 MP at the start of each turn
 
-export type ItemKind = 'heal' | 'fullHeal' | 'fairy' | 'bomb' | 'stun';
+export type ItemKind = 'heal' | 'fullHeal' | 'mp' | 'fairy' | 'bomb' | 'stun' | 'learn';
 
 /** Consumables carried in a unit's 6-slot pack. */
 export interface ItemDef {
@@ -133,6 +174,8 @@ export interface ItemDef {
   minRange?: number;
   maxRange?: number;
   radius?: number;
+  /** 'learn' items teach this ability when used. */
+  teaches?: string;
   desc: string;
 }
 
@@ -186,6 +229,8 @@ export interface UnitTemplate {
   growths?: Partial<Growths>;
   weapons: string[];
   skill?: SkillId;
+  /** Spells/songs/arrows known from the start. */
+  abilities?: string[];
   glyph: string;
   bio: string;
   /** Home region (colours the token). */
@@ -266,8 +311,16 @@ export interface Unit {
   weapons: string[];
   gear: Partial<Record<GearSlot, string>>;
   pack: PackItem[];
-  /** Turns left stunned (skips its action). */
-  stunned?: number;
+  /** Current MP (max is stats.mp). Refills at the start of each battle. */
+  mp: number;
+  statuses: Status[];
+  buffs: Buff[];
+  /** Known spells, songs and elemental arrows. */
+  abilities: string[];
+  /** Once-per-battle abilities already used. */
+  usedAbilities?: string[];
+  /** Farore's Wind return point. */
+  faroreMark?: Pos;
   skills: SkillId[];
   glyph: string;
   /** Enemy archetype id (used for shared art). */
@@ -314,6 +367,8 @@ export interface Battle {
   uidCounter: number;
   /** Impa's Royal Protector: used this enemy phase. */
   interceptUsed: boolean;
+  /** Rain from Song of Storms. */
+  weather?: { kind: 'rain'; turns: number };
   /** Army-wide healing multiplier from the commander bonus. */
   healMult: number;
   /** Loot dropped by bosses this battle. */

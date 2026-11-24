@@ -1,4 +1,4 @@
-import { CLASSES, GEAR, ITEMS, RACES, TEMPLATES, WEAPONS } from '../data/registry';
+import { ABILITIES, CLASSES, GEAR, ITEMS, RACES, TEMPLATES, WEAPONS } from '../data/registry';
 import type { RNG } from './rng';
 import { MAX_LEVEL, XP_PER_LEVEL } from './rules';
 import { GEAR_SLOTS, PACK_SIZE } from './types';
@@ -15,8 +15,11 @@ export function growthsFor(classId: string, race: string, overrides?: Partial<Gr
   return out;
 }
 
-function blank(p: Omit<Unit, 'level' | 'xp' | 'hp' | 'x' | 'y' | 'moved' | 'acted' | 'kills' | 'movedDist' | 'gear' | 'pack'> & Partial<Unit>): Unit {
-  return { level: 1, xp: 0, hp: p.stats.hp, x: 0, y: 0, moved: false, acted: false, kills: 0, movedDist: 0, gear: {}, pack: [], ...p };
+function blank(p: Omit<Unit, 'level' | 'xp' | 'hp' | 'x' | 'y' | 'moved' | 'acted' | 'kills' | 'movedDist' | 'gear' | 'pack' | 'mp' | 'statuses' | 'buffs' | 'abilities'> & Partial<Unit>): Unit {
+  return {
+    level: 1, xp: 0, hp: p.stats.hp, mp: p.stats.mp, x: 0, y: 0, moved: false, acted: false, kills: 0, movedDist: 0,
+    gear: {}, pack: [], statuses: [], buffs: [], abilities: [], ...p,
+  };
 }
 
 /** Roll a single level-up. Returns the stat gains. */
@@ -64,6 +67,7 @@ export function makeHero(template: UnitTemplate | string, uid: string, level: nu
     uid, templateId: t.id, name: t.name, title: t.title, race: t.race, home: t.home, classId: t.classId,
     team: 'player', size: t.size, stats, growths: growthsFor(t.classId, t.race, t.growths),
     weapons: [...t.weapons], skills: t.skill ? [t.skill] : [], glyph: t.glyph,
+    abilities: [...(t.abilities ?? []), ...(t.skill && ABILITIES[t.skill] ? [t.skill] : [])],
   });
   for (let l = 1; l < level; l++) rollLevelUp(unit, rng);
   unit.hp = unit.stats.hp;
@@ -80,6 +84,7 @@ export function makeEnemy(arch: EnemyArchetype | BossDef, world: WorldId, level:
     home: isBossDef ? (arch as BossDef).home : world, classId: arch.classId, team: 'enemy', size: arch.size ?? 1,
     stats, growths: growthsFor(arch.classId, arch.race, undefined, 0.85), weapons: [...arch.weapons],
     skills: arch.skill ? [arch.skill] : [], glyph: arch.glyph ?? arch.name.slice(0, 2).toUpperCase(),
+    abilities: arch.skill && ABILITIES[arch.skill] ? [arch.skill] : [],
     isBoss: opts.boss, bossId: isBossDef ? arch.id : undefined, artId: arch.id, ai: arch.ai ?? (opts.boss ? 'guard' : 'aggressive'),
   });
   for (let l = 1; l < lvl; l++) rollLevelUp(unit, rng);
@@ -125,6 +130,9 @@ export function effectiveStats(unit: Unit): Stats {
     for (const [k, v] of Object.entries(g.stats)) {
       if (k in s) (s as Record<string, number>)[k] += v as number;
     }
+  }
+  for (const b of unit.buffs ?? []) {
+    for (const [k, v] of Object.entries(b.stats ?? {})) (s as Record<string, number>)[k] += v as number;
   }
   for (const k of ['def', 'res', 'lck', 'spd', 'con'] as const) s[k] = Math.max(0, s[k]);
   s.mov = Math.max(1, s.mov);
@@ -191,7 +199,8 @@ export function addToPack(unit: Unit, itemId: string, uses?: number): boolean {
 export function prepareForBattle(unit: Unit): Unit {
   return {
     ...unit, stats: { ...unit.stats }, growths: { ...unit.growths }, skills: [...unit.skills], weapons: [...unit.weapons],
-    gear: { ...unit.gear }, pack: unit.pack.map((p) => ({ ...p })), stunned: 0,
+    gear: { ...unit.gear }, pack: unit.pack.map((p) => ({ ...p })), abilities: [...unit.abilities],
+    mp: unit.stats.mp, statuses: [], buffs: [], usedAbilities: [], faroreMark: undefined,
     hp: Math.max(1, unit.hp), moved: false, acted: false, kills: 0, movedDist: 0, survivedOnce: false,
   };
 }

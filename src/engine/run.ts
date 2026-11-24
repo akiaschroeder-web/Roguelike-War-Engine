@@ -293,7 +293,7 @@ export function finishBattle(run: RunWithEvent): BattleSummary {
       // Benched units rest a little more than those who fought.
       const pct = deployed.has(u.uid) ? heal : heal + 0.2;
       next.hp = Math.min(next.stats.hp, next.hp + Math.ceil(next.stats.hp * pct));
-      return { ...next, moved: false, acted: false, kills: 0, movedDist: 0, survivedOnce: false };
+      return { ...next, moved: false, acted: false, kills: 0, movedDist: 0, survivedOnce: false, statuses: [], buffs: [], mp: next.stats.mp, faroreMark: undefined };
     });
   run.fallen.push(...fallen.map((u) => ({ ...u, hp: 0 })));
 
@@ -471,16 +471,42 @@ export function stashItem(run: Run, uid: string, index: number): boolean {
   return true;
 }
 
-/** Use a healing item from the pack outside battle. */
-export function useItemOutside(run: Run, uid: string, index: number): number {
+/** Use an item from the pack outside battle: heal, or learn a spell/song/arrow. */
+export function useItemOutside(run: Run, uid: string, index: number): boolean {
   const u = run.roster.find((x) => x.uid === uid);
   const p = u?.pack[index];
   const def = p && ITEMS[p.id];
-  if (!u || !p || !def || (def.kind !== 'heal' && def.kind !== 'fullHeal') || u.hp >= u.stats.hp) return 0;
-  const amount = Math.min(def.kind === 'fullHeal' ? u.stats.hp : def.power, u.stats.hp - u.hp);
-  u.hp += amount;
+  if (!u || !p || !def || !canUseOutside(u, index)) return false;
+  if (def.kind === 'learn') u.abilities.push(def.teaches!);
+  else if (def.kind === 'heal' || def.kind === 'fullHeal') u.hp = Math.min(u.stats.hp, u.hp + (def.kind === 'fullHeal' ? u.stats.hp : def.power));
+  // (MP refills at the start of every battle, so MP items are only useful in battle.)
   if (--p.uses <= 0) u.pack.splice(index, 1);
-  return amount;
+  return true;
+}
+
+export function canUseOutside(u: Unit, index: number): boolean {
+  const def = ITEMS[u.pack[index]?.id];
+  if (!def) return false;
+  if (def.kind === 'learn') return !!def.teaches && !u.abilities.includes(def.teaches);
+  if (def.kind === 'heal' || def.kind === 'fullHeal') return u.hp < u.stats.hp;
+  return false;
+}
+
+/** Great Fairy spells a unit could still learn. */
+export function unlearnedFairySpells(u: Unit): string[] {
+  return ['dinsFire', 'faroresWind', 'nayrusLove'].filter((id) => !u.abilities.includes(id));
+}
+
+/** Fountain option: the Great Fairy teaches one of her spells. */
+export function fountainTeach(run: RunWithEvent, uid: string): string | null {
+  const u = run.roster.find((x) => x.uid === uid);
+  if (!u || run.event?.type !== 'fountain') return null;
+  const options = unlearnedFairySpells(u);
+  if (!options.length) return null;
+  const id = withRng(run, (rng) => rng.pick(options));
+  u.abilities.push(id);
+  run.event = undefined;
+  return id;
 }
 
 export function priceOf(run: Run, kind: ItemKindTag, id: string): number {
@@ -618,9 +644,18 @@ export function saveMeta(m: Meta): void {
 
 /** Bring saves from older versions up to date (single accessory slot, no pack). */
 export function migrateRun(run: RunWithEvent): RunWithEvent {
-  const fix = (u: Unit & { accessory?: string }) => {
+  const fix = (u: Unit & { accessory?: string; stunned?: number }) => {
     u.gear ??= {};
     u.pack ??= [];
+    u.mp ??= u.stats.mp;
+    u.statuses ??= [];
+    u.buffs ??= [];
+    if (!u.abilities) {
+      const t = u.templateId ? TEMPLATES[u.templateId] : undefined;
+      u.abilities = [...(t?.abilities ?? [])];
+    }
+    if (u.stunned) u.statuses.push({ kind: 'stun', turns: u.stunned });
+    delete u.stunned;
     if (u.accessory) {
       u.gear.acc1 = u.accessory;
       delete u.accessory;

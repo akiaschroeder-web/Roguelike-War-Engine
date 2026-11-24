@@ -17,16 +17,16 @@ const u = (t: T): UnitTemplate => ({ glyph: glyphOf(t.name), ...t });
 
 export const NAMED: UnitTemplate[] = [
   u({ id: 'link', name: 'Link', title: 'Hero of Time', race: 'hylian', classId: 'hero', size: 1, home: 'hyruleField',
-    stats: st(24, 8, 9, 10, 7, 9, 5, 3, 4, 8, 15, 6), weapons: ['kokiriSword', 'fairySlingshot'], skill: 'spiritOfCourage',
+    stats: st(24, 8, 9, 10, 7, 9, 5, 3, 4, 8, 15, 6), weapons: ['kokiriSword', 'fairySlingshot'], skill: 'spiritOfCourage', abilities: ['sariasSong'],
     exclusiveWith: ['youngLink'], bio: 'A versatile frontline fighter capable of using nearly every conventional weapon and adventuring tool.' }),
   u({ id: 'youngLink', name: 'Young Link', title: 'Kokiri Adventurer', race: 'hylian', classId: 'adventurer', size: 1, home: 'kokiriForest', glyph: 'YL',
     stats: st(19, 5, 9, 12, 4, 5, 5, 4, 5, 12, 12, 8), weapons: ['kokiriSword', 'boomerang'], skill: 'smallButMighty',
     exclusiveWith: ['link'], bio: 'A lighter, faster Link specializing in unconventional weapons and utility items.' }),
   u({ id: 'zelda', name: 'Princess Zelda', title: 'Princess of Destiny', race: 'hylian', classId: 'royalSage', size: 1, home: 'hyruleCastle', glyph: 'ZE',
-    stats: st(18, 3, 10, 8, 3, 5, 5, 13, 12, 10, 8, 24), weapons: ['lightSageStaff', 'healStaff'], skill: 'spiritOfWisdom',
+    stats: st(18, 3, 10, 8, 3, 5, 5, 13, 12, 10, 8, 24), weapons: ['lightSageStaff', 'healStaff', 'fairyOcarina'], skill: 'spiritOfWisdom', abilities: ['zeldasLullaby'],
     exclusiveWith: ['sheik'], bio: 'A powerful light-magic user with exceptional magical resistance and army support capabilities.' }),
   u({ id: 'sheik', name: 'Sheik', title: 'Survivor of the Sheikah', race: 'hylian', classId: 'shadowWarrior', size: 1, home: 'kakarikoGraveyard', glyph: 'SH',
-    stats: st(21, 6, 13, 14, 4, 6, 6, 5, 7, 8, 18, 10), weapons: ['sheikahNeedles', 'sheikahShortblade'], skill: 'vanishingAct',
+    stats: st(21, 6, 13, 14, 4, 6, 6, 5, 7, 8, 18, 10), weapons: ['sheikahNeedles', 'sheikahShortblade', 'sheiksHarp'], skill: 'vanishingAct', abilities: ['zeldasLullaby', 'sunsSong'],
     exclusiveWith: ['zelda'], bio: 'An exceptionally fast skirmisher specializing in evasion, infiltration and precision attacks.' }),
   u({ id: 'ganondorf', name: 'Ganondorf', title: 'King of Thieves', race: 'gerudo', classId: 'darkKing', size: 1, home: 'gerudoDesert',
     stats: st(30, 13, 8, 7, 10, 14, 5, 12, 9, 4, 20, 20), weapons: ['giantsKnife', 'poeLantern'], skill: 'spiritOfPower',
@@ -36,7 +36,7 @@ export const NAMED: UnitTemplate[] = [
     stats: st(20, 3, 9, 4, 5, 7, 4, 14, 14, 9, 8, 28), weapons: ['lightSageStaff', 'healStaff'], skill: 'sacredSanctuary',
     bio: 'The ancient sage who guards the Chamber of Sages.' }),
   u({ id: 'saria', name: 'Saria', title: 'Sage of Forest', race: 'kokiri', classId: 'forestSage', size: 1, home: 'kokiriForest',
-    stats: st(17, 2, 8, 9, 3, 4, 5, 10, 10, 11, 9, 20), weapons: ['forestSageStaff', 'healStaff'], skill: 'forestsFriendship',
+    stats: st(17, 2, 8, 9, 3, 4, 5, 10, 10, 11, 9, 20), weapons: ['forestSageStaff', 'healStaff', 'fairyOcarina'], skill: 'forestsFriendship', abilities: ['sariasSong'],
     bio: 'Link’s oldest friend. Her song carries through the Lost Woods.' }),
   u({ id: 'darunia', name: 'Darunia', title: 'Sage of Fire', race: 'goron', classId: 'goronChief', size: 2, home: 'deathMountain',
     stats: st(32, 12, 6, 5, 12, 16, 4, 5, 4, 7, 24, 8), weapons: ['goronHammer', 'fireSageStaff'], skill: 'swornBrother',
@@ -52,7 +52,7 @@ export const NAMED: UnitTemplate[] = [
     bio: 'A Gerudo thief who steals from the rich, and who has no love for Ganondorf.' }),
   // Supporting characters
   u({ id: 'malon', name: 'Malon', title: 'Rancher', race: 'hylian', classId: 'rancher', size: 1, home: 'hyruleField',
-    stats: st(19, 4, 7, 8, 4, 6, 5, 5, 6, 12, 10, 10), weapons: ['royalHuntingBow', 'healStaff'], skill: 'songOfTheRanch',
+    stats: st(19, 4, 7, 8, 4, 6, 5, 5, 6, 12, 10, 10), weapons: ['royalHuntingBow', 'healStaff'], skill: 'songOfTheRanch', abilities: ['eponasSong'],
     bio: 'Lon Lon Ranch’s cheerful heart. Every horse on the ranch adores her.' }),
   u({ id: 'talon', name: 'Talon', title: 'Quartermaster', race: 'hylian', classId: 'quartermaster', size: 1, home: 'hyruleField',
     stats: st(26, 6, 4, 3, 6, 11, 4, 1, 3, 9, 10, 0), weapons: ['pitchfork'], skill: 'ranchSupplies',
@@ -92,7 +92,7 @@ export const NAMED: UnitTemplate[] = [
     stats: st(65, 10, 7, 0, 16, 30, 0, 14, 15, 10, 20, 30), weapons: ['forestSageStaff', 'healStaff'], skill: 'guardianOfTheForest',
     bio: 'The ancient guardian of the Kokiri. Stationary, but nothing near him goes unprotected.' }),
   u({ id: 'greatFairy', name: 'Great Fairy', title: 'Fairy Matriarch', race: 'fairy', classId: 'fairyMatriarch', size: 2, home: 'deathMountain', glyph: 'GF',
-    stats: st(25, 2, 12, 10, 4, 6, 6, 17, 16, 14, 10, 35), weapons: ['greatFairyWand', 'forestSageStaff'], skill: 'greatFairysBlessing',
+    stats: st(25, 2, 12, 10, 4, 6, 6, 17, 16, 14, 10, 35), weapons: ['greatFairyWand', 'forestSageStaff'], skill: 'greatFairysBlessing', abilities: ['dinsFire', 'faroresWind', 'nayrusLove'],
     bio: 'Her laughter echoes through the fountain. Her blessings are worth the wait.' }),
 ];
 
