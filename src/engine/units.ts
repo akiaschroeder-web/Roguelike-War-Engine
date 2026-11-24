@@ -88,6 +88,7 @@ export function makeHeroUnit(hero: HeroDef | string, uid: string, level: number,
     weaponId: h.weaponId,
     skills: [h.skill],
     glyph: h.glyph,
+    portrait: h.portrait,
   });
   for (let l = 1; l < level; l++) rollLevelUp(unit, rng);
   unit.hp = unit.stats.hp;
@@ -118,6 +119,7 @@ export function makeEnemyUnit(
     weaponId: arch.weaponId,
     skills: arch.skill ? [arch.skill] : [],
     glyph: boss?.glyph ?? arch.name.slice(0, 2).toUpperCase(),
+    portrait: arch.portrait,
     isBoss: opts.boss,
     ai: opts.boss ? 'guard' : 'aggressive',
   });

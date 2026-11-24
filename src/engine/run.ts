@@ -1,5 +1,5 @@
 import { CLASSES } from '../data/classes';
-import { BOSSES } from '../data/enemies';
+import { BOSSES, bossesFor } from '../data/enemies';
 import { HEROES, HERO_MAP } from '../data/heroes';
 import { RELIC_IDS, RELICS } from '../data/skills';
 import { SHOP_WEAPONS, WEAPONS } from '../data/weapons';
@@ -46,11 +46,15 @@ export function newRun(seed: number, commanderId: string): Run {
 
   // Two companions from other worlds, one of whom is always a damage dealer
   // and the other random (so the starting party has some variety).
+  // Prefer other worlds, but fall back to anyone (packs may have few heroes).
   const cmdWorld = HERO_MAP[commanderId].world;
-  const pool = rng.shuffle(HEROES.filter((h) => h.world !== cmdWorld && CLASSES[h.classId].weapons[0] !== 'staff'));
-  const first = pool[0];
-  const second = rng.shuffle(HEROES.filter((h) => h.world !== cmdWorld && h.world !== first.world && h.id !== commanderId))[0];
-  for (const h of [first, second]) {
+  const others = HEROES.filter((h) => h.id !== commanderId);
+  const fighters = (list: typeof HEROES) => list.filter((h) => CLASSES[h.classId].weapons[0] !== 'staff');
+  const offWorld = others.filter((h) => h.world !== cmdWorld);
+  const first = rng.shuffle(fighters(offWorld))[0] ?? rng.shuffle(fighters(others))[0] ?? rng.shuffle([...others])[0];
+  const rest = others.filter((h) => h !== first);
+  const second = rng.shuffle(rest.filter((h) => h.world !== cmdWorld && h.world !== first?.world))[0] ?? rng.shuffle([...rest])[0];
+  for (const h of [first, second].filter(Boolean)) {
     run.roster.push(makeHeroUnit(h, nextUid(run), 1, rng));
     run.seenHeroes.push(h.id);
   }
@@ -165,7 +169,7 @@ export function enterNode(run: RunWithEvent, nodeId: string): void {
         if (node.type === 'boss' && !finalBoss) {
           boss = BOSSES.find((b) => b.world === node.world && !run.bossesFought.includes(b.id)) ?? BOSSES.find((b) => b.world === node.world);
         } else if (node.type === 'elite') {
-          boss = rng.pick(BOSSES.filter((b) => b.world === node.world));
+          boss = rng.pick(bossesFor(node.world));
         }
         if (boss) run.bossesFought.push(boss.id);
         run.battle = createBattle({

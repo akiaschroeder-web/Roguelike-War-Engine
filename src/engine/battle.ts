@@ -1,5 +1,5 @@
 import { TERRAIN_BONUS } from '../data/classes';
-import { BOSSES, ENEMY_ROSTERS, FINAL_BOSS } from '../data/enemies';
+import { bossesFor, FINAL_BOSS, rosterFor } from '../data/enemies';
 import { keyOf, unitAt } from './grid';
 import { generateMap } from './mapgen';
 import { RNG } from './rng';
@@ -45,7 +45,7 @@ export function createBattle(setup: BattleSetup): Battle {
   let uid = 0;
   const units: Unit[] = setup.roster.map((u, i) => ({ ...prepareForBattle(u), x: map.playerSpawns[i].x, y: map.playerSpawns[i].y }));
 
-  const roster = ENEMY_ROSTERS[setup.world];
+  const roster = rosterFor(setup.world);
   for (const p of map.enemySpawns) {
     const arch = rng.pick(roster);
     const lvl = Math.max(1, level + rng.int(-1, 1));
@@ -58,7 +58,7 @@ export function createBattle(setup: BattleSetup): Battle {
   }
 
   if (isBossFight) {
-    const bossDef = setup.finalBoss ? FINAL_BOSS : setup.boss ?? rng.pick(BOSSES.filter((b) => b.world === setup.world));
+    const bossDef = setup.finalBoss ? FINAL_BOSS : setup.boss ?? rng.pick(bossesFor(setup.world));
     const bossLevel = level + (setup.nodeType === 'boss' ? 2 : 1);
     const boss = makeEnemyUnit(bossDef, bossDef.world, bossLevel, `e${uid++}`, rng, { boss: true });
     boss.x = map.bossSpawn.x;
@@ -131,7 +131,7 @@ export function spawnReinforcements(b: Battle): Unit[] {
   for (const y of ys) {
     if (spawned.length >= 2) break;
     if (unitAt(b, edge, y) || b.tiles[keyOf(b, edge, y)] !== 'plain') continue;
-    const arch = rng.pick(ENEMY_ROSTERS[b.world]);
+    const arch = rng.pick(rosterFor(b.world));
     const e = makeEnemyUnit(arch, b.world, b.enemyLevel, `e${b.uidCounter++}`, rng);
     e.x = edge;
     e.y = y;

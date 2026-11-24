@@ -81,3 +81,8 @@ export const WORLDS: Record<WorldId, WorldDef> = {
 
 /** Worlds that heroes come from and that normal battles take place in. */
 export const PLAYABLE_WORLDS: WorldId[] = ['emberhold', 'starfall', 'pixelvale', 'neon', 'ronin', 'hollowmere'];
+
+/** Safe lookup: unknown worlds (e.g. from a disabled pack) fall back to the Rift. */
+export function worldDef(id: WorldId): WorldDef {
+  return WORLDS[id] ?? WORLDS.rift;
+}

@@ -108,3 +108,15 @@ export const FINAL_BOSS: BossDef = {
   statMods: { hp: 30, mag: 6, def: 6, res: 6, skl: 4, spd: 2 },
   quote: 'Every world you love is a story. I am the end of all of them.',
 };
+
+/** Enemy roster for a world, falling back to Rift enemies for worlds without one. */
+export function rosterFor(world: WorldId): EnemyArchetype[] {
+  const r = ENEMY_ROSTERS[world];
+  return r && r.length ? r : ENEMY_ROSTERS.rift;
+}
+
+/** Warlords from a world, or any warlord if that world has none. */
+export function bossesFor(world: WorldId): BossDef[] {
+  const local = BOSSES.filter((b) => b.world === world);
+  return local.length ? local : BOSSES;
+}

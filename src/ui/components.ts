@@ -2,7 +2,7 @@ import { CLASSES } from '../data/classes';
 import { HERO_MAP } from '../data/heroes';
 import { RELICS, SKILLS } from '../data/skills';
 import { WEAPONS } from '../data/weapons';
-import { WORLDS } from '../data/worlds';
+import { worldDef } from '../data/worlds';
 import type { LevelUp } from '../engine/combat';
 import { effectiveStats, XP_PER_LEVEL } from '../engine/units';
 import type { HeroDef, RelicId, StatKey, Unit, WeaponDef } from '../engine/types';
@@ -21,13 +21,17 @@ export const WEAPON_ICONS: Record<string, string> = {
 };
 
 export function worldTag(worldId: Unit['world']): string {
-  const w = WORLDS[worldId];
+  const w = worldDef(worldId);
   return `<span class="world-tag" style="--wc:${w.color}">${esc(w.name)}</span>`;
 }
 
-export function token(u: Pick<Unit, 'world' | 'glyph' | 'team'> & { isBoss?: boolean; isCommander?: boolean }, size = 40): string {
-  const w = WORLDS[u.world];
-  return `<span class="token ${u.team}" style="--wc:${w.color};--sz:${size}px">${esc(u.glyph)}${
+export function token(
+  u: Pick<Unit, 'world' | 'glyph' | 'team'> & { isBoss?: boolean; isCommander?: boolean; portrait?: string },
+  size = 40,
+): string {
+  const w = worldDef(u.world);
+  const face = u.portrait ? `<img src="${esc(u.portrait)}" alt="" draggable="false">` : esc(u.glyph);
+  return `<span class="token ${u.team}${u.portrait ? ' has-img' : ''}" style="--wc:${w.color};--sz:${size}px">${face}${
     u.isBoss ? '<i class="crown">♛</i>' : u.isCommander ? '<i class="crown star">★</i>' : ''
   }</span>`;
 }
@@ -84,9 +88,9 @@ export function heroCard(h: HeroDef, extra = ''): string {
   const cls = CLASSES[h.classId];
   const w = WEAPONS[h.weaponId];
   return `
-    <div class="hero-card" style="--wc:${WORLDS[h.world].color}">
+    <div class="hero-card" style="--wc:${worldDef(h.world).color}">
       <div class="hc-top">
-        ${token({ world: h.world, glyph: h.glyph, team: 'player' }, 52)}
+        ${token({ world: h.world, glyph: h.glyph, team: 'player', portrait: h.portrait }, 52)}
         <div>
           <div class="hc-name">${esc(h.name)}</div>
           <div class="dim small">${esc(h.title)}</div>

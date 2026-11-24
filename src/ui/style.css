@@ -72,6 +72,8 @@ p { margin: 8px 0; }
 }
 .token.player { border-color: var(--player); box-shadow: 0 0 0 2px #0b1a33, 0 2px 6px #0008; }
 .token.enemy { border: 3px solid var(--enemy); box-shadow: 0 0 0 2px #330b10, 0 0 10px #ff4a5a66; border-radius: 30%; }
+.token.has-img { background: #111; overflow: visible; }
+.token img { width: 100%; height: 100%; object-fit: cover; border-radius: inherit; display: block; pointer-events: none; }
 .token .crown { position: absolute; top: calc(var(--sz) * -0.32); font-style: normal; font-size: calc(var(--sz) * 0.4); color: var(--gold); text-shadow: 0 1px 2px #000; }
 .token .crown.star { font-size: calc(var(--sz) * 0.32); top: calc(var(--sz) * -0.26); }
 .world-tag { display: inline-block; font-size: 11px; font-weight: 700; padding: 1px 7px; border-radius: 99px; color: var(--wc); border: 1px solid color-mix(in srgb, var(--wc) 50%, transparent); background: color-mix(in srgb, var(--wc) 12%, transparent); }

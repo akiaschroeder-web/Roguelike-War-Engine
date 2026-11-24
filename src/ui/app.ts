@@ -2,7 +2,7 @@ import { CLASSES } from '../data/classes';
 import { HEROES, HERO_MAP } from '../data/heroes';
 import { RELICS } from '../data/skills';
 import { WEAPONS } from '../data/weapons';
-import { PLAYABLE_WORLDS, WORLDS } from '../data/worlds';
+import { PLAYABLE_WORLDS, worldDef } from '../data/worlds';
 import type { LevelUp } from '../engine/combat';
 import { randomSeed } from '../engine/rng';
 import {
@@ -25,6 +25,13 @@ const NODE_INFO: Record<NodeType, { icon: string; label: string; desc: string }>
   treasure: { icon: '◈', label: 'Cache', desc: 'Claim a relic that empowers your whole army.' },
   boss: { icon: '♛', label: 'Warlord', desc: 'The act boss. Defeat them to push deeper into the Rift.' },
 };
+
+/** Worlds that currently have heroes, in display order. */
+function heroWorlds(): string[] {
+  const withHeroes = new Set(HEROES.map((h) => h.world));
+  const order = [...PLAYABLE_WORLDS, ...HEROES.map((h) => h.world)];
+  return [...new Set(order)].filter((w) => withHeroes.has(w));
+}
 
 export class App {
   private run: RunWithEvent | null = loadRun();
@@ -65,7 +72,7 @@ export class App {
 
   title() {
     const hasRun = !!this.run;
-    const worlds = PLAYABLE_WORLDS.map((id) => `<span class="world-dot" style="--wc:${WORLDS[id].color}" title="${esc(WORLDS[id].name)}"></span>`).join('');
+    const worlds = PLAYABLE_WORLDS.map((id) => `<span class="world-dot" style="--wc:${worldDef(id).color}" title="${esc(worldDef(id).name)}"></span>`).join('');
     this.setScreen(`
       <div class="title-screen">
         <div class="logo"><span>RIFTBOUND</span><small>TACTICS</small></div>
@@ -116,10 +123,10 @@ export class App {
     const m = modal(`
       <h2>Hero Codex</h2>
       <p class="dim small">Heroes you've commanded or met through the Rift.</p>
-      <div class="codex">${PLAYABLE_WORLDS.map((wid) => `
-        <div class="codex-world"><h3 style="color:${WORLDS[wid].color}">${esc(WORLDS[wid].name)} <span class="dim small">${esc(WORLDS[wid].genre)}</span></h3>
+      <div class="codex">${heroWorlds().map((wid) => `
+        <div class="codex-world"><h3 style="color:${worldDef(wid).color}">${esc(worldDef(wid).name)} <span class="dim small">${esc(worldDef(wid).genre)}</span></h3>
         <div class="codex-row">${HEROES.filter((h) => h.world === wid).map((h) => met.has(h.id)
-          ? `<div class="codex-hero">${token({ world: h.world, glyph: h.glyph, team: 'player' }, 36)}<div><b>${esc(h.name)}</b><div class="dim small">${esc(h.title)}</div></div></div>`
+          ? `<div class="codex-hero">${token({ world: h.world, glyph: h.glyph, team: 'player', portrait: h.portrait }, 36)}<div><b>${esc(h.name)}</b><div class="dim small">${esc(h.title)}</div></div></div>`
           : `<div class="codex-hero locked"><span class="token" style="--sz:36px">?</span><div class="dim">Unknown</div></div>`).join('')}</div></div>`).join('')}
       </div>
       <button class="btn primary" data-close>Close</button>`, { dismissable: true });
@@ -135,10 +142,10 @@ export class App {
         <div class="page">
           <div class="page-head"><button class="btn" data-nav="back">← Back</button><h1>Choose your Commander</h1><span></span></div>
           <p class="dim center-text">Your Commander leads the army across the worlds. If they fall, the run is over. Two random allies from other worlds will join them.</p>
-          ${PLAYABLE_WORLDS.map((wid) => `
+          ${heroWorlds().map((wid) => `
             <section class="world-section">
-              <h2 style="color:${WORLDS[wid].color}">${esc(WORLDS[wid].name)} <span class="dim small">${esc(WORLDS[wid].genre)}</span></h2>
-              <p class="dim small">${esc(WORLDS[wid].blurb)}</p>
+              <h2 style="color:${worldDef(wid).color}">${esc(worldDef(wid).name)} <span class="dim small">${esc(worldDef(wid).genre)}</span></h2>
+              <p class="dim small">${esc(worldDef(wid).blurb)}</p>
               <div class="card-grid">${HEROES.filter((h) => h.world === wid).map((h) => `
                 <div class="pick ${chosen === h.id ? 'chosen' : ''}" data-nav="pick" data-id="${h.id}">${heroCard(h)}</div>`).join('')}
               </div>
@@ -257,7 +264,7 @@ export class App {
     const nodes = run.map.nodes.map((n) => {
       const p = pos(n);
       const info = NODE_INFO[n.type];
-      const w = WORLDS[n.world];
+      const w = worldDef(n.world);
       const isCur = n.id === run.currentNodeId;
       const cls = ['n-' + n.type, avail.has(n.id) ? 'avail' : '', n.visited ? 'visited' : '', isCur ? 'current' : ''].join(' ');
       return `<button class="map-node ${cls}" style="left:${p.x}px;top:${p.y}px;--wc:${w.color}" data-nav="${avail.has(n.id) ? 'node' : 'peek'}" data-id="${n.id}" title="${esc(info.label)} — ${esc(w.name)}">
@@ -282,7 +289,7 @@ export class App {
     const showInfo = (id: string, go: boolean) => {
       const n = run.map.nodes.find((x) => x.id === id)!;
       const info = NODE_INFO[n.type];
-      const w = WORLDS[n.world];
+      const w = worldDef(n.world);
       const el = this.root.querySelector('.node-info') as HTMLElement;
       el.innerHTML = `<b>${info.icon} ${esc(info.label)}</b> in ${worldTag(n.world)} — ${esc(info.desc)} <span class="dim">${esc(w.genre)}.</span>${
         go ? ` <button class="btn primary small" data-nav="go" data-id="${n.id}">Travel →</button>` : ''
@@ -414,6 +421,7 @@ export class App {
   private recruitScreen() {
     const run = this.run!;
     const ev = run.event as Extract<RunWithEvent['event'], { type: 'recruit' }>;
+    ev.offers = ev.offers.filter((id) => HERO_MAP[id]); // a pack may have been switched off
     const full = run.roster.length >= MAX_ROSTER;
     const lvl = Math.max(1, Math.round(averageLevel(run)) - 1);
     this.setScreen(`

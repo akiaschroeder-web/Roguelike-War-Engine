@@ -1,7 +1,9 @@
 // Core type definitions shared by the engine, data and UI layers.
 // Everything that lives in a Run or Battle is plain JSON so it can be saved.
 
-export type WorldId = 'emberhold' | 'starfall' | 'pixelvale' | 'neon' | 'ronin' | 'hollowmere' | 'rift';
+/** Built-in worlds are listed here; content packs can add more, so any string is allowed. */
+export type BuiltinWorldId = 'emberhold' | 'starfall' | 'pixelvale' | 'neon' | 'ronin' | 'hollowmere' | 'rift';
+export type WorldId = BuiltinWorldId | (string & {});
 
 export type WeaponType = 'sword' | 'lance' | 'axe' | 'bow' | 'magic' | 'gun' | 'staff';
 
@@ -88,6 +90,8 @@ export interface HeroDef {
   growthMods: Partial<Growths>;
   glyph: string;
   bio: string;
+  /** Optional image (URL or data: URI) shown instead of the glyph token. */
+  portrait?: string;
 }
 
 export interface EnemyArchetype {
@@ -95,6 +99,7 @@ export interface EnemyArchetype {
   classId: string;
   weaponId: string;
   skill?: SkillId;
+  portrait?: string;
 }
 
 export interface BossDef extends EnemyArchetype {
@@ -123,6 +128,7 @@ export interface Unit {
   weaponId: string;
   skills: SkillId[];
   glyph: string;
+  portrait?: string;
   isCommander?: boolean;
   isBoss?: boolean;
   ai?: 'aggressive' | 'guard' | 'stationary';

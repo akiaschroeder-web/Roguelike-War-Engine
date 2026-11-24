@@ -1,6 +1,6 @@
 import { CLASSES, TERRAIN_BONUS } from '../data/classes';
 import { FINAL_BOSS, BOSSES } from '../data/enemies';
-import { WORLDS } from '../data/worlds';
+import { worldDef } from '../data/worlds';
 import { planAction } from '../engine/ai';
 import { checkResult, moveUnit, objectiveText, spawnReinforcements, startPhase, type TurnStartEvent } from '../engine/battle';
 import { canReach, forecast, healAmount, resolveCombat, resolveHeal, weaponOf, type Forecast, type LevelUp } from '../engine/combat';
@@ -47,7 +47,7 @@ export class BattleView {
   }
 
   async mount() {
-    const w = WORLDS[this.b.world];
+    const w = worldDef(this.b.world);
     this.root.innerHTML = `
       <div class="battle" style="--wc:${w.color}">
         <header class="battle-header"></header>
@@ -89,7 +89,7 @@ export class BattleView {
 
   private buildTiles() {
     const { b } = this;
-    const world = WORLDS[b.world];
+    const world = worldDef(b.world);
     this.els.tiles.style.gridTemplateColumns = `repeat(${b.width}, var(--t))`;
     this.els.tiles.innerHTML = b.tiles
       .map((t, i) => {
@@ -122,7 +122,7 @@ export class BattleView {
 
   private renderHeader() {
     const { b } = this;
-    const w = WORLDS[b.world];
+    const w = worldDef(b.world);
     const enemies = b.units.filter((u) => u.team === 'enemy').length;
     const obj = objectiveText(b.objective);
     const progress = b.objective.type === 'survive' ? ` (${Math.min(b.turn, b.objective.turns!)}/${b.objective.turns})` : '';
@@ -245,7 +245,7 @@ export class BattleView {
     if (this.hover) {
       const t = terrainAt(b, this.hover.x, this.hover.y);
       const tb = TERRAIN_BONUS[t];
-      html += `<div class="terrain-info"><b>${esc(WORLDS[b.world].terrainNames[t])}</b> <span class="dim small">${
+      html += `<div class="terrain-info"><b>${esc(worldDef(b.world).terrainNames[t])}</b> <span class="dim small">${
         t === 'water' || t === 'wall' ? 'Impassable (fliers may cross water)' : `Avoid +${tb.avoid} · Def +${tb.def}${tb.heal ? ` · Heals ${tb.heal}%` : ''}`
       }</span></div>`;
     }
@@ -659,7 +659,7 @@ export class BattleView {
 
   private async intro() {
     const { b } = this;
-    const w = WORLDS[b.world];
+    const w = worldDef(b.world);
     const boss = b.units.find((u) => u.isBoss);
     const bossDef = boss && [...BOSSES, FINAL_BOSS].find((x) => x.name === boss.name);
     await new Promise<void>((resolve) => {
