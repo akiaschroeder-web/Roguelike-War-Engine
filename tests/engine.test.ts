@@ -292,17 +292,9 @@ describe('run flow', () => {
     expect([...seen].some((id) => TEMPLATES[id].monster)).toBe(true);
   });
 
-  it('forms of the same person exclude each other, and recruited bosses stop appearing as bosses', () => {
+  it('forms of the same person are not offered together in recruitment', () => {
     const run = newRun(7, 'ganondorf') as RunWithEvent;
     for (let s = 0; s < 60; s++) expect(recruitOffers(run, new RNG(s), 'hyruleCastle')).not.toContain('ganon');
-    // Ganondorf's army never faces Ganondorf or Ganon.
-    advanceRegion(run, 'hyruleCastle');
-    const boss = run.map.nodes.find((n) => n.type === 'boss')!;
-    run.currentNodeId = run.map.nodes.find((n) => n.next.includes(boss.id))!.id;
-    enterNode(run, boss.id);
-    if (run.event?.type === 'deploy') startBattle(run, run.roster.map((u) => u.uid));
-    const b = run.battle!.units.find((u) => u.isBoss)!;
-    expect(['ganondorfBoss', 'ganon']).not.toContain(b.bossId);
   });
 
   it('shop purchases apply', () => {
@@ -523,13 +515,28 @@ describe('enemy armies, techniques and warp songs', () => {
       army++;
       if (force.leader) leaders++;
       if (force.heroes?.length) rivals++;
-      // Never fight someone already in your army.
-      for (const id of [...force.heroes ?? [], force.leader ?? '']) expect(run.roster.some((u) => u.templateId === id)).toBe(false);
     }
     expect(monsters).toBeGreaterThan(0);
     expect(army).toBeGreaterThan(monsters);
     expect(leaders).toBeGreaterThan(0);
     expect(rivals).toBeGreaterThan(0);
+  });
+
+  it('from region 4 on, battles draw units from anywhere', () => {
+    const run = newRun(21, 'ruto') as RunWithEvent;
+    const node = { ...run.map.nodes[0], type: 'battle' as const, world: 'zorasDomain' };
+    expect(pickForce(run, new RNG(1), node)?.name).not.toBe('Free-for-All');
+    run.act = 4;
+    const force = pickForce(run, new RNG(1), node)!;
+    expect(force.name).toBe('Free-for-All');
+    expect(force.anyMonsters).toBe(true);
+    // Over many battles, enemies come from many different regions.
+    const homes = new Set<string>();
+    for (let s = 0; s < 30; s++) {
+      const b = createBattle({ world: 'zorasDomain', nodeType: 'battle', depth: 25, roster: run.roster, seed: s, force: pickForce(run, new RNG(s), node) });
+      for (const u of b.units) if (u.team === 'enemy') homes.add(u.templateId ? TEMPLATES[u.templateId].home : Object.keys(ROSTERS).find((r) => ROSTERS[r].includes(u.artId!)) ?? '');
+    }
+    expect(homes.size).toBeGreaterThanOrEqual(5);
   });
 
   it('an army battle fields soldiers (with portraits) and an elite leader', () => {

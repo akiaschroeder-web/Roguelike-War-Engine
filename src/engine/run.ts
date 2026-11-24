@@ -1,5 +1,5 @@
 import {
-  FACTIONS, GEAR, ITEMS, MONSTER_CHANCE, BOSS_AS_TEMPLATE, BOSSES, bossPool, COMMANDERS, PERMANENT_ITEMS, REGION_IDS, TEMPLATE_LIST, TEMPLATES, WEAPONS,
+  FACTIONS, GEAR, ITEMS, MONSTER_CHANCE, BOSSES, bossPool, COMMANDERS, PERMANENT_ITEMS, REGION_IDS, TEMPLATE_LIST, TEMPLATES, WEAPONS,
 } from '../data/registry';
 import { createBattle } from './battle';
 import { canWield, type LevelUp } from './combat';
@@ -151,15 +151,10 @@ export function ownedUniques(run: Run): Set<string> {
 }
 
 function bossFor(run: Run, rng: RNG, node: MapNode): BossDef {
-  // Bosses who serve in your army (or another form of them) don't fight you.
-  const have = new Set(run.roster.map((u) => u.templateId));
-  const exclude = new Set<string>();
-  for (const b of Object.values(BOSSES)) {
-    const t = TEMPLATES[BOSS_AS_TEMPLATE[b.id] ?? b.id];
-    if (t && (have.has(t.id) || t.exclusiveWith?.some((id) => have.has(id)))) exclude.add(b.id);
-  }
-  let pool = bossPool(node.world).filter((b) => !exclude.has(b.id));
-  if (!pool.length) pool = Object.values(BOSSES).filter((b) => !exclude.has(b.id));
+  // Not canon: anyone can be a boss, even someone already in your army.
+  // After the free-for-all point, bosses come from every region.
+  let pool = isFreeForAll(run) ? Object.values(BOSSES) : bossPool(node.world);
+  if (!pool.length) pool = Object.values(BOSSES);
   if (node.type === 'boss') {
     const fresh = pool.filter((b) => !run.bossesFought.includes(b.id));
     return fresh[0] ?? rng.pick(pool);
@@ -227,15 +222,34 @@ export function startBattle(run: RunWithEvent, uids: string[]): void {
  * an army mixed with monsters, or a band of rival heroes. Regional bosses stay
  * monsters/villains; elite fights can be led by a named character.
  */
+/** From this region on, battles ignore regions and draw units from anywhere. */
+export const FREE_FOR_ALL_REGION = 4;
+
+export function isFreeForAll(run: Run): boolean {
+  return run.act >= FREE_FOR_ALL_REGION;
+}
+
+/** A force drawn from the entire cast: any monster, soldier, hero, villain or boss. */
+function freeForAll(rng: RNG, node: MapNode): EnemyForce {
+  const named = TEMPLATE_LIST.filter((t) => !t.generic).map((t) => t.id);
+  return {
+    name: 'Free-for-All', desc: 'The war has scattered everyone across Hyrule. Anyone could be on the other side.',
+    templates: TEMPLATE_LIST.map((t) => t.id), monsters: true, anyMonsters: true,
+    heroes: rng.shuffle([...named]).slice(0, rng.int(0, 3)),
+    leader: node.type === 'elite' && rng.chance(60) ? rng.pick(named) : undefined,
+  };
+}
+
 export function pickForce(run: Run, rng: RNG, node: MapNode): EnemyForce | undefined {
+  if (isFreeForAll(run)) return freeForAll(rng, node);
   if (node.type === 'boss') return rng.chance(40) ? armyFor(run, rng, node, false) : undefined;
   if (rng.chance(MONSTER_CHANCE[node.world] ?? 50)) return undefined;
   return armyFor(run, rng, node, node.type === 'elite' && rng.chance(60));
 }
 
-function armyFor(run: Run, rng: RNG, node: MapNode, withLeader: boolean): EnemyForce | undefined {
-  const have = new Set(run.roster.map((u) => u.templateId));
-  const free = (id: string) => !!TEMPLATES[id] && !have.has(id) && !conflicts(run, TEMPLATES[id]);
+function armyFor(_run: Run, rng: RNG, node: MapNode, withLeader: boolean): EnemyForce | undefined {
+  // Duplicates are fine: rivals and leaders can be characters you already have.
+  const free = (id: string) => !!TEMPLATES[id];
   if (rng.chance(12) && FACTIONS.rivals) {
     const pool = TEMPLATE_LIST.filter((t) => !t.generic && !t.rare && free(t.id)).map((t) => t.id);
     const heroes = rng.shuffle(pool).slice(0, 4);

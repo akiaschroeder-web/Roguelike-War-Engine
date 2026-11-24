@@ -4,7 +4,7 @@ import { randomSeed } from '../engine/rng';
 import {
   ARMY_CAPACITY, DEPLOY_CAPACITY, advanceRegion, availableNodes, buy, campDrill, campRest, campTrain, currentNode, depthOf, enterNode,
   equipFromConvoy, finishBattle, fountainBless, fountainHeal, fountainRevive, isRegionComplete, loadMeta, loadRun, newRun, offerRegions,
-  recruit, recruitLevel, saveMeta, saveRun, canTake, canUseOutside, fountainTeach, unlearnedFairySpells, priceOf, stashGear, stashItem, stashWeapon, useItemOutside, type ItemKindTag, startBattle, takeTreasure, weaponPrice,
+  recruit, recruitLevel, saveMeta, saveRun, canTake, canUseOutside, FREE_FOR_ALL_REGION, isFreeForAll, fountainTeach, unlearnedFairySpells, priceOf, stashGear, stashItem, stashWeapon, useItemOutside, type ItemKindTag, startBattle, takeTreasure, weaponPrice,
   type Meta, type Reward, type RunEvent, type RunWithEvent,
 } from '../engine/run';
 import { equip } from '../engine/combat';
@@ -343,7 +343,7 @@ export class App {
       <div class="map-layout">
         <div class="map-main">
           <h2 style="color:${w.color}">${esc(w.name)}</h2>
-          <p class="dim small">${esc(w.blurb)} <span class="badge">${esc(w.genre)}</span> <span class="badge">Battle depth ${depth}</span></p>
+          <p class="dim small">${esc(w.blurb)} <span class="badge">${esc(w.genre)}</span> <span class="badge">Battle depth ${depth}</span>${isFreeForAll(run) ? ' <span class="badge gold">Free-for-All: enemies come from anywhere</span>' : run.act === FREE_FOR_ALL_REGION - 1 ? ' <span class="badge">Next region: Free-for-All</span>' : ''}</p>
           <div class="map-scroll"><div class="map" style="width:${width}px;height:${height}px"><svg width="${width}" height="${height}">${lines.join('')}</svg>${nodes}</div></div>
           <div class="legend">${(Object.keys(NODE_INFO) as NodeType[]).map((t) => `<span><b>${NODE_INFO[t].icon}</b> ${NODE_INFO[t].label}</span>`).join('')}</div>
           <div class="node-info dim small">Tap a glowing node to travel there.</div>

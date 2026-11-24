@@ -306,6 +306,8 @@ export interface EnemyForce {
   templates: string[];
   /** Also include the region's monsters. */
   monsters: boolean;
+  /** Monsters come from every region, not just this one. */
+  anyMonsters?: boolean;
   /** Named rival heroes (each appears at most once). */
   heroes?: string[];
   /** Named leader for elite fights (replaces the monster boss). */

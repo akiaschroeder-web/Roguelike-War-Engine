@@ -1,4 +1,4 @@
-import { bossPool, rosterFor, TEMPLATES, worldDef } from '../data/registry';
+import { bossPool, ENEMIES, rosterFor, TEMPLATES, worldDef } from '../data/registry';
 import { footprint, keyOf, unitDist } from './grid';
 import { generateMap } from './mapgen';
 import { RNG } from './rng';
@@ -48,10 +48,11 @@ export function createBattle(setup: BattleSetup): Battle {
   const heroes = rng.shuffle([...(force?.heroes ?? [])]);
   type Spec = { arch: EnemyArchetype } | { tmpl: string };
   const specs: Spec[] = Array.from({ length: enemyCount }, (): Spec => {
-    if (!force || (!force.templates.length && !heroes.length)) return { arch: rng.pick(rosterFor(setup.world)) };
+    const monster = () => ({ arch: rng.pick(force?.anyMonsters ? Object.values(ENEMIES) : rosterFor(setup.world)) });
+    if (!force || (!force.templates.length && !heroes.length)) return monster();
     if (heroes.length && rng.chance(60)) return { tmpl: heroes.shift()! };
-    if (force.monsters && rng.chance(40)) return { arch: rng.pick(rosterFor(setup.world)) };
-    if (!force.templates.length) return { arch: rng.pick(rosterFor(setup.world)) };
+    if (force.monsters && rng.chance(40)) return monster();
+    if (!force.templates.length) return monster();
     return { tmpl: rng.pick(force.templates) };
   });
   const leader = isBossFight && force?.leader && TEMPLATES[force.leader] ? TEMPLATES[force.leader] : undefined;
