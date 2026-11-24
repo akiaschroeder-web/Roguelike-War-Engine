@@ -26,6 +26,7 @@ export const COMMANDERS: (CommanderDef & { pendingGear?: string[] })[] = [];
 export const PACKS: ContentPack[] = [];
 export const ART_IDS = new Set<string>();
 export const ART_ALIASES: Record<string, string> = {};
+export const ART_VARIANTS: Record<string, string[]> = {};
 
 const index = <T extends { id: string }>(target: Record<string, T>, list: T[]) => {
   for (const x of list) target[x.id] = x;
@@ -50,6 +51,7 @@ export function installPack(p: ContentPack): void {
   COMMANDERS.push(...p.commanders);
   for (const id of p.artIds) ART_IDS.add(id);
   Object.assign(ART_ALIASES, p.artAliases);
+  Object.assign(ART_VARIANTS, p.artVariants ?? {});
 }
 
 installPack(OCARINA);
@@ -78,9 +80,18 @@ export function skillDef(id: string): SkillDef {
   return SKILLS[id] ?? { id, name: id, desc: '', implemented: false };
 }
 
-/** The art id a unit should display, or null if no image exists yet. */
-export function artFor(id: string | undefined): string | null {
+/**
+ * The art id a unit should display, or null if no image exists yet.
+ * `seed` (e.g. the unit's uid) picks a stable variant for generic units.
+ */
+export function artFor(id: string | undefined, seed = ''): string | null {
   if (!id) return null;
+  const variants = ART_VARIANTS[id]?.filter((v) => ART_IDS.has(v));
+  if (variants?.length) {
+    let h = 0;
+    for (const c of seed) h = (h * 31 + c.charCodeAt(0)) >>> 0;
+    return variants[h % variants.length];
+  }
   if (ART_IDS.has(id)) return id;
   const alias = ART_ALIASES[id];
   return alias && ART_IDS.has(alias) ? alias : null;

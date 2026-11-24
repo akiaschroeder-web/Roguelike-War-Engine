@@ -29,6 +29,8 @@ interface TokenLike {
   isCommander?: boolean;
   /** Unit/boss/template id; resolved to portraits/<id>.png through the art registry. */
   portraitId?: string;
+  /** Picks a stable art variant (unit uid). */
+  seed?: string;
 }
 
 export const portraitIdOf = (u: Pick<Unit, 'templateId' | 'bossId' | 'artId'>) => u.bossId ?? u.templateId ?? u.artId;
@@ -38,9 +40,9 @@ export const portraitIdOf = (u: Pick<Unit, 'templateId' | 'bossId' | 'artId'>) =
  * initials act as a placeholder (the image hides itself when missing).
  */
 export function token(u: TokenLike | Unit, size = 40): string {
-  const t: TokenLike = 'uid' in u ? { home: u.home, glyph: u.glyph, team: u.team, isBoss: u.isBoss, isCommander: u.isCommander, portraitId: portraitIdOf(u) } : u;
+  const t: TokenLike = 'uid' in u ? { home: u.home, glyph: u.glyph, team: u.team, isBoss: u.isBoss, isCommander: u.isCommander, portraitId: portraitIdOf(u), seed: u.uid } : u;
   const w = worldDef(t.home);
-  const art = artFor(t.portraitId);
+  const art = artFor(t.portraitId, t.seed);
   const img = art ? `<img src="portraits/${esc(art)}.png" alt="" draggable="false" onerror="this.remove()">` : '';
   return `<span class="token ${t.team}" style="--wc:${w.color};--sz:${size}px"><b>${esc(t.glyph)}</b>${img}${
     t.isBoss ? '<i class="crown">♛</i>' : t.isCommander ? '<i class="crown star">★</i>' : ''

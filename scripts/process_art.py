@@ -53,6 +53,23 @@ ENTRIES = {
     "hyruleSoldier": ("hyruleSoldier.webp", (0.50, 0.27, 0.50)),
     "kingZora": ("kingZora.webp", (0.36, 0.15, 0.40)),
     "phantomGanonMounted": ("phantomGanonMounted.webp", (0.645, 0.10, 0.16)),
+    # Batch 3
+    "kokiriA": ("kokiriA.png", (0.50, 0.21, 0.80)),
+    "kokiriB": ("kokiriB.webp", (0.50, 0.27, 0.60)),
+    "kokiriC": ("kokiriC.webp", (0.50, 0.29, 0.60)),
+    "zoraWarrior": ("zoraWarrior.webp", (0.36, 0.10, 0.25)),
+    "gerudoGuard": ("gerudoGuard.webp", (0.55, 0.19, 0.40)),
+    "gerudoThief": ("gerudoThief.webp", (0.49, 0.17, 0.42)),
+    "sheikahWarrior": ("sheikahWarrior.png", (0.57, 0.18, 0.32)),
+    "dekuScrub": ("dekuScrub.png", (0.53, 0.38, 0.80)),
+    "businessScrub": ("businessScrub.webp", (0.50, 0.51, 0.60)),
+    "stalchild": ("stalchild.webp", (0.55, 0.18, 0.50)),
+    "stalfos": ("stalfos.webp", (0.50, 0.26, 0.55)),
+    "dinolfos": ("dinolfos.webp", (0.19, 0.12, 0.30)),
+    "lizalfos": ("lizalfos.webp", (0.49, 0.43, 0.40)),
+    "moblin": ("moblin.png", (0.21, 0.15, 0.35)),
+    "ironKnuckle": ("ironKnuckle.webp", (0.44, 0.34, 0.42)),
+    "queenGohma": ("queenGohma.png", (0.54, 0.31, 0.50)),
 }
 
 

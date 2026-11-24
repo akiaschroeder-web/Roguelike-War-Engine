@@ -11,9 +11,13 @@ export const ART_ALIASES: Record<string, string> = {
   // Generic soldiers of the same army can share a look:
   hyruleKnight: 'hyruleSoldier',
   hyruleCavalry: 'hyruleSoldier',
-  kokiriSlingshooter: 'kokiriScout',
   goronRoller: 'goronWarrior',
   zoraMystic: 'zoraWarrior',
-  businessScrub: 'dekuScrub',
   gibdo: 'redead',
+};
+
+/** Generic units that pick one of several looks (stable per unit). */
+export const ART_VARIANTS: Record<string, string[]> = {
+  kokiriScout: ['kokiriA', 'kokiriB', 'kokiriC'],
+  kokiriSlingshooter: ['kokiriA', 'kokiriB', 'kokiriC'],
 };

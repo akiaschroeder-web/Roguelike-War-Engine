@@ -23,4 +23,6 @@ export interface ContentPack {
   artIds: string[];
   /** id -> id whose art it reuses. */
   artAliases: Record<string, string>;
+  /** id -> several art ids; each unit picks one. */
+  artVariants?: Record<string, string[]>;
 }
