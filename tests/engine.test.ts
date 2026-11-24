@@ -21,6 +21,8 @@ import { addStatus, onDamaged, tickStatuses } from '../src/engine/status';
 import { dig, environmentPhase, ignite, isSeen, plantBean, revealNearby, triggerTraps } from '../src/engine/field';
 import { hookTiles } from '../src/engine/abilities';
 import { freeCaptive } from '../src/engine/battle';
+import { armyCap, deployCap, gainArmyXp, issueOrder, orderUnusable, useBlessing } from '../src/engine/army';
+import { campFeast } from '../src/engine/run';
 import { EVENTS } from '../src/data/registry';
 import type { Battle, Team, Unit } from '../src/engine/types';
 
@@ -1022,5 +1024,76 @@ describe('allies, escorts and rescues', () => {
     expect(run.roster.length).toBe(before + sum.joined.length);
     expect(sum.joined.length).toBeGreaterThan(0);
     expect(run.roster.every((u) => !u.npc)).toBe(true);
+  });
+});
+
+describe('army management', () => {
+  it('army level raises capacities', () => {
+    const run = newRun(5, 'link');
+    expect(armyCap(run)).toBe(12);
+    expect(deployCap(run)).toBe(8);
+    gainArmyXp(run, 5000);
+    expect(armyCap(run)).toBe(16);
+    expect(deployCap(run)).toBe(10);
+  });
+
+  it('battles eat supplies, salvage materials and move morale', () => {
+    const run = newRun(6, 'link') as RunWithEvent;
+    enterNode(run, availableNodes(run)[0].id);
+    const a = run.army!;
+    const s0 = a.supplies, m0 = a.morale;
+    run.battle!.result = 'won';
+    const sum = finishBattle(run);
+    expect(sum.army.xp).toBeGreaterThan(0);
+    expect(a.morale).toBeGreaterThan(m0);
+    expect(a.supplies).not.toBe(s0);
+    expect(a.materials).toBeGreaterThan(10);
+  });
+
+  it('orders spend Command Points', () => {
+    const run = newRun(7, 'link') as RunWithEvent;
+    enterNode(run, availableNodes(run)[0].id);
+    const b = run.battle!;
+    expect(b.cp).toBeGreaterThan(0);
+    const cp = b.cp!;
+    expect(issueOrder(b, 'rally')).not.toBeNull();
+    expect(b.cp).toBe(cp - 2);
+    const foe = b.units.find((u) => u.team === 'enemy' && !u.hidden)!;
+    expect(issueOrder(b, 'focusFire', foe.uid)).not.toBeNull();
+    expect(foe.statuses.some((s) => s.kind === 'exposed')).toBe(true);
+    b.cp = 0;
+    expect(issueOrder(b, 'secondWind')).toBeNull();
+  });
+
+  it('reinforce brings in benched units and emergency retreat keeps them alive', () => {
+    const run = newRun(8, 'link') as RunWithEvent;
+    for (let i = 0; i < 6; i++) run.roster.push(makeHero('hyruleSoldier', `x${i}`, 1, rng()));
+    enterNode(run, availableNodes(run)[0].id);
+    if (run.event?.type === 'deploy') startBattle(run, run.roster.slice(0, 8).map((u) => u.uid));
+    const b = run.battle!;
+    expect(b.reserves!.length).toBeGreaterThan(0);
+    b.cp = 8;
+    const r = b.reserves![0];
+    expect(orderUnusable(b, 'reinforce')).toBeNull();
+    expect(issueOrder(b, 'reinforce', r.uid)).not.toBeNull();
+    expect(b.units).toContain(r);
+    const pulled = b.units.find((u) => u.team === 'player' && !u.isCommander && !u.npc)!;
+    b.orders!.push('emergencyRetreat');
+    expect(issueOrder(b, 'emergencyRetreat', pulled.uid)).not.toBeNull();
+    b.result = 'won';
+    finishBattle(run);
+    expect(run.roster.some((u) => u.uid === pulled.uid)).toBe(true);
+  });
+
+  it('feasts and blessings', () => {
+    const run = newRun(9, 'link') as RunWithEvent;
+    run.event = { type: 'camp' };
+    expect(campFeast(run)).toBe(true);
+    run.army!.sacredEnergy = 1;
+    expect(useBlessing(run, 'din')).toBe(true);
+    enterNode(run, availableNodes(run)[0].id);
+    const p = run.battle!.units.find((u) => u.isCommander)!;
+    expect(p.buffs.some((x) => x.id === 'din')).toBe(true);
+    expect(p.statuses.some((x) => x.kind === 'inspired')).toBe(true);
   });
 });

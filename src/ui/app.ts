@@ -2,9 +2,9 @@ import { ABILITIES, artFor, GEAR, ITEMS, CLASSES, COMMANDERS, PERMANENT_ITEMS, R
 import { canWield, type LevelUp } from '../engine/combat';
 import { randomSeed } from '../engine/rng';
 import {
-  ARMY_CAPACITY, DEPLOY_CAPACITY, advanceRegion, availableNodes, buy, campDrill, campRest, campTrain, currentNode, depthOf, enterNode,
+  advanceRegion, buySupplies, campFeast, commanderOf, FEAST_COST, improveMaterials, reviveWithDust, SUPPLY_PACK, availableNodes, buy, campDrill, campRest, campTrain, currentNode, depthOf, enterNode,
   equipFromConvoy, finishBattle, fountainBless, fountainHeal, fountainRevive, isRegionComplete, loadMeta, loadRun, newRun, offerRegions,
-  recruit, recruitLevel, saveMeta, saveRun, canTake, canUseOutside, forgePrice, forgeWeapon, improveCost, improveWeapon, MAX_FORGE, repairCost, repairWeapon, FREE_FOR_ALL_REGION, isFreeForAll, fountainTeach, unlearnedFairySpells, priceOf, stashGear, stashItem, stashWeapon, useItemOutside, type ItemKindTag, startBattle, takeTreasure, weaponPrice,
+  recruit, recruitLevel, saveMeta, saveRun, canTake, canUseOutside, forgePrice, forgeWeapon, improveCost, improveWeapon, MAX_FORGE, repairCost, repairWeapon, FREE_FOR_ALL_REGION, isFreeForAll, fountainTeach, unlearnedFairySpells, priceOf, stashGear, stashItem, stashWeapon, useItemOutside, type ItemKindTag, startBattle, takeTreasure,
   canChoose, chooseEvent, descendDungeon, eventDef, leaveDungeon,
   type Meta, type Reward, type RunEvent, type RunWithEvent,
 } from '../engine/run';
@@ -13,6 +13,7 @@ import { GEAR_SLOTS, PACK_SIZE, type GearSlot, type MapNode, type NodeType, type
 import { forgeLevel, slotFor } from '../engine/units';
 import { isSPair, rankOf } from '../engine/supports';
 import { BattleView } from './battleView';
+import { armyCap, armyOf, BLESSINGS, cpMax, deployCap, moraleBonus, moraleLabel, ORDERS, ordersFor, repDiscount, supplyCap, useBlessing, xpToNext } from '../engine/army';
 import {
   confirmDialog, esc, hpBar, itemLine, itemName, modal, SLOT_ICONS, SLOT_LABELS, weaponLine, showLevelUps, templateCard, token, unitDetails,
 } from './components';
@@ -188,8 +189,11 @@ export class App {
       <div class="topbar">
         <div><span class="dim small">Region ${run.act}</span> <b style="color:${w.color}">${esc(w.name)}</b></div>
         <div><span class="dim small">Rupees</span> <b class="rupee">₹${run.rupees}</b></div>
-        <div><span class="dim small">Army</span> <b>${run.roster.length}/${ARMY_CAPACITY}</b></div>
+        <div><span class="dim small">Army</span> <b>${run.roster.length}/${armyCap(run)}</b></div>
+        <div class="tb-res"><span class="dim small">Supplies</span> <b class="${armyOf(run).supplies < 5 ? 'bad' : ''}">${armyOf(run).supplies}</b></div>
+        <div class="tb-res"><span class="dim small">Morale</span> <b>${armyOf(run).morale}</b></div>
         <div class="spacer"></div>
+        <button class="btn small" data-nav="armyinfo">⚑ Army Lv ${armyOf(run).level}</button>
         <button class="btn small" data-nav="convoy">Convoy (${run.convoy.length})</button>
         <button class="btn small" data-nav="menu">☰</button>
       </div>`;
@@ -199,7 +203,7 @@ export class App {
     const run = this.run!;
     return `
       <div class="party">
-        <h3>Army <span class="dim small">${run.roster.length}/${ARMY_CAPACITY} · deploy ${DEPLOY_CAPACITY}</span></h3>
+        <h3>Army <span class="dim small">${run.roster.length}/${armyCap(run)} · deploy ${deployCap(run)}</span></h3>
         ${run.roster.map((u) => `
           <div class="party-row" data-nav="unit" data-uid="${u.uid}">
             ${token(u, 34)}
@@ -230,7 +234,43 @@ export class App {
       },
       unit: (el: HTMLElement) => this.unitModal(el.dataset.uid!, rerender),
       convoy: () => this.convoyModal(rerender),
+      armyinfo: () => this.armyModal(rerender),
     };
+  }
+
+  private armyModal(rerender: () => void) {
+    const run = this.run!;
+    const a = armyOf(run);
+    const cmd = commanderOf(run);
+    const row = (label: string, value: string, note = '') => `<div class="equip-row"><span>${label}</span><span><b>${value}</b>${note ? ` <span class="dim small">${note}</span>` : ''}</span></div>`;
+    const m = modal(`
+      <h2>${esc(cmd.armyName)} <span class="dim small">Army Lv ${a.level}</span></h2>
+      <div class="xpbar"><i style="width:${Math.round((a.xp / xpToNext(a.level)) * 100)}%"></i></div>
+      <p class="dim small">Army EXP ${a.xp}/${xpToNext(a.level)}. Army level comes from finishing encounters and raises capacity, supplies and Command Points.</p>
+      <div class="equip-list">
+        ${row('Rupees', `₹${run.rupees}`)}
+        ${row('Supplies', `${a.supplies}/${supplyCap(run)}`, 'eaten after every battle; camps rest better with them')}
+        ${row('Materials', String(a.materials), 'used by the Blacksmith to improve weapons')}
+        ${row('Command Points', String(cpMax(run)), 'per battle, for orders')}
+        ${row('Fairy Dust', String(a.fairyDust), 'revive the fallen at camp')}
+        ${row('Sacred Energy', String(a.sacredEnergy), 'army-wide blessings')}
+        ${row('Morale', `${a.morale}/100`, `${moraleLabel(a.morale)} · ${moraleBonus(a.morale) >= 0 ? '+' : ''}${moraleBonus(a.morale)} Hit/Avoid`)}
+        ${row('Reputation', `${a.reputation}/100`, `${repDiscount(run)}% off at merchants`)}
+        ${row('Army Capacity', `${run.roster.length}/${armyCap(run)}`)}
+        ${row('Deployment', String(deployCap(run)))}
+      </div>
+      <h3>Orders <span class="dim small">given in battle with Command Points</span></h3>
+      <div class="equip-list">${ordersFor(run.commanderId).map((id) => row(`${esc(ORDERS[id].name)}`, `${ORDERS[id].cp} CP`, esc(ORDERS[id].desc))).join('')}</div>
+      <h3>Sacred Energy blessings</h3>
+      ${a.blessing ? `<p class="small">Active for the next battle: <b>${BLESSINGS[a.blessing].name}</b></p>` : ''}
+      <div class="choice-grid">${(Object.keys(BLESSINGS) as (keyof typeof BLESSINGS)[]).map((k) => `
+        <button class="choice" data-k="${k}" ${a.sacredEnergy < 1 || (k !== 'farore' && a.blessing) ? 'disabled' : ''}><b>${BLESSINGS[k].name}</b><span>${BLESSINGS[k].desc} (1 Sacred Energy)</span></button>`).join('')}</div>
+      <div class="center-text"><button class="btn" data-close>Close</button></div>`, { dismissable: true });
+    m.el.addEventListener('click', (e) => {
+      const k = (e.target as HTMLElement).closest('[data-k]') as HTMLElement | null;
+      if (!k) return;
+      if (useBlessing(run, k.dataset.k as keyof typeof BLESSINGS)) { this.save(); m.close(); rerender(); this.armyModal(rerender); }
+    });
   }
 
   private unitModal(uid: string, rerender: () => void) {
@@ -414,6 +454,9 @@ export class App {
         <div class="res-row"><span>Enemies defeated</span><b>${summary.kills}</b></div>
         ${summary.drops.length ? `<div class="res-drops"><div class="dim small">Boss drop (sent to convoy)</div>${summary.drops.map((d) => `<div>${itemLine(d)}</div>`).join('')}</div>` : ''}
         ${summary.supportUps.length ? `<div class="res-drops"><div class="dim small">Supports</div>${summary.supportUps.map((x) => `<div>💞 <b>${esc(x.a)}</b> & <b>${esc(x.b)}</b> reached <b>${x.rank}</b></div>`).join('')}</div>` : ''}
+        ${summary.found.length ? `<div class="res-drops"><div class="dim small">Found on the field</div><div>${summary.found.map((d) => esc(itemName(d))).join(', ')}</div></div>` : ''}
+        ${summary.joined.length ? `<div class="res-drops"><div class="dim small">Rescued and joined your army</div><div>${summary.joined.map(esc).join(', ')}</div></div>` : ''}
+        <div class="res-army-stats">${armyReportHtml(summary.army)}</div>
         ${summary.fallen.length ? `<div class="res-fallen"><span class="dim">Fallen:</span> ${summary.fallen.map((u) => `${token(u, 28)} ${esc(u.name)}`).join(' ')}</div>` : '<div class="dim">No losses.</div>'}
         <div class="res-army">${run.roster.map((u) => `<div class="res-unit">${token(u, 36)}<div><b>${esc(u.name)}</b><div class="dim small">Lv ${u.level} · HP ${u.hp}/${u.stats.hp}</div></div></div>`).join('')}</div>
         <p class="dim small">Units recover 20% HP after each battle (benched units recover more).</p>
@@ -536,13 +579,13 @@ export class App {
     const run = this.run!;
     const chosen = new Set(run.roster.filter((u) => u.isCommander).map((u) => u.uid));
     // Default: commander plus the healthiest units.
-    for (const u of [...run.roster].sort((a, b) => b.hp / b.stats.hp - a.hp / a.stats.hp)) if (chosen.size < DEPLOY_CAPACITY) chosen.add(u.uid);
+    for (const u of [...run.roster].sort((a, b) => b.hp / b.stats.hp - a.hp / a.stats.hp)) if (chosen.size < deployCap(run)) chosen.add(u.uid);
     const render = () => {
       this.setScreen(`
         ${this.topBar()}
         <div class="page">
           <h1>Deployment</h1>
-          <p class="dim center-text">Choose up to <b>${DEPLOY_CAPACITY}</b> units. Benched units recover extra HP. (${chosen.size}/${DEPLOY_CAPACITY})</p>
+          <p class="dim center-text">Choose up to <b>${deployCap(run)}</b> units. Benched units recover extra HP. (${chosen.size}/${deployCap(run)})</p>
           <div class="deploy-grid">${run.roster.map((u) => `
             <button class="deploy ${chosen.has(u.uid) ? 'on' : ''}" data-nav="toggle" data-uid="${u.uid}" ${u.isCommander ? 'disabled' : ''}>
               ${token(u, 40)}<div><b>${esc(u.name)}</b><div class="dim small">Lv ${u.level} ${esc(CLASSES[u.classId]?.name ?? '')}${u.size > 1 ? ` · Size ${u.size}` : ''}</div>${hpBar(u.hp, u.stats.hp)}<div class="dim small">HP ${u.hp}/${u.stats.hp}</div></div>
@@ -554,7 +597,7 @@ export class App {
         toggle: (el) => {
           const uid = el.dataset.uid!;
           if (chosen.has(uid)) chosen.delete(uid);
-          else if (chosen.size < DEPLOY_CAPACITY) chosen.add(uid);
+          else if (chosen.size < deployCap(run)) chosen.add(uid);
           render();
         },
         go: () => { startBattle(run, [...chosen]); this.save(); this.battle(); },
@@ -567,12 +610,12 @@ export class App {
     const run = this.run!;
     const ev = run.event as EventOf<'recruit'>;
     ev.offers = ev.offers.filter((id) => TEMPLATES[id]);
-    const full = run.roster.length >= ARMY_CAPACITY;
+    const full = run.roster.length >= armyCap(run);
     this.setScreen(`
       ${this.topBar()}
       <div class="page">
         <h1>Recruitment</h1>
-        <p class="dim center-text">${full ? `<b>Your army is full (${ARMY_CAPACITY})</b>. You can only accept supplies (+₹120).` : `Recruits join at <b>Level ${recruitLevel(run)}</b>.`}</p>
+        <p class="dim center-text">${full ? `<b>Your army is full (${armyCap(run)})</b>. You can only accept supplies (+₹120).` : `Recruits join at <b>Level ${recruitLevel(run)}</b>.`}</p>
         <div class="card-grid">${ev.offers.map((id) => `<div>${templateCard(TEMPLATES[id], full ? '' : `<button class="btn primary wide" data-nav="take" data-id="${id}">Recruit ${esc(TEMPLATES[id].name)}</button>`)}</div>`).join('')}</div>
         <div class="center-text"><button class="btn" data-nav="skip">${full ? 'Take ₹120 and leave' : 'Leave'}</button></div>
       </div>`);
@@ -612,10 +655,13 @@ export class App {
           <div class="page">
             <h1>Merchant</h1>
             <p class="dim center-text">“Welcome! Buy somethin’, will ya?”${run.bonus === 'forging' ? ' <span class="badge gold">Goron discount −25% on weapons</span>' : ''}</p>
-            <h3>Weapons</h3><div class="shop-list">${ev.weapons.map((id) => row('weapon', id, weaponPrice(run, id))).join('')}</div>
-            <h3>Gear</h3><div class="shop-list">${ev.gear.map((id) => row('gear', id, GEAR[id].price)).join('') || '<div class="dim">None in stock.</div>'}</div>
+            ${repDiscount(run) ? `<p class="center-text"><span class="badge">Reputation discount −${repDiscount(run)}%</span></p>` : ''}
+            <h3>Weapons</h3><div class="shop-list">${ev.weapons.map((id) => row('weapon', id, priceOf(run, 'weapon', id))).join('')}</div>
+            <h3>Gear</h3><div class="shop-list">${ev.gear.map((id) => row('gear', id, priceOf(run, 'gear', id))).join('') || '<div class="dim">None in stock.</div>'}</div>
             <h3>Items <span class="dim small">restocked: buy as many as you like</span></h3><div class="shop-list">${ev.items.map((id) => row('item', id, priceOf(run, 'item', id))).join('') || '<div class="dim">None in stock.</div>'}</div>
-            <h3>Permanent upgrades</h3><div class="shop-list">${ev.permanents.map((id) => row('permanent', id, PERMANENT_ITEMS[id].price)).join('')}</div>
+            <h3>Permanent upgrades</h3><div class="shop-list">${ev.permanents.map((id) => row('permanent', id, priceOf(run, 'permanent', id))).join('')}</div>
+            <h3>Supplies <span class="dim small">${armyOf(run).supplies}/${supplyCap(run)}</span></h3>
+            <div class="shop-list"><div class="shop-item"><div><b>Crate of supplies</b> <span class="dim small">+${SUPPLY_PACK.amount} supplies (food, bandages, horse feed)</span></div><button class="btn small" data-nav="supplies" ${run.rupees < Math.round(SUPPLY_PACK.price * (1 - repDiscount(run) / 100)) || armyOf(run).supplies >= supplyCap(run) ? 'disabled' : ''}>₹${Math.round(SUPPLY_PACK.price * (1 - repDiscount(run) / 100))}</button></div></div>
             <div class="center-text"><button class="btn primary big" data-nav="leave">Leave</button></div>
           </div>
           ${this.partyHtml()}
@@ -628,6 +674,7 @@ export class App {
           const uid = await this.unitPicker(`Give ${esc(itemName(id))} to…`, (u) => canTake(u, id), (u) => this.itemPreview(u, id));
           if (uid && buy(run, kind, id, uid)) { this.save(); render(); }
         },
+        supplies: () => { if (buySupplies(run)) { this.save(); render(); } },
         leave: () => this.finishEvent(),
       });
     };
@@ -649,16 +696,21 @@ export class App {
           <h1>Camp</h1>
           <p class="dim center-text">The army makes camp for the night.</p>
           <div class="choice-grid">
-            <button class="choice" data-nav="rest"><b>☾ Rest</b><span>Everyone recovers 50% of their max HP.</span></button>
+            <button class="choice" data-nav="rest"><b>☾ Rest</b><span>${armyOf(run).supplies >= 4 ? 'Eat 4 supplies: everyone recovers fully (+5 morale).' : 'Out of supplies: everyone recovers 50% of their max HP.'}</span></button>
+            <button class="choice" data-nav="feast" ${armyOf(run).supplies < FEAST_COST ? 'disabled' : ''}><b>🍖 Feast</b><span>Mess Hall: spend ${FEAST_COST} supplies for +15 morale; everyone starts the next battle Inspired.</span></button>
             <button class="choice" data-nav="train"><b>⚔ Train</b><span>One unit trains hard and gains a full level.</span></button>
             <button class="choice" data-nav="drill"><b>⚑ Drill</b><span>The whole army drills together: everyone gains 45 XP.</span></button>
           </div>
+          ${armyOf(run).fairyDust > 0 && run.fallen.length ? `<h3>Infirmary <span class="dim small">${armyOf(run).fairyDust} Fairy Dust</span></h3>
+            <div class="shop-list">${run.fallen.map((u) => `<div class="shop-item"><div>${token(u, 24)} ${esc(u.name)}</div><button class="btn small" data-nav="dust" data-uid="${u.uid}" ${run.roster.length >= armyCap(run) ? 'disabled' : ''}>Revive (1 Fairy Dust)</button></div>`).join('')}</div>` : ''}
         </div>
         ${this.partyHtml()}
       </div>`);
     this.on({
       ...this.common(() => this.campScreen()),
       rest: () => { campRest(run); this.finishEvent(); },
+      feast: () => { if (campFeast(run)) this.finishEvent(); },
+      dust: (el) => { if (reviveWithDust(run, el.dataset.uid!)) { this.save(); this.campScreen(); } },
       train: async () => {
         const uid = await this.unitPicker('Who will train?', (u) => u.level < 30, (u) => `Lv ${u.level} → ${u.level + 1}`);
         if (!uid) return;
@@ -671,7 +723,7 @@ export class App {
 
   private fountainScreen() {
     const run = this.run!;
-    const canRevive = run.fallen.length > 0 && run.roster.length < ARMY_CAPACITY;
+    const canRevive = run.fallen.length > 0 && run.roster.length < armyCap(run);
     this.setScreen(`
       ${this.topBar()}
       <div class="map-layout">
@@ -764,7 +816,7 @@ export class App {
         const ic = improveCost(run, u, wid);
         return `<div class="shop-item"><div>${token(u, 24)} ${weaponLine(w, { owner: u })}</div><span>
           <button class="btn small" data-nav="repair" data-uid="${u.uid}" data-w="${wid}" ${!rc || run.rupees < rc ? 'disabled' : ''}>${rc ? `Repair ₹${rc}` : 'No wear'}</button>
-          <button class="btn small" data-nav="improve" data-uid="${u.uid}" data-w="${wid}" ${!ic || run.rupees < ic ? 'disabled' : ''}>${ic ? `Improve +${forgeLevel(u, wid) + 1} ₹${ic}` : 'Maxed'}</button></span></div>`;
+          <button class="btn small" data-nav="improve" data-uid="${u.uid}" data-w="${wid}" ${!ic || run.rupees < ic || armyOf(run).materials < improveMaterials(u, wid) ? 'disabled' : ''}>${ic ? `Improve +${forgeLevel(u, wid) + 1} ₹${ic} + ${improveMaterials(u, wid)} mats` : 'Maxed'}</button></span></div>`;
       })).join('');
       this.setScreen(`
         ${this.topBar()}
@@ -772,7 +824,7 @@ export class App {
           <div class="page">
             <h1>Blacksmith</h1>
             <p class="dim center-text">“Bring me your dull blades and your broken dreams!”${run.bonus === 'forging' ? ' <span class="badge gold">Goron discount −25%</span>' : ''}</p>
-            <h3>Repair & improve <span class="dim small">Improving adds +1 Might (max +${MAX_FORGE})</span></h3>
+            <h3>Repair & improve <span class="dim small">Improving adds +1 Might (max +${MAX_FORGE}) · Materials: ${armyOf(run).materials}</span></h3>
             <div class="shop-list">${rows}</div>
             <h3>Forge a new weapon</h3>
             <div class="shop-list">${ev.forgeOffers.map((id) => {
@@ -820,4 +872,18 @@ export class App {
       },
     });
   }
+}
+
+function armyReportHtml(r: { xp: number; levelUps: number; supplies: number; materials: number; morale: number; reputation: number; fairyDust: number; sacredEnergy: number; starving: boolean }): string {
+  const sign = (n: number) => (n > 0 ? `+${n}` : String(n));
+  const parts = [
+    `Army EXP +${r.xp}${r.levelUps ? ` <b class="win">(Army Level up!)</b>` : ''}`,
+    `Supplies ${sign(r.supplies)}`,
+    r.materials ? `Materials ${sign(r.materials)}` : '',
+    `Morale ${sign(r.morale)}`,
+    r.reputation ? `Reputation ${sign(r.reputation)}` : '',
+    r.fairyDust ? `Fairy Dust ${sign(r.fairyDust)}` : '',
+    r.sacredEnergy ? `Sacred Energy ${sign(r.sacredEnergy)}` : '',
+  ].filter(Boolean);
+  return `<span class="dim small">${parts.join(' · ')}</span>${r.starving ? '<div class="bad small">Out of supplies! The army goes hungry (less recovery, lower morale).</div>' : ''}`;
 }

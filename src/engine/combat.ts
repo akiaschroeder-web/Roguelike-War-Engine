@@ -1,5 +1,6 @@
 import { ABILITIES, CLASSES, ITEMS, WEAPONS } from '../data/registry';
 import { gainSupport, supportBonus } from './supports';
+import { coordinatedBonus, moraleBonus } from './army';
 import { isHelpless, onDamaged, rollElement, statusMods, weatherMight } from './status';
 import { keyOf, terrainAt, unitDist } from './grid';
 import type { RNG } from './rng';
@@ -151,6 +152,12 @@ export function situational(b: Battle, u: Unit, pos: Pos, foe: Unit, initiating:
   if (b.units.some((e) => e.team !== u.team && hasEffect(e, 'intimidate') && unitDist(u, e, pos) <= 2)) m.avoid -= 5;
   if (hasEffect(u, 'beastSlayer') && unitTags(foe).includes('beast')) m.str += 3;
   if (hasEffect(u, 'giantEye') && foe.size >= 2) m.hit += 20;
+  if (u.team === 'player' && !u.npc) {
+    const mb = moraleBonus(b.morale);
+    m.hit += mb;
+    m.avoid += mb;
+    if (initiating) m.dmg += coordinatedBonus(b, u, foe);
+  }
   const sup = supportBonus(b, u, pos);
   m.hit += sup.hit; m.avoid += sup.avoid; m.crit += sup.crit; m.def += sup.def; m.res += sup.def;
   return m;

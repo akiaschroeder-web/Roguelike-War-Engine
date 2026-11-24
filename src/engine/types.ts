@@ -517,11 +517,43 @@ export interface Battle {
   /** Items and Rupees found during the battle (handed out afterwards). */
   loot?: string[];
   bonusRupees?: number;
+  /** Command Points for orders this battle. */
+  cp?: number;
+  cpMax?: number;
+  /** Orders this commander can give. */
+  orders?: OrderId[];
+  /** Coordinated Strike: active on this turn. */
+  coordinatedTurn?: number;
+  /** Army morale (0-100) for Hit/Avoid. */
+  morale?: number;
+  /** Benched units that can be brought in with Reinforce. */
+  reserves?: Unit[];
+  /** Units pulled out with Emergency Retreat (they survive). */
+  withdrawn?: Unit[];
   /** Army-wide healing multiplier from the commander bonus. */
   healMult: number;
   /** Loot dropped by bosses this battle. */
   drops: string[];
 }
+
+export interface Army {
+  level: number;
+  xp: number;
+  supplies: number;
+  materials: number;
+  /** 0-100: Hit and Avoid bonus or penalty for the whole army. */
+  morale: number;
+  /** 0-100: shop discounts and better recruits. */
+  reputation: number;
+  fairyDust: number;
+  sacredEnergy: number;
+  /** Blessing bought with Sacred Energy, applied at the start of the next battle. */
+  blessing?: 'din' | 'nayru' | 'farore';
+  /** Feast at camp: everyone starts the next battle Inspired. */
+  feast?: boolean;
+}
+
+export type OrderId = 'rally' | 'forcedMarch' | 'defensiveFormation' | 'focusFire' | 'emergencyRetreat' | 'reinforce' | 'holdTheLine' | 'coordinatedStrike' | 'secondWind';
 
 export interface MapNode {
   id: string;
@@ -566,6 +598,12 @@ export interface Run {
   eventsSeen?: string[];
   /** Dungeon in progress: current floor out of `of`. */
   dungeon?: { floor: number; of: number };
+  /** Army-wide stats and resources. */
+  army?: Army;
+  /** Permanent bonuses bought between runs. */
+  metaBonus?: { armyCap?: number; cp?: number };
+  /** Discovered support conversations (keys 'templateA|templateB|rank'). */
+  convosSeen?: string[];
   /** uids chosen for the pending battle. */
   deployment?: string[];
   uidCounter: number;

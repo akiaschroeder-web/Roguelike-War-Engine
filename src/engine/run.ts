@@ -7,8 +7,10 @@ import { restoreForm } from './transform';
 import { canWield, type LevelUp } from './combat';
 import { RNG } from './rng';
 import { ARMY_CAPACITY, DEPLOY_CAPACITY } from './rules';
+import { adjustMorale, adjustReputation, applyArmyBuffs, armyCap, armyOf, deployCap, gainArmyXp, newArmy, repDiscount, supplyCap } from './army';
+import { prepareForBattle } from './units';
 import { addToPack, canRide, forgeLevel, gainXp, makeHero, maxUses, rollLevelUp, slotFor } from './units';
-import type { BossDef, CommanderDef, EventDef, EventEffect, EventOutcome, EnemyForce, FactionDef, GearSlot, MapNode, NodeType, Rarity, Run, RunMap, Unit, UnitTemplate, WorldId } from './types';
+import type { Battle, BossDef, CommanderDef, EventDef, EventEffect, EventOutcome, EnemyForce, FactionDef, GearSlot, MapNode, NodeType, Rarity, Run, RunMap, Unit, UnitTemplate, WorldId } from './types';
 
 export const ROWS_PER_REGION = 7; // last row is the regional boss
 export { ARMY_CAPACITY, DEPLOY_CAPACITY };
@@ -36,7 +38,7 @@ export function newRun(seed: number, commanderId: string): RunWithEvent {
   const run: RunWithEvent = {
     seed, rngState: 0, act: 1, region, regionsVisited: [region], map: { rows: 0, nodes: [] }, currentNodeId: null,
     roster: [], fallen: [], rupees: 200, convoy: [], commanderId: cmd.heroId, bonus: cmd.bonus,
-    stats: { battles: 0, kills: 0, recruits: 0 }, seenHeroes: [cmd.heroId], bossesFought: [], uidCounter: 0,
+    stats: { battles: 0, kills: 0, recruits: 0 }, seenHeroes: [cmd.heroId], bossesFought: [], uidCounter: 0, army: newArmy(),
   };
   const commander = makeHero(cmd.heroId, nextUid(run), 1, rng);
   commander.isCommander = true;
@@ -183,6 +185,7 @@ export function enterNode(run: RunWithEvent, nodeId: string): void {
     marchToBattle(run);
     return;
   }
+  gainArmyXp(run, 8);
   withRng(run, (rng) => {
     switch (node.type) {
       case 'recruit':
@@ -227,7 +230,7 @@ export function enterNode(run: RunWithEvent, nodeId: string): void {
 /** Go to deployment (if the army is bigger than the field) or straight into battle. */
 export function marchToBattle(run: RunWithEvent): void {
   const node = currentNode(run)!;
-  if (run.roster.length > DEPLOY_CAPACITY) run.event = { type: 'deploy', nodeId: node.id };
+  if (run.roster.length > deployCap(run)) run.event = { type: 'deploy', nodeId: node.id };
   else startBattle(run, run.roster.map((u) => u.uid));
 }
 
@@ -242,7 +245,7 @@ export function startBattle(run: RunWithEvent, uids: string[]): void {
   const node = currentNode(run)!;
   const kind = battleKind(run, node);
   const floorBonus = node.type === 'dungeon' ? (run.dungeon?.floor ?? 1) - 1 : 0;
-  const chosen = run.roster.filter((u) => uids.includes(u.uid) || u.isCommander).slice(0, DEPLOY_CAPACITY);
+  const chosen = run.roster.filter((u) => uids.includes(u.uid) || u.isCommander).slice(0, deployCap(run));
   run.deployment = chosen.map((u) => u.uid);
   run.event = undefined;
   withRng(run, (rng) => {
@@ -253,6 +256,8 @@ export function startBattle(run: RunWithEvent, uids: string[]): void {
       world: node.world, nodeType: node.type === 'dungeon' ? kind : node.type, depth: depthOf(run, node) + floorBonus, roster: chosen,
       seed: rng.int(0, 2 ** 31), boss, healMult: run.bonus === 'healing' ? 1.2 : 1, force, supports: run.supports,
     });
+    run.battle.reserves = run.roster.filter((u) => !chosen.includes(u)).map((u) => ({ ...prepareForBattle(u), x: -1, y: -1 }));
+    applyArmyBuffs(run, run.battle);
   });
 }
 
@@ -358,6 +363,8 @@ export interface BattleSummary {
   fallen: Unit[];
   kills: number;
   drops: string[];
+  /** Changes to army resources. */
+  army: ArmyReport;
   /** Items found on the battlefield (sent to packs or the convoy). */
   found: string[];
   /** Rescued prisoners who joined the army. */
@@ -389,9 +396,9 @@ export function finishBattle(run: RunWithEvent): BattleSummary {
     return [me, { ...partner, hp: me.hp > 0 ? Math.max(1, Math.ceil(partner.stats.hp * ratio)) : 0 }];
   };
   const fallen = b.fallen.filter((u) => u.team === 'player' && !u.npc).flatMap(split);
-  const survivors = new Map(b.units.filter((u) => u.team === 'player' && !u.npc).flatMap(split).map((u) => [u.uid, u]));
+  const survivors = new Map([...b.units, ...(b.withdrawn ?? [])].filter((u) => u.team === 'player' && !u.npc).flatMap(split).map((u) => [u.uid, u]));
   const deployed = new Set(run.deployment ?? []);
-  const heal = POST_BATTLE_HEAL + (run.bonus === 'postBattleHeal' ? 0.1 : 0);
+  const heal = (armyOf(run).supplies > 0 ? POST_BATTLE_HEAL : 0.05) + (run.bonus === 'postBattleHeal' ? 0.1 : 0);
   run.roster = run.roster
     .filter((u) => !fallen.some((f) => f.uid === u.uid))
     .map((u) => {
@@ -426,7 +433,7 @@ export function finishBattle(run: RunWithEvent): BattleSummary {
     // Freed prisoners join (if there's room)
     withRng(run, (rng) => {
       for (const c of b.units.filter((x) => x.rescued)) {
-        if (run.roster.length >= ARMY_CAPACITY || !c.templateId) continue;
+        if (run.roster.length >= armyCap(run) || !c.templateId) continue;
         if (!TEMPLATES[c.templateId]?.generic && run.roster.some((r) => r.templateId === c.templateId)) continue;
         const u = makeHero(c.templateId, nextUid(run), recruitLevel(run), rng);
         run.roster.push(u);
@@ -495,7 +502,51 @@ export function finishBattle(run: RunWithEvent): BattleSummary {
       withRng(run, (rng) => { run.event = { type: 'treasure', rewards: treasureRewards(run, rng, true), rupees: 250 + run.act * 100 }; });
     }
   }
-  return { won, rupees, fallen, kills, drops, supportUps, sideQuest, retreated: !won && !!b.retreat, dungeon, found, joined };
+  const army = armyAfterBattle(run, b, won, fallen.length, deployed.size || survivors.size);
+  return { won, rupees, fallen, kills, drops, supportUps, sideQuest, retreated: !won && !!b.retreat, dungeon, found, joined, army };
+}
+
+export interface ArmyReport {
+  xp: number;
+  levelUps: number;
+  supplies: number;
+  materials: number;
+  morale: number;
+  reputation: number;
+  fairyDust: number;
+  sacredEnergy: number;
+  starving: boolean;
+}
+
+/** Supplies eaten, materials salvaged, morale and reputation, army experience. */
+function armyAfterBattle(run: Run, b: Battle, won: boolean, losses: number, deployed: number): ArmyReport {
+  const a = armyOf(run);
+  const before = { ...a };
+  const eat = 1 + Math.ceil(deployed / 3);
+  const starving = a.supplies < eat;
+  a.supplies = Math.max(0, a.supplies - eat);
+  const kind = b.nodeType;
+  const rng = new RNG(b.rngState);
+  if (won) {
+    a.materials += rng.int(1, 3) + (kind === 'elite' || kind === 'siege' ? 3 : kind === 'boss' ? 6 : 0);
+    a.supplies = Math.min(supplyCap(run), a.supplies + rng.int(2, 5));
+    adjustMorale(run, 5 + (losses === 0 ? 3 : 0));
+    adjustReputation(run, 2 + (b.objective.type === 'rescue' || b.objective.type === 'escort' ? 4 : 0));
+    const bosses = b.fallen.filter((u) => u.team === 'enemy' && u.isBoss).length;
+    a.sacredEnergy += kind === 'boss' ? 1 : 0;
+    if (bosses && rng.chance(kind === 'boss' ? 100 : 35)) a.fairyDust++;
+  } else {
+    adjustMorale(run, -10);
+  }
+  adjustMorale(run, -8 * losses);
+  if (starving) adjustMorale(run, -10);
+  const xp = won ? (kind === 'boss' ? 60 : kind === 'elite' || kind === 'siege' ? 35 : 20) : 8;
+  const levelUps = gainArmyXp(run, xp);
+  return {
+    xp, levelUps, starving,
+    supplies: a.supplies - before.supplies, materials: a.materials - before.materials, morale: a.morale - before.morale,
+    reputation: a.reputation - before.reputation, fairyDust: a.fairyDust - before.fairyDust, sacredEnergy: a.sacredEnergy - before.sacredEnergy,
+  };
 }
 
 export function sideQuestText(sq: { kind: string; turns?: number }): string {
@@ -569,7 +620,7 @@ function applyEffect(run: Run, e: EventEffect, rng: RNG): string | null {
       return `Found ${name} (sent to convoy)`;
     }
     case 'recruit': {
-      if (run.roster.length >= ARMY_CAPACITY) { run.rupees += 100; return 'Your army is full: they leave you ₹100 instead'; }
+      if (run.roster.length >= armyCap(run)) { run.rupees += 100; return 'Your army is full: they leave you ₹100 instead'; }
       const have = new Set(run.roster.map((u) => u.templateId));
       const pool = e.pool.filter((id) => TEMPLATES[id] && (TEMPLATES[id].generic || !have.has(id)));
       if (!pool.length) return null;
@@ -630,7 +681,7 @@ export function recruitLevel(run: Run): number {
 }
 
 export function recruit(run: RunWithEvent, templateId: string): Unit | null {
-  if (run.roster.length >= ARMY_CAPACITY) return null;
+  if (run.roster.length >= armyCap(run)) return null;
   const unit = withRng(run, (rng) => makeHero(templateId, nextUid(run), recruitLevel(run), rng));
   run.roster.push(unit);
   if (run.event?.type === 'recruit') {
@@ -799,10 +850,43 @@ export function fountainTeach(run: RunWithEvent, uid: string): string | null {
 }
 
 export function priceOf(run: Run, kind: ItemKindTag, id: string): number {
-  if (kind === 'weapon') return weaponPrice(run, id);
-  if (kind === 'gear') return GEAR[id].price;
-  if (kind === 'item') return ITEMS[id].price;
-  return PERMANENT_ITEMS[id].price;
+  const base = kind === 'weapon' ? weaponPrice(run, id) : kind === 'gear' ? GEAR[id].price : kind === 'item' ? ITEMS[id].price : PERMANENT_ITEMS[id].price;
+  return Math.round(base * (1 - repDiscount(run) / 100));
+}
+
+export const SUPPLY_PACK = { amount: 10, price: 90 };
+
+/** Buy a crate of supplies at a merchant. */
+export function buySupplies(run: RunWithEvent): boolean {
+  const a = armyOf(run);
+  const price = Math.round(SUPPLY_PACK.price * (1 - repDiscount(run) / 100));
+  if (run.event?.type !== 'shop' || run.rupees < price || a.supplies >= supplyCap(run)) return false;
+  run.rupees -= price;
+  a.supplies = Math.min(supplyCap(run), a.supplies + SUPPLY_PACK.amount);
+  return true;
+}
+
+/** Camp: a feast in the mess hall (supplies → morale, and everyone starts the next battle Inspired). */
+export const FEAST_COST = 8;
+export function campFeast(run: RunWithEvent): boolean {
+  const a = armyOf(run);
+  if (run.event?.type !== 'camp' || a.supplies < FEAST_COST) return false;
+  a.supplies -= FEAST_COST;
+  adjustMorale(run, 15);
+  a.feast = true;
+  run.event = undefined;
+  return true;
+}
+
+/** Camp: revive a fallen unit with Fairy Dust (doesn't use up the camp visit). */
+export function reviveWithDust(run: RunWithEvent, uid: string): boolean {
+  const a = armyOf(run);
+  const i = run.fallen.findIndex((u) => u.uid === uid);
+  if (a.fairyDust < 1 || i < 0 || run.roster.length >= armyCap(run)) return false;
+  a.fairyDust--;
+  const [u] = run.fallen.splice(i, 1);
+  run.roster.push({ ...u, hp: Math.ceil(u.stats.hp / 2) });
+  return true;
 }
 
 export function buy(run: RunWithEvent, kind: ItemKindTag, id: string, uid: string | null): boolean {
@@ -820,7 +904,12 @@ export function buy(run: RunWithEvent, kind: ItemKindTag, id: string, uid: strin
 // ───────────────────────── Camp / fountain / treasure ─────────────────────────
 
 export function campRest(run: RunWithEvent): void {
-  for (const u of run.roster) u.hp = Math.min(u.stats.hp, u.hp + Math.ceil(u.stats.hp * 0.5));
+  // Resting eats supplies; a well-fed army recovers fully.
+  const a = armyOf(run);
+  const fed = a.supplies >= 4;
+  if (fed) a.supplies -= 4;
+  for (const u of run.roster) u.hp = Math.min(u.stats.hp, u.hp + Math.ceil(u.stats.hp * (fed ? 1 : 0.5)));
+  adjustMorale(run, fed ? 5 : 0);
   run.event = undefined;
 }
 
@@ -849,7 +938,7 @@ export function fountainHeal(run: RunWithEvent): void {
 
 export function fountainRevive(run: RunWithEvent, uid: string): boolean {
   const i = run.fallen.findIndex((u) => u.uid === uid);
-  if (i < 0 || run.roster.length >= ARMY_CAPACITY) return false;
+  if (i < 0 || run.roster.length >= armyCap(run)) return false;
   const [u] = run.fallen.splice(i, 1);
   run.roster.push({ ...u, hp: u.stats.hp });
   run.event = undefined;
@@ -933,6 +1022,7 @@ export function saveMeta(m: Meta): void {
 
 /** Bring saves from older versions up to date (single accessory slot, no pack). */
 export function migrateRun(run: RunWithEvent): RunWithEvent {
+  run.army ??= newArmy();
   const fix = (u: Unit & { accessory?: string; stunned?: number }) => {
     u.gear ??= {};
     u.pack ??= [];
@@ -989,6 +1079,11 @@ export function improveCost(run: Run, u: Unit, weaponId: string): number {
   return Math.round((150 + valueOf(weaponId) * 0.3) * (lvl + 1) * smithDiscount(run));
 }
 
+/** Materials needed to improve a weapon (2, 4, 6). */
+export function improveMaterials(u: Unit, weaponId: string): number {
+  return 2 * (forgeLevel(u, weaponId) + 1);
+}
+
 export function forgePrice(run: Run, weaponId: string): number {
   return Math.round(valueOf(weaponId) * 0.85 * smithDiscount(run));
 }
@@ -1007,8 +1102,10 @@ export function improveWeapon(run: RunWithEvent, uid: string, weaponId: string):
   const u = run.roster.find((x) => x.uid === uid);
   if (run.event?.type !== 'blacksmith' || !u) return false;
   const cost = improveCost(run, u, weaponId);
-  if (!cost || run.rupees < cost) return false;
+  const mats = improveMaterials(u, weaponId);
+  if (!cost || run.rupees < cost || armyOf(run).materials < mats) return false;
   run.rupees -= cost;
+  armyOf(run).materials -= mats;
   (u.forge ??= {})[weaponId] = forgeLevel(u, weaponId) + 1;
   return true;
 }

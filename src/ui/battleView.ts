@@ -13,13 +13,14 @@ import {
 } from '../engine/combat';
 import { computeMoves, footprint, keyOf, posOf, terrainAt, tilesInRange, unitAt, unitDist, type Moves } from '../engine/grid';
 import { RNG } from '../engine/rng';
+import { issueOrder, ORDERS, orderTargets, orderUnusable } from '../engine/army';
 import { TERRAIN_BONUS } from '../engine/rules';
 import type { RunWithEvent } from '../engine/run';
-import type { Battle, Pos, Unit } from '../engine/types';
+import type { Battle, OrderId, Pos, Unit } from '../engine/types';
 import { animationsEnabled, playCinematic, setAnimationsEnabled, type SideInfo } from './cinematic';
 import { ABILITY_ICONS, esc, hpBar, modal, showLevelUps, sleep, token, unitDetails, weaponLine } from './components';
 
-type Mode = 'idle' | 'select' | 'action' | 'attack' | 'heal' | 'items' | 'itemTarget' | 'magic' | 'abilityTarget' | 'abilityTile' | 'canto' | 'busy' | 'over';
+type Mode = 'orders' | 'orderTarget' | 'idle' | 'select' | 'action' | 'attack' | 'heal' | 'items' | 'itemTarget' | 'magic' | 'abilityTarget' | 'abilityTile' | 'canto' | 'busy' | 'over';
 
 const TERRAIN_GLYPH: Record<string, string> = {
   plain: '', forest: '♣', mountain: '▲', water: '≈', wall: '▦', fort: '⌂', lava: '♨',
@@ -51,6 +52,7 @@ export class BattleView {
   private onKey = (e: KeyboardEvent) => this.handleKey(e);
   private dungeon?: { floor: number; of: number };
   private tileSig = '';
+  private orderId: OrderId | null = null;
   private subPhase: 'allied' | 'environment' | null = null;
   private get phaseLabel(): string {
     return this.subPhase === 'allied' ? 'Allied' : this.subPhase === 'environment' ? 'Environment' : this.b.phase === 'player' ? 'Player' : 'Enemy';
@@ -284,6 +286,9 @@ export class BattleView {
         }
       }
     }
+    if (this.mode === 'orderTarget' && this.orderId) {
+      for (const t of orderTargets(b, this.orderId)) if (t.x >= 0) for (const f of footprint(t.x, t.y, t.size)) add(keyOf(b, f.x, f.y), ORDERS[this.orderId].target === 'enemy' ? 'tgt' : 'tgt hl');
+    }
     if (this.mode === 'abilityTarget' && this.sel && this.abilityId) {
       for (const t of abilityTargets(b, this.sel, ABILITIES[this.abilityId])) for (const f of footprint(t.x, t.y, t.size)) add(keyOf(b, f.x, f.y), 'tgt hl');
     }
@@ -312,6 +317,8 @@ export class BattleView {
       html = this.forecastHtml(forecast(b, this.sel, this.sel, this.pending, this.weaponChoice ?? undefined, this.arrowChoice ?? undefined));
     } else if (this.mode === 'heal' && this.sel && this.pending) {
       html = this.healHtml(this.sel, this.pending);
+    } else if (this.mode === 'orders' || this.mode === 'orderTarget') {
+      html = this.ordersHtml();
     } else if ((this.mode === 'items' || this.mode === 'itemTarget') && this.sel) {
       html = this.itemsHtml(this.sel);
     } else if ((this.mode === 'magic' || this.mode === 'abilityTarget' || this.mode === 'abilityTile') && this.sel) {
@@ -366,6 +373,33 @@ export class BattleView {
       <button class="btn primary wide" data-act="confirm">Attack ${esc(d.name)}</button></div>`;
   }
 
+  private ordersHtml(): string {
+    const { b } = this;
+    if (this.mode === 'orderTarget' && this.orderId === 'reinforce') {
+      return `<div class="forecast"><div class="fc-title">Reinforce: choose a unit</div><div class="item-list">${(b.reserves ?? []).map((u) => `
+        <button class="item-row" data-act="ordertarget" data-uid="${u.uid}"><b>${token(u, 24)} ${esc(u.name)}</b><span class="dim small">Lv ${u.level} · HP ${u.hp}/${u.stats.hp}</span></button>`).join('')}</div></div>`;
+    }
+    const rows = (b.orders ?? []).map((id) => {
+      const d = ORDERS[id];
+      const why = orderUnusable(b, id);
+      return `<button class="item-row ${this.orderId === id ? 'on' : ''}" data-act="order" data-id="${id}" ${why ? 'disabled' : ''}>
+        <b>⚑ ${esc(d.name)} <span class="dim">${d.cp} CP</span></b><span class="dim small">${esc(d.desc)}${why ? ` <i>(${esc(why)})</i>` : ''}</span></button>`;
+    }).join('');
+    const hint = this.mode === 'orderTarget' ? `<p class="small">Tap a highlighted ${ORDERS[this.orderId!].target === 'enemy' ? 'enemy' : 'ally'}.</p>` : '';
+    return `<div class="forecast"><div class="fc-title">Orders · ${b.cp ?? 0}/${b.cpMax ?? 0} CP · Morale ${b.morale ?? 50}</div>${hint}<div class="item-list">${rows}</div></div>`;
+  }
+
+  private async giveOrder(id: OrderId, targetUid?: string) {
+    const text = issueOrder(this.b, id, targetUid);
+    if (!text) return;
+    this.addLog(`⚑ <b>${esc(ORDERS[id].name)}</b>: ${esc(text)}`);
+    await this.banner(ORDERS[id].name, 'player');
+    this.mode = 'idle';
+    this.orderId = null;
+    this.save();
+    this.renderAll();
+  }
+
   private magicHtml(u: Unit): string {
     const defs = menuAbilities(u);
     const rows = defs.map((d) => {
@@ -410,6 +444,7 @@ export class BattleView {
     if (m === 'idle') {
       const ready = this.b.units.filter((u) => u.team === 'player' && !u.npc && !u.acted).length;
       html = `<button class="btn primary" data-act="end">End Turn <span class="dim">(${ready} ready)</span></button>
+        ${this.b.orders?.length ? `<button class="btn" data-act="orders">⚑ Orders <span class="dim">${this.b.cp ?? 0}/${this.b.cpMax ?? 0} CP</span></button>` : ''}
         <button class="btn ${this.showDanger ? 'on' : ''}" data-act="danger">Danger Zone</button>
         <button class="btn small" data-act="anims" title="Battle animations">🎬 ${animationsEnabled() ? 'On' : 'Off'}</button>`;
     } else if (m === 'select') {
@@ -434,6 +469,8 @@ export class BattleView {
       html = `<button class="btn" data-act="back">Back</button><span class="dim small">${m === 'items' ? 'Choose an item. Using one ends this unit\'s turn.' : 'Choose where to throw it.'}</span>`;
     } else if (m === 'canto') {
       html = `<button class="btn primary" data-act="stay">Stay</button><span class="dim small">${this.sel && hasEffect(this.sel, 'canto') && !this.sel.skills.includes('vanishingAct') ? 'Epona: use your leftover movement.' : 'Vanishing Act: move up to 3 more spaces.'}</span>`;
+    } else if (m === 'orders' || m === 'orderTarget') {
+      html = `<button class="btn" data-act="back">Back</button><span class="dim small">${m === 'orders' ? 'Orders don’t use up anyone’s turn.' : 'Pick a target for the order.'}</span>`;
     } else if (m === 'busy') {
       html = `<span class="dim small">${this.b.phase === 'enemy' ? 'Enemy is moving…' : '…'}</span>`;
     }
@@ -566,6 +603,11 @@ export class BattleView {
       return;
     }
 
+    if (this.mode === 'orderTarget' && this.orderId) {
+      if (u && orderTargets(b, this.orderId).includes(u)) await this.giveOrder(this.orderId, u.uid);
+      return;
+    }
+
     if (this.mode === 'abilityTarget' && this.sel && this.abilityId) {
       if (u && abilityTargets(b, this.sel, ABILITIES[this.abilityId]).includes(u)) await this.doCast(this.sel, this.abilityId, u.uid);
       return;
@@ -622,6 +664,19 @@ export class BattleView {
     switch (act) {
       case 'end':
         if (this.mode === 'idle') await this.endTurn();
+        return;
+      case 'orders':
+        if (this.mode === 'idle') { this.mode = 'orders'; this.orderId = null; this.renderAll(); }
+        return;
+      case 'order': {
+        const id = el?.dataset.id as OrderId;
+        if (!id || orderUnusable(b, id)) return;
+        if (ORDERS[id].target) { this.orderId = id; this.mode = 'orderTarget'; this.renderAll(); }
+        else await this.giveOrder(id);
+        return;
+      }
+      case 'ordertarget':
+        if (this.orderId && el?.dataset.uid) await this.giveOrder(this.orderId, el.dataset.uid);
         return;
       case 'anims':
         setAnimationsEnabled(!animationsEnabled());
@@ -700,6 +755,8 @@ export class BattleView {
         return;
       }
       case 'back':
+        if (this.mode === 'orders') { this.mode = 'idle'; this.renderAll(); return; }
+        if (this.mode === 'orderTarget') { this.mode = 'orders'; this.orderId = null; this.renderAll(); return; }
         this.mode = this.mode === 'itemTarget' ? 'items' : this.mode === 'abilityTarget' || this.mode === 'abilityTile' ? 'magic' : 'action';
         this.pending = null;
         this.itemIndex = null;
