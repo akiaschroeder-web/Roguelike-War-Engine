@@ -89,13 +89,16 @@ ENTRIES = {
     "skulltula": ("skulltula.webp", (0.50, 0.45, 0.60)),
     "wolfos": ("wolfos.webp", (0.79, 0.43, 0.42)),
     "tektite": ("tektite.png", (0.46, 0.42, 0.50)),
-    "stingerA": ("stingerA.webp", (0.50, 0.50, 0.95)),
-    "stingerB": ("stingerB.webp", (0.24, 0.24, 0.45)),
+    "stinger": ("stinger.webp", (0.50, 0.50, 0.95)),
+    "babyDodongo": ("babyDodongo.webp", (0.24, 0.24, 0.45)),
     "dodongo": ("dodongo.webp", (0.45, 0.38, 0.30)),
     "octorok": ("octorok.png", (0.57, 0.40, 0.62)),
     "shellBlade": ("shellBlade.webp", (0.51, 0.50, 0.80)),
     "likeLike": ("likeLike.png", (0.50, 0.50, 0.90)),
     "beamos": ("beamos.webp", (0.48, 0.16, 0.70)),
+    "anubis": ("anubis.webp", (0.50, 0.16, 0.60)),
+    "redead": ("redead.webp", (0.47, 0.14, 0.30)),
+    "wallmaster": ("wallmaster.webp", (0.50, 0.45, 0.85)),
 }
 
 

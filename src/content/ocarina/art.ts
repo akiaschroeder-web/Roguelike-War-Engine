@@ -21,5 +21,4 @@ export const ART_ALIASES: Record<string, string> = {
 export const ART_VARIANTS: Record<string, string[]> = {
   kokiriScout: ['kokiriA', 'kokiriB', 'kokiriC'],
   kokiriSlingshooter: ['kokiriA', 'kokiriB', 'kokiriC'],
-  stinger: ['stingerA', 'stingerB'],
 };
