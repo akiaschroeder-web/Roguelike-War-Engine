@@ -1,3 +1,4 @@
+import { STATUS_INFO } from '../engine/status';
 // A short side-view battle scene shown when two units fight, in the style of
 // classic tactics games: enemy on the left, player on the right, HP bars,
 // lunges, hit flashes, damage numbers and a KO. Click to skip.
@@ -165,7 +166,7 @@ export function playCinematic(opts: CinematicOptions): Promise<void> {
       }
       if (s.blocked) setTimeout(() => pop(s.target, 'BLOCK', 'miss'), 120);
       if (s.thawed) setTimeout(() => pop(s.target, 'THAWED', 'heal'), 160);
-      if (s.statuses?.length) setTimeout(() => pop(s.target, s.statuses!.map((st) => ({ burn: 'BURNING', freeze: 'FROZEN', shock: 'SHOCKED', poison: 'POISONED', stun: 'STUNNED' })[st]).join(' + '), 'crit'), 280);
+      if (s.statuses?.length) setTimeout(() => pop(s.target, s.statuses!.map((st) => STATUS_INFO[st].name.toUpperCase()).join(' + '), 'crit'), 280);
       if (s.saved) banner(s.saved === 'fairy' ? 'A FAIRY REVIVES THEM!' : 'TRIFORCE OF COURAGE!');
       await lunge;
       if (s.killed) {

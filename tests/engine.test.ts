@@ -17,6 +17,10 @@ import { castAbility } from '../src/engine/abilities';
 import { fountainTeach, improveWeapon, pickForce, repairWeapon, useItemOutside } from '../src/engine/run';
 import { gainSupport, isSPair, rankOf, supportKey } from '../src/engine/supports';
 import { chooseEvent, descendDungeon, migrateRun } from '../src/engine/run';
+import { addStatus, onDamaged, tickStatuses } from '../src/engine/status';
+import { dig, environmentPhase, ignite, isSeen, plantBean, revealNearby, triggerTraps } from '../src/engine/field';
+import { hookTiles } from '../src/engine/abilities';
+import { freeCaptive } from '../src/engine/battle';
 import { EVENTS } from '../src/data/registry';
 import type { Battle, Team, Unit } from '../src/engine/types';
 
@@ -847,5 +851,176 @@ describe('objectives and encounters', () => {
         expect(run.roster.every((u) => u.hp >= 1)).toBe(true);
       }
     }
+  });
+});
+
+describe('statuses, consumables and tools', () => {
+  it('new statuses change stats, tick and wake', () => {
+    const u = makeHero('link', 'p1', 5, rng());
+    const base = effectiveStats(u).str;
+    addStatus(u, 'curse', 2);
+    expect(effectiveStats(u).str).toBe(base - 2);
+    u.statuses = [];
+    u.hp = 10;
+    addStatus(u, 'regen', 2);
+    const t = tickStatuses(u);
+    expect(t.heal).toBeGreaterThan(0);
+    addStatus(u, 'sleep', 3);
+    expect(tickStatuses(u).lostTurn).toBe('sleep');
+    onDamaged(u);
+    expect(u.statuses.some((s) => s.kind === 'sleep')).toBe(false);
+  });
+
+  it('rooted units cannot move', () => {
+    const b = emptyBattle();
+    const u = place(makeHero('link', 'p1', 5, rng()), 2, 2, 'player');
+    b.units = [u];
+    addStatus(u, 'root', 1);
+    expect(computeMoves(b, u).reach.size).toBe(1);
+  });
+
+  it('antidote cures, elixir buffs, fire fruit burns the ground', () => {
+    const b = emptyBattle();
+    const u = place(makeHero('link', 'p1', 5, rng()), 1, 1, 'player');
+    const e = place(makeEnemy(ENEMIES.octorok ?? Object.values(ENEMIES)[0], 'hyruleField', 1, 'e2', rng()), 3, 1, 'enemy');
+    e.stats.hp = e.hp = 50;
+    b.units = [u, e];
+    addStatus(u, 'poison', 3);
+    u.pack = [{ id: 'antidote', uses: 1 }, { id: 'elixir', uses: 1 }, { id: 'fireFruit', uses: 2 }];
+    expect(useItem(b, u, 0, rng())).not.toBeNull();
+    expect(u.statuses.length).toBe(0);
+    const str = effectiveStats(u).str;
+    useItem(b, u, 0, rng());
+    expect(effectiveStats(u).str).toBe(str + 3);
+    b.tiles[keyOf(b, 3, 2)] = 'forest';
+    const r = useItem(b, u, 0, rng(), { x: 3, y: 1 });
+    expect(r!.hits[0].dmg).toBe(8);
+    expect(b.fires!.length).toBeGreaterThan(0);
+  });
+
+  it('bombs break cracked walls; Song of Time toggles Time Blocks', () => {
+    const b = emptyBattle();
+    const u = place(makeHero('zelda', 'p1', 5, rng()), 1, 1, 'player');
+    b.units = [u];
+    b.tiles[keyOf(b, 3, 1)] = 'cracked';
+    u.pack = [{ id: 'bomb', uses: 3 }];
+    useItem(b, u, 0, rng(), { x: 3, y: 1 });
+    expect(b.tiles[keyOf(b, 3, 1)]).toBe('plain');
+    b.tiles[keyOf(b, 5, 5)] = 'timeBlock';
+    u.abilities.push('songOfTime');
+    if (!u.weapons.some((w) => WEAPONS[w]?.type === 'instrument')) u.weapons.push('fairyOcarina');
+    u.mp = 20;
+    const res = castAbility(b, u, 'songOfTime', rng());
+    expect(res).not.toBeNull();
+    expect(b.tiles[keyOf(b, 5, 5)]).toBe('timeGap');
+  });
+
+  it('the Hookshot pulls across water to an anchor', () => {
+    const b = emptyBattle();
+    const u = place(makeHero('link', 'p1', 5, rng()), 1, 1, 'player');
+    u.weapons.push('hookshot');
+    b.units = [u];
+    b.tiles[keyOf(b, 2, 1)] = 'water';
+    b.tiles[keyOf(b, 4, 1)] = 'forest';
+    const tiles = hookTiles(b, u);
+    expect(tiles.some((t) => t.land.x === 3 && t.land.y === 1)).toBe(true);
+    const res = castAbility(b, u, 'hookshotPull', rng(), undefined, { x: 3, y: 1 });
+    expect(res).not.toBeNull();
+    expect(u.x).toBe(3);
+    expect(u.acted).toBe(false);
+  });
+
+  it('magic beans grow into bridges; fire spreads and burns out', () => {
+    const b = emptyBattle();
+    b.units = [];
+    b.tiles[keyOf(b, 5, 4)] = 'water';
+    plantBean(b, { x: 5, y: 4 });
+    environmentPhase(b);
+    environmentPhase(b);
+    expect(b.tiles[keyOf(b, 5, 4)]).toBe('bridge');
+    for (let x = 0; x < 6; x++) b.tiles[keyOf(b, x, 0)] = 'forest';
+    ignite(b, [{ x: 0, y: 0 }]);
+    for (let i = 0; i < 8; i++) environmentPhase(b);
+    expect(b.fires!.length).toBe(0);
+    expect(b.tiles[keyOf(b, 0, 0)]).toBe('plain');
+  });
+
+  it('traps, digging, fog and hidden enemies', () => {
+    const b = emptyBattle();
+    const u = place(makeHero('link', 'p1', 5, rng()), 1, 1, 'player');
+    const e = place(makeEnemy(ENEMIES.octorok ?? Object.values(ENEMIES)[0], 'hyruleField', 1, 'e2', rng()), 10, 6, 'enemy');
+    b.units = [u, e];
+    b.traps = [{ x: 1, y: 1, hidden: true }];
+    expect(triggerTraps(b, u)).toBeGreaterThan(0);
+    expect(u.statuses.some((s) => s.kind === 'root')).toBe(true);
+    b.digSpots = [{ x: 1, y: 1 }];
+    expect(dig(b, u, rng()).item).toBeDefined();
+    b.fog = true;
+    expect(isSeen(b, e)).toBe(false);
+    moveUnit(e, 3, 1);
+    expect(isSeen(b, e)).toBe(true);
+    e.hidden = true;
+    expect(isSeen(b, e)).toBe(false);
+    moveUnit(e, 2, 1);
+    revealNearby(b);
+    expect(e.hidden).toBe(false);
+  });
+
+  it('every map decorates without breaking (fog, traps, dig spots, special walls)', () => {
+    for (let s = 0; s < 40; s++) {
+      const run = newRun(s + 300, 'link');
+      const b = createBattle({ world: REGION_IDS[s % REGION_IDS.length], nodeType: s % 3 ? 'battle' : 'siege', depth: 4, roster: run.roster, seed: s });
+      for (const d of b.digSpots ?? []) expect(b.tiles[keyOf(b, d.x, d.y)]).toBe('plain');
+    }
+  });
+});
+
+describe('allies, escorts and rescues', () => {
+  const find = (type: string) => {
+    for (let s = 0; s < 400; s++) {
+      const run = newRun(s + 77, 'link');
+      const b = createBattle({ world: 'hyruleField', nodeType: 'battle', depth: 3, roster: run.roster, seed: s });
+      if (b.objective.type === type) return { run, b };
+    }
+    throw new Error('no ' + type);
+  };
+
+  it('escort battles have a VIP who heads for the exit', () => {
+    const { b } = find('escort');
+    const vip = b.units.find((u) => u.vip)!;
+    expect(vip.npc).toBe(true);
+    expect(planAction(b, vip).action).toBeNull();
+    moveUnit(vip, b.objective.tiles![0].x, b.objective.tiles![0].y);
+    expect(checkResult(b)).toBe('won');
+  });
+
+  it('losing the VIP means a retreat', () => {
+    const { b } = find('escort');
+    const vip = b.units.find((u) => u.vip)!;
+    b.units = b.units.filter((u) => u !== vip);
+    b.fallen.push(vip);
+    expect(checkResult(b)).toBe('lost');
+    expect(b.retreat).toBe(true);
+  });
+
+  it('rescued prisoners join after victory; allied NPCs do not', () => {
+    const { run, b } = find('rescue') as { run: RunWithEvent; b: Battle };
+    const captives = b.units.filter((u) => u.captive);
+    expect(captives.length).toBeGreaterThan(0);
+    const hero = b.units.find((u) => u.team === 'player' && !u.npc)!;
+    for (const c of captives) {
+      const spot = [[-1, 0], [1, 0], [0, -1], [0, 1]].map(([dx, dy]) => ({ x: c.x + dx, y: c.y + dy }))
+        .find((p) => p.x >= 0 && p.y >= 0 && p.x < b.width && p.y < b.height && !unitAt(b, p.x, p.y))!;
+      moveUnit(hero, spot.x, spot.y);
+      expect(freeCaptive(b, hero, c.uid)).not.toBeNull();
+    }
+    expect(checkResult(b)).toBe('won');
+    run.battle = b;
+    run.deployment = run.roster.map((u) => u.uid);
+    const before = run.roster.length;
+    const sum = finishBattle(run);
+    expect(run.roster.length).toBe(before + sum.joined.length);
+    expect(sum.joined.length).toBeGreaterThan(0);
+    expect(run.roster.every((u) => !u.npc)).toBe(true);
   });
 });

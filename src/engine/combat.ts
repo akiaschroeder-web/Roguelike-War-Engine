@@ -1,6 +1,6 @@
 import { ABILITIES, CLASSES, ITEMS, WEAPONS } from '../data/registry';
 import { gainSupport, supportBonus } from './supports';
-import { clearStatus, hasStatus, rollElement, statusMods, weatherMight } from './status';
+import { isHelpless, onDamaged, rollElement, statusMods, weatherMight } from './status';
 import { keyOf, terrainAt, unitDist } from './grid';
 import type { RNG } from './rng';
 import { isMagical, TERRAIN_BONUS, TRIANGLE } from './rules';
@@ -161,7 +161,7 @@ function sideStats(
   weapon: WeaponDef | undefined, foeWeapon: WeaponDef | undefined, arrow?: AbilityDef,
 ): SideForecast {
   const d = unitDist({ ...atk, ...atkPos }, { ...def, ...defPos });
-  const helpless = !initiating && (hasStatus(atk, 'freeze') || hasStatus(atk, 'stun'));
+  const helpless = !initiating && isHelpless(atk);
   if (!weapon || weapon.type === 'staff' || weapon.type === 'instrument' || !canReach(weapon, d) || helpless) {
     return { uid: atk.uid, weaponId: weapon?.id ?? null, canAttack: false, dmg: 0, hit: 0, crit: 0, attacks: 0, triangle: 0, effective: false, block: 0, arrowId: null };
   }
@@ -182,7 +182,7 @@ function sideStats(
 
   let might = (weapon.might + forgeLevel(atk, weapon.id) + (arrow?.might ?? 0)) * (effective ? 2 : 1) + weatherMight(b, element);
   if (atk.skills.includes('heavyForging') && weapon.twoHanded) might += 2;
-  const power = (magical ? as.mag + am.mag : as.str + am.str) + might + tri + am.dmg;
+  const power = (magical ? as.mag + am.mag : as.str + am.str) + might + tri + am.dmg + sa.dmg;
   let defense = magical ? ds.res + dm.res : Math.max(0, ds.def + dm.def + sd.def) + terrain.def;
   if (weapon.pierce) defense = Math.floor(defense * (1 - weapon.pierce));
   let dmg = Math.max(0, power - defense);
@@ -192,8 +192,8 @@ function sideStats(
   const atkSpd = as.spd + am.spd - Math.max(0, weapon.weight - as.con);
   const defW = foeWeapon ?? weapon;
   const defSpd = ds.spd + dm.spd - Math.max(0, (foeWeapon ? defW.weight : 0) - ds.con);
-  const hit = clamp(weapon.hit + (arrow?.hit ?? 0) + (as.skl + am.skl) * 2 + Math.floor(as.lck / 2) + tri * 15 + am.hit + ab.hit + sa.hit
-    - (Math.max(0, defSpd) * 2 + ds.lck + terrain.avoid + dm.avoid + db.avoid));
+  const hit = clamp(weapon.hit + (arrow?.hit ?? 0) + (as.skl + am.skl) * 2 + Math.floor(as.lck / 2) + tri * 15 + am.hit + ab.hit + sa.hit - (b.weather?.kind === 'sandstorm' ? 15 : 0)
+    - (Math.max(0, defSpd) * 2 + ds.lck + terrain.avoid + dm.avoid + db.avoid + sd.avoid));
   const crit = clamp(weapon.crit + (arrow?.crit ?? 0) + Math.floor((as.skl + am.skl) / 2) + am.crit + ab.crit - ds.lck);
 
   let attacks = atkSpd - defSpd >= 4 ? 2 : 1;
@@ -230,7 +230,7 @@ export function attackMods(u: Unit, weapon: WeaponDef | undefined): AbilityDef[]
   if (weapon.type === 'bow') {
     for (const id of u.abilities) {
       const a = ABILITIES[id];
-      if (a?.kind === 'arrow' && a.implemented && u.mp >= a.mp) out.push(a);
+      if (a?.kind === 'arrow' && a.implemented && u.mp >= a.mp && !u.statuses.some((s) => s.kind === 'silence')) out.push(a);
     }
   }
   for (const a of Object.values(ABILITIES)) {
@@ -317,8 +317,8 @@ export function resolveCombat(b: Battle, attacker: Unit, defender: Unit, rng: RN
     let thawed = false;
     let statuses: StatusKind[] | undefined;
     if (!killed && dmg > 0) {
-      if (hasStatus(target, 'freeze')) { clearStatus(target, 'freeze'); thawed = true; }
-      statuses = rollElement(b, by, target, side.element, rng);
+      if (target.statuses.some((x) => x.kind === 'freeze' || x.kind === 'sleep')) { onDamaged(target); thawed = true; }
+      statuses = rollElement(b, by, target, side.element, rng, side.weaponId ?? undefined);
     }
     strikes.push({ by: by.uid, target: target.uid, hit, crit, dmg, heal, targetHp: target.hp, byHp: by.hp, killed, blocked, saved, statuses, thawed });
     if (killed) {

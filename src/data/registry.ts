@@ -3,9 +3,10 @@
 // installing them here.
 
 import { OCARINA } from '../content/ocarina';
+import { SPECIAL_TERRAIN } from '../engine/rules';
 import type { ContentPack } from '../content/types';
 import type {
-  AbilityDef, FactionDef, GearDef, ItemDef, BossDef, ClassDef, CommanderDef, EnemyArchetype, PermanentItemDef, RaceDef, SkillDef, UnitTemplate, WeaponDef, WorldDef, WorldId, EventDef } from '../engine/types';
+  AbilityDef, FactionDef, GearDef, ItemDef, BossDef, ClassDef, CommanderDef, EnemyArchetype, PermanentItemDef, RaceDef, SkillDef, UnitTemplate, WeaponDef, WorldDef, WorldId, EventDef, BaseTerrain, Terrain } from '../engine/types';
 
 export const RACES: Record<string, RaceDef> = {};
 export const CLASSES: Record<string, ClassDef> = {};
@@ -141,4 +142,11 @@ export function artFor(id: string | undefined, seed = ''): string | null {
   if (ART_IDS.has(id)) return id;
   const alias = ART_ALIASES[id];
   return alias && ART_IDS.has(alias) ? alias : null;
+}
+
+/** Name and colour of a terrain type in a region (special terrain shares one look). */
+export function terrainLook(world: string, t: Terrain): { name: string; color: string } {
+  const w = worldDef(world);
+  if (t in SPECIAL_TERRAIN) return SPECIAL_TERRAIN[t as keyof typeof SPECIAL_TERRAIN];
+  return { name: w.terrainNames[t as BaseTerrain], color: w.terrainColors[t as BaseTerrain] };
 }

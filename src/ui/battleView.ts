@@ -1,11 +1,12 @@
-import { ABILITIES, BOSSES, CLASSES, ITEMS, worldDef } from '../data/registry';
+import { ABILITIES, BOSSES, CLASSES, ITEMS, terrainLook, worldDef } from '../data/registry';
 import { canRide, effectiveStats, hasEffect, isMounted, mountOf } from '../engine/units';
-import { enemyAutoTransform, abilityRadius, abilityTargets, castAbility, castableAbilities, costLabel, knownAbilities, needsTarget, needsTile, unusableReason, warpTiles } from '../engine/abilities';
+import { enemyAutoTransform, abilityRadius, abilityTargets, castAbility, castableAbilities, costLabel, knownAbilities, needsTarget, needsTile, unusableReason, abilityTiles } from '../engine/abilities';
 import { STATUS_INFO } from '../engine/status';
-import { canUse, isTargeted, targetTiles, useItem } from '../engine/items';
+import { canUse, canUseHere, isTargeted, targetTiles, useItem } from '../engine/items';
+import { environmentPhase, isSeen, revealNearby, triggerTraps, visibleTiles } from '../engine/field';
 import { planAction } from '../engine/ai';
 import { sideQuestText } from '../engine/run';
-import { checkResult, mountToggleBlocked, moveUnit, toggleMount, objectiveText, spawnReinforcements, startPhase, type TurnStartEvent } from '../engine/battle';
+import { adjacentCaptives, checkResult, freeCaptive, mountToggleBlocked, moveUnit, toggleMount, objectiveText, spawnReinforcements, startPhase, type TurnStartEvent } from '../engine/battle';
 import {
   attackMods, attackWeapons, findInterceptor, forecast, healAmount, healWeapons, maxAttackRange, resolveCombat, resolveHeal, weaponDef,
   type Forecast, type LevelUp,
@@ -22,6 +23,7 @@ type Mode = 'idle' | 'select' | 'action' | 'attack' | 'heal' | 'items' | 'itemTa
 
 const TERRAIN_GLYPH: Record<string, string> = {
   plain: '', forest: '♣', mountain: '▲', water: '≈', wall: '▦', fort: '⌂', lava: '♨',
+  cracked: '▤', timeBlock: '⧗', timeGap: '·', bridge: '═',
 };
 
 export class BattleView {
@@ -48,6 +50,14 @@ export class BattleView {
   };
   private onKey = (e: KeyboardEvent) => this.handleKey(e);
   private dungeon?: { floor: number; of: number };
+  private tileSig = '';
+  private subPhase: 'allied' | 'environment' | null = null;
+  private get phaseLabel(): string {
+    return this.subPhase === 'allied' ? 'Allied' : this.subPhase === 'environment' ? 'Environment' : this.b.phase === 'player' ? 'Player' : 'Enemy';
+  }
+  private get phaseCls(): string {
+    return this.subPhase ?? this.b.phase;
+  }
   private onResize = () => { this.layout(); this.renderUnits(); };
 
   constructor(
@@ -104,11 +114,11 @@ export class BattleView {
 
   private buildTiles() {
     const { b } = this;
-    const world = worldDef(b.world);
+    this.tileSig = b.tiles.join();
     this.els.tiles.style.gridTemplateColumns = `repeat(${b.width}, var(--t))`;
     this.els.tiles.innerHTML = b.tiles.map((t, i) => {
       const { x, y } = posOf(b, i);
-      return `<div class="tile t-${t} ${(x + y) % 2 ? 'odd' : ''}" data-x="${x}" data-y="${y}" style="--tc:${world.terrainColors[t]}"><span class="tg">${TERRAIN_GLYPH[t]}</span></div>`;
+      return `<div class="tile t-${t} ${(x + y) % 2 ? 'odd' : ''}" data-x="${x}" data-y="${y}" style="--tc:${terrainLook(b.world, t).color}"><span class="tg">${TERRAIN_GLYPH[t]}</span></div>`;
     }).join('');
     this.tileEls = [...this.els.tiles.children] as HTMLElement[];
   }
@@ -144,9 +154,10 @@ export class BattleView {
     this.els.header.innerHTML = `
       <div class="bh-world"><b>${esc(w.name)}</b><span class="dim small">${esc(kind)}${b.forceName ? ` · vs ${esc(b.forceName)}` : ''}</span></div>
       <div class="bh-obj"><span class="dim small">Objective</span><b>${esc(objectiveText(b.objective))}${progress}</b>${sq}</div>
-      <div class="bh-turn"><span class="dim small">Turn ${b.turn}</span><b class="phase ${b.phase}">${b.phase === 'player' ? 'Player' : 'Enemy'} Phase</b></div>
-      <div class="bh-count"><span class="dim small">Enemies</span><b>${enemies}</b></div>
-      ${b.weather ? `<div class="weather"><span class="dim small">Weather</span><b>🌧 Rain (${b.weather.turns})</b></div>` : ''}`;
+      <div class="bh-turn"><span class="dim small">Turn ${b.turn}</span><b class="phase ${this.phaseCls}">${this.phaseLabel} Phase</b></div>
+      <div class="bh-count"><span class="dim small">Enemies</span><b>${b.fog || b.units.some((u) => u.hidden) ? `${b.units.filter((u) => u.team === 'enemy' && isSeen(b, u)).length} seen` : enemies}</b></div>
+      ${b.weather ? `<div class="weather"><span class="dim small">Weather</span><b>${b.weather.kind === 'rain' ? '🌧 Rain' : '🌪 Sandstorm'} (${b.weather.turns})</b></div>` : ''}
+      ${b.fog ? '<div class="weather"><span class="dim small">Visibility</span><b>🌫 Fog</b></div>' : ''}`;
   }
 
   private posStyle(el: HTMLElement, x: number, y: number) {
@@ -172,8 +183,11 @@ export class BattleView {
       el.classList.toggle('acted', u.team === 'player' && u.acted && this.b.phase === 'player');
       el.classList.toggle('selected', this.sel === u);
       el.classList.toggle('enemy', u.team === 'enemy');
+      el.classList.toggle('ally', !!u.npc);
+      el.classList.toggle('captive', !!u.captive);
+      el.classList.toggle('unseen', !isSeen(this.b, u));
       el.classList.toggle('big', u.size > 1);
-      el.innerHTML = `<div class="u-body">${token(u, Math.round(this.tile * u.size * (u.size > 1 ? 0.86 : 0.78)))}</div>${hpBar(u.hp, u.stats.hp)}${u.statuses.length ? `<i class="stun-mark">${u.statuses.map((st) => STATUS_INFO[st.kind].icon).join('')}</i>` : ''}${isMounted(u) && !CLASSES_MOUNTED(u) ? '<i class="mount-mark">🐎</i>' : ''}`;
+      el.innerHTML = `<div class="u-body">${token(u, Math.round(this.tile * u.size * (u.size > 1 ? 0.86 : 0.78)))}</div>${hpBar(u.hp, u.stats.hp)}${u.statuses.length ? `<i class="stun-mark">${u.statuses.map((st) => STATUS_INFO[st.kind].icon).join('')}</i>` : ''}${isMounted(u) && !CLASSES_MOUNTED(u) ? '<i class="mount-mark">🐎</i>' : ''}${u.vip ? '<i class="vip-mark">VIP</i>' : u.captive ? '<i class="vip-mark">⛓</i>' : ''}`;
       el.classList.toggle('barrier', u.buffs.some((x) => x.barrier));
     }
   }
@@ -217,13 +231,20 @@ export class BattleView {
 
   private renderOverlay() {
     const { b } = this;
+    if (b.tiles.join() !== this.tileSig) { this.buildTiles(); this.layout(); }
     const cls: string[][] = b.tiles.map(() => []);
     const add = (k: number, c: string) => cls[k].push(c);
 
-    const objCls = { seize: 'obj-seize', defend: 'obj-defend', escape: 'obj-exit', capture: 'obj-cap' }[b.objective.type as string];
+    const objCls = { seize: 'obj-seize', defend: 'obj-defend', escape: 'obj-exit', escort: 'obj-exit', capture: 'obj-cap' }[b.objective.type as string];
+    const seen = visibleTiles(b);
+    if (seen) b.tiles.forEach((_, k) => { if (!seen.has(k)) add(k, 'fog'); });
+    for (const f of b.fires ?? []) add(keyOf(b, f.x, f.y), 'fire');
+    for (const sp of b.sprouts ?? []) add(keyOf(b, sp.x, sp.y), 'sprout');
+    for (const t of b.traps ?? []) if (!t.hidden) add(keyOf(b, t.x, t.y), 'trap');
+    if (b.units.some((u) => u.team === 'player' && u.skills.includes('graveyardShift'))) for (const d of b.digSpots ?? []) add(keyOf(b, d.x, d.y), 'digspot');
     if (objCls) for (const t of b.objective.tiles ?? []) add(keyOf(b, t.x, t.y), objCls);
     if (this.showDanger) {
-      for (const e of b.units.filter((u) => u.team === 'enemy')) {
+      for (const e of b.units.filter((u) => u.team === 'enemy' && isSeen(b, u))) {
         const t = this.threatTiles(e);
         for (const k of [...t.move, ...t.hit]) add(k, 'danger');
       }
@@ -267,7 +288,7 @@ export class BattleView {
       for (const t of abilityTargets(b, this.sel, ABILITIES[this.abilityId])) for (const f of footprint(t.x, t.y, t.size)) add(keyOf(b, f.x, f.y), 'tgt hl');
     }
     if (this.mode === 'abilityTile' && this.sel && this.abilityId) {
-      for (const t of warpTiles(b, this.sel, ABILITIES[this.abilityId])) add(keyOf(b, t.x, t.y), 'area');
+      for (const t of abilityTiles(b, this.sel, ABILITIES[this.abilityId])) add(keyOf(b, t.x, t.y), 'area');
       if (this.hover) add(keyOf(b, this.hover.x, this.hover.y), 'pending');
     }
     if (this.mode === 'magic' && this.sel && this.abilityId) {
@@ -310,7 +331,7 @@ export class BattleView {
         : t === 'water' ? 'Only fliers and swimmers (Zora) can enter'
         : t === 'lava' ? 'Burns 20% max HP per turn (Gorons and fliers are immune)'
         : `Avoid +${tb.avoid} · Def +${tb.def}${tb.heal ? ` · Heals ${tb.heal}%` : ''}`;
-      html += `<div class="terrain-info"><b>${esc(worldDef(b.world).terrainNames[t])}</b> <span class="dim small">${note}</span></div>`;
+      html += `<div class="terrain-info"><b>${esc(terrainLook(b.world, t).name)}</b> <span class="dim small">${note}</span></div>`;
     }
     this.els.panel.innerHTML = html;
   }
@@ -356,7 +377,7 @@ export class BattleView {
         <span class="dim small">${esc(d.desc)}${why ? ` <i>(${esc(why)})</i>` : ''}</span></button>`;
     }).join('');
     const hint = this.mode === 'abilityTarget' ? '<p class="small">Tap a highlighted ally.</p>'
-      : this.mode === 'abilityTile' ? '<p class="small">Tap a highlighted square to warp there.</p>'
+      : this.mode === 'abilityTile' ? '<p class="small">Tap a highlighted square.</p>'
       : this.abilityId ? '<p class="small">Tap the highlighted spell again to cast it.</p>' : '';
     return `<div class="forecast"><div class="fc-title">Abilities · MP ${u.mp}/${u.stats.mp} · STA ${u.sta}/${u.stats.sta}</div>${hint}<div class="item-list">${rows}</div></div>`;
   }
@@ -364,11 +385,11 @@ export class BattleView {
   private itemsHtml(u: Unit): string {
     const rows = u.pack.map((p, i) => {
       const def = ITEMS[p.id];
-      const usable = canUse(u, i);
+      const usable = canUseHere(this.b, u, i);
       const on = this.mode === 'itemTarget' && this.itemIndex === i;
       return `<button class="item-row ${on ? 'on' : ''}" data-act="useitem" data-i="${i}" ${usable ? '' : 'disabled'}>
         <b>${esc(def?.name ?? p.id)}${p.uses > 1 ? ` ×${p.uses}` : ''}</b><span class="dim small">${esc(def?.desc ?? '')}${
-          def?.kind === 'fairy' ? '' : !usable ? ' (already at full HP)' : ''}</span></button>`;
+          def?.kind === 'fairy' ? '' : !usable ? (canUse(u, i) ? ' (can’t use it here)' : def?.kind === 'cure' ? ' (nothing to cure)' : ' (not needed right now)') : ''}</span></button>`;
     }).join('');
     const hint = this.mode === 'itemTarget' ? '<p class="small">Tap a highlighted square to throw it. The blast area is shown in gold.</p>' : '';
     return `<div class="forecast"><div class="fc-title">Pack</div>${hint}<div class="item-list">${rows}</div></div>`;
@@ -387,7 +408,7 @@ export class BattleView {
     const m = this.mode;
     let html = '';
     if (m === 'idle') {
-      const ready = this.b.units.filter((u) => u.team === 'player' && !u.acted).length;
+      const ready = this.b.units.filter((u) => u.team === 'player' && !u.npc && !u.acted).length;
       html = `<button class="btn primary" data-act="end">End Turn <span class="dim">(${ready} ready)</span></button>
         <button class="btn ${this.showDanger ? 'on' : ''}" data-act="danger">Danger Zone</button>
         <button class="btn small" data-act="anims" title="Battle animations">🎬 ${animationsEnabled() ? 'On' : 'Off'}</button>`;
@@ -401,7 +422,8 @@ export class BattleView {
         ${this.attackTargets(this.sel).length ? '<button class="btn primary" data-act="attack">Attack</button>' : ''}
         ${this.healTargets(this.sel).length ? '<button class="btn primary" data-act="heal">Heal</button>' : ''}
         ${menuAbilities(this.sel).some((d) => d.implemented) ? `<button class="btn" data-act="magic" ${castableAbilities(this.b, this.sel).length ? '' : 'disabled'}>Abilities</button>` : ''}
-        ${this.sel.pack.some((_, i) => canUse(this.sel!, i)) ? '<button class="btn" data-act="items">Item</button>' : ''}
+        ${adjacentCaptives(this.b, this.sel).length ? '<button class="btn primary" data-act="free">Free Prisoner</button>' : ''}
+        ${this.sel.pack.some((_, i) => canUseHere(this.b, this.sel!, i)) ? '<button class="btn" data-act="items">Item</button>' : ''}
         <button class="btn" data-act="wait">Wait</button>
         <button class="btn" data-act="undo">Undo Move</button>`;
     } else if (m === 'attack' || m === 'heal') {
@@ -497,8 +519,8 @@ export class BattleView {
     this.hover = p;
 
     if (this.mode === 'idle') {
-      if (u && u.team === 'player' && !u.acted) this.selectUnit(u);
-      else if (u && u.team === 'enemy') {
+      if (u && u.team === 'player' && !u.acted && !u.npc) this.selectUnit(u);
+      else if (u && u.team === 'enemy' && isSeen(b, u)) {
         if (this.inspect.has(u.uid)) this.inspect.delete(u.uid);
         else this.inspect.add(u.uid);
       }
@@ -510,6 +532,7 @@ export class BattleView {
       const a = this.anchorFor(p);
       if (a !== null && (!u || u === this.sel || this.mode === 'canto')) {
         await this.walk(this.sel, this.moves.path(a));
+        this.afterMove(this.sel);
         if (this.mode === 'canto') { await this.finishUnit(this.sel); return; }
         this.mode = 'action';
         this.renderAll();
@@ -517,10 +540,11 @@ export class BattleView {
       }
       if (this.mode === 'canto') return;
       // Tap an enemy directly: move to the best tile in range and preview.
-      if (u && u.team === 'enemy') {
+      if (u && u.team === 'enemy' && isSeen(b, u)) {
         const from = this.bestTileToAttack(this.sel, u);
         if (from) {
           await this.walk(this.sel, this.moves.path(keyOf(b, from.x, from.y)));
+          this.afterMove(this.sel);
           this.mode = 'attack';
           this.pending = u;
           this.weaponChoice = null;
@@ -528,7 +552,7 @@ export class BattleView {
           return;
         }
       }
-      if (u && u.team === 'player' && !u.acted && u !== this.sel) {
+      if (u && u.team === 'player' && !u.npc && !u.acted && u !== this.sel) {
         this.selectUnit(u);
         this.renderAll();
         return;
@@ -538,7 +562,7 @@ export class BattleView {
     }
 
     if (this.mode === 'abilityTile' && this.sel && this.abilityId) {
-      if (warpTiles(b, this.sel, ABILITIES[this.abilityId]).some((t) => t.x === p.x && t.y === p.y)) await this.doCast(this.sel, this.abilityId, undefined, p);
+      if (abilityTiles(b, this.sel, ABILITIES[this.abilityId]).some((t) => t.x === p.x && t.y === p.y)) await this.doCast(this.sel, this.abilityId, undefined, p);
       return;
     }
 
@@ -580,7 +604,7 @@ export class BattleView {
   }
 
   private attackTargets(u: Unit): Unit[] {
-    return this.b.units.filter((t) => t.team !== u.team && attackWeapons(u, unitDist(u, t)).length > 0);
+    return this.b.units.filter((t) => t.team !== u.team && isSeen(this.b, t) && attackWeapons(u, unitDist(u, t)).length > 0);
   }
 
   private healTargets(u: Unit): Unit[] {
@@ -692,7 +716,7 @@ export class BattleView {
         const u = this.sel;
         const i = Number(el?.dataset.i);
         const def = u && ITEMS[u.pack[i]?.id];
-        if (!u || !def || !canUse(u, i)) return;
+        if (!u || !def || !canUseHere(b, u, i)) return;
         if (isTargeted(def)) {
           this.mode = 'itemTarget';
           this.itemIndex = i;
@@ -703,6 +727,16 @@ export class BattleView {
       case 'wait':
         if (this.sel) await this.finishUnit(this.sel);
         return;
+      case 'free': {
+        const u = this.sel;
+        const c = u && adjacentCaptives(b, u)[0];
+        if (!u || !c) return;
+        freeCaptive(b, u, c.uid);
+        this.float(c, 'FREED!', 'heal');
+        this.addLog(`🔓 <b class="player">${esc(u.name)}</b> frees ${esc(c.name)}! They'll fight with you, and join your army after a victory.`);
+        await this.finishUnit(u);
+        return;
+      }
       case 'stay':
         if (this.sel && this.mode === 'canto') await this.finishUnit(this.sel);
         return;
@@ -738,6 +772,14 @@ export class BattleView {
         return;
       }
     }
+  }
+
+  /** After a player unit moves: traps spring, hidden things are revealed. */
+  private afterMove(u: Unit) {
+    const dmg = triggerTraps(this.b, u);
+    if (dmg) { this.float(u, `TRAP −${dmg}`, 'dmg'); this.addLog(`⚠ <b class="player">${esc(u.name)}</b> stepped on a spike trap (−${dmg} HP, rooted)!`); }
+    for (const name of revealNearby(this.b)) this.addLog(`👁 ${esc(name)} is revealed!`);
+    this.renderUnits();
   }
 
   private async finishUnit(u: Unit) {
@@ -898,9 +940,10 @@ export class BattleView {
     for (const h of res.heals) { const t = this.unitById(h.uid); if (t) this.float(t, `+${h.amount}`, 'heal'); }
     for (const st of res.statuses) { const t = this.unitById(st.uid); if (t) this.float(t, STATUS_INFO[st.kind].name.toUpperCase(), 'miss'); }
     for (const id2 of res.cleansed) { const t = this.unitById(id2); if (t) this.float(t, 'CURED', 'heal'); }
-    for (const id2 of res.buffed) { const t = this.unitById(id2); if (t) this.float(t, res.def.id === 'nayrusLove' ? 'BARRIER' : '+SPD +LCK', 'heal'); }
+    for (const id2 of res.buffed) { const t = this.unitById(id2); if (t) this.float(t, res.def.id === 'nayrusLove' ? 'BARRIER' : res.def.id === 'songOfTime' ? 'REFRESHED' : '+SPD +LCK', 'heal'); }
+    for (const line of res.lines) this.addLog(esc(line));
     if (res.marked) this.addLog('A return point is set.');
-    if (res.warped) this.addLog(`${esc(u.name)} warps back to the return point.`);
+    if (res.warped && res.def.id === 'faroresWind') this.addLog(`${esc(u.name)} warps back to the return point.`);
     if (res.weather) this.addLog('🌧 Rain begins to fall.');
     if (res.mounted) { this.float(u, 'MOUNTED', 'heal'); this.addLog(`${esc(u.name)}'s mount answers the call!`); }
     if (res.repaired) { const t = this.unitById(res.repaired.uid); if (t) this.float(t, 'REPAIRED', 'heal'); this.addLog(`${esc(u.name)} repairs ${esc(weaponDef(res.repaired.weaponId)?.name ?? '')}.`); }
@@ -909,6 +952,13 @@ export class BattleView {
     this.abilityId = null;
     this.renderAll();
     await this.levelUps(res.levelUps);
+    if (res.def.freeAction && this.b.units.includes(u)) {
+      this.afterMove(u);
+      this.origin = null;
+      this.mode = 'action';
+      this.renderAll();
+      return;
+    }
     await this.finishUnit(u);
   }
 
@@ -920,7 +970,7 @@ export class BattleView {
     this.b.rngState = rng.state;
     if (!res) { this.mode = 'action'; this.renderAll(); return; }
     this.addLog(`<b class="${u.team}">${esc(u.name)}</b> uses ${esc(res.item.name)}.`);
-    if (at && res.item.kind === 'bomb') {
+    if (at && (res.item.kind === 'bomb' || res.item.kind === 'fruit')) {
       const blast = document.createElement('div');
       blast.className = 'blast';
       this.posStyle(blast, at.x - (res.item.radius ?? 0), at.y - (res.item.radius ?? 0));
@@ -943,10 +993,13 @@ export class BattleView {
       if (t) this.float(t, 'STUN', 'miss');
     }
     if (res.stunned.length) this.addLog(`${res.stunned.length} enemy${res.stunned.length > 1 ? 'ies' : 'y'} stunned!`.replace('enemyies', 'enemies'));
+    for (const st of res.statuses) { const t = this.unitById(st.uid); if (t) this.float(t, STATUS_INFO[st.kind].name.toUpperCase(), 'miss'); }
+    for (const line of res.lines) this.addLog(esc(line));
     await sleep(650);
     this.itemIndex = null;
     this.renderAll();
     await this.levelUps(res.levelUps);
+    if (res.free) { this.mode = 'action'; this.renderAll(); return; }
     await this.finishUnit(u);
   }
 
@@ -1013,7 +1066,53 @@ export class BattleView {
     if (this.b.phase !== 'player' || this.mode === 'over') return;
     this.sel = null;
     this.mode = 'busy';
+    if (await this.alliedPhase()) return;
     await this.enemyPhase();
+  }
+
+  /** Allied NPCs (escorts, friendly squads, freed prisoners) act on their own. Returns true if the battle ended. */
+  private async alliedPhase(): Promise<boolean> {
+    const { b } = this;
+    const movers = b.units.filter((u) => u.npc && !u.captive && !u.acted);
+    if (!movers.length) return false;
+    this.subPhase = 'allied';
+    this.renderAll();
+    await this.banner('Allied Phase', 'ally');
+    for (const a of movers) {
+      if (!b.units.includes(a)) continue;
+      const plan = planAction(b, a);
+      if (plan.path.length > 1) await this.walk(a, plan.path);
+      else moveUnit(a, plan.dest.x, plan.dest.y);
+      const target = plan.action ? b.units.find((u) => u.uid === plan.action!.target) : undefined;
+      if (target && plan.action!.type === 'attack') {
+        const weapon = attackWeapons(a, unitDist(a, target)).find((w) => w.id === plan.action!.weaponId)?.id ?? attackWeapons(a, unitDist(a, target))[0]?.id;
+        if (weapon) await this.doCombat(a, target, weapon);
+      } else if (target && plan.action!.type === 'heal') {
+        await this.doHeal(a, target, plan.action!.weaponId);
+      }
+      a.acted = true;
+      this.renderUnits();
+      if (await this.checkEnd()) { this.subPhase = null; return true; }
+    }
+    this.subPhase = null;
+    return false;
+  }
+
+  /** Fire spreads, beans grow, weather shifts. */
+  private async environmentStep() {
+    const events = environmentPhase(this.b);
+    if (!events.length) return;
+    this.subPhase = 'environment';
+    this.renderAll();
+    await this.banner('Environment Phase', 'env');
+    for (const ev of events) {
+      this.addLog(`🌍 ${esc(ev.text)}`);
+      const u = ev.uid ? this.unitById(ev.uid) : undefined;
+      if (u && ev.damage) { this.float(u, `−${ev.damage}`, 'dmg'); this.setHpBar(u.uid, u.hp, u.stats.hp); }
+    }
+    this.subPhase = null;
+    this.renderAll();
+    await sleep(400);
   }
 
   private async enemyPhase(opening = false) {
@@ -1050,6 +1149,7 @@ export class BattleView {
       else moveUnit(e, plan.dest.x, plan.dest.y);
       let target = plan.action ? b.units.find((u) => u.uid === plan.action!.target) : undefined;
       if (target && plan.action!.type === 'attack') {
+        if (e.hidden) { e.hidden = false; this.renderUnits(); this.addLog(`👁 ${esc(e.name)} appears from nowhere!`); }
         const guard = findInterceptor(b, e, target, plan.action!.weaponId);
         if (guard) {
           b.interceptUsed = true;
@@ -1068,7 +1168,10 @@ export class BattleView {
       if (await this.checkEnd()) return;
     }
 
-    if (!opening) b.turn++;
+    if (!opening) {
+      await this.environmentStep();
+      b.turn++;
+    }
     if (await this.checkEnd()) return;
     const pEvents = startPhase(b, 'player');
     this.mode = 'idle';

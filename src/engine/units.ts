@@ -1,4 +1,5 @@
 import { ABILITIES, CLASSES, GEAR, ITEMS, RACES, TEMPLATES, WEAPONS } from '../data/registry';
+import { STATUS_STATS } from './status';
 import type { RNG } from './rng';
 import { MAX_LEVEL, XP_PER_LEVEL } from './rules';
 import { GEAR_SLOTS, PACK_SIZE } from './types';
@@ -161,13 +162,18 @@ export function activeGear(unit: Unit): GearDef[] {
 /** Permanent stats plus gear bonuses. */
 export function effectiveStats(unit: Unit): Stats {
   const s = { ...unit.stats };
+  const masks = unit.skills?.includes('maskCollector');
   for (const g of activeGear(unit)) {
+    const mult = masks && g.slot === 'head' && /mask/i.test(g.name) ? 1.5 : 1;
     for (const [k, v] of Object.entries(g.stats)) {
-      if (k in s) (s as Record<string, number>)[k] += v as number;
+      if (k in s) (s as Record<string, number>)[k] += Math.round((v as number) * mult);
     }
   }
   for (const b of unit.buffs ?? []) {
     for (const [k, v] of Object.entries(b.stats ?? {})) (s as Record<string, number>)[k] += v as number;
+  }
+  for (const st of unit.statuses ?? []) {
+    for (const [k, v] of Object.entries(STATUS_STATS[st.kind] ?? {})) (s as Record<string, number>)[k] += v as number;
   }
   for (const k of ['def', 'res', 'lck', 'spd', 'con'] as const) s[k] = Math.max(0, s[k]);
   s.mov = Math.max(1, s.mov);

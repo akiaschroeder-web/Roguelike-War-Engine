@@ -1,8 +1,8 @@
-import type { MapStyle, Terrain, WorldDef } from '../../engine/types';
+import type { BaseTerrain, MapStyle, WorldDef } from '../../engine/types';
 
-const t = (plain: string, forest: string, mountain: string, water: string, wall: string, fort: string, lava: string): Record<Terrain, string> =>
+const t = (plain: string, forest: string, mountain: string, water: string, wall: string, fort: string, lava: string): Record<BaseTerrain, string> =>
   ({ plain, forest, mountain, water, wall, fort, lava });
-const r = (id: string, name: string, genre: string, blurb: string, color: string, terrainNames: Record<Terrain, string>, terrainColors: Record<Terrain, string>, map: MapStyle): WorldDef =>
+const r = (id: string, name: string, genre: string, blurb: string, color: string, terrainNames: Record<BaseTerrain, string>, terrainColors: Record<BaseTerrain, string>, map: MapStyle): WorldDef =>
   ({ id, name, genre, blurb, color, terrainNames, terrainColors, map });
 
 export const REGIONS: WorldDef[] = [

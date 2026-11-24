@@ -14,8 +14,18 @@ export interface AIPlan {
 /** Decide what an enemy unit does this turn. Pure: does not mutate the battle. */
 export function planAction(b: Battle, unit: Unit): AIPlan {
   const stay = { x: unit.x, y: unit.y };
+  if (unit.captive) return { unit: unit.uid, path: [stay], dest: stay, action: null };
   const moves = computeMoves(b, unit, unit.ai === 'stationary' ? 0 : undefined);
-  const foes = b.units.filter((u) => u.team !== unit.team);
+  // Escort VIPs head for the exit and never pick fights.
+  if (unit.vip) {
+    const exits = (b.objective.tiles ?? []).map((t) => ({ ...unit, x: t.x, y: t.y, size: 1 }));
+    for (const [k] of moves.reach) {
+      const p = posOf(b, k);
+      if (exits.some((e) => e.x === p.x && e.y === p.y)) return { unit: unit.uid, path: moves.path(k), dest: p, action: null };
+    }
+    return exits.length ? approach(b, unit, moves, exits) : { unit: unit.uid, path: [stay], dest: stay, action: null };
+  }
+  const foes = b.units.filter((u) => u.team !== unit.team && !u.captive && !(unit.team === 'player' && u.hidden));
   const friends = b.units.filter((u) => u.team === unit.team && u !== unit);
   const lavaPenalty = (k: number) => (b.tiles[k] === 'lava' && !isLavaImmune(unit) ? LAVA_DAMAGE_PCT / 4 : 0);
 

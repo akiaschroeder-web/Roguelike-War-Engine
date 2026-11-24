@@ -22,9 +22,9 @@ export const WEAPONS: WeaponDef[] = [
   // ── Link's ranged weapons ──
   w('fairySlingshot', 'Fairy Slingshot', 'sling', 'common', 3, 90, 0, 1, 2, 3, { effective: ['flying'], desc: 'Effective against flying enemies.' }),
   w('fairyBow', 'Fairy Bow', 'bow', 'rare', 7, 85, 0, 4, 2, 4, { effective: ['flying'] }),
-  w('boomerang', 'Boomerang', 'boomerang', 'uncommon', 4, 85, 0, 2, 1, 3, { desc: 'Stun effect coming with status effects.' }),
-  w('hookshot', 'Hookshot', 'hookshot', 'rare', 5, 80, 0, 4, 1, 3),
-  w('longshot', 'Longshot', 'hookshot', 'epic', 7, 85, 0, 5, 1, 5),
+  w('boomerang', 'Boomerang', 'boomerang', 'uncommon', 4, 85, 0, 2, 1, 3, { desc: '30% chance to stun.' }),
+  w('hookshot', 'Hookshot', 'hookshot', 'rare', 5, 80, 0, 4, 1, 3, { desc: 'Also a tool: pull yourself up to 3 spaces in a straight line to a tree, wall, fort or unit (crosses water and gaps).' }),
+  w('longshot', 'Longshot', 'hookshot', 'epic', 7, 85, 0, 5, 1, 5, { desc: 'Also a tool: pull yourself up to 5 spaces in a straight line to a tree, wall, fort or unit.' }),
   // ── Conventional weapons ──
   w('soldierSword', "Hyrule Soldier's Sword", 'sword', 'common', 5, 85, 0, 5, 1, 1),
   w('royalGuardBlade', "Royal Guard's Blade", 'sword', 'rare', 9, 90, 5, 7, 1, 1),

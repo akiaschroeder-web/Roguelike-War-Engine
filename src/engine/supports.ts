@@ -57,9 +57,9 @@ export function supportBonus(b: Battle, u: Unit, pos: Pos): { hit: number; avoid
 
 /** A player unit fought (or healed): bond with allies within 2 spaces. */
 export function gainSupport(b: Battle, u: Unit, amount = 1, partner?: Unit) {
-  if (u.team !== 'player') return;
+  if (u.team !== 'player' || u.npc) return;
   b.supports ??= {};
-  const friends = partner ? [partner] : b.units.filter((a) => a !== u && a.team === 'player' && unitDist(u, a) <= 2);
+  const friends = partner ? [partner] : b.units.filter((a) => a !== u && a.team === 'player' && !a.npc && unitDist(u, a) <= 2);
   for (const a of friends) {
     const k = supportKey(u.uid, a.uid);
     b.supports[k] = Math.min(pointCap(isSPair(u, a)), (b.supports[k] ?? 0) + amount);

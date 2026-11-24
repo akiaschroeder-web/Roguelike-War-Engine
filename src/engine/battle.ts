@@ -4,6 +4,7 @@ import { generateMap } from './mapgen';
 import { RNG } from './rng';
 import { INF, LAVA_DAMAGE_PCT, TERRAIN_BONUS } from './rules';
 import { tickStatuses } from './status';
+import { decorateField } from './field';
 import { canRide, hasEffect, isLavaImmune, isMounted, makeEnemy, mountOf, sizeWhen, makeEnemyFromTemplate, prepareForBattle } from './units';
 import type { Battle, BossDef, EnemyArchetype, EnemyForce, NodeType, Objective, ObjectiveType, Pos, Team, Terrain, Unit, WorldId } from './types';
 
@@ -39,7 +40,7 @@ export function createBattle(setup: BattleSetup): Battle {
   else if (setup.nodeType === 'siege') objective = { type: 'seize' };
   else if (setup.nodeType === 'ambush') objective = { type: 'rout' };
   else if (setup.depth >= 1) {
-    objective = { type: rng.weighted<ObjectiveType>([['rout', 40], ['survive', 12], ['seize', 16], ['defend', 10], ['escape', 10], ['capture', 12]]) };
+    objective = { type: rng.weighted<ObjectiveType>([['rout', 36], ['survive', 10], ['seize', 14], ['defend', 9], ['escape', 8], ['capture', 10], ['escort', 8], ['rescue', 8]]) };
     if (objective.type === 'survive' || objective.type === 'defend') objective.turns = 6;
   }
 
@@ -108,8 +109,10 @@ export function createBattle(setup: BattleSetup): Battle {
     units.push(boss);
   }
 
+  addAllies(rng, map, units, objective, setup, level);
+
   const base = setup.nodeType === 'boss' ? 500 : setup.nodeType === 'elite' ? 320 : setup.nodeType === 'siege' ? 260 : setup.nodeType === 'ambush' ? 220 : 160;
-  return {
+  const battle: Battle = {
     width: map.width,
     height: map.height,
     tiles: map.tiles,
@@ -136,6 +139,9 @@ export function createBattle(setup: BattleSetup): Battle {
         : { kind: 'noLoss', rupees: 80 + setup.depth * 10, item: rng.pick(['bluePotion', 'fairy', 'greenPotion', 'bombchu', 'staminaPotion']) }
       : undefined,
   };
+  decorateField(battle, rng, setup.nodeType);
+  battle.rngState = rng.state;
+  return battle;
 }
 
 type GenMap = ReturnType<typeof generateMap>;
@@ -172,6 +178,7 @@ function placeObjective(rng: RNG, map: GenMap, o: Objective, playerSizes: number
       break;
     }
     case 'escape':
+    case 'escort':
       o.tiles = all.filter((p) => p.x === w - 1 && WALKABLE.includes(map.tiles[p.y * w + p.x]));
       break;
     case 'capture': {
@@ -187,7 +194,7 @@ function placeObjective(rng: RNG, map: GenMap, o: Objective, playerSizes: number
       break;
     }
   }
-  if ((o.type === 'seize' || o.type === 'defend' || o.type === 'capture' || o.type === 'escape') && !o.tiles?.length) {
+  if ((o.type === 'seize' || o.type === 'defend' || o.type === 'capture' || o.type === 'escape' || o.type === 'escort') && !o.tiles?.length) {
     o.type = 'rout'; // couldn't place it: fall back
     delete o.tiles;
   }
@@ -228,10 +235,6 @@ export interface TurnStartEvent {
 export function startPhase(b: Battle, team: Team): TurnStartEvent[] {
   b.phase = team;
   if (team === 'enemy') b.interceptUsed = false;
-  if (team === 'player' && b.weather) {
-    b.weather.turns--;
-    if (b.weather.turns <= 0) b.weather = undefined;
-  }
   const events: TurnStartEvent[] = [];
   const mine = b.units.filter((u) => u.team === team);
   for (const u of mine) {
@@ -239,9 +242,11 @@ export function startPhase(b: Battle, team: Team): TurnStartEvent[] {
     u.acted = false;
     u.movedDist = 0;
     // Statuses: damage over time, lost turns (freeze/stun), countdowns.
-    const tick = tickStatuses(u);
+    const trng = new RNG(b.rngState);
+    const tick = tickStatuses(u, trng.int(0, 99));
+    b.rngState = trng.state;
     if (tick.lostTurn) u.moved = u.acted = true;
-    if (tick.damage || tick.lostTurn) events.push({ uid: u.uid, heal: 0, damage: tick.damage, source: tick.lostTurn ?? 'status' });
+    if (tick.damage || tick.heal || tick.lostTurn) events.push({ uid: u.uid, heal: tick.heal, damage: tick.damage, source: tick.lostTurn ?? 'status' });
     if (hasEffect(u, 'mpRegen')) u.mp = Math.min(u.stats.mp, u.mp + 2);
     u.sta = Math.min(u.stats.sta, (u.sta ?? u.stats.sta) + 2 + (hasEffect(u, 'staRegen') ? 2 : 0));
     for (const k of Object.keys(u.cooldowns ?? {})) if (--u.cooldowns![k] <= 0) delete u.cooldowns![k];
@@ -298,9 +303,10 @@ export function spawnReinforcements(b: Battle): Unit[] {
 
 export function checkResult(b: Battle): Battle['result'] {
   if (b.result) return b.result;
-  const players = b.units.filter((u) => u.team === 'player');
+  const players = b.units.filter((u) => u.team === 'player' && !u.npc);
   const enemies = b.units.filter((u) => u.team === 'enemy');
   if (!players.length || b.fallen.some((u) => u.isCommander)) return (b.result = 'lost');
+  if (b.objective.type === 'escort' && b.fallen.some((u) => u.vip)) { b.retreat = true; return (b.result = 'lost'); }
   if (!enemies.length) return (b.result = 'won');
   if (b.objective.type === 'boss' && b.fallen.some((u) => u.isBoss)) return (b.result = 'won');
   const o = b.objective;
@@ -311,6 +317,8 @@ export function checkResult(b: Battle): Battle['result'] {
     if (b.turn > (o.turns ?? 6)) return (b.result = 'won');
   }
   if (o.type === 'escape' && onTiles(b, 'player', o.tiles, (u) => !!u.isCommander)) return (b.result = 'won');
+  if (o.type === 'escort' && onTiles(b, 'player', o.tiles, (u) => !!u.vip)) return (b.result = 'won');
+  if (o.type === 'rescue' && b.units.some((u) => u.rescued) && !b.units.some((u) => u.captive)) return (b.result = 'won');
   if (o.type === 'capture' && onTiles(b, 'player', o.tiles) >= (o.need ?? 2)) return (b.result = 'won');
   return undefined;
 }
@@ -330,6 +338,8 @@ export function objectiveText(o: Objective): string {
     case 'seize': return 'Seize the throne (stand on the gold tile)';
     case 'defend': return `Defend the point for ${o.turns} turns`;
     case 'escape': return 'Escape: get your Commander to the far edge';
+    case 'escort': return 'Escort: get the VIP (green) safely to the far edge';
+    case 'rescue': return 'Rescue the prisoners (move next to them and Free them)';
     case 'capture': return `Hold ${o.need} of the ${o.tiles?.length ?? 3} capture points at once`;
   }
 }
@@ -354,4 +364,85 @@ export function toggleMount(b: Battle, u: Unit): boolean {
   u.mounted = u.mounted === false;
   u.size = sizeWhen(u, u.mounted);
   return true;
+}
+
+// ───────────────────────── Allied units ─────────────────────────
+
+const VIPS = ['talon', 'ingo', 'dampe', 'maskSalesman', 'carpenterBoss', 'malon', 'mido', 'saria', 'ruto', 'zelda', 'kaepora'];
+const PRISONERS = ['hyruleSoldier', 'kokiriScout', 'goronWarrior', 'zoraWarrior', 'gerudoGuard', 'sheikahWarrior', 'hyruleArcher', 'talon', 'mido', 'ingo', 'carpenterBoss'];
+const ALLY_SQUADS: Record<string, string[]> = {
+  hyruleField: ['hyruleSoldier', 'hyruleArcher', 'hyruleCavalry'], hyruleCastle: ['hyruleKnight', 'hyruleSoldier', 'hyruleArcher'],
+  kokiriForest: ['kokiriScout', 'kokiriSlingshooter'], lostWoods: ['kokiriScout', 'dekuScrub'], deathMountain: ['goronWarrior', 'goronRoller'],
+  zorasDomain: ['zoraWarrior', 'zoraMystic'], gerudoDesert: ['gerudoGuard', 'gerudoThief'], kakarikoGraveyard: ['sheikahWarrior', 'hyruleSoldier'],
+};
+
+function freeTile(map: GenMap, units: Unit[], minX: number, maxX: number, rng: RNG, nearY?: number): Pos | null {
+  const taken = new Set<string>();
+  for (const u of units) for (const f of footprint(u.x, u.y, u.size)) taken.add(`${f.x},${f.y}`);
+  const c: Pos[] = [];
+  for (let y = 0; y < map.height; y++) for (let x = Math.max(0, minX); x <= Math.min(map.width - 1, maxX); x++) {
+    if (!taken.has(`${x},${y}`) && WALKABLE.includes(map.tiles[y * map.width + x])) c.push({ x, y });
+  }
+  if (!c.length) return null;
+  if (nearY !== undefined) return c.sort((a, b) => Math.abs(a.y - nearY) + a.x * 0.3 - (Math.abs(b.y - nearY) + b.x * 0.3))[0];
+  return rng.pick(c);
+}
+
+function makeAlly(templateId: string, level: number, uid: string, rng: RNG): Unit | null {
+  if (!TEMPLATES[templateId] || (TEMPLATES[templateId].size ?? 1) > 1) return null;
+  const u = prepareForBattle(makeEnemyFromTemplate(templateId, level, uid, rng));
+  u.team = 'player';
+  u.npc = true;
+  u.ai = 'aggressive';
+  u.isBoss = false;
+  return u;
+}
+
+/** VIPs to escort, prisoners to rescue, and friendly squads that fight alongside you. */
+function addAllies(rng: RNG, map: GenMap, units: Unit[], o: Objective, setup: BattleSetup, level: number) {
+  const have = new Set(setup.roster.map((u) => u.templateId));
+  let n = 0;
+  const add = (id: string, lvl: number, minX: number, maxX: number, mod: (u: Unit) => void, nearY?: number) => {
+    const u = makeAlly(id, lvl, `a${n++}`, rng);
+    const p = u && freeTile(map, units, minX, maxX, rng, nearY);
+    if (!u || !p) return null;
+    u.x = p.x; u.y = p.y;
+    mod(u);
+    units.push(u);
+    return u;
+  };
+  if (o.type === 'escort') {
+    const id = rng.pick(VIPS.filter((v) => !have.has(v) && TEMPLATES[v]));
+    const vip = id && add(id, Math.max(1, level - 2), 0, 3, (u) => { u.vip = true; u.title = 'VIP'; }, Math.floor(map.height / 2));
+    if (!vip) { o.type = 'rout'; delete o.tiles; }
+  }
+  if (o.type === 'rescue') {
+    const pool = rng.shuffle(PRISONERS.filter((v) => TEMPLATES[v] && (TEMPLATES[v].generic || !have.has(v))));
+    let placed = 0;
+    for (const id of pool.slice(0, 2)) {
+      if (add(id, Math.max(1, level - 1), Math.floor(map.width * 0.55), map.width - 2, (u) => { u.captive = true; u.moved = u.acted = true; })) placed++;
+    }
+    if (!placed) o.type = 'rout';
+  }
+  // Sometimes a friendly squad joins the fight (never in boss battles).
+  if (setup.nodeType !== 'boss' && setup.nodeType !== 'elite' && rng.chance(15)) {
+    const squad = ALLY_SQUADS[setup.world] ?? ALLY_SQUADS.hyruleField;
+    for (let i = 0; i < rng.int(1, 2); i++) add(rng.pick(squad), Math.max(1, level - 1), 0, 4, () => undefined);
+  }
+}
+
+/** Free an adjacent prisoner: they join the fight now and your army after a victory. */
+export function freeCaptive(b: Battle, u: Unit, captiveUid: string): Unit | null {
+  const c = b.units.find((x) => x.uid === captiveUid);
+  if (!c?.captive || u.npc || u.team !== 'player' || unitDist(u, c) !== 1) return null;
+  c.captive = false;
+  c.rescued = true;
+  c.moved = c.acted = true;
+  b.log.push(`${u.name} freed ${c.name}!`);
+  return c;
+}
+
+export function adjacentCaptives(b: Battle, u: Unit): Unit[] {
+  if (u.npc || u.team !== 'player') return [];
+  return b.units.filter((c) => c.captive && unitDist(u, c) === 1);
 }

@@ -10,7 +10,10 @@ export type WeaponType =
 
 export type Element = 'fire' | 'ice' | 'lightning' | 'water' | 'light' | 'dark' | 'nature';
 
-export type StatusKind = 'burn' | 'freeze' | 'shock' | 'poison' | 'stun';
+export type StatusKind =
+  | 'burn' | 'freeze' | 'shock' | 'poison' | 'stun'
+  | 'silence' | 'root' | 'blind' | 'curse' | 'confuse' | 'sleep' | 'bleed' | 'fear' | 'weaken' | 'exposed'
+  | 'regen' | 'inspired' | 'protected' | 'haste' | 'veiled';
 
 export interface Status {
   kind: StatusKind;
@@ -55,6 +58,10 @@ export interface AbilityDef {
   effective?: string[];
   /** Personal abilities: usable once per battle. */
   oncePerBattle?: boolean;
+  /** Known automatically by anyone carrying one of these weapons or having this skill. */
+  grantedBy?: { weapons?: string[]; skill?: string };
+  /** Doesn't end the unit's turn (Hookshot: you can still attack). */
+  freeAction?: boolean;
   implemented: boolean;
 }
 
@@ -64,7 +71,9 @@ export interface AbilityDef {
  */
 export type MoveType = 'foot' | 'cavalry' | 'armor' | 'flying' | 'fixed';
 
-export type Terrain = 'plain' | 'forest' | 'mountain' | 'water' | 'wall' | 'fort' | 'lava';
+export type BaseTerrain = 'plain' | 'forest' | 'mountain' | 'water' | 'wall' | 'fort' | 'lava';
+/** Special terrain: cracked walls (bombs break them), Time Blocks (Song of Time), bridges (Magic Beans, Master Builder). */
+export type Terrain = BaseTerrain | 'cracked' | 'timeBlock' | 'timeGap' | 'bridge';
 
 export type Team = 'player' | 'enemy';
 
@@ -187,7 +196,14 @@ export type GearEffect =
   | 'staRegen' // +2 extra stamina per turn
   | 'flight'; // the rider flies (Loftwing)
 
-export type ItemKind = 'heal' | 'fullHeal' | 'mp' | 'sta' | 'fairy' | 'bomb' | 'stun' | 'learn';
+export type ItemKind =
+  | 'heal' | 'fullHeal' | 'mp' | 'sta' | 'fairy' | 'bomb' | 'stun' | 'learn'
+  /** cure: removes statuses; buff: timed stat boost; fruit: elemental throw; cloud: veils allies; muddle: confuses; bean: plants a sprout. */
+  | 'cure' | 'buff' | 'fruit' | 'cloud' | 'muddle' | 'bean'
+  /** Reusable tools (never used up). */
+  | 'tool';
+
+export type ToolKind = 'hookshot' | 'longshot' | 'lens' | 'fishing' | 'shovel';
 
 /** Consumables carried in a unit's 6-slot pack. */
 export interface ItemDef {
@@ -206,6 +222,16 @@ export interface ItemDef {
   radius?: number;
   /** 'learn' items teach this ability when used. */
   teaches?: string;
+  /** cure: statuses removed ('negative' = every harmful status). */
+  cures?: StatusKind[] | 'negative';
+  /** fruit/muddle/cloud: status applied (turns = 2 unless set). */
+  status?: StatusKind;
+  statusTurns?: number;
+  element?: Element;
+  /** buff items: stat bonus and duration. */
+  buff?: Partial<Record<StatKey | 'mov', number>>;
+  buffTurns?: number;
+  tool?: ToolKind;
   desc: string;
 }
 
@@ -231,8 +257,8 @@ export interface WorldDef {
   genre: string;
   blurb: string;
   color: string;
-  terrainNames: Record<Terrain, string>;
-  terrainColors: Record<Terrain, string>;
+  terrainNames: Record<BaseTerrain, string>;
+  terrainColors: Record<BaseTerrain, string>;
   map: MapStyle;
 }
 
@@ -406,6 +432,16 @@ export interface Unit {
   isBoss?: boolean;
   bossId?: string;
   ai?: 'aggressive' | 'guard' | 'stationary';
+  /** Invisible until revealed (Lens of Truth, adjacency, Dampé). */
+  hidden?: boolean;
+  /** Allied NPC on your side, moved by the computer in the Allied Phase. */
+  npc?: boolean;
+  /** Escort target: must survive and reach the exit. */
+  vip?: boolean;
+  /** Prisoner: can't act until a unit frees them. */
+  captive?: boolean;
+  /** A freed prisoner (joins the army after a victory). */
+  rescued?: boolean;
   // Battle state
   x: number; // top-left of footprint
   y: number;
@@ -416,7 +452,7 @@ export interface Unit {
   survivedOnce?: boolean;
 }
 
-export type ObjectiveType = 'rout' | 'boss' | 'survive' | 'seize' | 'defend' | 'escape' | 'capture';
+export type ObjectiveType = 'rout' | 'boss' | 'survive' | 'seize' | 'defend' | 'escape' | 'capture' | 'escort' | 'rescue';
 
 export interface Objective {
   type: ObjectiveType;
@@ -466,8 +502,21 @@ export interface Battle {
   supports?: Record<string, number>;
   /** Name of the army you're fighting (non-monster battles). */
   forceName?: string;
-  /** Rain from Song of Storms. */
-  weather?: { kind: 'rain'; turns: number };
+  /** Rain (Song of Storms, storms) or a sandstorm (−15 Hit for everyone). */
+  weather?: { kind: 'rain' | 'sandstorm'; turns: number };
+  /** Burning tiles (spread through forests; rain puts them out). */
+  fires?: { x: number; y: number; turns: number }[];
+  /** Magic Bean sprouts: grow into a bridge (on water) or thicket after `turns`. */
+  sprouts?: { x: number; y: number; turns: number }[];
+  /** Hidden spike traps (hurt and root player units; the Lens of Truth reveals them). */
+  traps?: { x: number; y: number; hidden: boolean }[];
+  /** Buried treasure: dig with a Shovel (or Dampé). */
+  digSpots?: Pos[];
+  /** Fog of war: enemies are only visible near your units. */
+  fog?: boolean;
+  /** Items and Rupees found during the battle (handed out afterwards). */
+  loot?: string[];
+  bonusRupees?: number;
   /** Army-wide healing multiplier from the commander bonus. */
   healMult: number;
   /** Loot dropped by bosses this battle. */

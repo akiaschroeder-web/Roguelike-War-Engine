@@ -15,9 +15,9 @@ export const ABILITIES: AbilityDef[] = [
   ab({ id: 'zeldasLullaby', name: "Zelda's Lullaby", kind: 'song', mp: 3, desc: 'Cures every status effect on allies within 3 spaces.' }),
   ab({ id: 'sariasSong', name: "Saria's Song", kind: 'song', mp: 4, desc: 'Allies within 3 spaces gain +2 SPD and +2 LCK for 3 turns.' }),
   ab({ id: 'sunsSong', name: "Sun's Song", kind: 'song', mp: 5, desc: 'Stuns every undead enemy within 3 spaces for a turn.' }),
+  ab({ id: 'songOfTime', name: 'Song of Time', kind: 'song', mp: 5, desc: 'Time Blocks vanish (or return to their slots), and allies within 3 spaces have their cooldowns reset.' }),
   ab({ id: 'songOfStorms', name: 'Song of Storms', kind: 'song', mp: 6, desc: 'Rain for 3 turns: puts out all fires, stops Burning, and powers up water and lightning attacks.' }),
   ab({ id: 'eponasSong', name: "Epona's Song", kind: 'song', mp: 3, desc: 'Calls your mount back if you dismounted, and mounted allies within 3 spaces gain +2 MOV for 2 turns.' }),
-  ab({ id: 'songOfTime', name: 'Song of Time', kind: 'song', mp: 5, desc: 'Moves Time Blocks and activates ancient mechanisms. (Coming with map objects.)', implemented: false }),
   // ── Elemental arrows (chosen in the combat forecast when a bow is equipped) ──
   ab({ id: 'fireArrow', name: 'Fire Arrow', kind: 'arrow', mp: 2, might: 3, element: 'fire', desc: '+3 Might; may set the target Burning.' }),
   ab({ id: 'iceArrow', name: 'Ice Arrow', kind: 'arrow', mp: 2, might: 2, element: 'ice', desc: '+2 Might; may Freeze the target.' }),
@@ -37,6 +37,11 @@ export const ABILITIES: AbilityDef[] = [
   // ── Personal abilities ──
   ab({ id: 'transformGanon', name: 'Demon King', kind: 'personal', mp: 0, oncePerBattle: true, desc: 'Below half HP: transform into Ganon for the rest of the battle (needs room for a 3×3 beast).' }),
   ab({ id: 'twinrovaFusion', name: 'Double Dynamite', kind: 'personal', mp: 0, oncePerBattle: true, desc: 'With the other sister adjacent: Koume and Kotake fuse into Twinrova for the rest of the battle.' }),
+  ab({ id: 'hookshotPull', name: 'Hookshot', kind: 'personal', mp: 0, freeAction: true, grantedBy: { weapons: ['hookshot', 'longshot'] },
+    desc: 'Instead of walking: pull yourself in a straight line (3 spaces, Longshot 5) to a tree, wall, fort, mountain or unit, across water and gaps. You can still act afterwards.' }),
+  ab({ id: 'digHere', name: 'Dig', kind: 'personal', mp: 0, grantedBy: { skill: 'graveyardShift' }, desc: 'Dig where you stand for buried treasure (better finds than a shovel).' }),
+  ab({ id: 'buildHere', name: 'Build', kind: 'personal', mp: 0, grantedBy: { skill: 'masterBuilder' }, desc: 'Bridge adjacent water, clear an adjacent wall or obstacle, or raise a barricade on open ground.' }),
+  ab({ id: 'transportAlly', name: 'Transport', kind: 'personal', mp: 0, cooldown: 2, grantedBy: { skill: 'ancientGuidance' }, desc: 'Send an adjacent ally on foot (who hasn’t acted) to any open space within 5. 2-turn cooldown.' }),
   ab({ id: 'masterCraftsman', name: 'Master Craftsman', kind: 'personal', mp: 0, oncePerBattle: true, desc: 'Once per battle: restore 5 uses to an adjacent ally’s weapon (or your own).' }),
   ab({ id: 'greatFairysBlessing', name: "Great Fairy's Blessing", kind: 'personal', mp: 0, oncePerBattle: true, desc: 'Once per battle: fully restore the HP and MP of an ally within 2 spaces (or yourself).' }),
 ];

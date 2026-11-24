@@ -358,6 +358,10 @@ export interface BattleSummary {
   fallen: Unit[];
   kills: number;
   drops: string[];
+  /** Items found on the battlefield (sent to packs or the convoy). */
+  found: string[];
+  /** Rescued prisoners who joined the army. */
+  joined: string[];
   /** Side quest result, if there was one. */
   sideQuest?: { text: string; done: boolean; reward: string };
   /** The objective was lost but the army escaped. */
@@ -384,8 +388,8 @@ export function finishBattle(run: RunWithEvent): BattleSummary {
     const ratio = me.hp > 0 ? me.hp / me.stats.hp : 0;
     return [me, { ...partner, hp: me.hp > 0 ? Math.max(1, Math.ceil(partner.stats.hp * ratio)) : 0 }];
   };
-  const fallen = b.fallen.filter((u) => u.team === 'player').flatMap(split);
-  const survivors = new Map(b.units.filter((u) => u.team === 'player').flatMap(split).map((u) => [u.uid, u]));
+  const fallen = b.fallen.filter((u) => u.team === 'player' && !u.npc).flatMap(split);
+  const survivors = new Map(b.units.filter((u) => u.team === 'player' && !u.npc).flatMap(split).map((u) => [u.uid, u]));
   const deployed = new Set(run.deployment ?? []);
   const heal = POST_BATTLE_HEAL + (run.bonus === 'postBattleHeal' ? 0.1 : 0);
   run.roster = run.roster
@@ -406,9 +410,30 @@ export function finishBattle(run: RunWithEvent): BattleSummary {
 
   let rupees = 0;
   const drops: string[] = [];
+  const found: string[] = [];
+  const joined: string[] = [];
   if (won) {
-    rupees = Math.round(b.rewardRupees * (run.bonus === 'rupees' ? 1.25 : 1));
+    rupees = Math.round(b.rewardRupees * (run.bonus === 'rupees' ? 1.25 : 1)) + (b.bonusRupees ?? 0);
     run.rupees += rupees;
+    // Things found on the field (digging, fishing)
+    for (const id of b.loot ?? []) { giveItem(run, id, null); found.push(id); }
+    // Talon's Ranch Supplies
+    for (const u of run.roster) {
+      if (!u.skills.includes('ranchSupplies')) continue;
+      for (let i = 0; i < 2; i++) giveItem(run, 'lonLonMilk', u.uid);
+      found.push('lonLonMilk', 'lonLonMilk');
+    }
+    // Freed prisoners join (if there's room)
+    withRng(run, (rng) => {
+      for (const c of b.units.filter((x) => x.rescued)) {
+        if (run.roster.length >= ARMY_CAPACITY || !c.templateId) continue;
+        if (!TEMPLATES[c.templateId]?.generic && run.roster.some((r) => r.templateId === c.templateId)) continue;
+        const u = makeHero(c.templateId, nextUid(run), recruitLevel(run), rng);
+        run.roster.push(u);
+        run.stats.recruits++;
+        joined.push(u.name);
+      }
+    });
     withRng(run, (rng) => {
       const owned = ownedUniques(run);
       for (const boss of b.fallen.filter((u) => u.isBoss && u.bossId)) {
@@ -470,7 +495,7 @@ export function finishBattle(run: RunWithEvent): BattleSummary {
       withRng(run, (rng) => { run.event = { type: 'treasure', rewards: treasureRewards(run, rng, true), rupees: 250 + run.act * 100 }; });
     }
   }
-  return { won, rupees, fallen, kills, drops, supportUps, sideQuest, retreated: !won && !!b.retreat, dungeon };
+  return { won, rupees, fallen, kills, drops, supportUps, sideQuest, retreated: !won && !!b.retreat, dungeon, found, joined };
 }
 
 export function sideQuestText(sq: { kind: string; turns?: number }): string {

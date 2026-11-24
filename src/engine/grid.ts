@@ -91,7 +91,7 @@ export interface Moves {
  * on; enemies block (unless the unit has Spectral Passage).
  */
 export function computeMoves(b: Battle, unit: Unit, budget?: number): Moves {
-  const mov = budget ?? effectiveStats(unit).mov;
+  const mov = unit.statuses?.some((s) => s.kind === 'root') ? 0 : budget ?? effectiveStats(unit).mov;
   const ghost = unit.skills.includes('spectralPassage') || hasEffect(unit, 'phantomRide');
   const occ = new Map<number, Unit>();
   for (const u of b.units) for (const p of footprint(u.x, u.y, u.size)) occ.set(keyOf(b, p.x, p.y), u);
