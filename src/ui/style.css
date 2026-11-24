@@ -424,3 +424,11 @@ p { margin: 8px 0; }
 .tile.area::after { background: #9ad8ff40; box-shadow: inset 0 0 0 1px #d0f0ffaa; }
 .intro-force { margin: 8px 0 0; color: var(--gold); }
 .forecast .fc-title { line-height: 1.7; }
+
+/* ───── Mounts ───── */
+.mount-mark { position: absolute; bottom: 6%; left: 0; font-style: normal; font-size: calc(var(--t) * 0.32); pointer-events: none; filter: drop-shadow(0 1px 1px #000); }
+.cine-mounted { position: relative; height: 100%; width: 100%; display: flex; align-items: flex-end; justify-content: center; }
+.cine-mount { max-height: 72%; max-width: 100%; object-fit: contain; filter: drop-shadow(0 10px 14px #000c); }
+.cine-mounted.right .cine-mount { transform: scaleX(-1); }
+.cine-rider { position: absolute; bottom: 38%; left: 50%; transform: translateX(-50%); height: 62%; display: flex; align-items: flex-end; }
+.cine-rider .cine-art { max-height: 100%; }

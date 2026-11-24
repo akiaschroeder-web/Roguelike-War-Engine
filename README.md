@@ -36,6 +36,7 @@ npm test           # engine tests + AI-vs-AI battle simulations
 - **Free-for-All:** from region 4 on, battles ignore regions: enemies, armies, leaders and bosses are drawn from the entire cast. Characters can show up on both sides at once (it's not canon).
 - **Stamina and techniques:** Power Strike, Piercing Thrust and Aimed Shot (chosen in the forecast) and Spin Attack, based on the weapon type; Stamina Potions and Stamina Vessels.
 - **Warp songs:** Minuet, Bolero, Serenade, Requiem, Nocturne and Prelude teleport the performer (3-turn cooldown).
+- **Mounts:** a mount slot for horses (Hyrule Horse, Lon Lon Horse, Gerudo Stallion, Royal Warhorse, Stalhorse, Giant Horse, Epona, Phantom Ganon's Horse, Ganondorf's Stallion, Lord of the Mountain). Riders become 2×2 cavalry with bonus movement and mount abilities; dismount in battle to fit through gaps. Epona's Song calls the mount back. Malon starts with Epona, Ganondorf with his stallion.
 - **Status effects and elements:** fire weapons can Burn, ice can Freeze, lightning can Shock, nature can Poison; Deku Nuts and Sun's Song Stun. Song of Storms brings rain (no burning, stronger water and lightning).
 - **Deployment:** army capacity is 12 and deployment capacity is 8.
 
@@ -58,9 +59,9 @@ tests/               Vitest suite
 ## Not built yet (from the design doc)
 
 - Mounts and the mount slot; tools (Hookshot traversal, Lens of Truth…) and the remaining consumables (Magic Beans, Fire/Ice Fruit…)
-- Epona's Song and Song of Time; curses, confusion and the remaining statuses
+- Song of Time; other mounts from the doc (Loftwing, Sand Seal, Wolf, Bullbo, Dodongo); curses, confusion and the remaining statuses
 - Fog of war, destructible terrain, fire spreading
-- Supports, mounts and transformations (Twinrova fusion, Ganon)
+- Supports and transformations (Twinrova fusion, Ganon)
 - Weapon durability and the Blacksmith
 - Army stats and resources (supplies, materials, command points, morale)
 - Commander orders

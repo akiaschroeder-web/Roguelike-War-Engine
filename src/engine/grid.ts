@@ -1,6 +1,6 @@
 import { RACES } from '../data/registry';
 import { INF, MOVE_COSTS } from './rules';
-import { canSwim, effectiveStats, moveTypeOf } from './units';
+import { canSwim, effectiveStats, hasEffect, isMounted, moveTypeOf } from './units';
 import type { Battle, Pos, Terrain, Unit } from './types';
 
 // Units occupy a size×size footprint anchored at (x, y), its top-left tile.
@@ -47,6 +47,10 @@ export function tileCost(b: Battle, unit: Unit, t: Terrain): number {
   const race = RACES[unit.race];
   if (t === 'water' && canSwim(unit)) c = 1;
   if (t === 'forest' && (race?.forestWalker || forestFriend(b, unit))) c = 1;
+  if (isMounted(unit)) {
+    if (t === 'forest' && hasEffect(unit, 'forestRunner')) c = 1;
+    if (t === 'mountain' && hasEffect(unit, 'mountainWalker')) c = 2;
+  }
   if (t === 'wall' && unit.skills.includes('spectralPassage')) c = 2;
   return c;
 }
@@ -88,7 +92,7 @@ export interface Moves {
  */
 export function computeMoves(b: Battle, unit: Unit, budget?: number): Moves {
   const mov = budget ?? effectiveStats(unit).mov;
-  const ghost = unit.skills.includes('spectralPassage');
+  const ghost = unit.skills.includes('spectralPassage') || hasEffect(unit, 'phantomRide');
   const occ = new Map<number, Unit>();
   for (const u of b.units) for (const p of footprint(u.x, u.y, u.size)) occ.set(keyOf(b, p.x, p.y), u);
 

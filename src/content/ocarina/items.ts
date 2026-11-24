@@ -6,6 +6,8 @@ const a = (id: string, name: string, rarity: Rarity, stats: GearDef['stats'], de
 const gs = (slot: GearSlotKind) => (id: string, name: string, rarity: Rarity, stats: GearDef['stats'], desc: string, extra: Partial<GearDef> = {}): GearDef =>
   ({ id, name, slot, rarity, price: PRICE[rarity], stats, desc, ...extra });
 const shield = gs('shield'), head = gs('head'), body = gs('body'), hands = gs('hands'), feet = gs('feet');
+const mount = (id: string, name: string, rarity: Rarity, stats: GearDef['stats'], desc: string, art: string, extra: Partial<GearDef> = {}): GearDef =>
+  ({ id, name, slot: 'mount', rarity, price: PRICE[rarity], stats, desc, art, size: 2, ...extra });
 
 // Equipment from the design doc. Effects that depend on systems not built yet
 // (elements, MP, forced movement, fog) are noted as "coming later" in the text.
@@ -86,6 +88,17 @@ export const GEAR: GearDef[] = [
   feet('goronBoots', 'Goron Stone Boots', 'rare', { def: 3 }, '+3 DEF.'),
   feet('zoraFins', 'Zora Swimming Fins', 'rare', { spd: 1 }, '+1 SPD; can swim through deep water.', { effects: ['swim'] }),
   feet('phantomBoots', 'Phantom Boots', 'legendary', { mov: 1, avoid: 10 }, '+1 MOV, +10 Avoid.'),
+  // ── Mounts (riders become at least 2×2 and move like cavalry; dismount in battle to squeeze through) ──
+  mount('hyruleHorse', 'Hyrule Horse', 'common', { mov: 3 }, '+3 MOV. Standard cavalry mount.', 'horsePinto'),
+  mount('lonLonHorse', 'Lon Lon Horse', 'uncommon', { mov: 3 }, '+3 MOV; +2 stamina recovery each turn.', 'horseWhite', { effects: ['staRegen'] }),
+  mount('gerudoStallion', 'Gerudo Stallion', 'rare', { mov: 3, spd: 1 }, '+3 MOV, +1 SPD.', 'horseBlack'),
+  mount('royalWarhorse', 'Royal Warhorse', 'epic', { mov: 3, def: 2 }, '+3 MOV, +2 DEF; +2 damage when charging (attacking after moving 3+ spaces).', 'horseGolden', { effects: ['charge'] }),
+  mount('stalhorse', 'Stalhorse', 'rare', { mov: 3, res: 2 }, '+3 MOV, +2 RES. Undead cavalry that never tires.', 'stalhorse', { effects: ['staRegen'] }),
+  mount('giantHorse', 'Giant Horse', 'epic', { mov: 2, str: 3, def: 3 }, '+2 MOV, +3 STR, +3 DEF; +2 damage when charging.', 'giantHorse', { effects: ['charge'] }),
+  mount('epona', 'Epona', 'legendary', { mov: 4 }, '+4 MOV; forests cost no extra movement; can move again after attacking.', 'epona', { effects: ['forestRunner', 'canto'], unique: true }),
+  mount('phantomHorse', "Phantom Ganon's Horse", 'legendary', { mov: 4 }, '+4 MOV; rides straight through enemy units.', 'ganondorfStallion', { effects: ['phantomRide'], unique: true }),
+  mount('ganondorfStallion', "Ganondorf's Stallion", 'legendary', { mov: 3, str: 3 }, '+3 MOV, +3 STR; enemies within 2 spaces have −5 Avoid.', 'ganondorfStallion', { effects: ['intimidate'], unique: true }),
+  mount('lordOfTheMountain', 'Lord of the Mountain', 'mythic', { mov: 4, res: 4 }, '+4 MOV, +4 RES; crosses forests and mountains with ease.', 'lordOfTheMountain', { effects: ['forestRunner', 'mountainWalker'], unique: true }),
   // ── Accessories ──
   a('silverScale', 'Silver Scale', 'uncommon', {}, 'Can swim through deep water.', { effects: ['swim'] }),
   a('goldenScale', 'Golden Scale', 'rare', { spd: 1 }, '+1 SPD; can swim through deep water.', { effects: ['swim'] }),
@@ -180,7 +193,7 @@ export const SKILLS: SkillDef[] = [
   { id: 'royalWaters', name: 'Royal Waters', implemented: true, desc: 'Recovers 15% max HP each turn while in water.' },
   { id: 'royalProtector', name: 'Royal Protector', implemented: true, desc: 'Once per enemy phase, intercepts an attack targeting an adjacent ally.' },
   { id: 'loneThief', name: 'Lone Thief', implemented: true, desc: '+15 Hit and Avoid when no allies are adjacent.' },
-  { id: 'songOfTheRanch', name: 'Song of the Ranch', implemented: false, desc: 'Restores HP to adjacent mounted units and removes their movement penalties. (Coming with songs.)' },
+  { id: 'songOfTheRanch', name: 'Song of the Ranch', implemented: true, desc: 'Adjacent mounted allies recover 10% max HP at the start of each turn.' },
   { id: 'ranchSupplies', name: 'Ranch Supplies', implemented: false, desc: 'Produces two bottles of Lon Lon Milk after each battle. (Coming with items.)' },
   { id: 'ruthlessRider', name: 'Ruthless Rider', implemented: true, desc: '+3 damage when attacking after moving at least four spaces.' },
   { id: 'kokiriAuthority', name: 'Kokiri Authority', implemented: true, desc: 'Kokiri allies within two spaces gain +2 SKL and SPD.' },

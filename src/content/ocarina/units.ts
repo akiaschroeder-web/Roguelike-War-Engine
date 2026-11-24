@@ -29,7 +29,7 @@ export const NAMED: UnitTemplate[] = [
     stats: st(21, 6, 13, 14, 4, 6, 6, 5, 7, 8, 18, 10), weapons: ['sheikahNeedles', 'sheikahShortblade', 'sheiksHarp'], skill: 'vanishingAct', abilities: ['zeldasLullaby', 'sunsSong', 'minuetOfForest', 'nocturneOfShadow'],
     exclusiveWith: ['zelda'], bio: 'An exceptionally fast skirmisher specializing in evasion, infiltration and precision attacks.' }),
   u({ id: 'ganondorf', name: 'Ganondorf', title: 'King of Thieves', race: 'gerudo', classId: 'darkKing', size: 1, home: 'gerudoDesert',
-    stats: st(30, 13, 8, 7, 10, 14, 5, 12, 9, 4, 20, 20), weapons: ['giantsKnife', 'poeLantern'], skill: 'spiritOfPower',
+    stats: st(30, 13, 8, 7, 10, 14, 5, 12, 9, 4, 20, 20), weapons: ['giantsKnife', 'poeLantern'], skill: 'spiritOfPower', gear: { mount: 'ganondorfStallion' },
     bio: 'A powerful hybrid combatant with exceptional strength, magic and constitution.' }),
   // Sages
   u({ id: 'rauru', name: 'Rauru', title: 'Sage of Light', race: 'hylian', classId: 'lightSage', size: 1, home: 'hyruleCastle',
@@ -52,7 +52,7 @@ export const NAMED: UnitTemplate[] = [
     bio: 'A Gerudo thief who steals from the rich, and who has no love for Ganondorf.' }),
   // Supporting characters
   u({ id: 'malon', name: 'Malon', title: 'Rancher', race: 'hylian', classId: 'rancher', size: 1, home: 'hyruleField',
-    stats: st(19, 4, 7, 8, 4, 6, 5, 5, 6, 12, 10, 10), weapons: ['royalHuntingBow', 'healStaff'], skill: 'songOfTheRanch', abilities: ['eponasSong'],
+    stats: st(19, 4, 7, 8, 4, 6, 5, 5, 6, 12, 10, 10), weapons: ['royalHuntingBow', 'healStaff'], skill: 'songOfTheRanch', abilities: ['eponasSong'], gear: { mount: 'epona' },
     bio: 'Lon Lon Ranch’s cheerful heart. Every horse on the ranch adores her.' }),
   u({ id: 'talon', name: 'Talon', title: 'Quartermaster', race: 'hylian', classId: 'quartermaster', size: 1, home: 'hyruleField',
     stats: st(26, 6, 4, 3, 6, 11, 4, 1, 3, 9, 10, 0), weapons: ['pitchfork'], skill: 'ranchSupplies',

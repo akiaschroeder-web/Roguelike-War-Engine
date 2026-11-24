@@ -16,7 +16,7 @@ export const ABILITIES: AbilityDef[] = [
   ab({ id: 'sariasSong', name: "Saria's Song", kind: 'song', mp: 4, desc: 'Allies within 3 spaces gain +2 SPD and +2 LCK for 3 turns.' }),
   ab({ id: 'sunsSong', name: "Sun's Song", kind: 'song', mp: 5, desc: 'Stuns every undead enemy within 3 spaces for a turn.' }),
   ab({ id: 'songOfStorms', name: 'Song of Storms', kind: 'song', mp: 6, desc: 'Rain for 3 turns: puts out all fires, stops Burning, and powers up water and lightning attacks.' }),
-  ab({ id: 'eponasSong', name: "Epona's Song", kind: 'song', mp: 3, desc: 'Summons the performer’s mount. (Coming with mounts.)', implemented: false }),
+  ab({ id: 'eponasSong', name: "Epona's Song", kind: 'song', mp: 3, desc: 'Calls your mount back if you dismounted, and mounted allies within 3 spaces gain +2 MOV for 2 turns.' }),
   ab({ id: 'songOfTime', name: 'Song of Time', kind: 'song', mp: 5, desc: 'Moves Time Blocks and activates ancient mechanisms. (Coming with map objects.)', implemented: false }),
   // ── Elemental arrows (chosen in the combat forecast when a bow is equipped) ──
   ab({ id: 'fireArrow', name: 'Fire Arrow', kind: 'arrow', mp: 2, might: 3, element: 'fire', desc: '+3 Might; may set the target Burning.' }),

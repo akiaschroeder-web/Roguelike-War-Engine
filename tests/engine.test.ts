@@ -3,7 +3,7 @@ import {
   GEAR, ITEMS, BOSSES, CLASSES, COMMANDERS, ENEMIES, PERMANENT_ITEMS, RACES, REGION_BOSSES, REGION_IDS, ROSTERS, SKILLS, TEMPLATE_LIST, TEMPLATES, WEAPONS, WORLDS,
 } from '../src/data/registry';
 import { planAction } from '../src/engine/ai';
-import { checkResult, createBattle, moveUnit, spawnReinforcements, startPhase } from '../src/engine/battle';
+import { checkResult, createBattle, moveUnit, spawnReinforcements, startPhase, toggleMount } from '../src/engine/battle';
 import { canWield, findInterceptor, forecast, resolveCombat } from '../src/engine/combat';
 import { computeMoves, footDist, keyOf, unitAt } from '../src/engine/grid';
 import { generateMap } from '../src/engine/mapgen';
@@ -11,7 +11,7 @@ import { RNG } from '../src/engine/rng';
 import {
   advanceRegion, availableNodes, buy, enterNode, finishBattle, newRun, offerRegions, recruit, recruitOffers, startBattle, type RunWithEvent,
 } from '../src/engine/run';
-import { effectiveStats, gainXp, makeEnemy, makeHero } from '../src/engine/units';
+import { canRide, effectiveStats, gainXp, makeEnemy, makeHero, prepareForBattle as prepareForBattleFn } from '../src/engine/units';
 import { canUse, useItem } from '../src/engine/items';
 import { castAbility } from '../src/engine/abilities';
 import { fountainTeach, pickForce, useItemOutside } from '../src/engine/run';
@@ -583,3 +583,56 @@ describe('enemy armies, techniques and warp songs', () => {
     expect(castAbility(b, sheik, 'minuetOfForest', rng(), undefined, { x: 2, y: 2 })).not.toBeNull();
   });
 });
+
+describe('mounts', () => {
+  it('riding makes a unit 2×2 cavalry; dismounting shrinks it back; size resets after battle', () => {
+    const run = newRun(30, 'link') as RunWithEvent;
+    const link = run.roster[0];
+    link.gear.mount = 'hyruleHorse';
+    const b = createBattle({ world: 'hyruleField', nodeType: 'battle', depth: 0, roster: run.roster, seed: 3 });
+    const bl = b.units.find((u) => u.uid === link.uid)!;
+    expect(bl.size).toBe(2);
+    expect(bl.mounted).toBe(true);
+    expect(effectiveStats(bl).mov).toBe(link.stats.mov + 3);
+    expect(toggleMount(b, bl)).toBe(true);
+    expect(bl.size).toBe(1);
+    expect(effectiveStats(bl).mov).toBe(link.stats.mov);
+    run.battle = b;
+    b.result = 'won';
+    finishBattle(run);
+    expect(run.roster.find((u) => u.uid === link.uid)!.size).toBe(1);
+  });
+
+  it('giants and fliers cannot ride; Malon brings Epona and Ganondorf his stallion', () => {
+    expect(canRide(makeHero('biggoron', 'b', 1, rng()))).toBe(false);
+    expect(canRide(makeHero('navi', 'n', 1, rng()))).toBe(false);
+    expect(makeHero('malon', 'm', 1, rng()).gear.mount).toBe('epona');
+    expect(newRun(1, 'ganondorf').roster[0].gear.mount).toBe('ganondorfStallion');
+  });
+
+  it("Phantom Ganon's Horse rides through enemies; Epona's Song calls the mount back", () => {
+    const b = emptyBattle(12, 6);
+    const rider = place(makeHero('ingo', 'i', 1, rng()), 0, 0);
+    rider.classId = 'soldier'; // a foot class that can ride
+    rider.gear.mount = 'phantomHorse';
+    const r = { ...prepareForBattleForTest(rider) };
+    const wall = place(makeEnemy(ENEMIES.moblin, 'hyruleField', 1, 'w', rng()), 3, 0);
+    b.units = [r, wall];
+    const reach = computeMoves(b, r).reach;
+    expect([...reach.keys()].some((k) => k % b.width >= 5)).toBe(true);
+
+    const malon = place(makeHero('malon', 'm', 1, rng()), 6, 3);
+    malon.weapons.push('fairyOcarina');
+    const mb = prepareForBattleForTest(malon);
+    b.units = [mb];
+    toggleMount(b, mb);
+    expect(mb.mounted).toBe(false);
+    expect(castAbility(b, mb, 'eponasSong', rng())).not.toBeNull();
+    expect(mb.mounted).toBe(true);
+    expect(mb.size).toBe(2);
+  });
+});
+
+function prepareForBattleForTest(u: Unit): Unit {
+  return Object.assign(prepareForBattleFn(u), { x: u.x, y: u.y });
+}

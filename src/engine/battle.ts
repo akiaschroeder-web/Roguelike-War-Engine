@@ -1,10 +1,10 @@
 import { bossPool, ENEMIES, rosterFor, TEMPLATES, worldDef } from '../data/registry';
-import { footprint, keyOf, unitDist } from './grid';
+import { anchorCost, footprint, keyOf, unitAt, unitDist } from './grid';
 import { generateMap } from './mapgen';
 import { RNG } from './rng';
-import { LAVA_DAMAGE_PCT, TERRAIN_BONUS } from './rules';
+import { INF, LAVA_DAMAGE_PCT, TERRAIN_BONUS } from './rules';
 import { tickStatuses } from './status';
-import { hasEffect, isLavaImmune, makeEnemy, makeEnemyFromTemplate, prepareForBattle } from './units';
+import { canRide, hasEffect, isLavaImmune, isMounted, makeEnemy, mountOf, sizeWhen, makeEnemyFromTemplate, prepareForBattle } from './units';
 import type { Battle, BossDef, EnemyArchetype, EnemyForce, NodeType, Objective, Team, Unit, WorldId } from './types';
 
 export interface BattleSetup {
@@ -57,7 +57,7 @@ export function createBattle(setup: BattleSetup): Battle {
   });
   const leader = isBossFight && force?.leader && TEMPLATES[force.leader] ? TEMPLATES[force.leader] : undefined;
   const bossDef = isBossFight && !leader ? setup.boss ?? rng.pick(bossPool(setup.world)) : undefined;
-  const playerSizes = setup.roster.map((u) => u.size);
+  const playerSizes = setup.roster.map((u) => prepareForBattle(u).size);
   const enemySizes = specs.map((sp) => ('arch' in sp ? sp.arch.size ?? 1 : TEMPLATES[sp.tmpl]?.size ?? 1));
   const bossSize = leader?.size ?? bossDef?.size ?? 0;
   const biggest = Math.max(1, ...playerSizes, ...enemySizes, bossSize);
@@ -141,7 +141,7 @@ export function startPhase(b: Battle, team: Team): TurnStartEvent[] {
     if (tick.lostTurn) u.moved = u.acted = true;
     if (tick.damage || tick.lostTurn) events.push({ uid: u.uid, heal: 0, damage: tick.damage, source: tick.lostTurn ?? 'status' });
     if (hasEffect(u, 'mpRegen')) u.mp = Math.min(u.stats.mp, u.mp + 2);
-    u.sta = Math.min(u.stats.sta, (u.sta ?? u.stats.sta) + 2);
+    u.sta = Math.min(u.stats.sta, (u.sta ?? u.stats.sta) + 2 + (hasEffect(u, 'staRegen') ? 2 : 0));
     for (const k of Object.keys(u.cooldowns ?? {})) if (--u.cooldowns![k] <= 0) delete u.cooldowns![k];
     const max = u.stats.hp;
     const tiles = footprint(u.x, u.y, u.size).map((p) => b.tiles[keyOf(b, p.x, p.y)]);
@@ -156,6 +156,7 @@ export function startPhase(b: Battle, team: Team): TurnStartEvent[] {
       if (a === u) continue;
       if (a.skills.includes('sacredSanctuary') && unitDist(u, a) <= 2) { pct += 10; sources.push('Sanctuary'); }
       if (a.skills.includes('guardianOfTheForest') && unitDist(u, a) <= 3) { pct += 10; sources.push('Deku Tree'); }
+      if (a.skills.includes('songOfTheRanch') && isMounted(u) && unitDist(u, a) <= 1) { pct += 10; sources.push('Song of the Ranch'); }
       if (hasEffect(a, 'lightAura') && unitDist(u, a) <= 1) { flat += 3; sources.push('Light Medallion'); }
     }
     let damage = 0;
@@ -217,4 +218,26 @@ export function objectiveText(o: Objective): string {
     case 'boss': return 'Defeat the enemy commander';
     case 'survive': return `Defend for ${o.turns} turns`;
   }
+}
+
+/** Why the unit can't mount/dismount right now, or null if it can. */
+export function mountToggleBlocked(b: Battle, u: Unit): string | null {
+  if (!mountOf(u) || !canRide(u)) return 'No mount';
+  if (u.mounted !== false) return null; // dismounting always works
+  const was = { mounted: u.mounted, size: u.size };
+  u.mounted = true;
+  u.size = sizeWhen(u, true);
+  const fits = anchorCost(b, u, u.x, u.y) < INF
+    && footprint(u.x, u.y, u.size).every((p) => { const o = unitAt(b, p.x, p.y); return !o || o === u; });
+  u.mounted = was.mounted;
+  u.size = was.size;
+  return fits ? null : 'Not enough room to mount here';
+}
+
+/** Mount or dismount (changes size and movement type). Returns false if blocked. */
+export function toggleMount(b: Battle, u: Unit): boolean {
+  if (mountToggleBlocked(b, u)) return false;
+  u.mounted = u.mounted === false;
+  u.size = sizeWhen(u, u.mounted);
+  return true;
 }

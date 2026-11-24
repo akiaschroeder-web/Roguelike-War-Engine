@@ -20,10 +20,10 @@ export const WEAPON_ICONS: Record<string, string> = {
 };
 
 export const SLOT_LABELS: Record<string, string> = {
-  shield: 'Shield', head: 'Head', body: 'Body', hands: 'Hands', feet: 'Feet', accessory: 'Accessory', acc1: 'Accessory', acc2: 'Accessory',
+  shield: 'Shield', head: 'Head', body: 'Body', hands: 'Hands', feet: 'Feet', accessory: 'Accessory', acc1: 'Accessory', acc2: 'Accessory', mount: 'Mount',
 };
 export const SLOT_ICONS: Record<string, string> = {
-  shield: '🛡', head: '⛑', body: '👕', hands: '🧤', feet: '👢', accessory: '◇', acc1: '◇', acc2: '◇',
+  shield: '🛡', head: '⛑', body: '👕', hands: '🧤', feet: '👢', accessory: '◇', acc1: '◇', acc2: '◇', mount: '🐎',
 };
 export const ITEM_ICONS: Record<string, string> = { heal: '🧪', fullHeal: '🧪', fairy: '🧚', bomb: '💣', stun: '🌰' };
 

@@ -5,7 +5,7 @@ import { createBattle } from './battle';
 import { canWield, type LevelUp } from './combat';
 import { RNG } from './rng';
 import { ARMY_CAPACITY, DEPLOY_CAPACITY } from './rules';
-import { addToPack, gainXp, makeHero, rollLevelUp, slotFor } from './units';
+import { addToPack, canRide, gainXp, makeHero, rollLevelUp, slotFor } from './units';
 import type { BossDef, CommanderDef, EnemyForce, FactionDef, GearSlot, MapNode, NodeType, Rarity, Run, RunMap, Unit, UnitTemplate, WorldId } from './types';
 
 export const ROWS_PER_REGION = 7; // last row is the regional boss
@@ -336,6 +336,10 @@ export function finishBattle(run: RunWithEvent): BattleSummary {
     .map((u) => {
       const fought = survivors.get(u.uid);
       const next = fought ? { ...fought } : { ...u };
+      // Back on foot-size bookkeeping after the battle.
+      next.size = u.baseSize ?? u.size;
+      delete next.baseSize;
+      delete next.mounted;
       // Benched units rest a little more than those who fought.
       const pct = deployed.has(u.uid) ? heal : heal + 0.2;
       next.hp = Math.min(next.stats.hp, next.hp + Math.ceil(next.stats.hp * pct));
@@ -436,6 +440,7 @@ export function giveGear(run: Run, id: string, uid: string | null): boolean {
   const def = GEAR[id];
   if (!def) return false;
   if (!u) { run.convoy.push(id); return true; }
+  if (def.slot === 'mount' && !canRide(u)) return false;
   const slot = slotFor(u, def.slot);
   const old = u.gear[slot];
   if (old) run.convoy.push(old);
@@ -474,6 +479,7 @@ export function give(run: Run, id: string, uid: string | null): boolean {
 /** Can this unit take this thing right now? */
 export function canTake(u: Unit, id: string): boolean {
   if (WEAPONS[id]) return canWield(u, WEAPONS[id]);
+  if (GEAR[id]?.slot === 'mount') return canRide(u);
   return !!kindOf(id);
 }
 

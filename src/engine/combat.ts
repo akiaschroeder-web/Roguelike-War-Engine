@@ -3,7 +3,7 @@ import { clearStatus, hasStatus, rollElement, statusMods, weatherMight } from '.
 import { keyOf, terrainAt, unitDist } from './grid';
 import type { RNG } from './rng';
 import { isMagical, TERRAIN_BONUS, TRIANGLE } from './rules';
-import { effectiveStats, gainXp, gearBonus, hasEffect, unitTags } from './units';
+import { effectiveStats, gainXp, gearBonus, hasEffect, isMounted, unitTags } from './units';
 import type { AbilityDef, Battle, Element, Pos, StatKey, StatusKind, Unit, WeaponDef } from './types';
 
 export interface SideForecast {
@@ -143,7 +143,9 @@ export function situational(b: Battle, u: Unit, pos: Pos, foe: Unit, initiating:
     if (a.skills.includes('heyListen') && near(a, 2)) m.hit += 20;
     if (hasEffect(a, 'crestAura') && near(a, 1)) m.hit += 5;
   }
-  if (hasEffect(u, 'mountedAvoid') && CLASSES[u.classId]?.moveType === 'cavalry') m.avoid += 10;
+  if (hasEffect(u, 'mountedAvoid') && (isMounted(u) || CLASSES[u.classId]?.moveType === 'cavalry')) m.avoid += 10;
+  if (hasEffect(u, 'charge') && initiating && u.movedDist >= 3) m.dmg += 2;
+  if (b.units.some((e) => e.team !== u.team && hasEffect(e, 'intimidate') && unitDist(u, e, pos) <= 2)) m.avoid -= 5;
   if (hasEffect(u, 'beastSlayer') && unitTags(foe).includes('beast')) m.str += 3;
   if (hasEffect(u, 'giantEye') && foe.size >= 2) m.hit += 20;
   return m;

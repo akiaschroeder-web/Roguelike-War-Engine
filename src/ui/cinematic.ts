@@ -3,6 +3,7 @@
 // lunges, hit flashes, damage numbers and a KO. Click to skip.
 
 import { artFor, worldDef } from '../data/registry';
+import { isMounted, mountOf } from '../engine/units';
 import type { Strike } from '../engine/combat';
 import type { Unit } from '../engine/types';
 import { esc, portraitIdOf, token } from './components';
@@ -47,9 +48,14 @@ export function playCinematic(opts: CinematicOptions): Promise<void> {
 
   const fighter = (u: Unit, side: 'left' | 'right') => {
     const art = artFor(portraitIdOf(u), u.uid);
-    const body = art
+    const rider = art
       ? `<img class="cine-art" src="art/${esc(art)}.png" alt="" draggable="false">`
       : `<div class="cine-token">${token(u, 170)}</div>`;
+    const mount = isMounted(u) ? mountOf(u) : undefined;
+    const mountArt = mount?.art && artFor(mount.art);
+    const body = mountArt
+      ? `<div class="cine-mounted ${side}"><img class="cine-mount" src="art/${esc(mountArt)}.png" alt="" draggable="false"><div class="cine-rider">${rider}</div></div>`
+      : rider;
     const i = info[u.uid];
     const max = u.stats.hp;
     const hp = startHp[u.uid] ?? u.hp;

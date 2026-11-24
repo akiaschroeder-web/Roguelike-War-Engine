@@ -138,10 +138,10 @@ export interface WeaponDef {
 
 export type Rarity = 'common' | 'uncommon' | 'rare' | 'epic' | 'legendary' | 'mythic';
 
-export type GearSlotKind = 'shield' | 'head' | 'body' | 'hands' | 'feet' | 'accessory';
+export type GearSlotKind = 'shield' | 'head' | 'body' | 'hands' | 'feet' | 'accessory' | 'mount';
 /** Equipment slots on a unit. Accessories have two slots. */
-export type GearSlot = 'shield' | 'head' | 'body' | 'hands' | 'feet' | 'acc1' | 'acc2';
-export const GEAR_SLOTS: GearSlot[] = ['shield', 'head', 'body', 'hands', 'feet', 'acc1', 'acc2'];
+export type GearSlot = 'shield' | 'head' | 'body' | 'hands' | 'feet' | 'acc1' | 'acc2' | 'mount';
+export const GEAR_SLOTS: GearSlot[] = ['shield', 'head', 'body', 'hands', 'feet', 'acc1', 'acc2', 'mount'];
 
 export interface GearDef {
   id: string;
@@ -154,6 +154,10 @@ export interface GearDef {
   desc: string;
   /** Engine-implemented special effects. */
   effects?: GearEffect[];
+  /** Mounts: footprint size while riding (the rider becomes at least this big). */
+  size?: number;
+  /** Art id for the battle animation (mounts). */
+  art?: string;
   unique?: boolean;
 }
 
@@ -169,7 +173,14 @@ export type GearEffect =
   | 'lavaImmune' // Goron Tunic: no lava damage
   | 'swim' // Zora Tunic / scales: can enter deep water
   | 'critGuard' // Stalfos Shield: crits deal ×2 instead of ×3
-  | 'mpRegen'; // +2 MP at the start of each turn
+  | 'mpRegen' // +2 MP at the start of each turn
+  | 'canto' // Epona: can move again after attacking, with leftover movement
+  | 'forestRunner' // forests cost 1 movement while riding
+  | 'mountainWalker' // mountains passable (cost 2) while riding
+  | 'phantomRide' // ride straight through enemy units
+  | 'charge' // +2 damage when attacking after moving 3+ spaces
+  | 'intimidate' // enemies within 2 spaces have −5 Avoid
+  | 'staRegen'; // +2 extra stamina per turn
 
 export type ItemKind = 'heal' | 'fullHeal' | 'mp' | 'sta' | 'fairy' | 'bomb' | 'stun' | 'learn';
 
@@ -245,6 +256,8 @@ export interface UnitTemplate {
   skill?: SkillId;
   /** Spells/songs/arrows known from the start. */
   abilities?: string[];
+  /** Gear equipped from the start (e.g. a mount). */
+  gear?: Partial<Record<GearSlot, string>>;
   glyph: string;
   bio: string;
   /** Home region (colours the token). */
@@ -360,6 +373,10 @@ export interface Unit {
   mp: number;
   /** Current stamina (max is stats.sta). Refills each battle, +2 per turn. */
   sta: number;
+  /** In battle: riding the equipped mount (false after dismounting). */
+  mounted?: boolean;
+  /** Size on foot (size grows while mounted). */
+  baseSize?: number;
   /** Ability id -> turns until usable again. */
   cooldowns?: Record<string, number>;
   statuses: Status[];

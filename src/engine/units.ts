@@ -69,6 +69,7 @@ export function makeHero(template: UnitTemplate | string, uid: string, level: nu
     weapons: [...t.weapons], skills: t.skill ? [t.skill] : [], glyph: t.glyph,
     abilities: [...(t.abilities ?? []), ...(t.skill && ABILITIES[t.skill] ? [t.skill] : [])],
   });
+  if (t.gear) unit.gear = { ...t.gear };
   for (let l = 1; l < level; l++) rollLevelUp(unit, rng);
   unit.hp = unit.stats.hp;
   return unit;
@@ -111,7 +112,31 @@ export function moveTypeOf(u: Unit): MoveType {
   const cls = CLASSES[u.classId];
   if (cls?.moveType === 'fixed') return 'fixed';
   if (RACES[u.race]?.flies) return 'flying';
+  if (isMounted(u)) return 'cavalry';
   return cls?.moveType ?? 'foot';
+}
+
+/** Can this unit ride a mount? (Not fliers, stationary units, cavalry classes or giants.) */
+export function canRide(u: Unit): boolean {
+  const mt = CLASSES[u.classId]?.moveType;
+  return mt !== 'fixed' && mt !== 'flying' && mt !== 'cavalry' && !RACES[u.race]?.flies && (u.baseSize ?? u.size) <= 2;
+}
+
+export function mountOf(u: Unit): GearDef | undefined {
+  const id = u.gear?.mount;
+  return id ? GEAR[id] : undefined;
+}
+
+/** Riding right now (outside battle, a unit with a mount counts as mounted). */
+export function isMounted(u: Unit): boolean {
+  return !!mountOf(u) && u.mounted !== false && canRide(u);
+}
+
+/** Footprint size with or without the mount. */
+export function sizeWhen(u: Unit, mounted: boolean): number {
+  const base = u.baseSize ?? u.size;
+  const m = mountOf(u);
+  return mounted && m && canRide(u) ? Math.max(base, m.size ?? 2) : base;
 }
 
 /** Tags used for weapon effectiveness: race/class tags, move type, and 'large'. */
@@ -127,6 +152,7 @@ export function activeGear(unit: Unit): GearDef[] {
     const id = unit.gear?.[slot];
     if (!id || !GEAR[id]) continue;
     if (slot === 'shield' && twoHanded) continue;
+    if (slot === 'mount' && !isMounted(unit)) continue;
     out.push(GEAR[id]);
   }
   return out;
@@ -206,8 +232,11 @@ export function addToPack(unit: Unit, itemId: string, uses?: number): boolean {
 
 /** Reset per-battle state. HP carries over between battles. */
 export function prepareForBattle(unit: Unit): Unit {
+  const baseSize = unit.baseSize ?? unit.size;
+  const riding = !!mountOf(unit) && canRide({ ...unit, baseSize });
   return {
-    ...unit, stats: { ...unit.stats }, growths: { ...unit.growths }, skills: [...unit.skills], weapons: [...unit.weapons],
+    ...unit, baseSize, mounted: riding, size: riding ? Math.max(baseSize, mountOf(unit)!.size ?? 2) : baseSize,
+    stats: { ...unit.stats }, growths: { ...unit.growths }, skills: [...unit.skills], weapons: [...unit.weapons],
     gear: { ...unit.gear }, pack: unit.pack.map((p) => ({ ...p })), abilities: [...unit.abilities],
     mp: unit.stats.mp, sta: unit.stats.sta, statuses: [], buffs: [], usedAbilities: [], faroreMark: undefined, cooldowns: {},
     hp: Math.max(1, unit.hp), moved: false, acted: false, kills: 0, movedDist: 0, survivedOnce: false,

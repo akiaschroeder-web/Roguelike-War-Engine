@@ -78,7 +78,7 @@ export const BOSSES: BossDef[] = [
     quote: 'You are nothing but a phantom yourself, boy.', drops: ['pgTrident', 'pgMask', 'forestMedallion'] }),
   b({ id: 'phantomGanonMounted', name: 'Phantom Ganon', title: 'Rider of the Painting', home: 'hyruleField', race: 'phantom', classId: 'phantomKnight', size: 2,
     weapons: ['pgTrident'], glyph: 'PG', skill: 'spectralPassage', stats: st(28, 9, 10, 11, 7, 9, 9, 11, 9, 3, 16, 20),
-    quote: '(A spectral horse bursts out of the painting.)', drops: ['pgTrident'] }),
+    quote: '(A spectral horse bursts out of the painting.)', drops: ['pgTrident', 'phantomHorse'] }),
   b({ id: 'volvagia', name: 'Volvagia', title: 'Subterranean Lava Dragon', home: 'deathMountain', race: 'demon', classId: 'dragon', size: 4,
     weapons: ['fireBreath', 'bossClaws'], glyph: 'VO', stats: st(48, 13, 9, 10, 10, 24, 6, 12, 8, 3, 24, 20), quote: '(The lava erupts. Something enormous rises with it.)',
     drops: ['volvagiaCrown', 'volvagiaArmor', 'fireMedallion'] }),

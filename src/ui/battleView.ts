@@ -1,9 +1,10 @@
-import { ABILITIES, BOSSES, ITEMS, worldDef } from '../data/registry';
+import { ABILITIES, BOSSES, CLASSES, ITEMS, worldDef } from '../data/registry';
+import { canRide, effectiveStats, hasEffect, isMounted, mountOf } from '../engine/units';
 import { abilityRadius, abilityTargets, castAbility, castableAbilities, costLabel, knownAbilities, needsTarget, needsTile, unusableReason, warpTiles } from '../engine/abilities';
 import { STATUS_INFO } from '../engine/status';
 import { canUse, isTargeted, targetTiles, useItem } from '../engine/items';
 import { planAction } from '../engine/ai';
-import { checkResult, moveUnit, objectiveText, spawnReinforcements, startPhase, type TurnStartEvent } from '../engine/battle';
+import { checkResult, mountToggleBlocked, moveUnit, toggleMount, objectiveText, spawnReinforcements, startPhase, type TurnStartEvent } from '../engine/battle';
 import {
   attackMods, attackWeapons, findInterceptor, forecast, healAmount, healWeapons, maxAttackRange, resolveCombat, resolveHeal, weaponDef,
   type Forecast, type LevelUp,
@@ -160,7 +161,7 @@ export class BattleView {
       el.classList.toggle('selected', this.sel === u);
       el.classList.toggle('enemy', u.team === 'enemy');
       el.classList.toggle('big', u.size > 1);
-      el.innerHTML = `<div class="u-body">${token(u, Math.round(this.tile * u.size * (u.size > 1 ? 0.86 : 0.78)))}</div>${hpBar(u.hp, u.stats.hp)}${u.statuses.length ? `<i class="stun-mark">${u.statuses.map((st) => STATUS_INFO[st.kind].icon).join('')}</i>` : ''}`;
+      el.innerHTML = `<div class="u-body">${token(u, Math.round(this.tile * u.size * (u.size > 1 ? 0.86 : 0.78)))}</div>${hpBar(u.hp, u.stats.hp)}${u.statuses.length ? `<i class="stun-mark">${u.statuses.map((st) => STATUS_INFO[st.kind].icon).join('')}</i>` : ''}${isMounted(u) && !CLASSES_MOUNTED(u) ? '<i class="mount-mark">🐎</i>' : ''}`;
       el.classList.toggle('barrier', u.buffs.some((x) => x.barrier));
     }
   }
@@ -377,7 +378,10 @@ export class BattleView {
         <button class="btn ${this.showDanger ? 'on' : ''}" data-act="danger">Danger Zone</button>
         <button class="btn small" data-act="anims" title="Battle animations">🎬 ${animationsEnabled() ? 'On' : 'Off'}</button>`;
     } else if (m === 'select') {
-      html = `<button class="btn" data-act="cancel">Cancel</button><span class="dim small">Choose a destination, or tap the unit to stay put.</span>`;
+      const sel = this.sel;
+      const mountBtn = sel && mountOf(sel) && canRide(sel)
+        ? (() => { const why = mountToggleBlocked(this.b, sel); return `<button class="btn" data-act="mount" ${why ? `disabled title="${esc(why)}"` : ''}>🐎 ${sel.mounted === false ? 'Mount' : 'Dismount'}</button>`; })() : '';
+      html = `<button class="btn" data-act="cancel">Cancel</button>${mountBtn}<span class="dim small">Choose a destination, or tap the unit to stay put.</span>`;
     } else if (m === 'action' && this.sel) {
       html = `
         ${this.attackTargets(this.sel).length ? '<button class="btn primary" data-act="attack">Attack</button>' : ''}
@@ -393,7 +397,7 @@ export class BattleView {
     } else if (m === 'items' || m === 'itemTarget') {
       html = `<button class="btn" data-act="back">Back</button><span class="dim small">${m === 'items' ? 'Choose an item. Using one ends this unit\'s turn.' : 'Choose where to throw it.'}</span>`;
     } else if (m === 'canto') {
-      html = `<button class="btn primary" data-act="stay">Stay</button><span class="dim small">Vanishing Act: move up to 3 more spaces.</span>`;
+      html = `<button class="btn primary" data-act="stay">Stay</button><span class="dim small">${this.sel && hasEffect(this.sel, 'canto') && !this.sel.skills.includes('vanishingAct') ? 'Epona: use your leftover movement.' : 'Vanishing Act: move up to 3 more spaces.'}</span>`;
     } else if (m === 'busy') {
       html = `<span class="dim small">${this.b.phase === 'enemy' ? 'Enemy is moving…' : '…'}</span>`;
     }
@@ -622,6 +626,14 @@ export class BattleView {
         this.arrowChoice = el?.dataset.a || null;
         this.renderPanel();
         return;
+      case 'mount':
+        if (this.sel && this.mode === 'select' && toggleMount(b, this.sel)) {
+          this.origin = { x: this.sel.x, y: this.sel.y };
+          this.moves = computeMoves(b, this.sel);
+          this.addLog(`${esc(this.sel.name)} ${this.sel.mounted ? 'mounts up' : 'dismounts'}.`);
+          this.renderAll();
+        }
+        return;
       case 'magic':
         this.mode = 'magic';
         this.abilityId = null;
@@ -694,6 +706,15 @@ export class BattleView {
         const killed = await this.doCombat(u, t, this.weaponChoice ?? undefined, this.arrowChoice ?? undefined);
         if (killed && u.skills.includes('vanishingAct') && b.units.includes(u) && !checkResult(b)) {
           this.moves = computeMoves(b, u, 3);
+          this.pending = null;
+          this.mode = 'canto';
+          this.renderAll();
+          return;
+        }
+        // Epona: move again with leftover movement after attacking.
+        const leftover = effectiveStats(u).mov - u.movedDist;
+        if (hasEffect(u, 'canto') && leftover > 0 && b.units.includes(u) && !checkResult(b)) {
+          this.moves = computeMoves(b, u, leftover);
           this.pending = null;
           this.mode = 'canto';
           this.renderAll();
@@ -856,6 +877,7 @@ export class BattleView {
     if (res.marked) this.addLog('A return point is set.');
     if (res.warped) this.addLog(`${esc(u.name)} warps back to the return point.`);
     if (res.weather) this.addLog('🌧 Rain begins to fall.');
+    if (res.mounted) { this.float(u, 'MOUNTED', 'heal'); this.addLog(`${esc(u.name)}'s mount answers the call!`); }
     await sleep(700);
     this.abilityId = null;
     this.renderAll();
@@ -1038,4 +1060,9 @@ export class BattleView {
 /** Abilities shown in the Abilities menu (forecast-only modifiers are excluded). */
 function menuAbilities(u: Unit) {
   return knownAbilities(u).filter((d) => d.kind !== 'arrow' && !(d.kind === 'technique' && !d.area));
+}
+
+/** Cavalry classes are always mounted; only show the horse badge for gear mounts. */
+function CLASSES_MOUNTED(u: Unit): boolean {
+  return CLASSES[u.classId]?.moveType === 'cavalry';
 }

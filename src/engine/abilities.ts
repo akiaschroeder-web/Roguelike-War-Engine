@@ -6,7 +6,8 @@ import { anchorCost, footprint, unitAt, unitDist } from './grid';
 import type { RNG } from './rng';
 import { INF } from './rules';
 import { addStatus, clearStatus, weatherMight } from './status';
-import { effectiveStats, gainXp, unitTags } from './units';
+import { mountToggleBlocked } from './battle';
+import { effectiveStats, gainXp, isMounted, mountOf, sizeWhen, unitTags } from './units';
 import type { AbilityDef, Battle, Pos, StatusKind, Unit } from './types';
 
 /** Best instrument discount among carried instruments, or null with no instrument. */
@@ -72,6 +73,10 @@ export function unusableReason(b: Battle, u: Unit, def: AbilityDef): string | nu
   if (def.sta ? u.sta < def.sta : u.mp < abilityCost(u, def)) return def.sta ? 'Not enough stamina' : 'Not enough MP';
   if (def.id === 'spinAttack' && !b.units.some((e) => e.team !== u.team && unitDist(u, e) === 1)) return 'No adjacent enemies';
   if (def.warp && !warpTiles(b, u, def).length) return 'No suitable destination on this map';
+  if (def.id === 'eponasSong') {
+    const needsRemount = u.mounted === false && !!mountOf(u) && !mountToggleBlocked(b, u);
+    if (!needsRemount && !b.units.some((a) => a.team === u.team && isMounted(a) && unitDist(u, a) <= 3)) return 'No mount to call and no riders nearby';
+  }
   if (def.id === 'faroresWind' && u.faroreMark && !markFree(b, u)) return 'The return point is blocked';
   if (def.id === 'greatFairysBlessing' && !abilityTargets(b, u, def).length) return 'No one needs it';
   return null;
@@ -126,6 +131,7 @@ export interface AbilityResult {
   marked?: Pos;
   warped?: { from: Pos; to: Pos };
   weather?: boolean;
+  mounted?: boolean;
   levelUps: LevelUp[];
 }
 
@@ -203,6 +209,20 @@ export function castAbility(b: Battle, u: Unit, id: string, rng: RNG, targetUid?
         res.statuses.push({ uid: e.uid, kind: 'stun' });
       }
       break;
+    case 'eponasSong': {
+      if (u.mounted === false && mountOf(u) && !mountToggleBlocked(b, u)) {
+        u.mounted = true;
+        u.size = sizeWhen(u, true);
+        res.mounted = true;
+      }
+      for (const a of allies(3)) {
+        if (!isMounted(a)) continue;
+        a.buffs = a.buffs.filter((x) => x.id !== 'eponasSong');
+        a.buffs.push({ id: 'eponasSong', name: "Epona's Song", turns: 2, stats: { mov: 2 } });
+        res.buffed.push(a.uid);
+      }
+      break;
+    }
     case 'songOfStorms':
       b.weather = { kind: 'rain', turns: 3 };
       for (const x of b.units) {
