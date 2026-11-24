@@ -23,6 +23,9 @@ import { hookTiles } from '../src/engine/abilities';
 import { freeCaptive } from '../src/engine/battle';
 import { armyCap, deployCap, gainArmyXp, issueOrder, orderUnusable, useBlessing } from '../src/engine/army';
 import { campFeast } from '../src/engine/run';
+import { applyMetaToRun, awardMedals, bump, buyUpgrade, claimBounties, emptyProgress, trialMultiplier, unlockFormation, unlockKit } from '../src/engine/meta';
+import { conversationFor } from '../src/content/ocarina/conversations';
+import { SUPPORT_S_PAIRS } from '../src/data/registry';
 import { EVENTS } from '../src/data/registry';
 import type { Battle, Team, Unit } from '../src/engine/types';
 
@@ -1095,5 +1098,55 @@ describe('army management', () => {
     const p = run.battle!.units.find((u) => u.isCommander)!;
     expect(p.buffs.some((x) => x.id === 'din')).toBe(true);
     expect(p.statuses.some((x) => x.kind === 'inspired')).toBe(true);
+  });
+});
+
+describe('cross-run progression and support conversations', () => {
+  it('medals buy upgrades that apply to new campaigns', () => {
+    const p = emptyProgress();
+    awardMedals(p, 40);
+    expect(buyUpgrade(p, 'purse')).toBe(true);
+    expect(buyUpgrade(p, 'barracks')).toBe(true);
+    expect(unlockKit(p, 'explorer')).toBe(true);
+    expect(unlockFormation(p, 'quartermasters')).toBe(true);
+    const run = newRun(3, 'link') as RunWithEvent;
+    const r0 = run.rupees;
+    const s0 = run.army!.supplies;
+    const given: string[] = [];
+    applyMetaToRun(run, p, { kit: 'explorer', formation: 'quartermasters', trials: ['hardened'] }, () => undefined, (id) => given.push(id), () => undefined);
+    expect(run.rupees).toBe(r0 + 100);
+    expect(armyCap(run)).toBe(13);
+    expect(given).toContain('shovel');
+    expect(run.army!.supplies).toBe(s0 + 20);
+    expect(run.trials).toEqual(['hardened']);
+  });
+
+  it('bounties pay once', () => {
+    const p = emptyProgress();
+    bump(p, 'sieges');
+    const first = claimBounties(p);
+    expect(first.map((b) => b.id)).toContain('siege');
+    expect(claimBounties(p).length).toBe(0);
+    expect(p.medals).toBeGreaterThan(0);
+  });
+
+  it('trials raise enemy levels and medal rewards', () => {
+    const run = newRun(4, 'link');
+    const normal = createBattle({ world: 'hyruleField', nodeType: 'battle', depth: 3, roster: run.roster, seed: 9 });
+    const hard = createBattle({ world: 'hyruleField', nodeType: 'battle', depth: 3, roster: run.roster, seed: 9, trials: ['hardened', 'mist'] });
+    expect(hard.enemyLevel).toBe(normal.enemyLevel + 2);
+    expect(hard.fog).toBe(true);
+    expect(trialMultiplier(['hardened', 'swarm'])).toBeGreaterThan(1.5);
+  });
+
+  it('every pair has a conversation at every rank', () => {
+    for (const [a, b] of SUPPORT_S_PAIRS) {
+      for (const r of ['C', 'B', 'A', 'S'] as const) {
+        const c = conversationFor(a, b, r, { a: 'A', b: 'B' });
+        expect(c.lines.length, `${a}|${b}|${r}`).toBeGreaterThan(0);
+      }
+    }
+    const g = conversationFor('hyruleSoldier', 'moblin', 'B', { a: 'Sol', b: 'Mob' });
+    expect(g.lines.some(([, t]) => t.includes('{'))).toBe(false);
   });
 });

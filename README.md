@@ -47,7 +47,15 @@ npm test           # engine tests + AI-vs-AI battle simulations
 - **Supports:** allies who fight near each other build C/B/A ranks (S for special pairs like Link & Zelda), granting Hit/Avoid/Crit/Def bonuses when close.
 - **Transformations:** Ganondorf can become Ganon below half HP; Koume and Kotake fuse into Twinrova when adjacent. Enemy versions do it on their own. Forms revert after battle.
 - **Status effects and elements:** fire weapons can Burn, ice can Freeze, lightning can Shock, nature can Poison; Deku Nuts and Sun's Song Stun. Song of Storms brings rain (no burning, stronger water and lightning).
-- **Deployment:** army capacity is 12 and deployment capacity is 8.
+- **Deployment:** army capacity starts at 12 (up to 16) and deployment at 8 (up to 10) as the army levels up.
+- **More statuses:** Silenced, Rooted, Blinded, Cursed, Confused, Asleep, Bleeding, Frightened, Weakened, Exposed, plus Regenerating, Inspired, Protected, Hasted and Veiled. Some monsters inflict them (ReDead roots, Like Like weakens, Poes curse, Wolfos make you bleed).
+- **Consumables and tools:** Antidote, Sacred Water, Elixir, Fire/Ice/Shock Fruit, Puffshroom, Muddle Bud, Magic Beans, Lens of Truth, Fishing Rod and Shovel. The Hookshot/Longshot double as traversal tools.
+- **Battlefield:** fog of war, invisible enemies, cracked walls, Time Blocks (Song of Time), spike traps, buried treasure, spreading fire, bean bridges, rain and sandstorms.
+- **Turn phases:** Player, Allied (friendly NPC squads, escorts, freed prisoners), Enemy and Environment.
+- **Escort and rescue objectives:** guide a VIP to the far edge, or free prisoners (who then join your army).
+- **Army management:** army level, supplies, materials, Command Points, morale, reputation, Fairy Dust and Sacred Energy. Commanders give orders (Rally, Forced March, Defensive Formation, Focus Fire, Emergency Retreat, Reinforce, Hold the Line, Coordinated Strike, Second Wind). Camps have a Feast and an Infirmary.
+- **Support conversations** for every pair at every rank (hand-written for the special pairs).
+- **Between campaigns:** Hero Medals and the Sanctuary: Goddess Statue upgrades, Hall of Heroes companions, Royal Treasury kits, Military Academy formations, the Bounty Board, Chamber of Trials modifiers, and expanded Hyrule Archives.
 
 ## Portraits
 
@@ -65,16 +73,7 @@ src/
 tests/               Vitest suite
 ```
 
-## Not built yet (from the design doc)
+## Possible future additions
 
-- Tools (Hookshot traversal, Lens of Truth…) and the remaining consumables (Magic Beans, Fire/Ice Fruit…)
-- Song of Time; curses, confusion and the remaining statuses
-- Fog of war, destructible terrain, fire spreading
-- Support conversations
-- Army stats and resources (supplies, materials, command points, morale)
-- Commander orders
-- Escort objectives
-- Allied and environmental phases
-- Cross-run progression facilities
-
-Personal skills that depend on those systems are marked "coming" in-game.
+- More content packs (Majora's Mask, Wind Waker…) and the tools from other games (Clawshot, Gust Bellows, Dominion Rod…)
+- Class promotions

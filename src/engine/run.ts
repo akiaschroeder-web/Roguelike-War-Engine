@@ -9,6 +9,7 @@ import { RNG } from './rng';
 import { ARMY_CAPACITY, DEPLOY_CAPACITY } from './rules';
 import { adjustMorale, adjustReputation, applyArmyBuffs, armyCap, armyOf, deployCap, gainArmyXp, newArmy, repDiscount, supplyCap } from './army';
 import { prepareForBattle } from './units';
+import { emptyProgress, type MetaProgress } from './meta';
 import { addToPack, canRide, forgeLevel, gainXp, makeHero, maxUses, rollLevelUp, slotFor } from './units';
 import type { Battle, BossDef, CommanderDef, EventDef, EventEffect, EventOutcome, EnemyForce, FactionDef, GearSlot, MapNode, NodeType, Rarity, Run, RunMap, Unit, UnitTemplate, WorldId } from './types';
 
@@ -254,7 +255,7 @@ export function startBattle(run: RunWithEvent, uids: string[]): void {
     if (boss) run.bossesFought.push(boss.id);
     run.battle = createBattle({
       world: node.world, nodeType: node.type === 'dungeon' ? kind : node.type, depth: depthOf(run, node) + floorBonus, roster: chosen,
-      seed: rng.int(0, 2 ** 31), boss, healMult: run.bonus === 'healing' ? 1.2 : 1, force, supports: run.supports,
+      seed: rng.int(0, 2 ** 31), boss, healMult: run.bonus === 'healing' ? 1.2 : 1, force, supports: run.supports, trials: run.trials,
     });
     run.battle.reserves = run.roster.filter((u) => !chosen.includes(u)).map((u) => ({ ...prepareForBattle(u), x: -1, y: -1 }));
     applyArmyBuffs(run, run.battle);
@@ -376,7 +377,7 @@ export interface BattleSummary {
   /** Dungeon: next floor (or cleared). */
   dungeon?: { floor: number; of: number; cleared: boolean };
   /** Support ranks reached this battle. */
-  supportUps: { a: string; b: string; rank: SupportRank }[];
+  supportUps: { a: string; b: string; aUid: string; bUid: string; rank: SupportRank }[];
 }
 
 /** HP recovered after a battle (fraction of max HP). */
@@ -398,7 +399,7 @@ export function finishBattle(run: RunWithEvent): BattleSummary {
   const fallen = b.fallen.filter((u) => u.team === 'player' && !u.npc).flatMap(split);
   const survivors = new Map([...b.units, ...(b.withdrawn ?? [])].filter((u) => u.team === 'player' && !u.npc).flatMap(split).map((u) => [u.uid, u]));
   const deployed = new Set(run.deployment ?? []);
-  const heal = (armyOf(run).supplies > 0 ? POST_BATTLE_HEAL : 0.05) + (run.bonus === 'postBattleHeal' ? 0.1 : 0);
+  const heal = run.trials?.includes('wounds') ? 0 : (armyOf(run).supplies > 0 ? POST_BATTLE_HEAL : 0.05) + (run.bonus === 'postBattleHeal' ? 0.1 : 0);
   run.roster = run.roster
     .filter((u) => !fallen.some((f) => f.uid === u.uid))
     .map((u) => {
@@ -469,7 +470,7 @@ export function finishBattle(run: RunWithEvent): BattleSummary {
     if (!ux || !uy) continue;
     const s = isSPair(ux, uy);
     const r = rankOf(pts, s);
-    if (r && r !== rankOf(before[k] ?? 0, s)) supportUps.push({ a: ux.name, b: uy.name, rank: r });
+    if (r && r !== rankOf(before[k] ?? 0, s)) supportUps.push({ a: ux.name, b: uy.name, aUid: ux.uid, bUid: uy.uid, rank: r });
   }
   run.supports = after;
 
@@ -856,10 +857,14 @@ export function priceOf(run: Run, kind: ItemKindTag, id: string): number {
 
 export const SUPPLY_PACK = { amount: 10, price: 90 };
 
+export function supplyPrice(run: Run): number {
+  return Math.round(SUPPLY_PACK.price * (1 - repDiscount(run) / 100) * (run.trials?.includes('famine') ? 2 : 1));
+}
+
 /** Buy a crate of supplies at a merchant. */
 export function buySupplies(run: RunWithEvent): boolean {
   const a = armyOf(run);
-  const price = Math.round(SUPPLY_PACK.price * (1 - repDiscount(run) / 100));
+  const price = supplyPrice(run);
   if (run.event?.type !== 'shop' || run.rupees < price || a.supplies >= supplyCap(run)) return false;
   run.rupees -= price;
   a.supplies = Math.min(supplyCap(run), a.supplies + SUPPLY_PACK.amount);
@@ -973,7 +978,7 @@ export function takeTreasure(run: RunWithEvent, index: number | null, uid: strin
 const RUN_KEY = 'hyrule.run.v1';
 const META_KEY = 'hyrule.meta.v1';
 
-export interface Meta {
+export interface Meta extends MetaProgress {
   runs: number;
   bestDepth: number;
   bestRegion: number;
@@ -1006,7 +1011,7 @@ export function loadRun(): RunWithEvent | null {
 }
 
 export function loadMeta(): Meta {
-  const empty: Meta = { runs: 0, bestDepth: 0, bestRegion: 0, discovered: [], bossesDefeated: [] };
+  const empty: Meta = { runs: 0, bestDepth: 0, bestRegion: 0, discovered: [], bossesDefeated: [], ...emptyProgress() };
   try {
     const raw = storage()?.getItem(META_KEY);
     if (raw) return { ...empty, ...JSON.parse(raw) };

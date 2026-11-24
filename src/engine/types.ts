@@ -600,6 +600,8 @@ export interface Run {
   dungeon?: { floor: number; of: number };
   /** Army-wide stats and resources. */
   army?: Army;
+  /** Chamber of Trials modifiers for this campaign. */
+  trials?: string[];
   /** Permanent bonuses bought between runs. */
   metaBonus?: { armyCap?: number; cp?: number };
   /** Discovered support conversations (keys 'templateA|templateB|rank'). */

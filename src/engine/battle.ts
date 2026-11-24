@@ -20,6 +20,8 @@ export interface BattleSetup {
   /** Who you're fighting; omitted = the region's monsters. */
   force?: EnemyForce;
   supports?: Record<string, number>;
+  /** Chamber of Trials modifiers. */
+  trials?: string[];
 }
 
 /** Enemy level for a given depth. Keeps climbing in endless mode. */
@@ -32,7 +34,7 @@ export function createBattle(setup: BattleSetup): Battle {
   const rng = new RNG(setup.seed);
   const pc = setup.roster.length;
   const isBossFight = setup.nodeType === 'boss' || setup.nodeType === 'elite';
-  const level = enemyLevelFor(setup.depth, setup.nodeType);
+  const level = enemyLevelFor(setup.depth, setup.nodeType) + (setup.trials?.includes('hardened') ? 2 : 0);
   const world = worldDef(setup.world);
 
   let objective: Objective = { type: 'rout' };
@@ -49,6 +51,7 @@ export function createBattle(setup: BattleSetup): Battle {
   if (setup.nodeType === 'elite') enemyCount += 1;
   if (setup.nodeType === 'boss') enemyCount += 2;
   if (objective.type === 'survive') enemyCount = Math.max(3, enemyCount - 2);
+  if (setup.trials?.includes('swarm')) enemyCount += 2;
 
   // Each enemy slot is either a monster archetype or a character/soldier template.
   const force = setup.force;
@@ -140,6 +143,7 @@ export function createBattle(setup: BattleSetup): Battle {
       : undefined,
   };
   decorateField(battle, rng, setup.nodeType);
+  if (setup.trials?.includes('mist')) battle.fog = true;
   battle.rngState = rng.state;
   return battle;
 }

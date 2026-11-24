@@ -1,8 +1,8 @@
-import { ABILITIES, artFor, GEAR, ITEMS, CLASSES, COMMANDERS, PERMANENT_ITEMS, REGION_IDS, TEMPLATE_LIST, TEMPLATES, WEAPONS, worldDef } from '../data/registry';
+import { ABILITIES, artFor, BOSSES, ENEMIES, GEAR, ITEMS, CLASSES, COMMANDERS, PERMANENT_ITEMS, REGION_IDS, TEMPLATE_LIST, TEMPLATES, WEAPONS, worldDef } from '../data/registry';
 import { canWield, type LevelUp } from '../engine/combat';
 import { randomSeed } from '../engine/rng';
 import {
-  advanceRegion, buySupplies, campFeast, commanderOf, FEAST_COST, improveMaterials, reviveWithDust, SUPPLY_PACK, availableNodes, buy, campDrill, campRest, campTrain, currentNode, depthOf, enterNode,
+  advanceRegion, buySupplies, supplyPrice, give, campFeast, commanderOf, FEAST_COST, improveMaterials, reviveWithDust, SUPPLY_PACK, availableNodes, buy, campDrill, campRest, campTrain, currentNode, depthOf, enterNode,
   equipFromConvoy, finishBattle, fountainBless, fountainHeal, fountainRevive, isRegionComplete, loadMeta, loadRun, newRun, offerRegions,
   recruit, recruitLevel, saveMeta, saveRun, canTake, canUseOutside, forgePrice, forgeWeapon, improveCost, improveWeapon, MAX_FORGE, repairCost, repairWeapon, FREE_FOR_ALL_REGION, isFreeForAll, fountainTeach, unlearnedFairySpells, priceOf, stashGear, stashItem, stashWeapon, useItemOutside, type ItemKindTag, startBattle, takeTreasure,
   canChoose, chooseEvent, descendDungeon, eventDef, leaveDungeon,
@@ -13,6 +13,13 @@ import { GEAR_SLOTS, PACK_SIZE, type GearSlot, type MapNode, type NodeType, type
 import { forgeLevel, slotFor } from '../engine/units';
 import { isSPair, rankOf } from '../engine/supports';
 import { BattleView } from './battleView';
+import {
+  applyMetaToRun, awardMedals, BOUNTIES, bump, buyUpgrade, claimBounties, FORMATIONS, HERO_COST, heroCandidates, KITS, medalsForRun, setMax, TRIALS,
+  trialMultiplier, unlockFormation, unlockHero, unlockKit, upgradeCost, upgradeLevel, UPGRADES, type RunChoices,
+} from '../engine/meta';
+import { RNG } from '../engine/rng';
+import { rollLevelUp } from '../engine/units';
+import { conversationFor, type ConvoRank } from '../content/ocarina/conversations';
 import { armyCap, armyOf, BLESSINGS, cpMax, deployCap, moraleBonus, moraleLabel, ORDERS, ordersFor, repDiscount, supplyCap, useBlessing, xpToNext } from '../engine/army';
 import {
   confirmDialog, esc, hpBar, itemLine, itemName, modal, SLOT_ICONS, SLOT_LABELS, weaponLine, showLevelUps, templateCard, token, unitDetails,
@@ -78,6 +85,7 @@ export class App {
         <div class="menu">
           ${hasRun ? '<button class="btn primary big" data-nav="continue">Continue Campaign</button>' : ''}
           <button class="btn ${hasRun ? '' : 'primary'} big" data-nav="new">New Campaign</button>
+          <button class="btn" data-nav="sanctuary">🏛 Sanctuary <span class="dim">· ${this.meta.medals} Hero Medals</span></button>
           <button class="btn" data-nav="howto">How to Play</button>
           <button class="btn" data-nav="codex">Hyrule Archives</button>
         </div>
@@ -87,11 +95,65 @@ export class App {
     this.on({
       continue: () => this.resume(),
       new: async () => {
-        if (this.run && !(await confirmDialog('Abandon your current campaign?', 'Abandon', 'Keep it'))) return;
+        if (this.run && !(await confirmDialog('Abandon your current campaign? You still earn Hero Medals for how far you got.', 'Abandon', 'Keep it'))) return;
+        if (this.run) { this.recordEnd(); this.endCampaign(this.run); this.run = null; this.save(); }
         this.chooseCommander();
       },
       howto: () => this.howTo(),
       codex: () => this.codex(),
+      sanctuary: () => this.sanctuary(),
+    });
+  }
+
+  // ───────────────────────── Sanctuary (between campaigns) ─────────────────────────
+
+  private sanctuary(tab = 'statue') {
+    const p = this.meta;
+    const fresh = claimBounties(p);
+    if (fresh.length) saveMeta(p);
+    const tabs: [string, string][] = [['statue', '🗿 Goddess Statue'], ['heroes', '🛡 Hall of Heroes'], ['treasury', '💰 Royal Treasury'], ['academy', '⚔ Military Academy'], ['bounty', '📜 Bounty Board'], ['trials', '⏳ Chamber of Trials']];
+    let body = '';
+    if (tab === 'statue') {
+      body = `<p class="dim">Permanent upgrades for every future campaign.</p><div class="shop-list">${UPGRADES.map((u) => {
+        const lvl = upgradeLevel(p, u.id);
+        const cost = upgradeCost(p, u.id);
+        return `<div class="shop-item"><div><b>${esc(u.name)}</b> <span class="dim small">Lv ${lvl}/${u.costs.length}</span><div class="dim small">${esc(u.desc)}</div></div>
+          <button class="btn small" data-nav="buyup" data-id="${u.id}" ${cost === null || p.medals < cost ? 'disabled' : ''}>${cost === null ? 'Maxed' : `🏅 ${cost}`}</button></div>`;
+      }).join('')}</div>`;
+    } else if (tab === 'heroes') {
+      const cands = heroCandidates(p.discovered, p);
+      body = `<p class="dim">Unlock characters you've met so one of them can join you at the start of a campaign (🏅 ${HERO_COST} each).</p>
+        ${p.heroes.length ? `<h3>Unlocked</h3><div class="army-tokens">${p.heroes.map((id) => `<span title="${esc(TEMPLATES[id]?.name ?? id)}">${token({ home: TEMPLATES[id].home, glyph: TEMPLATES[id].glyph, team: 'player', portraitId: id }, 36)}</span>`).join('')}</div>` : ''}
+        <h3>Available</h3><div class="shop-list">${cands.map((id) => `<div class="shop-item"><div>${token({ home: TEMPLATES[id].home, glyph: TEMPLATES[id].glyph, team: 'player', portraitId: id }, 28)} <b>${esc(TEMPLATES[id].name)}</b> <span class="dim small">${esc(TEMPLATES[id].title)}</span></div>
+          <button class="btn small" data-nav="hero" data-id="${id}" ${p.medals < HERO_COST ? 'disabled' : ''}>🏅 ${HERO_COST}</button></div>`).join('') || '<div class="dim">Meet more characters in your campaigns to unlock them here.</div>'}</div>`;
+    } else if (tab === 'treasury') {
+      body = `<p class="dim">Starting kits: pick one when you begin a campaign.</p><div class="shop-list">${KITS.map((k) => `<div class="shop-item"><div><b>${esc(k.name)}</b><div class="dim small">${esc(k.desc)}</div></div>
+        ${p.kits.includes(k.id) ? '<span class="badge gold">Unlocked</span>' : `<button class="btn small" data-nav="kit" data-id="${k.id}" ${p.medals < k.cost ? 'disabled' : ''}>🏅 ${k.cost}</button>`}</div>`).join('')}</div>`;
+    } else if (tab === 'academy') {
+      body = `<p class="dim">Starting formations: pick one when you begin a campaign.</p><div class="shop-list">${FORMATIONS.map((f) => `<div class="shop-item"><div><b>${esc(f.name)}</b><div class="dim small">${esc(f.desc)}</div></div>
+        ${p.formations.includes(f.id) ? '<span class="badge gold">Unlocked</span>' : `<button class="btn small" data-nav="formation" data-id="${f.id}" ${p.medals < f.cost ? 'disabled' : ''}>🏅 ${f.cost}</button>`}</div>`).join('')}</div>`;
+    } else if (tab === 'bounty') {
+      body = `<p class="dim">Challenges that pay Hero Medals once. Progress counts across all campaigns.</p><div class="shop-list">${BOUNTIES.map((b) => `<div class="shop-item ${p.bounties.includes(b.id) ? 'sold' : ''}"><div><b>${esc(b.name)}</b><div class="dim small">${esc(b.desc)}</div></div>
+        <span>${p.bounties.includes(b.id) ? '✔ Claimed' : `🏅 ${b.reward}`}</span></div>`).join('')}</div>`;
+    } else {
+      body = `<p class="dim">Optional modifiers, chosen when you begin a campaign. Each one makes the war harder and raises the Hero Medals you earn.</p><div class="shop-list">${TRIALS.map((t) => `<div class="shop-item"><div><b>${esc(t.name)}</b><div class="dim small">${esc(t.desc)}</div></div><span class="badge">+${Math.round(t.mult * 100)}% medals</span></div>`).join('')}</div>`;
+    }
+    this.setScreen(`
+      <div class="page">
+        <div class="page-head"><button class="btn" data-nav="back">← Back</button><h1>Sanctuary</h1><span class="badge gold">🏅 ${p.medals} Hero Medals</span></div>
+        ${fresh.length ? `<p class="center-text win">Bounties claimed: ${fresh.map((b) => `${esc(b.name)} (+${b.reward})`).join(', ')}</p>` : ''}
+        <p class="dim center-text">Hero Medals are earned when a campaign ends (more for going further). Spend them here on lasting upgrades.</p>
+        <div class="tabs">${tabs.map(([id, label]) => `<button class="btn ${tab === id ? 'primary' : ''}" data-nav="tab" data-id="${id}">${label}</button>`).join('')}</div>
+        ${body}
+      </div>`);
+    const buy = (ok: boolean) => { if (ok) { saveMeta(p); this.sanctuary(tab); } };
+    this.on({
+      back: () => this.title(),
+      tab: (el) => this.sanctuary(el.dataset.id!),
+      buyup: (el) => buy(buyUpgrade(p, el.dataset.id!)),
+      hero: (el) => buy(unlockHero(p, el.dataset.id!)),
+      kit: (el) => buy(unlockKit(p, el.dataset.id!)),
+      formation: (el) => buy(unlockFormation(p, el.dataset.id!)),
     });
   }
 
@@ -109,27 +171,85 @@ export class App {
         <li><b>Unit size:</b> large units fill 2×2 up to 5×5 squares and need room to move.</li>
         <li>Lava burns everyone but Gorons and fliers. Zora swim through deep water. Kokiri ignore forests.</li>
       </ul>
+      <h3>Turn order</h3>
+      <p>Player Phase → Allied Phase (friendly NPCs in green act on their own) → Enemy Phase → Environment Phase (fire spreads, Magic Beans grow, weather shifts).</p>
+      <h3>The battlefield</h3>
+      <ul>
+        <li><b>Fog</b> hides enemies beyond your units' sight. Some ghosts and undead are <b>invisible</b> until you get close or use the Lens of Truth.</li>
+        <li>Bombs break <b>cracked walls</b>. The <b>Song of Time</b> moves Time Blocks. Hidden <b>spike traps</b> hurt and root; buried treasure waits for a Shovel.</li>
+        <li>The <b>Hookshot</b> pulls you across water and gaps to trees, walls and units. You can still attack afterwards.</li>
+      </ul>
+      <h3>Your army</h3>
+      <ul>
+        <li><b>Orders</b> cost Command Points: Rally, Focus Fire, Reinforce and more, depending on your Commander. They don't use up anyone's turn.</li>
+        <li><b>Supplies</b> are eaten after every battle; run out and the army goes hungry. <b>Morale</b> gives the whole army Hit/Avoid. <b>Reputation</b> lowers prices. <b>Materials</b> improve weapons. <b>Fairy Dust</b> revives the fallen at camp. <b>Sacred Energy</b> buys blessings.</li>
+        <li>Allies who fight side by side build <b>supports</b>; read their conversations from the unit screen.</li>
+      </ul>
+      <h3>Between campaigns</h3>
+      <p>When a campaign ends you earn <b>Hero Medals</b>. Spend them in the <b>Sanctuary</b>: permanent upgrades, starting companions, kits and formations, bounties, and optional Trials for bigger rewards.</p>
       <h3>Permadeath and attrition</h3>
       <p>Fallen units are gone unless a Great Fairy revives them. If your <b>Commander</b> falls, the campaign ends. HP carries over between battles, so rest at camps and fountains.</p>
       <button class="btn primary" data-close>Got it</button>`, { dismissable: true });
   }
 
-  private codex() {
-    const met = new Set(this.meta.discovered);
+  private codex(tab = 'heroes') {
+    const p = this.meta;
+    const met = new Set(p.discovered);
     const named = TEMPLATE_LIST.filter((t) => !t.generic);
-    modal(`
-      <h2>Hyrule Archives</h2>
-      <p class="dim small">Characters you've commanded or met: ${named.filter((t) => met.has(t.id)).length}/${named.length}. Bosses defeated: ${this.meta.bossesDefeated.length}.</p>
+    const tt = (id: string) => TEMPLATES[id];
+    const tabs: [string, string][] = [['heroes', 'Characters'], ['enemies', 'Enemies'], ['items', 'Items'], ['convos', 'Conversations']];
+    let body = '';
+    if (tab === 'heroes') {
+      body = `<p class="dim small">Characters you've commanded or met: ${named.filter((t) => met.has(t.id)).length}/${named.length}. Bosses defeated: ${p.bossesDefeated.length}.</p>
       <div class="codex-row">${named.map((t) => met.has(t.id)
         ? `<div class="codex-hero">${token({ home: t.home, glyph: t.glyph, team: 'player', portraitId: t.id }, 36)}<div><b>${esc(t.name)}</b><div class="dim small">${esc(t.title)}</div></div></div>`
-        : '<div class="codex-hero locked"><span class="token" style="--sz:36px"><b>?</b></span><div class="dim">Unknown</div></div>').join('')}</div>
+        : '<div class="codex-hero locked"><span class="token" style="--sz:36px"><b>?</b></span><div class="dim">Unknown</div></div>').join('')}</div>`;
+    } else if (tab === 'enemies') {
+      const all = [...Object.values(ENEMIES).map((e) => ({ id: e.id, name: e.name, kind: 'Monster' })), ...Object.values(BOSSES).map((b) => ({ id: b.id, name: b.name, kind: 'Boss' }))];
+      const seen = new Set(p.enemiesSeen);
+      body = `<p class="dim small">Foes faced: ${all.filter((e) => seen.has(e.id)).length}/${all.length}</p><div class="codex-row">${all.map((e) => seen.has(e.id)
+        ? `<div class="codex-hero">${token({ home: 'hyruleField', glyph: e.name[0], team: 'enemy', portraitId: e.id }, 36)}<div><b>${esc(e.name)}</b><div class="dim small">${e.kind}</div></div></div>`
+        : '<div class="codex-hero locked"><span class="token" style="--sz:36px"><b>?</b></span><div class="dim">Unknown</div></div>').join('')}</div>`;
+    } else if (tab === 'items') {
+      const all = [...Object.keys(WEAPONS).filter((id) => WEAPONS[id].type !== 'natural'), ...Object.keys(GEAR), ...Object.keys(ITEMS)];
+      const seen = new Set(p.itemsSeen);
+      body = `<p class="dim small">Equipment and items found: ${all.filter((id) => seen.has(id)).length}/${all.length}</p><div class="shop-list">${all.filter((id) => seen.has(id)).map((id) => `<div class="shop-item"><div>${itemLine(id)}</div></div>`).join('') || '<div class="dim">Nothing yet.</div>'}</div>`;
+    } else {
+      body = `<p class="dim small">Support conversations you've read: ${p.convos.length}</p><div class="shop-list">${p.convos.map((k, i) => {
+        const [a, b, r] = k.split('|');
+        return `<div class="shop-item"><div><b>${esc(tt(a)?.name ?? a)} & ${esc(tt(b)?.name ?? b)}</b> <span class="badge">${r}</span></div><button class="btn small" data-k="read" data-i="${i}">💬 Read</button></div>`;
+      }).join('') || '<div class="dim">Build supports in battle, then read their conversations from the unit screen.</div>'}</div>`;
+    }
+    const m = modal(`
+      <h2>Hyrule Archives</h2>
+      <div class="tabs">${tabs.map(([id, label]) => `<button class="btn small ${tab === id ? 'primary' : ''}" data-k="tab" data-id="${id}">${label}</button>`).join('')}</div>
+      ${body}
       <button class="btn primary" data-close>Close</button>`, { dismissable: true });
+    m.el.addEventListener('click', (e) => {
+      const k = (e.target as HTMLElement).closest('[data-k]') as HTMLElement | null;
+      if (!k) return;
+      if (k.dataset.k === 'tab') { m.close(); this.codex(k.dataset.id!); }
+      if (k.dataset.k === 'read') {
+        const [a, b, r] = p.convos[Number(k.dataset.i)].split('|');
+        const ta = tt(a), tb = tt(b);
+        if (!ta || !tb) return;
+        const { lines, swap } = conversationFor(a, b, r as ConvoRank, { a: ta.name, b: tb.name });
+        modal(`<h2>${esc(ta.name)} & ${esc(tb.name)} <span class="dim small">Support ${r}</span></h2>
+          <div class="convo">${lines.map(([sp, text]) => {
+            const t = (sp === 'a') !== swap ? ta : tb;
+            return `<div class="convo-line ${t === ta ? 'left' : 'right'}">${token({ home: t.home, glyph: t.glyph, team: 'player', portraitId: t.id }, 40)}<div class="bubble"><b>${esc(t.name)}</b><div>${esc(text)}</div></div></div>`;
+          }).join('')}</div><div class="center-text"><button class="btn primary" data-close>Close</button></div>`, { dismissable: true });
+      }
+    });
   }
+
 
   // ───────────────────────── New run ─────────────────────────
 
   private chooseCommander() {
     let chosen: string | null = null;
+    const p = this.meta;
+    const choices: RunChoices = { trials: [] };
     const render = () => {
       this.setScreen(`
         <div class="page">
@@ -147,6 +267,15 @@ export class App {
                 ${c.pendingGear?.length ? `<div class="dim small">Coming later: ${esc(c.pendingGear.join(', '))}</div>` : ''}
               </div>`)}</div>`;
           }).join('')}</div>
+          ${`
+          <div class="run-options">
+            <h3>Campaign options</h3>
+            ${p.heroes.length ? `<div class="opt-row"><span class="dim small">Companion (Hall of Heroes)</span><select data-opt="hero"><option value="">None</option>${p.heroes.map((id) => `<option value="${id}" ${choices.hero === id ? 'selected' : ''}>${esc(TEMPLATES[id]?.name ?? id)}</option>`).join('')}</select></div>` : ''}
+            ${p.kits.length ? `<div class="opt-row"><span class="dim small">Starting kit (Royal Treasury)</span><select data-opt="kit"><option value="">None</option>${KITS.filter((k) => p.kits.includes(k.id)).map((k) => `<option value="${k.id}" ${choices.kit === k.id ? 'selected' : ''}>${esc(k.name)}</option>`).join('')}</select></div>` : ''}
+            ${p.formations.length ? `<div class="opt-row"><span class="dim small">Formation (Military Academy)</span><select data-opt="formation"><option value="">Standard</option>${FORMATIONS.filter((f) => p.formations.includes(f.id)).map((f) => `<option value="${f.id}" ${choices.formation === f.id ? 'selected' : ''}>${esc(f.name)}</option>`).join('')}</select></div>` : ''}
+            <div class="opt-row"><span class="dim small">Trials (Chamber of Trials)</span><span class="trial-list">${TRIALS.map((t) => `<label class="small" title="${esc(t.desc)}"><input type="checkbox" data-trial="${t.id}" ${choices.trials!.includes(t.id) ? 'checked' : ''}> ${esc(t.name)}</label>`).join(' ')}</span></div>
+            <div class="dim small">Medal multiplier: ×${trialMultiplier(choices.trials).toFixed(2)}</div>
+          </div>`}
           <div class="sticky-bar">${chosen
             ? `<span>Commander: <b>${esc(TEMPLATES[chosen].name)}</b></span><button class="btn primary big" data-nav="start">Begin Campaign →</button>`
             : '<span class="dim">Select a commander above.</span>'}</div>
@@ -157,12 +286,26 @@ export class App {
         start: () => {
           if (!chosen) return;
           this.run = newRun(randomSeed(), chosen);
+          const run = this.run;
+          applyMetaToRun(run, p, choices,
+            (id) => { recruit(run, id); run.event = undefined; },
+            (id) => { const taker = run.roster.find((u) => canTake(u, id)); if (!taker || !give(run, id, taker.uid)) run.convoy.push(id); },
+            (levels) => { for (const u of run.roster) for (let i = 0; i < levels; i++) { const rng = new RNG(run.rngState + i * 7 + u.uid.length); rollLevelUp(u, rng); } },
+          );
           this.meta.runs++;
           this.discover(this.run.roster.map((u) => u.templateId!));
           this.save();
           this.mapScreen();
         },
       });
+      this.root.querySelectorAll<HTMLSelectElement>('[data-opt]').forEach((sel) => sel.addEventListener('change', () => {
+        (choices as Record<string, unknown>)[sel.dataset.opt!] = sel.value || undefined;
+      }));
+      this.root.querySelectorAll<HTMLInputElement>('[data-trial]').forEach((cb) => cb.addEventListener('change', () => {
+        const id = cb.dataset.trial!;
+        choices.trials = cb.checked ? [...choices.trials!, id] : choices.trials!.filter((t) => t !== id);
+        const y = window.scrollY; render(); window.scrollTo(0, y);
+      }));
     };
     render();
   }
@@ -224,8 +367,9 @@ export class App {
           if (!k) return;
           m.close();
           if (k.dataset.k === 'title') this.title();
-          if (k.dataset.k === 'abandon' && (await confirmDialog('Abandon this campaign?', 'Abandon'))) {
+          if (k.dataset.k === 'abandon' && (await confirmDialog('Abandon this campaign? You still earn Hero Medals for how far you got.', 'Abandon'))) {
             this.recordEnd();
+            if (this.run) this.endCampaign(this.run);
             this.run = null;
             this.save();
             this.title();
@@ -304,6 +448,11 @@ export class App {
     m.el.addEventListener('click', (e) => {
       const k = (e.target as HTMLElement).closest('[data-k]') as HTMLElement | null;
       if (!k) return;
+      if (k.dataset.k === 'talk') {
+        const other = run.roster.find((x) => x.uid === k.dataset.uid);
+        if (other) this.showConversation(u, other, k.dataset.rank as ConvoRank);
+        return;
+      }
       if (k.dataset.k === 'equip') equip(u, k.dataset.id!);
       if (k.dataset.k === 'stash') stashWeapon(run, uid, k.dataset.id!);
       if (k.dataset.k === 'ungear') stashGear(run, uid, k.dataset.slot as GearSlot);
@@ -432,14 +581,41 @@ export class App {
     const node = currentNode(run);
     this.meta.bestDepth = Math.max(this.meta.bestDepth, node ? depthOf(run, node) + 1 : 0);
     this.meta.bestRegion = Math.max(this.meta.bestRegion, run.act);
+    setMax(this.meta, 'bestRegion', run.act);
     saveMeta(this.meta);
+  }
+
+  /** Campaign over: Hero Medals and bounties. */
+  private endCampaign(run: RunWithEvent): { medals: number; bounties: string[] } {
+    const medals = medalsForRun(run);
+    awardMedals(this.meta, medals);
+    const bounties = claimBounties(this.meta).map((b) => `${b.name} (+${b.reward})`);
+    saveMeta(this.meta);
+    return { medals, bounties };
   }
 
   private afterBattle(result: 'won' | 'lost') {
     const run = this.run!;
+    const fought = run.battle!;
+    const p = this.meta;
+    // Lifetime counters for the Bounty Board and Archives
+    for (const e of [...fought.units, ...fought.fallen]) {
+      if (e.team === 'enemy') { const id = e.bossId ?? e.artId ?? e.templateId; if (id && !p.enemiesSeen.includes(id)) p.enemiesSeen.push(id); }
+    }
+    if (result === 'won') {
+      bump(p, 'wins');
+      if (!fought.fallen.some((u) => u.team === 'player' && !u.npc)) bump(p, 'flawless');
+      if (fought.nodeType === 'siege') bump(p, 'sieges');
+      if (fought.objective.type === 'escort') bump(p, 'escorts');
+      bump(p, 'rescued', fought.units.filter((u) => u.rescued).length);
+      bump(p, 'bossKills', fought.fallen.filter((u) => u.team === 'enemy' && u.isBoss).length);
+    }
     const commanderFell = run.battle!.fallen.some((u) => u.isCommander);
     const bosses = run.battle!.fallen.filter((u) => u.isBoss && u.bossId).map((u) => u.bossId!);
     const summary = finishBattle(run);
+    if (summary.dungeon?.cleared) bump(p, 'dungeons');
+    if (summary.supportUps.some((x) => x.rank === 'S')) bump(p, 'supportS');
+    for (const id of [...run.convoy, ...run.roster.flatMap((u) => [...u.weapons, ...Object.values(u.gear), ...u.pack.map((x) => x.id)])]) if (id && !p.itemsSeen.includes(id)) p.itemsSeen.push(id);
     this.recordEnd();
     if (result === 'lost' && !summary.retreated) return this.gameOver(commanderFell ? 'Your Commander has fallen.' : 'Your army was wiped out.');
     for (const id of bosses) if (!this.meta.bossesDefeated.includes(id)) this.meta.bossesDefeated.push(id);
@@ -453,7 +629,7 @@ export class App {
         <div class="res-row"><span>Rupees</span><b class="rupee">+₹${summary.rupees}</b></div>
         <div class="res-row"><span>Enemies defeated</span><b>${summary.kills}</b></div>
         ${summary.drops.length ? `<div class="res-drops"><div class="dim small">Boss drop (sent to convoy)</div>${summary.drops.map((d) => `<div>${itemLine(d)}</div>`).join('')}</div>` : ''}
-        ${summary.supportUps.length ? `<div class="res-drops"><div class="dim small">Supports</div>${summary.supportUps.map((x) => `<div>💞 <b>${esc(x.a)}</b> & <b>${esc(x.b)}</b> reached <b>${x.rank}</b></div>`).join('')}</div>` : ''}
+        ${summary.supportUps.length ? `<div class="res-drops"><div class="dim small">Supports</div>${summary.supportUps.map((x, i) => `<div>💞 <b>${esc(x.a)}</b> & <b>${esc(x.b)}</b> reached <b>${x.rank}</b> <button class="btn tiny" data-nav="talk" data-i="${i}">💬 Read</button></div>`).join('')}</div>` : ''}
         ${summary.found.length ? `<div class="res-drops"><div class="dim small">Found on the field</div><div>${summary.found.map((d) => esc(itemName(d))).join(', ')}</div></div>` : ''}
         ${summary.joined.length ? `<div class="res-drops"><div class="dim small">Rescued and joined your army</div><div>${summary.joined.map(esc).join(', ')}</div></div>` : ''}
         <div class="res-army-stats">${armyReportHtml(summary.army)}</div>
@@ -462,7 +638,14 @@ export class App {
         <p class="dim small">Units recover 20% HP after each battle (benched units recover more).</p>
         <button class="btn primary big" data-nav="cont">Continue</button>
       </div>`, 'center');
-    this.on({ cont: () => this.afterNode() });
+    this.on({
+      cont: () => this.afterNode(),
+      talk: (el) => {
+        const x = summary.supportUps[Number(el.dataset.i)];
+        const ua = run.roster.find((u) => u.uid === x.aUid), ub = run.roster.find((u) => u.uid === x.bUid);
+        if (ua && ub && x.rank) this.showConversation(ua, ub, x.rank as ConvoRank);
+      },
+    });
   }
 
   private afterNode() {
@@ -479,6 +662,7 @@ export class App {
     const run = this.run!;
     this.run = null;
     this.save();
+    const earned = this.endCampaign(run);
     this.setScreen(`
       <div class="results">
         <h1 class="lose">Campaign Over</h1>
@@ -488,9 +672,13 @@ export class App {
         <div class="res-row"><span>Enemies defeated</span><b>${run.stats.kills}</b></div>
         <div class="res-row"><span>Recruits</span><b>${run.stats.recruits}</b></div>
         <div class="res-row"><span>Best ever</span><b>Region ${this.meta.bestRegion}</b></div>
-        <button class="btn primary big" data-nav="title">Return to Title</button>
+        <div class="res-row"><span>Hero Medals earned</span><b class="win">🏅 ${earned.medals}${run.trials?.length ? ` <span class="dim small">(Trials ×${trialMultiplier(run.trials).toFixed(2)})</span>` : ''}</b></div>
+        ${earned.bounties.length ? `<div class="res-drops"><div class="dim small">Bounties completed</div>${earned.bounties.map((b) => `<div>📜 ${esc(b)}</div>`).join('')}</div>` : ''}
+        <p class="dim small">Spend Hero Medals in the Sanctuary for lasting upgrades.</p>
+        <button class="btn primary big" data-nav="sanctuary">🏛 Sanctuary</button>
+        <button class="btn big" data-nav="title">Return to Title</button>
       </div>`, 'center');
-    this.on({ title: () => this.title() });
+    this.on({ title: () => this.title(), sanctuary: () => this.sanctuary() });
   }
 
   // ───────────────────────── Events ─────────────────────────
@@ -661,7 +849,7 @@ export class App {
             <h3>Items <span class="dim small">restocked: buy as many as you like</span></h3><div class="shop-list">${ev.items.map((id) => row('item', id, priceOf(run, 'item', id))).join('') || '<div class="dim">None in stock.</div>'}</div>
             <h3>Permanent upgrades</h3><div class="shop-list">${ev.permanents.map((id) => row('permanent', id, priceOf(run, 'permanent', id))).join('')}</div>
             <h3>Supplies <span class="dim small">${armyOf(run).supplies}/${supplyCap(run)}</span></h3>
-            <div class="shop-list"><div class="shop-item"><div><b>Crate of supplies</b> <span class="dim small">+${SUPPLY_PACK.amount} supplies (food, bandages, horse feed)</span></div><button class="btn small" data-nav="supplies" ${run.rupees < Math.round(SUPPLY_PACK.price * (1 - repDiscount(run) / 100)) || armyOf(run).supplies >= supplyCap(run) ? 'disabled' : ''}>₹${Math.round(SUPPLY_PACK.price * (1 - repDiscount(run) / 100))}</button></div></div>
+            <div class="shop-list"><div class="shop-item"><div><b>Crate of supplies</b> <span class="dim small">+${SUPPLY_PACK.amount} supplies (food, bandages, horse feed)</span></div><button class="btn small" data-nav="supplies" ${run.rupees < supplyPrice(run) || armyOf(run).supplies >= supplyCap(run) ? 'disabled' : ''}>₹${supplyPrice(run)}</button></div></div>
             <div class="center-text"><button class="btn primary big" data-nav="leave">Leave</button></div>
           </div>
           ${this.partyHtml()}
@@ -791,6 +979,25 @@ export class App {
     });
   }
 
+  /** Show a support conversation between two units. */
+  private showConversation(a: Unit, b: Unit, rank: ConvoRank) {
+    const run = this.run!;
+    const { lines, swap } = conversationFor(a.templateId ?? a.uid, b.templateId ?? b.uid, rank, { a: a.name, b: b.name });
+    const who = (s: 'a' | 'b') => ((s === 'a') !== swap ? a : b);
+    const key = `${[a.templateId, b.templateId].sort().join('|')}|${rank}`;
+    if (!(run.convosSeen ??= []).includes(key)) run.convosSeen.push(key);
+    if (!this.meta.convos.includes(key)) { this.meta.convos.push(key); saveMeta(this.meta); }
+    this.save();
+    modal(`
+        <h2>${esc(a.name)} & ${esc(b.name)} <span class="dim small">Support ${rank}</span></h2>
+        <div class="convo">${lines.map(([s, t]) => {
+          const u = who(s);
+          const left = u === a;
+          return `<div class="convo-line ${left ? 'left' : 'right'}">${token(u, 40)}<div class="bubble"><b>${esc(u.name)}</b><div>${esc(t)}</div></div></div>`;
+        }).join('')}</div>
+        <div class="center-text"><button class="btn primary" data-close>Close</button></div>`, { dismissable: true });
+  }
+
   private supportsHtml(u: Unit): string {
     const run = this.run!;
     const rows = Object.entries(run.supports ?? {})
@@ -800,7 +1007,9 @@ export class App {
         if (!other) return '';
         const s = isSPair(u, other);
         const r = rankOf(pts, s);
-        return `<div class="equip-row"><span>${token(other, 22)} ${esc(other.name)}</span><span><b>${r || '–'}</b> <span class="dim small">${pts}/${s ? 70 : 40}${s ? ' · S possible' : ''}</span></span></div>`;
+        const reached = (['C', 'B', 'A', 'S'] as ConvoRank[]).filter((x) => r && 'CBAS'.indexOf(x) <= 'CBAS'.indexOf(r));
+        const talks = reached.map((x) => `<button class="btn tiny" data-k="talk" data-uid="${other.uid}" data-rank="${x}" title="Read the ${x} conversation">💬${x}</button>`).join('');
+        return `<div class="equip-row"><span>${token(other, 22)} ${esc(other.name)}</span><span><b>${r || '–'}</b> <span class="dim small">${pts}/${s ? 70 : 40}${s ? ' · S possible' : ''}</span> ${talks}</span></div>`;
       }).filter(Boolean);
     return `<h3>Supports</h3><div class="equip-list">${rows.join('') || '<div class="dim small">Fight near allies to build supports (C → B → A, and S for special pairs).</div>'}</div>`;
   }

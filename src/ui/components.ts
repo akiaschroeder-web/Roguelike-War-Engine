@@ -25,7 +25,10 @@ export const SLOT_LABELS: Record<string, string> = {
 export const SLOT_ICONS: Record<string, string> = {
   shield: '🛡', head: '⛑', body: '👕', hands: '🧤', feet: '👢', accessory: '◇', acc1: '◇', acc2: '◇', mount: '🐎',
 };
-export const ITEM_ICONS: Record<string, string> = { heal: '🧪', fullHeal: '🧪', fairy: '🧚', bomb: '💣', stun: '🌰' };
+export const ITEM_ICONS: Record<string, string> = {
+  heal: '🧪', fullHeal: '🧪', mp: '🧪', sta: '🧪', fairy: '🧚', bomb: '💣', stun: '🌰', learn: '📜',
+  cure: '💧', buff: '⚗', fruit: '🍎', cloud: '🍄', muddle: '🌸', bean: '🫘', tool: '🔧',
+};
 
 export function packLine(u: Unit): string {
   if (!u.pack.length) return '';

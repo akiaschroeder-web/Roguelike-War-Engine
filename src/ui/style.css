@@ -477,3 +477,19 @@ p { margin: 8px 0; }
 .xpbar i { display: block; height: 100%; background: var(--gold); }
 .res-army-stats { margin: 8px 0; text-align: center; }
 @media (max-width: 700px) { .tb-res { display: none; } }
+
+/* Support conversations */
+.convo { display: flex; flex-direction: column; gap: 10px; margin: 12px 0; max-height: 60vh; overflow-y: auto; }
+.convo-line { display: flex; gap: 10px; align-items: flex-start; }
+.convo-line.right { flex-direction: row-reverse; }
+.convo-line .bubble { background: #ffffff10; border: 1px solid #ffffff1f; border-radius: 12px; padding: 8px 12px; max-width: 75%; }
+.convo-line.right .bubble { background: #ffd24a14; }
+.convo-line .bubble b { font-size: 0.8em; opacity: 0.75; display: block; }
+.btn.tiny { padding: 1px 6px; font-size: 11px; }
+/* Sanctuary and campaign options */
+.tabs { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; margin: 10px 0 14px; }
+.run-options { background: #0003; border: 1px solid #fff2; border-radius: 12px; padding: 12px 16px; margin: 16px 0 80px; }
+.run-options h3 { margin-top: 0; }
+.opt-row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; margin: 6px 0; }
+.opt-row select { background: #1a1d2e; color: inherit; border: 1px solid #fff3; border-radius: 6px; padding: 4px 8px; }
+.trial-list { display: flex; flex-wrap: wrap; gap: 6px 14px; }
