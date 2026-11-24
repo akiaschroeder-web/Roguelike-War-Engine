@@ -76,6 +76,7 @@ ENTRIES = {
     "volvagia": ("volvagia.webp", (0.14, 0.30, 0.22)),
     "morpha": ("morpha.png", (0.72, 0.78, 0.42)),
     "bongoBongo": ("bongoBongo.png", (0.49, 0.48, 0.50)),
+    "malon": ("malon.png", (0.50, 0.14, 0.42)),
 }
 
 
