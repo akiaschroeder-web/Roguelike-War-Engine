@@ -79,6 +79,23 @@ ENTRIES = {
     "malon": ("malon.png", (0.50, 0.14, 0.42)),
     "greatFairy": ("greatFairy.webp", (0.22, 0.44, 0.24)),
     "phantomGanon": ("phantomGanon.png", (0.63, 0.24, 0.30)),
+    # Creatures batch 1
+    "keese": ("keese.png", (0.44, 0.56, 0.60)),
+    "guay": ("guay.png", (0.42, 0.55, 0.75)),
+    "peahat": ("peahat.webp", (0.49, 0.50, 0.70)),
+    "leever": ("leever.webp", (0.50, 0.37, 0.60)),
+    "poe": ("poe.webp", (0.43, 0.26, 0.60)),
+    "dekuBaba": ("dekuBaba.webp", (0.28, 0.40, 0.62)),
+    "skulltula": ("skulltula.webp", (0.50, 0.45, 0.60)),
+    "wolfos": ("wolfos.webp", (0.79, 0.43, 0.42)),
+    "tektite": ("tektite.png", (0.46, 0.42, 0.50)),
+    "stingerA": ("stingerA.webp", (0.50, 0.50, 0.95)),
+    "stingerB": ("stingerB.webp", (0.24, 0.24, 0.45)),
+    "dodongo": ("dodongo.webp", (0.45, 0.38, 0.30)),
+    "octorok": ("octorok.png", (0.57, 0.40, 0.62)),
+    "shellBlade": ("shellBlade.webp", (0.51, 0.50, 0.80)),
+    "likeLike": ("likeLike.png", (0.50, 0.50, 0.90)),
+    "beamos": ("beamos.webp", (0.48, 0.16, 0.70)),
 }
 
 
