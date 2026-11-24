@@ -4,15 +4,16 @@ import { randomSeed } from '../engine/rng';
 import {
   ARMY_CAPACITY, DEPLOY_CAPACITY, advanceRegion, availableNodes, buy, campDrill, campRest, campTrain, currentNode, depthOf, enterNode,
   equipFromConvoy, finishBattle, fountainBless, fountainHeal, fountainRevive, isRegionComplete, loadMeta, loadRun, newRun, offerRegions,
-  recruit, recruitLevel, saveMeta, saveRun, canTake, canUseOutside, FREE_FOR_ALL_REGION, isFreeForAll, fountainTeach, unlearnedFairySpells, priceOf, stashGear, stashItem, stashWeapon, useItemOutside, type ItemKindTag, startBattle, takeTreasure, weaponPrice,
+  recruit, recruitLevel, saveMeta, saveRun, canTake, canUseOutside, forgePrice, forgeWeapon, improveCost, improveWeapon, MAX_FORGE, repairCost, repairWeapon, FREE_FOR_ALL_REGION, isFreeForAll, fountainTeach, unlearnedFairySpells, priceOf, stashGear, stashItem, stashWeapon, useItemOutside, type ItemKindTag, startBattle, takeTreasure, weaponPrice,
   type Meta, type Reward, type RunEvent, type RunWithEvent,
 } from '../engine/run';
 import { equip } from '../engine/combat';
 import { GEAR_SLOTS, PACK_SIZE, type GearSlot, type MapNode, type NodeType, type Unit } from '../engine/types';
-import { slotFor } from '../engine/units';
+import { forgeLevel, slotFor } from '../engine/units';
+import { isSPair, rankOf } from '../engine/supports';
 import { BattleView } from './battleView';
 import {
-  confirmDialog, esc, hpBar, itemLine, itemName, modal, SLOT_ICONS, SLOT_LABELS, showLevelUps, templateCard, token, unitDetails,
+  confirmDialog, esc, hpBar, itemLine, itemName, modal, SLOT_ICONS, SLOT_LABELS, weaponLine, showLevelUps, templateCard, token, unitDetails,
 } from './components';
 
 const NODE_INFO: Record<NodeType, { icon: string; label: string; desc: string }> = {
@@ -23,6 +24,7 @@ const NODE_INFO: Record<NodeType, { icon: string; label: string; desc: string }>
   camp: { icon: '⛺', label: 'Camp', desc: 'Rest, train one unit, or drill the whole army.' },
   fountain: { icon: '❀', label: 'Great Fairy Fountain', desc: 'Full heal, a fairy blessing, or revive the fallen.' },
   treasure: { icon: '◈', label: 'Treasure', desc: 'Claim equipment or a permanent upgrade.' },
+  blacksmith: { icon: '⚒', label: 'Blacksmith', desc: 'Repair worn weapons, improve them (+1 Might), or forge new ones.' },
   boss: { icon: '♛', label: 'Regional Boss', desc: 'Defeat the region’s commander to march onward.' },
 };
 
@@ -251,6 +253,7 @@ export class App {
         return `<div class="equip-row"><span>${esc(def?.name ?? p.id)}${p.uses > 1 ? ` ×${p.uses}` : ''} <span class="dim small">${esc(def?.desc ?? '')}</span></span>
           <span>${usable ? `<button class="btn small" data-k="use" data-i="${i}">${label}</button>` : ''}<button class="btn small" data-k="unpack" data-i="${i}">To convoy</button></span></div>`;
       }).join('') : '<div class="dim small">Empty. Buy potions, bombs and Deku Nuts from merchants.</div>'}</div>
+      ${this.supportsHtml(u)}
       ${t ? `<p class="bio">${esc(t.bio)}</p>` : ''}
       <button class="btn primary" data-close>Close</button>`, { dismissable: true });
     m.el.addEventListener('click', (e) => {
@@ -403,6 +406,7 @@ export class App {
         <div class="res-row"><span>Rupees</span><b class="rupee">+₹${summary.rupees}</b></div>
         <div class="res-row"><span>Enemies defeated</span><b>${summary.kills}</b></div>
         ${summary.drops.length ? `<div class="res-drops"><div class="dim small">Boss drop (sent to convoy)</div>${summary.drops.map((d) => `<div>${itemLine(d)}</div>`).join('')}</div>` : ''}
+        ${summary.supportUps.length ? `<div class="res-drops"><div class="dim small">Supports</div>${summary.supportUps.map((x) => `<div>💞 <b>${esc(x.a)}</b> & <b>${esc(x.b)}</b> reached <b>${x.rank}</b></div>`).join('')}</div>` : ''}
         ${summary.fallen.length ? `<div class="res-fallen"><span class="dim">Fallen:</span> ${summary.fallen.map((u) => `${token(u, 28)} ${esc(u.name)}`).join(' ')}</div>` : '<div class="dim">No losses.</div>'}
         <div class="res-army">${run.roster.map((u) => `<div class="res-unit">${token(u, 36)}<div><b>${esc(u.name)}</b><div class="dim small">Lv ${u.level} · HP ${u.hp}/${u.stats.hp}</div></div></div>`).join('')}</div>
         <p class="dim small">Units recover 20% HP after each battle (benched units recover more).</p>
@@ -452,6 +456,7 @@ export class App {
       case 'fountain': return this.fountainScreen();
       case 'treasure': return this.treasureScreen();
       case 'region': return this.regionScreen();
+      case 'blacksmith': return this.blacksmithScreen();
     }
   }
 
@@ -666,6 +671,66 @@ export class App {
       },
       rupees: () => { takeTreasure(run, null, null); this.finishEvent(); },
     });
+  }
+
+  private supportsHtml(u: Unit): string {
+    const run = this.run!;
+    const rows = Object.entries(run.supports ?? {})
+      .filter(([k]) => k.split('|').includes(u.uid))
+      .map(([k, pts]) => {
+        const other = run.roster.find((x) => x.uid !== u.uid && k.split('|').includes(x.uid));
+        if (!other) return '';
+        const s = isSPair(u, other);
+        const r = rankOf(pts, s);
+        return `<div class="equip-row"><span>${token(other, 22)} ${esc(other.name)}</span><span><b>${r || '–'}</b> <span class="dim small">${pts}/${s ? 70 : 40}${s ? ' · S possible' : ''}</span></span></div>`;
+      }).filter(Boolean);
+    return `<h3>Supports</h3><div class="equip-list">${rows.join('') || '<div class="dim small">Fight near allies to build supports (C → B → A, and S for special pairs).</div>'}</div>`;
+  }
+
+  private blacksmithScreen() {
+    const run = this.run!;
+    const ev = run.event as EventOf<'blacksmith'>;
+    const render = () => {
+      const rows = run.roster.flatMap((u) => u.weapons.map((wid) => {
+        const w = WEAPONS[wid];
+        if (!w || w.type === 'natural' || w.type === 'instrument') return '';
+        const rc = repairCost(run, u, wid);
+        const ic = improveCost(run, u, wid);
+        return `<div class="shop-item"><div>${token(u, 24)} ${weaponLine(w, { owner: u })}</div><span>
+          <button class="btn small" data-nav="repair" data-uid="${u.uid}" data-w="${wid}" ${!rc || run.rupees < rc ? 'disabled' : ''}>${rc ? `Repair ₹${rc}` : 'No wear'}</button>
+          <button class="btn small" data-nav="improve" data-uid="${u.uid}" data-w="${wid}" ${!ic || run.rupees < ic ? 'disabled' : ''}>${ic ? `Improve +${forgeLevel(u, wid) + 1} ₹${ic}` : 'Maxed'}</button></span></div>`;
+      })).join('');
+      this.setScreen(`
+        ${this.topBar()}
+        <div class="map-layout">
+          <div class="page">
+            <h1>Blacksmith</h1>
+            <p class="dim center-text">“Bring me your dull blades and your broken dreams!”${run.bonus === 'forging' ? ' <span class="badge gold">Goron discount −25%</span>' : ''}</p>
+            <h3>Repair & improve <span class="dim small">Improving adds +1 Might (max +${MAX_FORGE})</span></h3>
+            <div class="shop-list">${rows}</div>
+            <h3>Forge a new weapon</h3>
+            <div class="shop-list">${ev.forgeOffers.map((id) => {
+              const sold = ev.sold.includes(id);
+              const p = forgePrice(run, id);
+              return `<div class="shop-item ${sold ? 'sold' : ''}"><div>${itemLine(id)}</div><button class="btn small" data-nav="forge" data-id="${id}" ${sold || run.rupees < p ? 'disabled' : ''}>${sold ? 'Forged' : `₹${p}`}</button></div>`;
+            }).join('')}</div>
+            <div class="center-text"><button class="btn primary big" data-nav="leave">Leave</button></div>
+          </div>
+          ${this.partyHtml()}
+        </div>`);
+      this.on({
+        ...this.common(render),
+        repair: (el) => { if (repairWeapon(run, el.dataset.uid!, el.dataset.w!)) { this.save(); render(); } },
+        improve: (el) => { if (improveWeapon(run, el.dataset.uid!, el.dataset.w!)) { this.save(); render(); } },
+        forge: async (el) => {
+          const id = el.dataset.id!;
+          const uid = await this.unitPicker(`Who gets the ${esc(itemName(id))}?`, (u) => canTake(u, id), (u) => this.itemPreview(u, id));
+          if (uid && forgeWeapon(run, id, uid)) { this.save(); render(); }
+        },
+        leave: () => this.finishEvent(),
+      });
+    };
+    render();
   }
 
   private regionScreen() {

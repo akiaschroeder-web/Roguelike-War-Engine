@@ -16,6 +16,7 @@ export const ITEMS: Record<string, ItemDef> = {};
 export const ABILITIES: Record<string, AbilityDef> = {};
 export const FACTIONS: Record<string, FactionDef> = {};
 export const MONSTER_CHANCE: Record<string, number> = {};
+export const SUPPORT_S_PAIRS: [string, string][] = [];
 export const PERMANENT_ITEMS: Record<string, PermanentItemDef> = {};
 export const SKILLS: Record<string, SkillDef> = {};
 export const WORLDS: Record<string, WorldDef> = {};
@@ -48,6 +49,7 @@ export function installPack(p: ContentPack): void {
   index(ABILITIES, p.abilities);
   index(FACTIONS, p.factions);
   Object.assign(MONSTER_CHANCE, p.monsterChance);
+  SUPPORT_S_PAIRS.push(...(p.supportPairs ?? []));
   index(PERMANENT_ITEMS, p.permanentItems);
   index(SKILLS, p.skills);
   index(WORLDS, p.regions);
@@ -69,7 +71,7 @@ export function installPack(p: ContentPack): void {
     if (TEMPLATES[b.id] || BOSS_AS_TEMPLATE[b.id]) continue;
     addTemplate({
       id: b.id, name: b.name, title: b.title, race: b.race, classId: b.classId, size: b.size ?? 1, stats: { ...b.stats },
-      weapons: [...b.weapons], skill: b.skill, glyph: b.glyph, home: b.home, rare: true,
+      weapons: [...b.weapons], skill: b.skill, abilities: b.abilities, glyph: b.glyph, home: b.home, rare: true,
       bio: `${b.title}. ${b.quote}`,
     });
   }

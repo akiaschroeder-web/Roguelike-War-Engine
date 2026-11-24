@@ -1,6 +1,6 @@
 import { ABILITIES, BOSSES, CLASSES, ITEMS, worldDef } from '../data/registry';
 import { canRide, effectiveStats, hasEffect, isMounted, mountOf } from '../engine/units';
-import { abilityRadius, abilityTargets, castAbility, castableAbilities, costLabel, knownAbilities, needsTarget, needsTile, unusableReason, warpTiles } from '../engine/abilities';
+import { enemyAutoTransform, abilityRadius, abilityTargets, castAbility, castableAbilities, costLabel, knownAbilities, needsTarget, needsTile, unusableReason, warpTiles } from '../engine/abilities';
 import { STATUS_INFO } from '../engine/status';
 import { canUse, isTargeted, targetTiles, useItem } from '../engine/items';
 import { planAction } from '../engine/ai';
@@ -798,6 +798,7 @@ export class BattleView {
         this.addLog(`<b class="${by.team}">${esc(by.name)}</b> ${!s.hit ? 'misses' : s.crit ? 'CRITS' : 'hits'} ${esc(tg.name)}${s.hit ? ` for ${s.dmg}` : ''}.`);
         if (s.killed) this.addLog(`☠ ${esc(tg.name)} has fallen.`);
       }
+      this.reportBroken(res.broken);
       this.renderAll();
       await this.levelUps(res.levelUps);
       return res.deaths.includes(def.uid);
@@ -839,9 +840,19 @@ export class BattleView {
         await sleep(450);
       }
     }
+    this.reportBroken(res.broken);
     this.renderAll();
     await this.levelUps(res.levelUps);
     return res.deaths.includes(def.uid);
+  }
+
+  private reportBroken(broken: { uid: string; weaponId: string; into?: string }[]) {
+    for (const x of broken) {
+      const u = this.unitById(x.uid);
+      if (!u) continue;
+      this.float(u, 'BROKE!', 'crit');
+      this.addLog(`💥 ${esc(u.name)}'s ${esc(weaponDef(x.weaponId)?.name ?? x.weaponId)} broke${x.into ? `! (now: ${esc(weaponDef(x.into)?.name ?? x.into)})` : '!'}`);
+    }
   }
 
   private async doCast(u: Unit, id: string, targetUid?: string, at?: Pos) {
@@ -878,6 +889,8 @@ export class BattleView {
     if (res.warped) this.addLog(`${esc(u.name)} warps back to the return point.`);
     if (res.weather) this.addLog('🌧 Rain begins to fall.');
     if (res.mounted) { this.float(u, 'MOUNTED', 'heal'); this.addLog(`${esc(u.name)}'s mount answers the call!`); }
+    if (res.repaired) { const t = this.unitById(res.repaired.uid); if (t) this.float(t, 'REPAIRED', 'heal'); this.addLog(`${esc(u.name)} repairs ${esc(weaponDef(res.repaired.weaponId)?.name ?? '')}.`); }
+    if (res.transformed) { this.unitEls.get(u.uid)?.remove(); this.unitEls.delete(u.uid); this.renderUnits(); this.float(u, 'TRANSFORM!', 'crit'); this.addLog(`⚡ ${esc(res.transformed)} becomes <b>${esc(u.name)}</b>!`); }
     await sleep(700);
     this.abilityId = null;
     this.renderAll();
@@ -1007,6 +1020,16 @@ export class BattleView {
 
     for (const e of order) {
       if (!b.units.includes(e)) continue;
+      // Ganondorf and the witch sisters transform when they can.
+      const trng = new RNG(b.rngState);
+      const tr = enemyAutoTransform(b, e, trng);
+      b.rngState = trng.state;
+      if (tr?.transformed) {
+        this.unitEls.get(e.uid)?.remove(); this.unitEls.delete(e.uid);
+        this.renderAll();
+        await this.banner(`${tr.transformed} → ${e.name}!`, 'enemy');
+        this.addLog(`⚡ ${esc(tr.transformed)} becomes <b>${esc(e.name)}</b>!`);
+      }
       const plan = planAction(b, e);
       const moved = plan.path.length > 1;
       if (moved) await this.walk(e, plan.path);

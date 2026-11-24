@@ -37,6 +37,9 @@ npm test           # engine tests + AI-vs-AI battle simulations
 - **Stamina and techniques:** Power Strike, Piercing Thrust and Aimed Shot (chosen in the forecast) and Spin Attack, based on the weapon type; Stamina Potions and Stamina Vessels.
 - **Warp songs:** Minuet, Bolero, Serenade, Requiem, Nocturne and Prelude teleport the performer (3-turn cooldown).
 - **Mounts:** a mount slot for horses (Hyrule Horse, Lon Lon Horse, Gerudo Stallion, Royal Warhorse, Stalhorse, Giant Horse, Epona, Phantom Ganon's Horse, Ganondorf's Stallion, Lord of the Mountain). Riders become 2×2 cavalry with bonus movement and mount abilities; dismount in battle to fit through gaps. Epona's Song calls the mount back. Malon starts with Epona, Ganondorf with his stallion.
+- **Weapon durability and the Blacksmith:** weapons wear out with use (Kokiri Sword 45, Giant's Knife 8 then it breaks into the Broken Giant's Knife, Master Sword unbreakable…). Blacksmith nodes repair, improve (+1 Might up to +3) and forge weapons. Biggoron's Master Craftsman repairs in battle.
+- **Supports:** allies who fight near each other build C/B/A ranks (S for special pairs like Link & Zelda), granting Hit/Avoid/Crit/Def bonuses when close.
+- **Transformations:** Ganondorf can become Ganon below half HP; Koume and Kotake fuse into Twinrova when adjacent. Enemy versions do it on their own. Forms revert after battle.
 - **Status effects and elements:** fire weapons can Burn, ice can Freeze, lightning can Shock, nature can Poison; Deku Nuts and Sun's Song Stun. Song of Storms brings rain (no burning, stronger water and lightning).
 - **Deployment:** army capacity is 12 and deployment capacity is 8.
 
@@ -58,11 +61,10 @@ tests/               Vitest suite
 
 ## Not built yet (from the design doc)
 
-- Mounts and the mount slot; tools (Hookshot traversal, Lens of Truth…) and the remaining consumables (Magic Beans, Fire/Ice Fruit…)
-- Song of Time; other mounts from the doc (Loftwing, Sand Seal, Wolf, Bullbo, Dodongo); curses, confusion and the remaining statuses
+- Tools (Hookshot traversal, Lens of Truth…) and the remaining consumables (Magic Beans, Fire/Ice Fruit…)
+- Song of Time; curses, confusion and the remaining statuses
 - Fog of war, destructible terrain, fire spreading
-- Supports and transformations (Twinrova fusion, Ganon)
-- Weapon durability and the Blacksmith
+- Support conversations
 - Army stats and resources (supplies, materials, command points, morale)
 - Commander orders
 - More objectives (escort, capture, siege…) and encounters (siege, ambush, side quests, dungeons, random events)

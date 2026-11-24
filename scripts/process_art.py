@@ -87,6 +87,10 @@ ENTRIES = {
     "horseGolden": ("horseGolden.png", (0.18, 0.13, 0.45)),
     "horsePinto": ("horsePinto.png", (0.22, 0.17, 0.50)),
     "stalhorse": ("stalhorse.webp", (0.80, 0.17, 0.45)),
+    "loftwing": ("loftwing.webp", (0.20, 0.62, 0.40)),
+    "sandSeal": ("sandSeal.png", (0.18, 0.50, 0.40)),
+    "wolfMount": ("wolfMount.webp", (0.78, 0.25, 0.40)),
+    "bullbo": ("bullbo.webp", (0.70, 0.35, 0.50)),
     "greatFairy": ("greatFairy.webp", (0.22, 0.44, 0.24)),
     "phantomGanon": ("phantomGanon.png", (0.63, 0.24, 0.30)),
     # Creatures batch 1

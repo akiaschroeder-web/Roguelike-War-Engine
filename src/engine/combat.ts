@@ -1,9 +1,10 @@
 import { ABILITIES, CLASSES, ITEMS, WEAPONS } from '../data/registry';
+import { gainSupport, supportBonus } from './supports';
 import { clearStatus, hasStatus, rollElement, statusMods, weatherMight } from './status';
 import { keyOf, terrainAt, unitDist } from './grid';
 import type { RNG } from './rng';
 import { isMagical, TERRAIN_BONUS, TRIANGLE } from './rules';
-import { effectiveStats, gainXp, gearBonus, hasEffect, isMounted, unitTags } from './units';
+import { effectiveStats, forgeLevel, gainXp, gearBonus, hasEffect, isMounted, spendUse, unitTags } from './units';
 import type { AbilityDef, Battle, Element, Pos, StatKey, StatusKind, Unit, WeaponDef } from './types';
 
 export interface SideForecast {
@@ -56,6 +57,8 @@ export interface LevelUp {
 
 export interface CombatResult {
   strikes: Strike[];
+  /** Weapons that broke during the exchange. */
+  broken: { uid: string; weaponId: string; into?: string }[];
   deaths: string[];
   xp: { uid: string; amount: number }[];
   levelUps: LevelUp[];
@@ -148,6 +151,8 @@ export function situational(b: Battle, u: Unit, pos: Pos, foe: Unit, initiating:
   if (b.units.some((e) => e.team !== u.team && hasEffect(e, 'intimidate') && unitDist(u, e, pos) <= 2)) m.avoid -= 5;
   if (hasEffect(u, 'beastSlayer') && unitTags(foe).includes('beast')) m.str += 3;
   if (hasEffect(u, 'giantEye') && foe.size >= 2) m.hit += 20;
+  const sup = supportBonus(b, u, pos);
+  m.hit += sup.hit; m.avoid += sup.avoid; m.crit += sup.crit; m.def += sup.def; m.res += sup.def;
   return m;
 }
 
@@ -175,7 +180,7 @@ function sideStats(
   const sa = statusMods(atk);
   const sd = statusMods(def);
 
-  let might = (weapon.might + (arrow?.might ?? 0)) * (effective ? 2 : 1) + weatherMight(b, element);
+  let might = (weapon.might + forgeLevel(atk, weapon.id) + (arrow?.might ?? 0)) * (effective ? 2 : 1) + weatherMight(b, element);
   if (atk.skills.includes('heavyForging') && weapon.twoHanded) might += 2;
   const power = (magical ? as.mag + am.mag : as.str + am.str) + might + tri + am.dmg;
   let defense = magical ? ds.res + dm.res : Math.max(0, ds.def + dm.def + sd.def) + terrain.def;
@@ -281,8 +286,13 @@ export function resolveCombat(b: Battle, attacker: Unit, defender: Unit, rng: RN
   const deaths: string[] = [];
   const dealt = new Set<string>();
 
+  const broken: CombatResult['broken'] = [];
   for (const [by, target, side] of seq) {
     if (by.hp <= 0 || target.hp <= 0) break;
+    if (side.weaponId && by.weapons.includes(side.weaponId)) {
+      const r = spendUse(by, side.weaponId);
+      if (r.broke) broken.push({ uid: by.uid, weaponId: side.weaponId, into: r.into });
+    }
     const hit = rng.chance(side.hit);
     const crit = hit && rng.chance(side.crit);
     let dmg = hit ? side.dmg * (crit ? (hasEffect(target, 'critGuard') ? 2 : 3) : 1) : 0;
@@ -320,6 +330,7 @@ export function resolveCombat(b: Battle, attacker: Unit, defender: Unit, rng: RN
     }
   }
 
+  for (const me of [attacker, defender]) if (me.hp > 0) gainSupport(b, me);
   const xp: { uid: string; amount: number }[] = [];
   const levelUps: LevelUp[] = [];
   for (const [me, foe] of [[attacker, defender], [defender, attacker]] as const) {
@@ -328,7 +339,7 @@ export function resolveCombat(b: Battle, attacker: Unit, defender: Unit, rng: RN
     xp.push({ uid: me.uid, amount });
     for (const gains of gainXp(me, amount, rng)) levelUps.push({ uid: me.uid, name: me.name, level: me.level, gains });
   }
-  return { strikes, deaths, xp, levelUps };
+  return { strikes, broken, deaths, xp, levelUps };
 }
 
 /** Move a weapon to the front of the unit's inventory. */
@@ -351,6 +362,8 @@ export function resolveHeal(b: Battle, healer: Unit, target: Unit, rng: RNG, sta
   const staff = (staffId ? WEAPONS[staffId] : undefined) ?? healWeapons(healer, unitDist(healer, target))[0];
   const amount = staff ? Math.min(healAmount(b, healer, staff), target.stats.hp - target.hp) : 0;
   target.hp += amount;
+  if (staff) spendUse(healer, staff.id);
+  if (amount > 0) gainSupport(b, healer, 2, target);
   const levelUps: LevelUp[] = [];
   const xp = healer.team === 'player' ? 16 : 0;
   if (xp) for (const gains of gainXp(healer, xp, rng)) levelUps.push({ uid: healer.uid, name: healer.name, level: healer.level, gains });

@@ -11,10 +11,11 @@ import { RNG } from '../src/engine/rng';
 import {
   advanceRegion, availableNodes, buy, enterNode, finishBattle, newRun, offerRegions, recruit, recruitOffers, startBattle, type RunWithEvent,
 } from '../src/engine/run';
-import { canRide, effectiveStats, gainXp, makeEnemy, makeHero, prepareForBattle as prepareForBattleFn } from '../src/engine/units';
+import { canRide, effectiveStats, forgeLevel, moveTypeOf, gainXp, makeEnemy, makeHero, prepareForBattle as prepareForBattleFn } from '../src/engine/units';
 import { canUse, useItem } from '../src/engine/items';
 import { castAbility } from '../src/engine/abilities';
-import { fountainTeach, pickForce, useItemOutside } from '../src/engine/run';
+import { fountainTeach, improveWeapon, pickForce, repairWeapon, useItemOutside } from '../src/engine/run';
+import { gainSupport, isSPair, rankOf, supportKey } from '../src/engine/supports';
 import { migrateRun } from '../src/engine/run';
 import type { Battle, Team, Unit } from '../src/engine/types';
 
@@ -636,3 +637,99 @@ describe('mounts', () => {
 function prepareForBattleForTest(u: Unit): Unit {
   return Object.assign(prepareForBattleFn(u), { x: u.x, y: u.y });
 }
+
+describe('durability, blacksmith, supports and transformations', () => {
+  it("weapons wear out; the Giant's Knife breaks into the Broken Giant's Knife", () => {
+    const b = emptyBattle();
+    const u = place(makeHero('link', 'l', 10, rng()), 0, 0);
+    u.weapons = ['giantsKnife', 'kokiriSword'];
+    const foe = place(makeEnemy(ENEMIES.ironKnuckle, 'hyruleField', 25, 'f', rng()), 1, 0);
+    foe.stats.hp = foe.hp = 999;
+    b.units = [u, foe];
+    let broke = false;
+    for (let s = 0; s < 12 && !broke; s++) {
+      u.hp = u.stats.hp;
+      broke = resolveCombat(b, u, foe, new RNG(s), 'giantsKnife').broken.some((x) => x.weaponId === 'giantsKnife');
+      if (!b.units.includes(u)) b.units.push(u);
+    }
+    expect(broke).toBe(true);
+    expect(u.weapons).toContain('brokenGiantsKnife');
+    expect(u.weapons).not.toContain('giantsKnife');
+  });
+
+  it('the Blacksmith repairs and improves weapons', () => {
+    const run = newRun(5, 'darunia') as RunWithEvent;
+    const d = run.roster[0];
+    d.wear = { [d.weapons[0]]: 5 };
+    run.rupees = 5000;
+    run.event = { type: 'blacksmith', forgeOffers: [], sold: [] };
+    expect(repairWeapon(run, d.uid, d.weapons[0])).toBe(true);
+    expect(d.wear[d.weapons[0]]).toBeUndefined();
+    expect(improveWeapon(run, d.uid, d.weapons[0])).toBe(true);
+    expect(forgeLevel(d, d.weapons[0])).toBe(1);
+  });
+
+  it('supports build up and give bonuses; only special pairs reach S', () => {
+    const b = emptyBattle();
+    const link = place(makeHero('link', 'l', 1, rng()), 2, 2);
+    const zelda = place(makeHero('zelda', 'z', 1, rng()), 3, 2);
+    const soldier = place(makeHero('hyruleSoldier', 's', 1, rng()), 2, 3);
+    const foe = place(makeEnemy(ENEMIES.stalchild, 'hyruleField', 1, 'f', rng()), 6, 6);
+    b.units = [link, zelda, soldier, foe];
+    foe.x = 1; foe.y = 2;
+    const foeHitBefore = forecast(b, foe, foe, link).attacker.hit;
+    b.supports = { [supportKey(link.uid, zelda.uid)]: 70, [supportKey(link.uid, soldier.uid)]: 5 };
+    for (let i = 0; i < 100; i++) gainSupport(b, link);
+    expect(b.supports[supportKey(link.uid, zelda.uid)]).toBe(70);
+    expect(b.supports[supportKey(link.uid, soldier.uid)]).toBe(40); // capped at A
+    expect(rankOf(70, isSPair(link, zelda))).toBe('S');
+    expect(forecast(b, foe, foe, link).attacker.hit).toBeLessThan(foeHitBefore); // allies boost Link's avoid
+  });
+
+  it('Ganondorf becomes Ganon below half HP, and turns back after battle', () => {
+    const run = newRun(9, 'ganondorf') as RunWithEvent;
+    run.roster[0].gear = {};
+    run.battle = createBattle({ world: 'hyruleField', nodeType: 'battle', depth: 0, roster: run.roster, seed: 1 });
+    const b = run.battle;
+    b.tiles.fill('plain');
+    const g = b.units.find((u) => u.isCommander)!;
+    b.units = b.units.filter((u) => u.team === 'player' || u.uid === b.units.find((x) => x.team === 'enemy')!.uid);
+    g.x = 4; g.y = 3;
+    b.units = b.units.filter((u) => u === g || u.team === 'enemy');
+    expect(castAbility(b, g, 'transformGanon', rng())).toBeNull(); // full HP
+    g.hp = Math.floor(g.stats.hp / 2);
+    expect(castAbility(b, g, 'transformGanon', rng())).not.toBeNull();
+    expect(g.name).toBe('Ganon');
+    expect(g.size).toBe(3);
+    b.result = 'won';
+    finishBattle(run);
+    const back = run.roster.find((u) => u.isCommander)!;
+    expect(back.name).toBe('Ganondorf');
+    expect(back.size).toBe(1);
+  });
+
+  it('Koume and Kotake fuse into Twinrova and split again after battle', () => {
+    const run = newRun(10, 'link') as RunWithEvent;
+    run.roster.push(makeHero('koume', 'k1', 1, rng()), makeHero('kotake', 'k2', 1, rng()));
+    run.battle = createBattle({ world: 'hyruleField', nodeType: 'battle', depth: 0, roster: run.roster, seed: 2 });
+    const b = run.battle;
+    b.tiles.fill('plain');
+    const k1 = b.units.find((u) => u.uid === 'k1')!, k2 = b.units.find((u) => u.uid === 'k2')!;
+    k1.x = 5; k1.y = 3; k2.x = 6; k2.y = 3;
+    const cmd = b.units.find((u) => u.isCommander)!;
+    cmd.x = 0; cmd.y = 0;
+    b.units = [k1, k2, cmd];
+    expect(castAbility(b, k1, 'twinrovaFusion', rng())).not.toBeNull();
+    expect(k1.name).toBe('Twinrova');
+    expect(b.units).not.toContain(k2);
+    b.result = 'won';
+    finishBattle(run);
+    expect(run.roster.map((u) => u.name)).toEqual(expect.arrayContaining(['Koume', 'Kotake']));
+  });
+
+  it('a Loftwing makes its rider fly', () => {
+    const u = makeHero('link', 'l', 1, rng());
+    u.gear.mount = 'loftwing';
+    expect(moveTypeOf(u)).toBe('flying');
+  });
+});

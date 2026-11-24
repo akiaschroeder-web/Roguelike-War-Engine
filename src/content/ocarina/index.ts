@@ -21,6 +21,13 @@ export const OCARINA: ContentPack = {
   items: ITEMS,
   abilities: ABILITIES,
   factions: FACTIONS,
+  supportPairs: [
+    ['link', 'zelda'], ['link', 'malon'], ['link', 'saria'], ['link', 'navi'], ['link', 'darunia'], ['link', 'ruto'],
+    ['youngLink', 'saria'], ['youngLink', 'malon'], ['youngLink', 'navi'], ['youngLink', 'mido'],
+    ['zelda', 'impa'], ['sheik', 'impa'], ['ruto', 'kingZora'], ['malon', 'talon'], ['darunia', 'biggoron'],
+    ['biggoron', 'medigoron'], ['koume', 'kotake'], ['ganondorf', 'koume'], ['ganondorf', 'kotake'], ['nabooru', 'ganondorf'],
+    ['saria', 'dekuTree'], ['navi', 'dekuTree'], ['rauru', 'zelda'],
+  ],
   monsterChance: MONSTER_CHANCE,
   permanentItems: PERMANENT_ITEMS,
   skills: SKILLS,

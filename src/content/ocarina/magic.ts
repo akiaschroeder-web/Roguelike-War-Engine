@@ -35,5 +35,8 @@ export const ABILITIES: AbilityDef[] = [
   ab({ id: 'aimedShot', name: 'Aimed Shot', kind: 'technique', mp: 0, sta: 3, hit: 25, weaponTypes: ['bow', 'sling', 'boomerang', 'hookshot'], desc: '+25 Hit on this attack.' }),
   ab({ id: 'spinAttack', name: 'Spin Attack', kind: 'technique', mp: 0, sta: 6, area: true, weaponTypes: ['sword'], desc: 'Strike every adjacent enemy at once (STR + sword Might vs DEF). No counterattacks.' }),
   // ── Personal abilities ──
+  ab({ id: 'transformGanon', name: 'Demon King', kind: 'personal', mp: 0, oncePerBattle: true, desc: 'Below half HP: transform into Ganon for the rest of the battle (needs room for a 3×3 beast).' }),
+  ab({ id: 'twinrovaFusion', name: 'Double Dynamite', kind: 'personal', mp: 0, oncePerBattle: true, desc: 'With the other sister adjacent: Koume and Kotake fuse into Twinrova for the rest of the battle.' }),
+  ab({ id: 'masterCraftsman', name: 'Master Craftsman', kind: 'personal', mp: 0, oncePerBattle: true, desc: 'Once per battle: restore 5 uses to an adjacent ally’s weapon (or your own).' }),
   ab({ id: 'greatFairysBlessing', name: "Great Fairy's Blessing", kind: 'personal', mp: 0, oncePerBattle: true, desc: 'Once per battle: fully restore the HP and MP of an ally within 2 spaces (or yourself).' }),
 ];

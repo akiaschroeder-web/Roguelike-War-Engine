@@ -127,6 +127,10 @@ export interface WeaponDef {
   twoHanded?: boolean;
   /** Element: may inflict a status (fire burns, ice freezes, lightning shocks, nature poisons). */
   element?: Element;
+  /** Durability (uses). Omit for the rarity default; 0 = unbreakable. */
+  uses?: number;
+  /** What the weapon becomes when it breaks (e.g. Giant's Knife -> Broken Giant's Knife). */
+  brokenInto?: string;
   /** Instruments: MP discount on songs. */
   songDiscount?: number;
   /** Healing power multiplier for staves (e.g. 1.5 = +50%). */
@@ -180,7 +184,8 @@ export type GearEffect =
   | 'phantomRide' // ride straight through enemy units
   | 'charge' // +2 damage when attacking after moving 3+ spaces
   | 'intimidate' // enemies within 2 spaces have −5 Avoid
-  | 'staRegen'; // +2 extra stamina per turn
+  | 'staRegen' // +2 extra stamina per turn
+  | 'flight'; // the rider flies (Loftwing)
 
 export type ItemKind = 'heal' | 'fullHeal' | 'mp' | 'sta' | 'fairy' | 'bomb' | 'stun' | 'learn';
 
@@ -292,6 +297,8 @@ export interface BossDef extends EnemyArchetype {
   stats: Stats;
   glyph: string;
   quote: string;
+  /** Abilities (e.g. Koume and Kotake can fuse). */
+  abilities?: string[];
   /** Equipment that can drop on defeat. */
   drops?: string[];
 }
@@ -373,6 +380,10 @@ export interface Unit {
   mp: number;
   /** Current stamina (max is stats.sta). Refills each battle, +2 per turn. */
   sta: number;
+  /** Weapon id -> uses spent (durability wear). */
+  wear?: Record<string, number>;
+  /** Weapon id -> Blacksmith improvement level (+1 Might each, max 3). */
+  forge?: Record<string, number>;
   /** In battle: riding the equipped mount (false after dismounting). */
   mounted?: boolean;
   /** Size on foot (size grows while mounted). */
@@ -412,7 +423,7 @@ export interface Objective {
   turns?: number;
 }
 
-export type NodeType = 'battle' | 'elite' | 'recruit' | 'shop' | 'camp' | 'fountain' | 'treasure' | 'boss';
+export type NodeType = 'battle' | 'elite' | 'recruit' | 'shop' | 'camp' | 'fountain' | 'treasure' | 'blacksmith' | 'boss';
 
 export interface Battle {
   width: number;
@@ -433,6 +444,8 @@ export interface Battle {
   uidCounter: number;
   /** Impa's Royal Protector: used this enemy phase. */
   interceptUsed: boolean;
+  /** Support points for the deployed army (copied from the run). */
+  supports?: Record<string, number>;
   /** Name of the army you're fighting (non-monster battles). */
   forceName?: string;
   /** Rain from Song of Storms. */
@@ -478,6 +491,10 @@ export interface Run {
   seenHeroes: string[];
   bossesFought: string[];
   battle?: Battle;
+  /** Wear/forge state of weapons sitting in the convoy, by weapon id. */
+  itemState?: Record<string, { wear?: number; forge?: number }>;
+  /** Support points between pairs of units (key: 'uidA|uidB', sorted). */
+  supports?: Record<string, number>;
   /** uids chosen for the pending battle. */
   deployment?: string[];
   uidCounter: number;

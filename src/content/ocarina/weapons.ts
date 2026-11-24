@@ -12,12 +12,13 @@ const w = (
 // implemented yet, so the Giant's Knife doesn't break.
 export const WEAPONS: WeaponDef[] = [
   // ── Link's swords and hammers ──
-  w('kokiriSword', 'Kokiri Sword', 'sword', 'common', 4, 95, 5, 2, 1, 1, { desc: 'Lightweight; no weight penalty.' }),
-  w('masterSword', 'Master Sword', 'sword', 'mythic', 12, 95, 15, 5, 1, 1, { effective: ['demon'], unique: true, desc: 'Double damage against demonic enemies. Never breaks.' }),
-  w('giantsKnife', "Giant's Knife", 'sword', 'rare', 15, 75, 5, 13, 1, 1, { twoHanded: true, desc: 'Extremely powerful two-handed sword.' }),
-  w('biggoronSword', "Biggoron's Sword", 'sword', 'legendary', 17, 85, 10, 12, 1, 1, { twoHanded: true, pierce: 0.25, unique: true, desc: 'Durable two-handed blade; armor-breaking (ignores 25% DEF).' }),
-  w('megatonHammer', 'Megaton Hammer', 'hammer', 'legendary', 14, 70, 0, 14, 1, 1, { effective: ['armor', 'stone'], unique: true, desc: 'Effective against armored and rock enemies.' }),
-  w('dekuStick', 'Deku Stick', 'sword', 'common', 5, 80, 0, 2, 1, 1),
+  w('kokiriSword', 'Kokiri Sword', 'sword', 'common', 4, 95, 5, 2, 1, 1, { uses: 45, desc: 'Lightweight; no weight penalty.' }),
+  w('masterSword', 'Master Sword', 'sword', 'mythic', 12, 95, 15, 5, 1, 1, { effective: ['demon'], unique: true, uses: 0, desc: 'Double damage against demonic enemies. Never breaks.' }),
+  w('giantsKnife', "Giant's Knife", 'sword', 'rare', 15, 75, 5, 13, 1, 1, { twoHanded: true, uses: 8, brokenInto: 'brokenGiantsKnife', desc: 'Extremely powerful two-handed sword. Very limited durability.' }),
+  w('brokenGiantsKnife', "Broken Giant's Knife", 'sword', 'common', 3, 65, 0, 6, 1, 1, { uses: 0, unique: true, desc: 'What is left of a Giant\'s Knife. Never breaks further.' }),
+  w('biggoronSword', "Biggoron's Sword", 'sword', 'legendary', 17, 85, 10, 12, 1, 1, { twoHanded: true, pierce: 0.25, unique: true, uses: 70, desc: 'Durable two-handed blade; armor-breaking (ignores 25% DEF).' }),
+  w('megatonHammer', 'Megaton Hammer', 'hammer', 'legendary', 14, 70, 0, 14, 1, 1, { effective: ['armor', 'stone'], unique: true, uses: 40, desc: 'Effective against armored and rock enemies.' }),
+  w('dekuStick', 'Deku Stick', 'sword', 'common', 5, 80, 0, 2, 1, 1, { uses: 3, desc: 'Fragile: breaks after 3 uses.' }),
   // ── Link's ranged weapons ──
   w('fairySlingshot', 'Fairy Slingshot', 'sling', 'common', 3, 90, 0, 1, 2, 3, { effective: ['flying'], desc: 'Effective against flying enemies.' }),
   w('fairyBow', 'Fairy Bow', 'bow', 'rare', 7, 85, 0, 4, 2, 4, { effective: ['flying'] }),

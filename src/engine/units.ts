@@ -2,7 +2,7 @@ import { ABILITIES, CLASSES, GEAR, ITEMS, RACES, TEMPLATES, WEAPONS } from '../d
 import type { RNG } from './rng';
 import { MAX_LEVEL, XP_PER_LEVEL } from './rules';
 import { GEAR_SLOTS, PACK_SIZE } from './types';
-import type { BossDef, EnemyArchetype, GearDef, GearSlot, GearSlotKind, Growths, MoveType, Stats, StatKey, Unit, UnitTemplate, WorldId } from './types';
+import type { BossDef, EnemyArchetype, GearDef, WeaponDef, GearSlot, GearSlotKind, Growths, MoveType, Stats, StatKey, Unit, UnitTemplate, WorldId } from './types';
 
 export { MAX_LEVEL, XP_PER_LEVEL };
 export const STAT_KEYS: StatKey[] = ['hp', 'str', 'mag', 'skl', 'spd', 'def', 'res', 'lck'];
@@ -94,7 +94,7 @@ export function makeEnemy(arch: EnemyArchetype | BossDef, world: WorldId, level:
     home: isBossDef ? (arch as BossDef).home : world, classId: arch.classId, team: 'enemy', size: arch.size ?? 1,
     stats, growths: growthsFor(arch.classId, arch.race, undefined, 0.85), weapons: [...arch.weapons],
     skills: arch.skill ? [arch.skill] : [], glyph: arch.glyph ?? arch.name.slice(0, 2).toUpperCase(),
-    abilities: arch.skill && ABILITIES[arch.skill] ? [arch.skill] : [],
+    abilities: [...(('abilities' in arch && (arch as BossDef).abilities) || []), ...(arch.skill && ABILITIES[arch.skill] ? [arch.skill] : [])],
     isBoss: opts.boss, bossId: isBossDef ? arch.id : undefined, artId: arch.id, ai: arch.ai ?? (opts.boss ? 'guard' : 'aggressive'),
   });
   for (let l = 1; l < lvl; l++) rollLevelUp(unit, rng);
@@ -112,7 +112,7 @@ export function moveTypeOf(u: Unit): MoveType {
   const cls = CLASSES[u.classId];
   if (cls?.moveType === 'fixed') return 'fixed';
   if (RACES[u.race]?.flies) return 'flying';
-  if (isMounted(u)) return 'cavalry';
+  if (isMounted(u)) return mountOf(u)!.effects?.includes('flight') ? 'flying' : 'cavalry';
   return cls?.moveType ?? 'foot';
 }
 
@@ -241,4 +241,48 @@ export function prepareForBattle(unit: Unit): Unit {
     mp: unit.stats.mp, sta: unit.stats.sta, statuses: [], buffs: [], usedAbilities: [], faroreMark: undefined, cooldowns: {},
     hp: Math.max(1, unit.hp), moved: false, acted: false, kills: 0, movedDist: 0, survivedOnce: false,
   };
+}
+
+// ───────── Weapon durability and forging ─────────
+
+const RARITY_USES: Record<string, number> = { common: 40, uncommon: 35, rare: 30, epic: 30, legendary: 45, mythic: 0 };
+
+/** Max uses for a weapon (0 = unbreakable). Natural weapons and instruments never break. */
+export function maxUses(w: WeaponDef | undefined): number {
+  if (!w || w.type === 'natural' || w.type === 'instrument') return 0;
+  if (w.uses !== undefined) return w.uses;
+  return w.type === 'staff' ? Math.round((RARITY_USES[w.rarity] ?? 30) * 0.6) : RARITY_USES[w.rarity] ?? 30;
+}
+
+export function usesLeft(u: Unit, weaponId: string): number | null {
+  const max = maxUses(WEAPONS[weaponId]);
+  if (!max) return null;
+  return Math.max(0, max - (u.wear?.[weaponId] ?? 0));
+}
+
+export function forgeLevel(u: Unit, weaponId: string): number {
+  return u.forge?.[weaponId] ?? 0;
+}
+
+/**
+ * Spend one use of a weapon (player units only). If it breaks it is replaced
+ * by its broken form, or removed; a unit left with nothing grabs a Deku Stick.
+ */
+export function spendUse(u: Unit, weaponId: string): { broke: boolean; into?: string } {
+  if (u.team !== 'player') return { broke: false };
+  const max = maxUses(WEAPONS[weaponId]);
+  if (!max) return { broke: false };
+  u.wear ??= {};
+  u.wear[weaponId] = (u.wear[weaponId] ?? 0) + 1;
+  if (u.wear[weaponId] < max) return { broke: false };
+  delete u.wear[weaponId];
+  if (u.forge) delete u.forge[weaponId];
+  const i = u.weapons.indexOf(weaponId);
+  const into = WEAPONS[weaponId]?.brokenInto;
+  if (i >= 0) {
+    if (into) u.weapons[i] = into;
+    else u.weapons.splice(i, 1);
+  }
+  if (!u.weapons.length) u.weapons.push('dekuStick');
+  return { broke: true, into: into ?? (u.weapons[0] === 'dekuStick' && !into ? 'dekuStick' : undefined) };
 }

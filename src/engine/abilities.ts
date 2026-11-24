@@ -1,6 +1,7 @@
 // Casting spells, performing songs and using personal abilities in battle.
 
-import { ABILITIES, WEAPONS } from '../data/registry';
+import { ABILITIES, TEMPLATES, WEAPONS } from '../data/registry';
+import { roomFor, transformInto } from './transform';
 import { useFairy, type LevelUp } from './combat';
 import { anchorCost, footprint, unitAt, unitDist } from './grid';
 import type { RNG } from './rng';
@@ -79,6 +80,16 @@ export function unusableReason(b: Battle, u: Unit, def: AbilityDef): string | nu
   }
   if (def.id === 'faroresWind' && u.faroreMark && !markFree(b, u)) return 'The return point is blocked';
   if (def.id === 'greatFairysBlessing' && !abilityTargets(b, u, def).length) return 'No one needs it';
+  if (def.id === 'masterCraftsman' && !abilityTargets(b, u, def).length) return 'No worn weapons nearby';
+  if (def.id === 'transformGanon') {
+    if (u.hp > u.stats.hp / 2) return 'Only below half HP';
+    if (!TEMPLATES.ganon || !roomFor(b, u, TEMPLATES.ganon.size)) return 'Not enough room to transform';
+  }
+  if (def.id === 'twinrovaFusion') {
+    const sis = sister(b, u);
+    if (!sis) return 'The other sister must be adjacent';
+    if (!TEMPLATES.twinrova || !roomFor(b, u, TEMPLATES.twinrova.size, [sis])) return 'Not enough room to fuse';
+  }
   return null;
 }
 
@@ -92,6 +103,9 @@ export function needsTile(def: AbilityDef): boolean {
 
 /** Units an ability can be aimed at (only abilities that need a target). */
 export function abilityTargets(b: Battle, u: Unit, def: AbilityDef): Unit[] {
+  if (def.id === 'masterCraftsman') {
+    return b.units.filter((a) => a.team === u.team && unitDist(u, a) <= 1 && a.weapons.some((w) => (a.wear?.[w] ?? 0) > 0));
+  }
   if (def.id === 'greatFairysBlessing') {
     return b.units.filter((a) => a.team === u.team && unitDist(u, a) <= 2 && (a.hp < a.stats.hp || a.mp < a.stats.mp));
   }
@@ -99,7 +113,7 @@ export function abilityTargets(b: Battle, u: Unit, def: AbilityDef): Unit[] {
 }
 
 export function needsTarget(def: AbilityDef): boolean {
-  return def.id === 'greatFairysBlessing';
+  return def.id === 'greatFairysBlessing' || def.id === 'masterCraftsman';
 }
 
 /** Radius of the area an ability affects around the caster (for previews). */
@@ -132,6 +146,8 @@ export interface AbilityResult {
   warped?: { from: Pos; to: Pos };
   weather?: boolean;
   mounted?: boolean;
+  repaired?: { uid: string; weaponId: string };
+  transformed?: string;
   levelUps: LevelUp[];
 }
 
@@ -251,6 +267,26 @@ export function castAbility(b: Battle, u: Unit, id: string, rng: RNG, targetUid?
       }
       break;
     }
+    case 'masterCraftsman': {
+      const t = target!;
+      const w = t.weapons.find((id) => (t.wear?.[id] ?? 0) > 0)!;
+      t.wear![w] = Math.max(0, t.wear![w] - 5);
+      res.repaired = { uid: t.uid, weaponId: w };
+      (u.usedAbilities ??= []).push(id);
+      break;
+    }
+    case 'transformGanon':
+      transformInto(b, u, 'ganon');
+      res.transformed = u.name;
+      (u.usedAbilities ??= []).push(id);
+      break;
+    case 'twinrovaFusion': {
+      const sis = sister(b, u)!;
+      transformInto(b, u, 'twinrova', sis);
+      res.transformed = u.name;
+      (u.usedAbilities ??= []).push(id);
+      break;
+    }
     case 'greatFairysBlessing': {
       const t = target!;
       const amount = t.stats.hp - t.hp;
@@ -276,4 +312,22 @@ export function castAbility(b: Battle, u: Unit, id: string, rng: RNG, targetUid?
     for (const gains of gainXp(u, Math.min(60, xp), rng)) res.levelUps.push({ uid: u.uid, name: u.name, level: u.level, gains });
   }
   return res;
+}
+
+/** Koume's or Kotake's sister, if adjacent and on the same side. */
+function sister(b: Battle, u: Unit): Unit | undefined {
+  const other = u.templateId === 'koume' || u.bossId === 'koume' ? 'kotake' : u.templateId === 'kotake' || u.bossId === 'kotake' ? 'koume' : null;
+  if (!other) return undefined;
+  return b.units.find((a) => a !== u && a.team === u.team && (a.templateId === other || a.bossId === other) && unitDist(u, a) <= 1);
+}
+
+/** Enemy Ganondorf and the witch sisters transform on their own when they can. */
+export function enemyAutoTransform(b: Battle, u: Unit, rng: RNG): AbilityResult | null {
+  if (u.team !== 'enemy') return null;
+  for (const id of ['transformGanon', 'twinrovaFusion']) {
+    if (!u.abilities.includes(id)) continue;
+    const def = ABILITIES[id];
+    if (def && !unusableReason(b, u, def)) return castAbility(b, u, id, rng);
+  }
+  return null;
 }

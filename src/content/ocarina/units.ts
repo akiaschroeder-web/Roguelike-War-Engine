@@ -29,7 +29,7 @@ export const NAMED: UnitTemplate[] = [
     stats: st(21, 6, 13, 14, 4, 6, 6, 5, 7, 8, 18, 10), weapons: ['sheikahNeedles', 'sheikahShortblade', 'sheiksHarp'], skill: 'vanishingAct', abilities: ['zeldasLullaby', 'sunsSong', 'minuetOfForest', 'nocturneOfShadow'],
     exclusiveWith: ['zelda'], bio: 'An exceptionally fast skirmisher specializing in evasion, infiltration and precision attacks.' }),
   u({ id: 'ganondorf', name: 'Ganondorf', title: 'King of Thieves', race: 'gerudo', classId: 'darkKing', size: 1, home: 'gerudoDesert',
-    stats: st(30, 13, 8, 7, 10, 14, 5, 12, 9, 4, 20, 20), weapons: ['giantsKnife', 'poeLantern'], skill: 'spiritOfPower', gear: { mount: 'ganondorfStallion' },
+    stats: st(30, 13, 8, 7, 10, 14, 5, 12, 9, 4, 20, 20), weapons: ['giantsKnife', 'poeLantern'], skill: 'spiritOfPower', abilities: ['transformGanon'], gear: { mount: 'ganondorfStallion' },
     bio: 'A powerful hybrid combatant with exceptional strength, magic and constitution.' }),
   // Sages
   u({ id: 'rauru', name: 'Rauru', title: 'Sage of Light', race: 'hylian', classId: 'lightSage', size: 1, home: 'hyruleCastle',

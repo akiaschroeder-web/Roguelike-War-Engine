@@ -13,6 +13,8 @@ export interface ContentPack {
   items: ItemDef[];
   abilities: AbilityDef[];
   factions: FactionDef[];
+  /** Pairs of template ids that can reach S-rank supports. */
+  supportPairs?: [string, string][];
   monsterChance: Record<string, number>;
   permanentItems: PermanentItemDef[];
   skills: SkillDef[];

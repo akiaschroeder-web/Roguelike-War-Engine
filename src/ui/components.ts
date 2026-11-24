@@ -2,7 +2,7 @@ import { ABILITIES, GEAR, ITEMS, artFor, CLASSES, PERMANENT_ITEMS, raceOf, skill
 import { STATUS_INFO } from '../engine/status';
 import { GEAR_SLOTS, PACK_SIZE } from '../engine/types';
 import type { LevelUp } from '../engine/combat';
-import { effectiveStats, XP_PER_LEVEL } from '../engine/units';
+import { effectiveStats, forgeLevel, maxUses, usesLeft, XP_PER_LEVEL } from '../engine/units';
 import type { StatKey, Unit, UnitTemplate, WeaponDef } from '../engine/types';
 
 export const esc = (s: string | number) =>
@@ -85,10 +85,14 @@ export function worldTag(worldId: string): string {
   return `<span class="world-tag" style="--wc:${w.color}">${esc(w.name)}</span>`;
 }
 
-export function weaponLine(w: WeaponDef, opts: { equipped?: boolean } = {}): string {
+export function weaponLine(w: WeaponDef, opts: { equipped?: boolean; owner?: Unit } = {}): string {
   const range = w.minRange === w.maxRange ? `${w.minRange}` : `${w.minRange}–${w.maxRange}`;
-  const mt = w.type === 'staff' ? `Heal ${w.might}` : `Mt ${w.might}`;
-  return `<span class="weapon-line"><b style="color:${RARITY_COLORS[w.rarity]}">${WEAPON_ICONS[w.type] ?? ''} ${esc(w.name)}</b>${opts.equipped ? ' <span class="badge eq">E</span>' : ''} <span class="dim">${mt} · Hit ${w.hit} · Crit ${w.crit} · Wt ${w.weight} · Rng ${range}${
+  const plus = opts.owner ? forgeLevel(opts.owner, w.id) : 0;
+  const mt = w.type === 'staff' ? `Heal ${w.might}` : `Mt ${w.might + plus}`;
+  const left = opts.owner ? usesLeft(opts.owner, w.id) : null;
+  const max = maxUses(w);
+  const uses = !max ? (w.type === 'natural' || w.type === 'instrument' ? '' : ' · Unbreakable') : left !== null ? ` · <span class="${left <= 3 ? 'down' : ''}">Uses ${left}/${max}</span>` : ` · Uses ${max}`;
+  return `<span class="weapon-line"><b style="color:${RARITY_COLORS[w.rarity]}">${WEAPON_ICONS[w.type] ?? ''} ${esc(w.name)}${plus ? ` +${plus}` : ''}</b>${opts.equipped ? ' <span class="badge eq">E</span>' : ''} <span class="dim">${mt} · Hit ${w.hit} · Crit ${w.crit} · Wt ${w.weight} · Rng ${range}${uses}${
     w.effective ? ` · ×2 vs ${w.effective.join('/')}` : ''}${w.pierce ? ` · ignores ${w.pierce * 100}% DEF` : ''}${w.brave ? ' · strikes twice' : ''}</span></span>`;
 }
 
@@ -147,7 +151,7 @@ export function unitDetails(u: Unit): string {
       <div class="ud-row"><span>Lv <b>${u.level}</b></span>${u.team === 'player' ? `<span class="dim small">XP ${u.xp}/${XP_PER_LEVEL}</span>` : ''}<span class="ud-hp">HP <b>${u.hp}</b>/${u.stats.hp}</span></div>
       ${hpBar(u.hp, u.stats.hp)}
       ${statGrid(u)}
-      <div class="ud-weapons">${u.weapons.map((id, i) => (WEAPONS[id] ? `<div>${weaponLine(WEAPONS[id], { equipped: i === 0 })}</div>` : '')).join('')}</div>
+      <div class="ud-weapons">${u.weapons.map((id, i) => (WEAPONS[id] ? `<div>${weaponLine(WEAPONS[id], { equipped: i === 0, owner: u })}</div>` : '')).join('')}</div>
       ${gearLine(u)}
       ${packLine(u)}
       ${u.stats.mp > 0 || u.stats.sta > 0 ? `<div class="ud-row small">${u.stats.mp > 0 ? `<span>MP <b>${u.mp}</b>/${u.stats.mp}</span>` : '<span></span>'}<span>STA <b>${u.sta ?? u.stats.sta}</b>/${u.stats.sta}</span></div>` : ''}

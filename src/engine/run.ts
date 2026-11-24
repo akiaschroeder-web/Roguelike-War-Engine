@@ -2,10 +2,12 @@ import {
   FACTIONS, GEAR, ITEMS, MONSTER_CHANCE, BOSSES, bossPool, COMMANDERS, PERMANENT_ITEMS, REGION_IDS, TEMPLATE_LIST, TEMPLATES, WEAPONS,
 } from '../data/registry';
 import { createBattle } from './battle';
+import { isSPair, rankOf, type SupportRank } from './supports';
+import { restoreForm } from './transform';
 import { canWield, type LevelUp } from './combat';
 import { RNG } from './rng';
 import { ARMY_CAPACITY, DEPLOY_CAPACITY } from './rules';
-import { addToPack, canRide, gainXp, makeHero, rollLevelUp, slotFor } from './units';
+import { addToPack, canRide, forgeLevel, gainXp, makeHero, maxUses, rollLevelUp, slotFor } from './units';
 import type { BossDef, CommanderDef, EnemyForce, FactionDef, GearSlot, MapNode, NodeType, Rarity, Run, RunMap, Unit, UnitTemplate, WorldId } from './types';
 
 export const ROWS_PER_REGION = 7; // last row is the regional boss
@@ -91,7 +93,7 @@ function pickNodeType(rng: RNG, row: number): NodeType {
   if (row === 0) return 'battle';
   if (row === ROWS_PER_REGION - 2) return rng.weighted([['camp', 3], ['fountain', 2], ['shop', 2], ['battle', 1]]);
   return rng.weighted([
-    ['battle', 42], ['recruit', 14], ['shop', 10], ['camp', 9], ['fountain', 6], ['treasure', 9], ['elite', row >= 2 ? 12 : 0],
+    ['battle', 42], ['recruit', 14], ['shop', 10], ['camp', 9], ['fountain', 6], ['treasure', 9], ['blacksmith', 7], ['elite', row >= 2 ? 12 : 0],
   ]);
 }
 
@@ -130,7 +132,8 @@ export type RunEvent =
   | { type: 'camp' }
   | { type: 'fountain' }
   | { type: 'treasure'; rewards: Reward[]; rupees: number }
-  | { type: 'region'; options: WorldId[] };
+  | { type: 'region'; options: WorldId[] }
+  | { type: 'blacksmith'; forgeOffers: string[]; sold: string[] };
 
 export interface RunWithEvent extends Run {
   event?: RunEvent;
@@ -190,6 +193,12 @@ export function enterNode(run: RunWithEvent, nodeId: string): void {
       case 'camp':
         run.event = { type: 'camp' };
         break;
+      case 'blacksmith': {
+        const rar = raritiesFor(run.act + 1);
+        const forgeOffers = rng.shuffle(Object.values(WEAPONS).filter((w) => !w.unique && w.type !== 'instrument' && rar.includes(w.rarity))).slice(0, 3).map((w) => w.id);
+        run.event = { type: 'blacksmith', forgeOffers, sold: [] };
+        break;
+      }
       case 'fountain':
         run.event = { type: 'fountain' };
         break;
@@ -212,7 +221,7 @@ export function startBattle(run: RunWithEvent, uids: string[]): void {
     if (boss) run.bossesFought.push(boss.id);
     run.battle = createBattle({
       world: node.world, nodeType: node.type, depth: depthOf(run, node), roster: chosen,
-      seed: rng.int(0, 2 ** 31), boss, healMult: run.bonus === 'healing' ? 1.2 : 1, force,
+      seed: rng.int(0, 2 ** 31), boss, healMult: run.bonus === 'healing' ? 1.2 : 1, force, supports: run.supports,
     });
   });
 }
@@ -318,6 +327,8 @@ export interface BattleSummary {
   fallen: Unit[];
   kills: number;
   drops: string[];
+  /** Support ranks reached this battle. */
+  supportUps: { a: string; b: string; rank: SupportRank }[];
 }
 
 /** HP recovered after a battle (fraction of max HP). */
@@ -327,8 +338,17 @@ export function finishBattle(run: RunWithEvent): BattleSummary {
   const b = run.battle!;
   const won = b.result === 'won';
   const kills = b.fallen.filter((u) => u.team === 'enemy').length;
-  const fallen = b.fallen.filter((u) => u.team === 'player');
-  const survivors = new Map(b.units.filter((u) => u.team === 'player').map((u) => [u.uid, u]));
+  // Undo transformations: Ganon becomes Ganondorf again; Twinrova splits back
+  // into Koume and Kotake (both fall if Twinrova fell).
+  const split = (u: Unit): Unit[] => {
+    const partner = u.fusedPartner;
+    const me = restoreForm(u);
+    if (!partner) return [me];
+    const ratio = me.hp > 0 ? me.hp / me.stats.hp : 0;
+    return [me, { ...partner, hp: me.hp > 0 ? Math.max(1, Math.ceil(partner.stats.hp * ratio)) : 0 }];
+  };
+  const fallen = b.fallen.filter((u) => u.team === 'player').flatMap(split);
+  const survivors = new Map(b.units.filter((u) => u.team === 'player').flatMap(split).map((u) => [u.uid, u]));
   const deployed = new Set(run.deployment ?? []);
   const heal = POST_BATTLE_HEAL + (run.bonus === 'postBattleHeal' ? 0.1 : 0);
   run.roster = run.roster
@@ -369,7 +389,21 @@ export function finishBattle(run: RunWithEvent): BattleSummary {
   run.stats.kills += kills;
   run.battle = undefined;
   run.deployment = undefined;
-  return { won, rupees, fallen, kills, drops };
+  // Supports: keep the new points and report rank-ups.
+  const supportUps: BattleSummary['supportUps'] = [];
+  const before = run.supports ?? {};
+  const after = { ...before, ...(b.supports ?? {}) };
+  const byUid = new Map([...run.roster, ...run.fallen].map((u) => [u.uid, u]));
+  for (const [k, pts] of Object.entries(after)) {
+    const [x, y] = k.split('|');
+    const ux = byUid.get(x), uy = byUid.get(y);
+    if (!ux || !uy) continue;
+    const s = isSPair(ux, uy);
+    const r = rankOf(pts, s);
+    if (r && r !== rankOf(before[k] ?? 0, s)) supportUps.push({ a: ux.name, b: uy.name, rank: r });
+  }
+  run.supports = after;
+  return { won, rupees, fallen, kills, drops, supportUps };
 }
 
 export function isRegionComplete(run: Run): boolean {
@@ -429,8 +463,14 @@ export function giveWeapon(run: Run, id: string, uid: string | null): boolean {
   const u = uid ? run.roster.find((x) => x.uid === uid) : undefined;
   if (!u) { run.convoy.push(id); return true; }
   if (!canWield(u, WEAPONS[id])) return false;
-  if (u.weapons.length >= 5) run.convoy.push(u.weapons.pop()!);
+  if (u.weapons.length >= 5) stashWeapon(run, u.uid, u.weapons[u.weapons.length - 1], true);
   u.weapons.push(id);
+  const st = run.itemState?.[id];
+  if (st) {
+    if (st.wear) (u.wear ??= {})[id] = st.wear;
+    if (st.forge) (u.forge ??= {})[id] = st.forge;
+    delete run.itemState![id];
+  }
   return true;
 }
 
@@ -493,13 +533,20 @@ export function equipFromConvoy(run: Run, index: number, uid: string): boolean {
   return ok;
 }
 
-export function stashWeapon(run: Run, uid: string, weaponId: string): boolean {
+export function stashWeapon(run: Run, uid: string, weaponId: string, force = false): boolean {
   const u = run.roster.find((x) => x.uid === uid);
-  if (!u || u.weapons.length <= 1) return false;
+  if (!u || (u.weapons.length <= 1 && !force)) return false;
   const i = u.weapons.indexOf(weaponId);
   if (i < 0) return false;
   u.weapons.splice(i, 1);
   run.convoy.push(weaponId);
+  // Remember wear and improvements while it sits in the convoy.
+  const wear = u.wear?.[weaponId], forge = u.forge?.[weaponId];
+  if (wear || forge) {
+    (run.itemState ??= {})[weaponId] = { wear, forge };
+    if (u.wear) delete u.wear[weaponId];
+    if (u.forge) delete u.forge[weaponId];
+  }
   return true;
 }
 
@@ -727,4 +774,61 @@ export function migrateRun(run: RunWithEvent): RunWithEvent {
     for (const r of ev.rewards) if ((r.kind as string) === 'accessory') r.kind = 'gear';
   }
   return run;
+}
+
+// ───────────────────────── Blacksmith ─────────────────────────
+
+const RARITY_VALUE: Record<string, number> = { common: 150, uncommon: 300, rare: 550, epic: 900, legendary: 1500, mythic: 2500 };
+const smithDiscount = (run: Run) => (run.bonus === 'forging' ? 0.75 : 1);
+const valueOf = (id: string) => WEAPONS[id]?.price || RARITY_VALUE[WEAPONS[id]?.rarity] || 300;
+
+export function repairCost(run: Run, u: Unit, weaponId: string): number {
+  const max = maxUses(WEAPONS[weaponId]);
+  const wear = u.wear?.[weaponId] ?? 0;
+  if (!max || !wear) return 0;
+  return Math.max(20, Math.round(valueOf(weaponId) * (wear / max) * 0.6 * smithDiscount(run)));
+}
+
+export const MAX_FORGE = 3;
+
+export function improveCost(run: Run, u: Unit, weaponId: string): number {
+  const w = WEAPONS[weaponId];
+  if (!w || w.type === 'natural' || w.type === 'instrument' || w.type === 'staff') return 0;
+  const lvl = forgeLevel(u, weaponId);
+  if (lvl >= MAX_FORGE) return 0;
+  return Math.round((150 + valueOf(weaponId) * 0.3) * (lvl + 1) * smithDiscount(run));
+}
+
+export function forgePrice(run: Run, weaponId: string): number {
+  return Math.round(valueOf(weaponId) * 0.85 * smithDiscount(run));
+}
+
+export function repairWeapon(run: RunWithEvent, uid: string, weaponId: string): boolean {
+  const u = run.roster.find((x) => x.uid === uid);
+  if (run.event?.type !== 'blacksmith' || !u) return false;
+  const cost = repairCost(run, u, weaponId);
+  if (!cost || run.rupees < cost) return false;
+  run.rupees -= cost;
+  delete u.wear![weaponId];
+  return true;
+}
+
+export function improveWeapon(run: RunWithEvent, uid: string, weaponId: string): boolean {
+  const u = run.roster.find((x) => x.uid === uid);
+  if (run.event?.type !== 'blacksmith' || !u) return false;
+  const cost = improveCost(run, u, weaponId);
+  if (!cost || run.rupees < cost) return false;
+  run.rupees -= cost;
+  (u.forge ??= {})[weaponId] = forgeLevel(u, weaponId) + 1;
+  return true;
+}
+
+export function forgeWeapon(run: RunWithEvent, weaponId: string, uid: string): boolean {
+  const ev = run.event;
+  if (ev?.type !== 'blacksmith' || !ev.forgeOffers.includes(weaponId) || ev.sold.includes(weaponId)) return false;
+  const price = forgePrice(run, weaponId);
+  if (run.rupees < price || !giveWeapon(run, weaponId, uid)) return false;
+  run.rupees -= price;
+  ev.sold.push(weaponId);
+  return true;
 }

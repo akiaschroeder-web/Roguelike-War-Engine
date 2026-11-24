@@ -18,6 +18,7 @@ export interface BattleSetup {
   healMult?: number;
   /** Who you're fighting; omitted = the region's monsters. */
   force?: EnemyForce;
+  supports?: Record<string, number>;
 }
 
 /** Enemy level for a given depth. Keeps climbing in endless mode. */
@@ -111,6 +112,7 @@ export function createBattle(setup: BattleSetup): Battle {
     interceptUsed: false,
     healMult: setup.healMult ?? 1,
     forceName: force?.name,
+    supports: { ...(setup.supports ?? {}) },
     drops: [],
   };
 }
