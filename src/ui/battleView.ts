@@ -10,6 +10,7 @@ import { RNG } from '../engine/rng';
 import { TERRAIN_BONUS } from '../engine/rules';
 import type { RunWithEvent } from '../engine/run';
 import type { Battle, Pos, Unit } from '../engine/types';
+import { animationsEnabled, playCinematic, setAnimationsEnabled, type SideInfo } from './cinematic';
 import { esc, hpBar, modal, showLevelUps, sleep, token, unitDetails, weaponLine } from './components';
 
 type Mode = 'idle' | 'select' | 'action' | 'attack' | 'heal' | 'canto' | 'busy' | 'over';
@@ -306,7 +307,8 @@ export class BattleView {
     if (m === 'idle') {
       const ready = this.b.units.filter((u) => u.team === 'player' && !u.acted).length;
       html = `<button class="btn primary" data-act="end">End Turn <span class="dim">(${ready} ready)</span></button>
-        <button class="btn ${this.showDanger ? 'on' : ''}" data-act="danger">Danger Zone</button>`;
+        <button class="btn ${this.showDanger ? 'on' : ''}" data-act="danger">Danger Zone</button>
+        <button class="btn small" data-act="anims" title="Battle animations">🎬 ${animationsEnabled() ? 'On' : 'Off'}</button>`;
     } else if (m === 'select') {
       html = `<button class="btn" data-act="cancel">Cancel</button><span class="dim small">Choose a destination, or tap the unit to stay put.</span>`;
     } else if (m === 'action' && this.sel) {
@@ -490,6 +492,10 @@ export class BattleView {
       case 'end':
         if (this.mode === 'idle') await this.endTurn();
         return;
+      case 'anims':
+        setAnimationsEnabled(!animationsEnabled());
+        this.renderActions();
+        return;
       case 'danger':
         this.showDanger = !this.showDanger;
         this.renderAll();
@@ -607,9 +613,31 @@ export class BattleView {
 
   /** Returns true if the attacker killed the defender. */
   private async doCombat(att: Unit, def: Unit, weaponId?: string): Promise<boolean> {
+    const fc = forecast(this.b, att, att, def, weaponId);
+    const startHp = { [att.uid]: att.hp, [def.uid]: def.hp };
+    const side = (s: Forecast['attacker'], u: Unit): SideInfo => ({
+      weapon: weaponDef(s.weaponId)?.name ?? weaponDef(u.weapons[0])?.name ?? '',
+      dmg: s.canAttack ? s.dmg : null, hit: s.canAttack ? s.hit : null, crit: s.canAttack ? s.crit : null,
+    });
     const rng = new RNG(this.b.rngState);
     const res = resolveCombat(this.b, att, def, rng, weaponId);
     this.b.rngState = rng.state;
+
+    if (animationsEnabled()) {
+      await playCinematic({
+        attacker: att, defender: def, startHp, strikes: res.strikes, world: this.b.world,
+        info: { [att.uid]: side(fc.attacker, att), [def.uid]: side(fc.defender, def) },
+      });
+      for (const s of res.strikes) {
+        const by = this.unitById(s.by)!, tg = this.unitById(s.target)!;
+        this.addLog(`<b class="${by.team}">${esc(by.name)}</b> ${!s.hit ? 'misses' : s.crit ? 'CRITS' : 'hits'} ${esc(tg.name)}${s.hit ? ` for ${s.dmg}` : ''}.`);
+        if (s.killed) this.addLog(`☠ ${esc(tg.name)} has fallen.`);
+      }
+      this.renderAll();
+      await this.levelUps(res.levelUps);
+      return res.deaths.includes(def.uid);
+    }
+
     for (const s of res.strikes) {
       const by = this.unitById(s.by)!;
       const tg = this.unitById(s.target)!;

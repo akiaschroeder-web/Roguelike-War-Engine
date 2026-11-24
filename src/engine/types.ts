@@ -227,6 +227,8 @@ export interface Unit {
   accessory?: string;
   skills: SkillId[];
   glyph: string;
+  /** Enemy archetype id (used for shared art). */
+  artId?: string;
   isCommander?: boolean;
   isBoss?: boolean;
   bossId?: string;

@@ -1,4 +1,4 @@
-import { ACCESSORIES, CLASSES, PERMANENT_ITEMS, raceOf, skillDef, WEAPONS, worldDef } from '../data/registry';
+import { ACCESSORIES, artFor, CLASSES, PERMANENT_ITEMS, raceOf, skillDef, WEAPONS, worldDef } from '../data/registry';
 import type { LevelUp } from '../engine/combat';
 import { effectiveStats, XP_PER_LEVEL } from '../engine/units';
 import type { StatKey, Unit, UnitTemplate, WeaponDef } from '../engine/types';
@@ -27,11 +27,11 @@ interface TokenLike {
   team: 'player' | 'enemy';
   isBoss?: boolean;
   isCommander?: boolean;
-  /** Used to look up portraits/<id>.png */
+  /** Unit/boss/template id; resolved to portraits/<id>.png through the art registry. */
   portraitId?: string;
 }
 
-export const portraitIdOf = (u: Pick<Unit, 'templateId' | 'bossId' | 'name'>) => u.bossId ?? u.templateId ?? u.name.toLowerCase().replace(/[^a-z0-9]+/g, '-');
+export const portraitIdOf = (u: Pick<Unit, 'templateId' | 'bossId' | 'artId'>) => u.bossId ?? u.templateId ?? u.artId;
 
 /**
  * A unit token. Shows `portraits/<id>.png` if that file exists; otherwise the
@@ -40,7 +40,8 @@ export const portraitIdOf = (u: Pick<Unit, 'templateId' | 'bossId' | 'name'>) =>
 export function token(u: TokenLike | Unit, size = 40): string {
   const t: TokenLike = 'uid' in u ? { home: u.home, glyph: u.glyph, team: u.team, isBoss: u.isBoss, isCommander: u.isCommander, portraitId: portraitIdOf(u) } : u;
   const w = worldDef(t.home);
-  const img = t.portraitId ? `<img src="portraits/${esc(t.portraitId)}.png" alt="" draggable="false" onerror="this.remove()">` : '';
+  const art = artFor(t.portraitId);
+  const img = art ? `<img src="portraits/${esc(art)}.png" alt="" draggable="false" onerror="this.remove()">` : '';
   return `<span class="token ${t.team}" style="--wc:${w.color};--sz:${size}px"><b>${esc(t.glyph)}</b>${img}${
     t.isBoss ? '<i class="crown">♛</i>' : t.isCommander ? '<i class="crown star">★</i>' : ''
   }</span>`;

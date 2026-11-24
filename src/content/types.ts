@@ -19,4 +19,8 @@ export interface ContentPack {
   bosses: BossDef[];
   regionBosses: Record<string, string[]>;
   commanders: (CommanderDef & { pendingGear?: string[] })[];
+  /** Ids with files in public/art and public/portraits. */
+  artIds: string[];
+  /** id -> id whose art it reuses. */
+  artAliases: Record<string, string>;
 }

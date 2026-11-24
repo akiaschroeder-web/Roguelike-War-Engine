@@ -24,6 +24,8 @@ export const BOSSES: Record<string, BossDef> = {};
 export const REGION_BOSSES: Record<string, string[]> = {};
 export const COMMANDERS: (CommanderDef & { pendingGear?: string[] })[] = [];
 export const PACKS: ContentPack[] = [];
+export const ART_IDS = new Set<string>();
+export const ART_ALIASES: Record<string, string> = {};
 
 const index = <T extends { id: string }>(target: Record<string, T>, list: T[]) => {
   for (const x of list) target[x.id] = x;
@@ -46,6 +48,8 @@ export function installPack(p: ContentPack): void {
   index(BOSSES, p.bosses);
   for (const [k, v] of Object.entries(p.regionBosses)) (REGION_BOSSES[k] ??= []).push(...v);
   COMMANDERS.push(...p.commanders);
+  for (const id of p.artIds) ART_IDS.add(id);
+  Object.assign(ART_ALIASES, p.artAliases);
 }
 
 installPack(OCARINA);
@@ -72,4 +76,12 @@ export function raceOf(id: string): RaceDef {
 
 export function skillDef(id: string): SkillDef {
   return SKILLS[id] ?? { id, name: id, desc: '', implemented: false };
+}
+
+/** The art id a unit should display, or null if no image exists yet. */
+export function artFor(id: string | undefined): string | null {
+  if (!id) return null;
+  if (ART_IDS.has(id)) return id;
+  const alias = ART_ALIASES[id];
+  return alias && ART_IDS.has(alias) ? alias : null;
 }

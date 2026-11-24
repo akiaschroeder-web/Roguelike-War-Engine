@@ -1,3 +1,4 @@
+import { ART_ALIASES, ART_IDS } from './art';
 import { CLASSES } from './classes';
 import { COMMANDERS } from './commanders';
 import { BOSSES, ENEMIES, REGION_BOSSES, ROSTERS } from './enemies';
@@ -24,4 +25,6 @@ export const OCARINA: ContentPack = {
   bosses: BOSSES,
   regionBosses: REGION_BOSSES,
   commanders: COMMANDERS,
+  artIds: ART_IDS,
+  artAliases: ART_ALIASES,
 };

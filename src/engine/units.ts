@@ -79,7 +79,7 @@ export function makeEnemy(arch: EnemyArchetype | BossDef, world: WorldId, level:
     home: isBossDef ? (arch as BossDef).home : world, classId: arch.classId, team: 'enemy', size: arch.size ?? 1,
     stats, growths: growthsFor(arch.classId, arch.race, undefined, 0.85), weapons: [...arch.weapons],
     skills: arch.skill ? [arch.skill] : [], glyph: arch.glyph ?? arch.name.slice(0, 2).toUpperCase(),
-    isBoss: opts.boss, bossId: isBossDef ? arch.id : undefined, ai: arch.ai ?? (opts.boss ? 'guard' : 'aggressive'),
+    isBoss: opts.boss, bossId: isBossDef ? arch.id : undefined, artId: arch.id, ai: arch.ai ?? (opts.boss ? 'guard' : 'aggressive'),
   });
   for (let l = 1; l < lvl; l++) rollLevelUp(unit, rng);
   // Endless scaling: levels beyond the cap become flat bonuses.

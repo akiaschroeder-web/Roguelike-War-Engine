@@ -363,3 +363,38 @@ p { margin: 8px 0; }
 .choice.region { border-color: color-mix(in srgb, var(--wc) 50%, var(--line)); }
 .choice[disabled] { opacity: 0.4; cursor: not-allowed; transform: none; }
 .map-node.n-fountain { background: #2a2444; }
+
+/* ───── Battle cinematic ───── */
+.cine { position: fixed; inset: 0; z-index: 60; background: #05040ae6; display: grid; place-items: center; cursor: pointer; }
+.cine-stage { position: relative; width: min(1100px, 100vw); height: min(620px, 92vh); overflow: hidden; border-radius: 14px;
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--wc) 60%, #000), 0 20px 80px #000; }
+.cine-sky { position: absolute; inset: 0; background: radial-gradient(ellipse at 50% 30%, color-mix(in srgb, var(--wc) 35%, #1a1530), #0b0914 75%); }
+.cine-ground { position: absolute; left: 0; right: 0; bottom: 0; height: 30%; background: linear-gradient(180deg, color-mix(in srgb, var(--ground) 80%, #000), color-mix(in srgb, var(--ground) 35%, #000));
+  border-top: 2px solid color-mix(in srgb, var(--ground) 60%, #fff3); }
+.cine-fighter { position: absolute; bottom: 0; width: 46%; height: 100%; display: flex; flex-direction: column; justify-content: flex-end; align-items: center; }
+.cine-fighter.left { left: 2%; } .cine-fighter.right { right: 2%; }
+.cine-body { height: 66%; display: flex; align-items: flex-end; justify-content: center; margin-bottom: -6%; will-change: transform; }
+.cine-art { max-height: 100%; max-width: 100%; object-fit: contain; filter: drop-shadow(0 10px 14px #000c); }
+.cine-fighter.big .cine-art { transform: scale(1.12); transform-origin: bottom center; }
+.cine-token { padding-bottom: 12%; }
+.cine-plate { position: relative; z-index: 2; width: 92%; margin-bottom: 3%; padding: 8px 12px; border-radius: 10px; background: #0d0b16e6;
+  border: 2px solid var(--player); font-size: 13px; }
+.cine-fighter.enemy .cine-plate { border-color: var(--enemy); }
+.cine-name { display: flex; justify-content: space-between; } .cine-name b { font-size: 16px; } .cine-name span, .cine-weapon { color: var(--dim); }
+.cine-hp { display: flex; align-items: center; gap: 8px; margin: 4px 0; }
+.cine-hpnum { font: 14px 'Press Start 2P', monospace; min-width: 44px; }
+.cine-hpbar { flex: 1; height: 10px; background: #000a; border-radius: 5px; overflow: hidden; }
+.cine-hpfill { height: 100%; background: linear-gradient(90deg, #4ae07a, #b6f06a); transition: width 0.35s ease-out; }
+.cine-fighter.enemy .cine-hpfill { background: linear-gradient(90deg, #ff4a5a, #ff9a6a); }
+.cine-stats { display: flex; gap: 12px; color: var(--dim); font-size: 12px; } .cine-stats b { color: var(--text); }
+.cine-flash { position: absolute; inset: 0; background: #fff; opacity: 0; pointer-events: none; }
+.cine-banner { position: absolute; top: 12%; left: 0; right: 0; text-align: center; font: 28px 'Press Start 2P', monospace; color: var(--gold);
+  text-shadow: 0 3px 0 #000, 0 0 20px #ffcc4a; opacity: 0; pointer-events: none; }
+.cine-pop { position: absolute; top: 28%; left: 50%; transform: translateX(-50%); font: 30px 'Press Start 2P', monospace; text-shadow: 0 3px 0 #000, 0 0 10px #000;
+  animation: cinePop 0.9s ease-out forwards; pointer-events: none; z-index: 3; }
+.cine-pop.dmg { color: #fff; } .cine-pop.crit { color: var(--gold); font-size: 38px; } .cine-pop.miss { color: #aab; font-size: 20px; } .cine-pop.heal { color: var(--good); }
+@keyframes cinePop { 0% { margin-top: 10px; opacity: 0; transform: translateX(-50%) scale(0.6); } 20% { opacity: 1; transform: translateX(-50%) scale(1.15); } 100% { margin-top: -50px; opacity: 0; transform: translateX(-50%) scale(1); } }
+.cine-skip { position: absolute; bottom: 10px; right: 16px; color: var(--dim); font-size: 12px; }
+.cine.skipping { opacity: 0; transition: opacity 0.15s; }
+@media (max-width: 700px) { .cine-stage { height: 70vh; border-radius: 0; } .cine-plate { font-size: 11px; padding: 6px; } .cine-name b { font-size: 13px; } .cine-banner { font-size: 18px; } .cine-pop { font-size: 22px; } }
+@media (prefers-reduced-motion: reduce) { .cine-pop { animation-duration: 0.01s; } }
