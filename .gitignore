@@ -3,4 +3,3 @@ dist
 *.log
 .DS_Store
 
-# Source art (large originals); processed copies live in public/
