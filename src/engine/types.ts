@@ -602,6 +602,8 @@ export interface Run {
   dungeon?: { floor: number; of: number };
   /** Army-wide stats and resources. */
   army?: Army;
+  /** Which campaign: the endless Hyrule war, or Termina with its three-day cycle. */
+  campaign?: 'hyrule' | 'termina';
   /** Chamber of Trials modifiers for this campaign. */
   trials?: string[];
   /** Permanent bonuses bought between runs. */

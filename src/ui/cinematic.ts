@@ -1,3 +1,4 @@
+import { sfx } from './audio';
 import { STATUS_INFO } from '../engine/status';
 // A short side-view battle scene shown when two units fight, in the style of
 // classic tactics games: enemy on the left, player on the right, HP bars,
@@ -140,6 +141,7 @@ export function playCinematic(opts: CinematicOptions): Promise<void> {
       ], 560, 'ease-in-out');
       await wait(250);
 
+      sfx(!s.hit ? 'miss' : s.blocked ? 'block' : s.crit ? 'crit' : 'hit');
       if (s.hit) {
         const flash = el.querySelector('.cine-flash') as HTMLElement;
         void anim(flash, [{ opacity: s.crit ? 0.9 : 0.45 }, { opacity: 0 }], s.crit ? 320 : 180);
@@ -170,6 +172,7 @@ export function playCinematic(opts: CinematicOptions): Promise<void> {
       if (s.saved) banner(s.saved === 'fairy' ? 'A FAIRY REVIVES THEM!' : 'TRIFORCE OF COURAGE!');
       await lunge;
       if (s.killed) {
+        sfx('death');
         await anim(target, [{ opacity: 1, filter: 'brightness(1)' }, { opacity: 1, filter: 'brightness(4)', offset: 0.2 }, { opacity: 0, transform: 'translateY(30px)', filter: 'brightness(1)' }], 650, 'ease-in');
         if (target) target.style.opacity = '0';
       }

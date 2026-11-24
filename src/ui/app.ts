@@ -13,6 +13,7 @@ import { GEAR_SLOTS, PACK_SIZE, type GearSlot, type MapNode, type NodeType, type
 import { forgeLevel, slotFor } from '../engine/units';
 import { isSPair, rankOf } from '../engine/supports';
 import { BattleView } from './battleView';
+import { audioSettings, music, setAudio, sfx } from './audio';
 import {
   applyMetaToRun, awardMedals, BOUNTIES, bump, buyUpgrade, claimBounties, FORMATIONS, HERO_COST, heroCandidates, KITS, medalsForRun, setMax, TRIALS,
   trialMultiplier, unlockFormation, unlockHero, unlockKit, upgradeCost, upgradeLevel, UPGRADES, type RunChoices,
@@ -76,6 +77,7 @@ export class App {
   // ───────────────────────── Title ─────────────────────────
 
   title() {
+    music('title');
     const hasRun = !!this.run;
     this.setScreen(`
       <div class="title-screen">
@@ -86,6 +88,7 @@ export class App {
           ${hasRun ? '<button class="btn primary big" data-nav="continue">Continue Campaign</button>' : ''}
           <button class="btn ${hasRun ? '' : 'primary'} big" data-nav="new">New Campaign</button>
           <button class="btn" data-nav="sanctuary">🏛 Sanctuary <span class="dim">· ${this.meta.medals} Hero Medals</span></button>
+          <button class="btn" data-nav="sound">🔊 Sound</button>
           <button class="btn" data-nav="howto">How to Play</button>
           <button class="btn" data-nav="codex">Hyrule Archives</button>
         </div>
@@ -102,7 +105,21 @@ export class App {
       howto: () => this.howTo(),
       codex: () => this.codex(),
       sanctuary: () => this.sanctuary(),
+      sound: () => this.soundModal(),
     });
+  }
+
+  private soundModal() {
+    const a = audioSettings();
+    const m = modal(`
+      <h2>Sound</h2>
+      <div class="opt-row"><span>Sound effects</span><input type="range" min="0" max="100" value="${Math.round(a.sfx * 100)}" data-vol="sfx"></div>
+      <div class="opt-row"><span>Music</span><input type="range" min="0" max="100" value="${Math.round(a.music * 100)}" data-vol="music"></div>
+      <div class="opt-row"><label><input type="checkbox" data-mute ${a.muted ? 'checked' : ''}> Mute everything</label></div>
+      <p class="dim small">Music plays from files in the game's <code>music/</code> folder (title, map, battle, boss, victory, gameover, camp, shop, termina, moon). Tracks that aren't there are simply silent.</p>
+      <div class="center-text"><button class="btn primary" data-close>Done</button></div>`, { dismissable: true });
+    m.el.querySelectorAll<HTMLInputElement>('[data-vol]').forEach((r) => r.addEventListener('input', () => { setAudio({ [r.dataset.vol!]: Number(r.value) / 100 }); if (r.dataset.vol === 'sfx') sfx('tick'); }));
+    m.el.querySelector<HTMLInputElement>('[data-mute]')?.addEventListener('change', (e) => setAudio({ muted: (e.target as HTMLInputElement).checked }));
   }
 
   // ───────────────────────── Sanctuary (between campaigns) ─────────────────────────
@@ -361,11 +378,12 @@ export class App {
   private common(rerender: () => void) {
     return {
       menu: () => {
-        const m = modal(`<h2>Paused</h2><div class="menu"><button class="btn" data-close>Resume</button><button class="btn" data-k="title">Save & Quit to Title</button><button class="btn danger" data-k="abandon">Abandon Campaign</button></div>`, { dismissable: true });
+        const m = modal(`<h2>Paused</h2><div class="menu"><button class="btn" data-close>Resume</button><button class="btn" data-k="sound">🔊 Sound</button><button class="btn" data-k="title">Save & Quit to Title</button><button class="btn danger" data-k="abandon">Abandon Campaign</button></div>`, { dismissable: true });
         m.el.addEventListener('click', async (e) => {
           const k = (e.target as HTMLElement).closest('[data-k]') as HTMLElement | null;
           if (!k) return;
           m.close();
+          if (k.dataset.k === 'sound') this.soundModal();
           if (k.dataset.k === 'title') this.title();
           if (k.dataset.k === 'abandon' && (await confirmDialog('Abandon this campaign? You still earn Hero Medals for how far you got.', 'Abandon'))) {
             this.recordEnd();
@@ -514,6 +532,7 @@ export class App {
   }
 
   mapScreen() {
+    music(this.run?.campaign === 'termina' ? (this.run.region === 'moon' ? 'moon' : 'termina') : 'map');
     const run = this.run!;
     const avail = new Set(availableNodes(run).map((n) => n.id));
     const rows: MapNode[][] = [];
@@ -570,6 +589,7 @@ export class App {
   // ───────────────────────── Battle ─────────────────────────
 
   private battle() {
+    music(this.run?.battle?.nodeType === 'boss' || this.run?.battle?.nodeType === 'elite' ? 'boss' : 'battle');
     this.setScreen('');
     this.battleView = new BattleView(this.root.firstElementChild as HTMLElement, this.run!, () => this.save(), (r) => this.afterBattle(r));
     void this.battleView.mount();
@@ -617,6 +637,7 @@ export class App {
     if (summary.supportUps.some((x) => x.rank === 'S')) bump(p, 'supportS');
     for (const id of [...run.convoy, ...run.roster.flatMap((u) => [...u.weapons, ...Object.values(u.gear), ...u.pack.map((x) => x.id)])]) if (id && !p.itemsSeen.includes(id)) p.itemsSeen.push(id);
     this.recordEnd();
+    if (result === 'won') music('victory');
     if (result === 'lost' && !summary.retreated) return this.gameOver(commanderFell ? 'Your Commander has fallen.' : 'Your army was wiped out.');
     for (const id of bosses) if (!this.meta.bossesDefeated.includes(id)) this.meta.bossesDefeated.push(id);
     saveMeta(this.meta);
@@ -659,6 +680,7 @@ export class App {
   }
 
   private gameOver(reason: string) {
+    music('gameover');
     const run = this.run!;
     this.run = null;
     this.save();
@@ -830,6 +852,7 @@ export class App {
   }
 
   private shopScreen() {
+    music('shop');
     const run = this.run!;
     const ev = run.event as EventOf<'shop'>;
     const render = () => {
@@ -860,7 +883,7 @@ export class App {
           const kind = el.dataset.kind as ItemKindTag;
           const id = el.dataset.id!;
           const uid = await this.unitPicker(`Give ${esc(itemName(id))} to…`, (u) => canTake(u, id), (u) => this.itemPreview(u, id));
-          if (uid && buy(run, kind, id, uid)) { this.save(); render(); }
+          if (uid && buy(run, kind, id, uid)) { sfx('coin'); this.save(); render(); }
         },
         supplies: () => { if (buySupplies(run)) { this.save(); render(); } },
         leave: () => this.finishEvent(),
@@ -876,6 +899,7 @@ export class App {
   }
 
   private campScreen() {
+    music('camp');
     const run = this.run!;
     this.setScreen(`
       ${this.topBar()}
@@ -910,6 +934,7 @@ export class App {
   }
 
   private fountainScreen() {
+    music('camp');
     const run = this.run!;
     const canRevive = run.fallen.length > 0 && run.roster.length < armyCap(run);
     this.setScreen(`
@@ -954,6 +979,7 @@ export class App {
   }
 
   private treasureScreen() {
+    sfx('chest');
     const run = this.run!;
     const ev = run.event as EventOf<'treasure'>;
     const label = (r: Reward) => ({ weapon: 'Weapon', gear: 'Gear', item: 'Item', permanent: 'Permanent upgrade' })[r.kind];
@@ -1015,6 +1041,7 @@ export class App {
   }
 
   private blacksmithScreen() {
+    music('shop');
     const run = this.run!;
     const ev = run.event as EventOf<'blacksmith'>;
     const render = () => {

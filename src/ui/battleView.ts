@@ -13,6 +13,7 @@ import {
 } from '../engine/combat';
 import { computeMoves, footprint, keyOf, posOf, terrainAt, tilesInRange, unitAt, unitDist, type Moves } from '../engine/grid';
 import { RNG } from '../engine/rng';
+import { audioSettings, setAudio, sfx } from './audio';
 import { issueOrder, ORDERS, orderTargets, orderUnusable } from '../engine/army';
 import { TERRAIN_BONUS } from '../engine/rules';
 import type { RunWithEvent } from '../engine/run';
@@ -52,6 +53,7 @@ export class BattleView {
   private onKey = (e: KeyboardEvent) => this.handleKey(e);
   private dungeon?: { floor: number; of: number };
   private tileSig = '';
+  private suppressClick = false;
   private orderId: OrderId | null = null;
   private subPhase: 'allied' | 'environment' | null = null;
   private get phaseLabel(): string {
@@ -128,7 +130,8 @@ export class BattleView {
   private layout() {
     const availW = this.els.wrap.clientWidth - 8;
     const availH = Math.max(320, window.innerHeight - 140);
-    this.tile = Math.max(22, Math.min(60, Math.floor(Math.min(availW / this.b.width, availH / this.b.height))));
+    // Fit the map when possible; big maps keep readable tiles and scroll/drag instead.
+    this.tile = Math.max(34, Math.min(60, Math.floor(Math.min(availW / this.b.width, availH / this.b.height))));
     this.els.board.style.setProperty('--t', `${this.tile}px`);
     this.els.board.style.width = `${this.tile * this.b.width}px`;
     this.els.board.style.height = `${this.tile * this.b.height}px`;
@@ -446,7 +449,8 @@ export class BattleView {
       html = `<button class="btn primary" data-act="end">End Turn <span class="dim">(${ready} ready)</span></button>
         ${this.b.orders?.length ? `<button class="btn" data-act="orders">⚑ Orders <span class="dim">${this.b.cp ?? 0}/${this.b.cpMax ?? 0} CP</span></button>` : ''}
         <button class="btn ${this.showDanger ? 'on' : ''}" data-act="danger">Danger Zone</button>
-        <button class="btn small" data-act="anims" title="Battle animations">🎬 ${animationsEnabled() ? 'On' : 'Off'}</button>`;
+        <button class="btn small" data-act="anims" title="Battle animations">🎬 ${animationsEnabled() ? 'On' : 'Off'}</button>
+        <button class="btn small" data-act="mute" title="Sound">${audioSettings().muted ? '🔇' : '🔊'}</button>`;
     } else if (m === 'select') {
       const sel = this.sel;
       const mountBtn = sel && mountOf(sel) && canRide(sel)
@@ -490,6 +494,28 @@ export class BattleView {
   // ───────────────────────── Input ─────────────────────────
 
   private bind() {
+    // Drag to pan large maps (mouse); touch scrolls natively.
+    const wrap = this.els.wrap;
+    let drag: { x: number; y: number; sl: number; st: number; moved: boolean } | null = null;
+    wrap.addEventListener('pointerdown', (e) => {
+      if (e.pointerType !== 'mouse' || e.button !== 0) return;
+      drag = { x: e.clientX, y: e.clientY, sl: wrap.scrollLeft, st: wrap.scrollTop, moved: false };
+    });
+    window.addEventListener('pointermove', (e) => {
+      if (!drag) return;
+      const dx = e.clientX - drag.x, dy = e.clientY - drag.y;
+      if (!drag.moved && Math.abs(dx) + Math.abs(dy) < 8) return;
+      drag.moved = true;
+      wrap.classList.add('dragging');
+      wrap.scrollLeft = drag.sl - dx;
+      wrap.scrollTop = drag.st - dy;
+    });
+    window.addEventListener('pointerup', () => {
+      if (drag?.moved) { this.suppressClick = true; setTimeout(() => (this.suppressClick = false), 0); }
+      drag = null;
+      wrap.classList.remove('dragging');
+    });
+
     const tileFrom = (e: Event): Pos | null => {
       const el = (e.target as HTMLElement).closest('.tile') as HTMLElement | null;
       return el ? { x: Number(el.dataset.x), y: Number(el.dataset.y) } : null;
@@ -507,6 +533,7 @@ export class BattleView {
       this.renderPanel();
     });
     this.els.tiles.addEventListener('click', (e) => {
+      if (this.suppressClick) return;
       const p = tileFrom(e);
       if (p) void this.clickTile(p);
     });
@@ -534,6 +561,7 @@ export class BattleView {
   }
 
   private deselect() {
+    if (this.sel) sfx('cancel');
     this.sel = null;
     this.moves = null;
     this.origin = null;
@@ -544,6 +572,7 @@ export class BattleView {
   }
 
   private selectUnit(u: Unit) {
+    sfx('select');
     this.sel = u;
     this.origin = { x: u.x, y: u.y };
     this.moves = computeMoves(this.b, u);
@@ -677,6 +706,10 @@ export class BattleView {
       }
       case 'ordertarget':
         if (this.orderId && el?.dataset.uid) await this.giveOrder(this.orderId, el.dataset.uid);
+        return;
+      case 'mute':
+        setAudio({ muted: !audioSettings().muted });
+        this.renderActions();
         return;
       case 'anims':
         setAnimationsEnabled(!animationsEnabled());
@@ -834,8 +867,11 @@ export class BattleView {
   /** After a player unit moves: traps spring, hidden things are revealed. */
   private afterMove(u: Unit) {
     const dmg = triggerTraps(this.b, u);
-    if (dmg) { this.float(u, `TRAP −${dmg}`, 'dmg'); this.addLog(`⚠ <b class="player">${esc(u.name)}</b> stepped on a spike trap (−${dmg} HP, rooted)!`); }
-    for (const name of revealNearby(this.b)) this.addLog(`👁 ${esc(name)} is revealed!`);
+    if (dmg) { sfx('hit'); this.float(u, `TRAP −${dmg}`, 'dmg'); this.addLog(`⚠ <b class="player">${esc(u.name)}</b> stepped on a spike trap (−${dmg} HP, rooted)!`); }
+    for (const name of revealNearby(this.b)) {
+      sfx('secret');
+      this.addLog(`👁 ${esc(name)} is revealed!`);
+    }
     this.renderUnits();
   }
 
@@ -863,6 +899,7 @@ export class BattleView {
   // ───────────────────────── Animation ─────────────────────────
 
   private async walk(u: Unit, path: Pos[]) {
+    if (path.length > 1) sfx(u.team === 'player' ? 'move' : 'step');
     const el = this.unitEls.get(u.uid);
     const prev = this.mode;
     this.mode = 'busy';
@@ -931,6 +968,7 @@ export class BattleView {
       }
       await sleep(180);
       const tBody = this.unitEls.get(s.target)?.querySelector('.u-body') as HTMLElement | null;
+      sfx(!s.hit ? 'miss' : s.blocked ? 'block' : s.crit ? 'crit' : 'hit');
       if (s.hit) {
         tBody?.classList.remove('hurt');
         void tBody?.offsetWidth;
@@ -948,6 +986,7 @@ export class BattleView {
       await sleep(s.crit ? 420 : 320);
       this.els.board.classList.remove('shake');
       if (s.killed) {
+        sfx('death');
         this.unitEls.get(s.target)?.classList.add('dying');
         this.addLog(`☠ ${esc(tg.name)} has fallen.`);
         await sleep(450);
@@ -975,6 +1014,7 @@ export class BattleView {
     const res = castAbility(this.b, u, id, rng, targetUid, at);
     this.b.rngState = rng.state;
     if (!res) { this.mode = 'action'; this.renderAll(); return; }
+    if (res.transformed) sfx('transform'); else if (res.def.kind !== 'song') sfx('spell');
     this.addLog(`<b class="${u.team}">${esc(u.name)}</b> ${res.def.kind === 'song' ? 'plays' : res.def.kind === 'technique' ? 'uses' : 'casts'} ${esc(res.def.name)}.`);
     await this.banner(res.def.name, res.def.kind === 'song' ? 'song' : 'player');
     if (res.def.id === 'dinsFire') {
@@ -1026,6 +1066,7 @@ export class BattleView {
     const res = useItem(this.b, u, index, rng, at);
     this.b.rngState = rng.state;
     if (!res) { this.mode = 'action'; this.renderAll(); return; }
+    sfx(res.item.kind === 'bomb' ? 'bomb' : res.heals.length || res.item.kind === 'cure' ? 'heal' : res.item.kind === 'tool' ? 'secret' : 'confirm');
     this.addLog(`<b class="${u.team}">${esc(u.name)}</b> uses ${esc(res.item.name)}.`);
     if (at && (res.item.kind === 'bomb' || res.item.kind === 'fruit')) {
       const blast = document.createElement('div');
@@ -1063,6 +1104,7 @@ export class BattleView {
   private async doHeal(healer: Unit, t: Unit, staffId?: string) {
     const rng = new RNG(this.b.rngState);
     const res = resolveHeal(this.b, healer, t, rng, staffId);
+    sfx('heal');
     this.b.rngState = rng.state;
     this.float(t, `+${res.amount}`, 'heal');
     this.addLog(`<b class="${healer.team}">${esc(healer.name)}</b> heals ${esc(t.name)} for ${res.amount}.`);
@@ -1072,6 +1114,7 @@ export class BattleView {
   }
 
   private async levelUps(ups: LevelUp[]) {
+    if (ups.length) sfx('levelUp');
     if (ups.length) await showLevelUps(ups, this.b.units);
   }
 
@@ -1087,6 +1130,7 @@ export class BattleView {
   }
 
   private async banner(text: string, cls: string) {
+    sfx(cls === 'song' ? 'song' : 'phase');
     const el = document.createElement('div');
     el.className = `phase-banner ${cls}`;
     el.innerHTML = `<span>${esc(text)}</span>`;
@@ -1245,6 +1289,7 @@ export class BattleView {
     this.renderAll();
     const el = document.createElement('div');
     el.className = `phase-banner big ${result === 'won' ? 'player' : 'enemy'}`;
+    sfx(result === 'won' ? 'victory' : 'defeat');
     el.innerHTML = `<span>${result === 'won' ? 'VICTORY' : this.b.fallen.some((u) => u.isCommander) ? 'COMMANDER LOST' : 'DEFEAT'}</span>`;
     this.els.wrap.appendChild(el);
     await sleep(1600);
