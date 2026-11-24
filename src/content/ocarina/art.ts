@@ -7,6 +7,7 @@ export const ART_ALIASES: Record<string, string> = {
   ganondorfBoss: 'ganondorf',
   // Generic soldiers of the same army can share a look:
   hyruleKnight: 'hyruleSoldier',
+  hyruleArcher: 'hyruleSoldier',
   hyruleCavalry: 'hyruleSoldier',
   goronRoller: 'goronWarrior',
   biggoron: 'goronWarrior',
