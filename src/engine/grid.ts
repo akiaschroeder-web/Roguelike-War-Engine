@@ -45,7 +45,12 @@ export function tileCost(b: Battle, unit: Unit, t: Terrain): number {
   let c = MOVE_COSTS[mt][t];
   if (mt === 'fixed') return INF;
   const race = RACES[unit.race];
-  if (t === 'water' && canSwim(unit)) c = 1;
+  const watery = t === 'water' || t === 'poisonWater' || t === 'current';
+  if (watery && canSwim(unit)) c = 1;
+  else if (watery && unit.skills.includes('dekuMobility')) c = 2; // Deku Link bounces across water
+  else if (watery && unit.race === 'deku') c = 3; // other Deku hop a little
+  if (race?.waterOnly && !watery) return INF; // Lord Jabu-Jabu stays in the water
+  if (t === 'rollingRamp' && unit.race === 'goron') c = 1;
   if (t === 'forest' && (race?.forestWalker || forestFriend(b, unit))) c = 1;
   if (isMounted(unit)) {
     if (t === 'forest' && hasEffect(unit, 'forestRunner')) c = 1;

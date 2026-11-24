@@ -5,7 +5,7 @@ import { ITEMS } from '../data/registry';
 import { footDist, footprint, inBounds, keyOf, unitAt } from './grid';
 import { RNG } from './rng';
 import { addStatus } from './status';
-import { unitTags } from './units';
+import { hasEffect, unitTags } from './units';
 import type { Battle, Pos, Terrain, Unit, WorldId } from './types';
 
 const DIRS = [[1, 0], [-1, 0], [0, 1], [0, -1]];
@@ -46,6 +46,7 @@ export function decorateField(b: Battle, rng: RNG, nodeType: string) {
     if ((e.artId === 'poe' || e.artId === 'wallmaster' || (tags.includes('undead') && world === 'kakarikoGraveyard')) && rng.chance(60)) e.hidden = true;
   }
   // Desert storms
+  decorateTermina(b, rng);
   if (world === 'gerudoDesert' && rng.chance(30)) b.weather = { kind: 'sandstorm', turns: 4 };
   if (world === 'zorasDomain' && rng.chance(20)) b.weather = { kind: 'rain', turns: 4 };
 }
@@ -92,12 +93,16 @@ export function revealNearby(b: Battle): string[] {
     if (!e.hidden) continue;
     const found = players.some((p) => {
       const d = footDist(p.x, p.y, p.size, e.x, e.y, e.size);
-      return d <= 1 || (p.buffs?.some((x) => x.id === 'lens') && d <= 4) || (p.skills.includes('graveyardShift') && d <= 3 && unitTags(e).includes('undead'));
+      return d <= 1 || (p.buffs?.some((x) => x.id === 'lens') && d <= 4) || (p.skills.includes('graveyardShift') && d <= 3 && unitTags(e).includes('undead'))
+        || (p.skills.includes('kooloolimpah') && d <= 6) || (hasEffect(p, 'garoSight') && d <= 4) || (hasEffect(p, 'scents') && d <= 4);
     });
     if (found) { e.hidden = false; out.push(e.name); }
   }
   for (const t of b.traps ?? []) {
-    if (t.hidden && players.some((p) => p.buffs?.some((x) => x.id === 'lens') && footDist(p.x, p.y, p.size, t.x, t.y, 1) <= 4)) t.hidden = false;
+    if (t.hidden && players.some((p) => {
+      const d = footDist(p.x, p.y, p.size, t.x, t.y, 1);
+      return ((p.buffs?.some((x) => x.id === 'lens') || hasEffect(p, 'scents')) && d <= 4) || (p.skills.includes('kooloolimpah') && d <= 6);
+    })) t.hidden = false;
   }
   return out;
 }
@@ -106,9 +111,10 @@ export function revealNearby(b: Battle): string[] {
 
 /** A player unit ending its move on a trap: 20% max HP and rooted for a turn. */
 export function triggerTraps(b: Battle, u: Unit): number {
-  if (u.team !== 'player' || moveIsFlying(u)) return 0;
+  if (moveIsFlying(u)) return 0;
   const tiles = footprint(u.x, u.y, u.size);
-  const i = (b.traps ?? []).findIndex((t) => tiles.some((p) => p.x === t.x && p.y === t.y));
+  // Hidden spike traps catch your army; Death Armos Cores you planted catch the enemy.
+  const i = (b.traps ?? []).findIndex((t) => (u.team === 'player' ? !t.armed : !!t.armed) && tiles.some((p) => p.x === t.x && p.y === t.y));
   if (i < 0) return 0;
   b.traps!.splice(i, 1);
   const dmg = Math.min(u.hp - 1, Math.ceil(u.stats.hp * 0.2));
@@ -177,12 +183,12 @@ export function fish(b: Battle, rng: RNG): { item?: string; rupees?: number } {
 // ───────────────────────── Terrain changes ─────────────────────────
 
 /** Bombs break cracked walls in their blast. Returns tiles broken. */
-export function blastTerrain(b: Battle, at: Pos, radius: number): number {
+export function blastTerrain(b: Battle, at: Pos, radius: number, walls = false): number {
   let n = 0;
   for (let y = at.y - radius; y <= at.y + radius; y++) for (let x = at.x - radius; x <= at.x + radius; x++) {
     if (!inBounds(b, x, y) || Math.abs(x - at.x) + Math.abs(y - at.y) > radius) continue;
     const k = keyOf(b, x, y);
-    if (b.tiles[k] === 'cracked') { b.tiles[k] = 'plain'; n++; }
+    if (b.tiles[k] === 'cracked' || (walls && (b.tiles[k] === 'wall' || b.tiles[k] === 'frozenMech' || b.tiles[k] === 'sunBlock'))) { b.tiles[k] = 'plain'; n++; }
   }
   return n;
 }
@@ -253,6 +259,12 @@ export function environmentPhase(b: Battle): EnvEvent[] {
   const rng = new RNG(b.rngState);
   const events: EnvEvent[] = [];
   const rain = b.weather?.kind === 'rain';
+  if ((b.timeSlowed ?? 0) > 0) {
+    b.timeSlowed!--;
+    events.push({ text: 'Time crawls: the battlefield holds still.' });
+    return events;
+  }
+  terminaEnvironment(b, events);
 
   // Fire
   if (rain && b.fires?.length) { b.fires = []; events.push({ text: 'The rain puts out the fires.' }); }
@@ -304,4 +316,160 @@ export function environmentPhase(b: Battle): EnvEvent[] {
   }
   b.rngState = rng.state;
   return events;
+}
+
+/** Sunlight or Light Arrows melt Sun Blocks within `r` of a unit. Returns how many. */
+export function meltSunBlocks(b: Battle, near: { x: number; y: number; size: number }, r: number): number {
+  let n = 0;
+  b.tiles.forEach((t, k) => {
+    if (t !== 'sunBlock') return;
+    const x = k % b.width, y = Math.floor(k / b.width);
+    if (footDist(x, y, 1, near.x, near.y, near.size) <= r) { b.tiles[k] = 'plain'; n++; }
+  });
+  return n;
+}
+
+/** Fire thaws Frozen Mechanisms within `r`. */
+export function thawMechanisms(b: Battle, near: { x: number; y: number; size: number }, r: number): number {
+  let n = 0;
+  b.tiles.forEach((t, k) => {
+    if (t !== 'frozenMech') return;
+    const x = k % b.width, y = Math.floor(k / b.width);
+    if (footDist(x, y, 1, near.x, near.y, near.size) <= r) { b.tiles[k] = 'plain'; n++; }
+  });
+  return n;
+}
+
+// ───────────────────────── Termina battlefield spaces ─────────────────────────
+
+const TERMINA_FEATURES: Record<string, Partial<Record<Terrain, number>>> = {
+  clockTown: { mailbox: 3, owlStatue: 1, weightedSwitch: 1 },
+  terminaField: { owlStatue: 1, dekuFlower: 2, mailbox: 1 },
+  woodfall: { dekuFlower: 4, goldFlower: 1, poisonWater: 6, owlStatue: 1 },
+  snowhead: { frozenMech: 3, rollingRamp: 3, owlStatue: 1 },
+  greatBay: { current: 6, waterwheel: 1, owlStatue: 1, mailbox: 1 },
+  ikana: { sunBlock: 3, inversionSwitch: 1, weightedSwitch: 1, owlStatue: 1 },
+  moon: { dekuFlower: 2, goldFlower: 1, rollingRamp: 1, sunBlock: 2 },
+};
+
+/** Scatter a region's special spaces across the middle of the map. */
+export function decorateTermina(b: Battle, rng: RNG) {
+  const feats = TERMINA_FEATURES[b.world];
+  if (!feats) return;
+  const occupied = (x: number, y: number) => !!unitAt(b, x, y);
+  for (const [t, count] of Object.entries(feats) as [Terrain, number][]) {
+    for (let i = 0; i < count; i++) {
+      const walkableTarget = !['owlStatue', 'frozenMech', 'waterwheel', 'sunBlock', 'mailbox'].includes(t);
+      const cand: number[] = [];
+      b.tiles.forEach((cur, k) => {
+        const x = k % b.width, y = Math.floor(k / b.width);
+        if (x < 3 || x > b.width - 4 || occupied(x, y)) return;
+        if (t === 'poisonWater' || t === 'current') { if (cur === 'water' || (cur === 'plain' && rng.chance(8))) cand.push(k); return; }
+        if (t === 'waterwheel') { if (cur === 'wall' || cur === 'plain') cand.push(k); return; }
+        if (cur === 'plain' || (!walkableTarget && cur === 'wall')) cand.push(k);
+      });
+      if (!cand.length) continue;
+      b.tiles[rng.pick(cand)] = t;
+    }
+  }
+  if (b.tiles.includes('current')) b.currentDir = rng.pick([[0, 1], [0, -1], [1, 0], [-1, 0]] as [number, number][]);
+  if (b.tiles.includes('inversionSwitch')) {
+    // Some walls and some open ground swap places when the switch is pressed.
+    const walls = b.tiles.map((t, k) => (t === 'wall' ? k : -1)).filter((k) => k >= 0);
+    const open = b.tiles.map((t, k) => (t === 'plain' && !occupied(k % b.width, Math.floor(k / b.width)) && k % b.width > 3 && k % b.width < b.width - 4 ? k : -1)).filter((k) => k >= 0);
+    b.invertTiles = [...rng.shuffle(walls).slice(0, 4), ...rng.shuffle(open).slice(0, 4)];
+  }
+}
+
+/** Environment Phase in Termina: poisoned water, currents, waterwheels and weighted switches. */
+function terminaEnvironment(b: Battle, events: EnvEvent[]) {
+  for (const u of b.units) {
+    const tiles = footprint(u.x, u.y, u.size).map((p) => b.tiles[keyOf(b, p.x, p.y)]);
+    if (tiles.includes('poisonWater') && u.hp > 1 && !u.skills.includes('jungleRitual')) {
+      const d = Math.min(u.hp - 1, Math.ceil(u.stats.hp * 0.1));
+      u.hp -= d;
+      addStatus(u, 'poison', 2);
+      events.push({ text: `${u.name} is hurt by the poisoned water.`, uid: u.uid, damage: d });
+    }
+  }
+  // Currents push swimmers along.
+  if (b.currentDir) {
+    const [dx, dy] = b.currentDir;
+    for (const u of b.units) {
+      if (b.tiles[keyOf(b, u.x, u.y)] !== 'current' || u.size > 1) continue;
+      const nx = u.x + dx, ny = u.y + dy;
+      if (!inBounds(b, nx, ny) || unitAt(b, nx, ny)) continue;
+      const t = b.tiles[keyOf(b, nx, ny)];
+      if (!['water', 'current', 'poisonWater', 'plain', 'bridge'].includes(t)) continue;
+      u.x = nx; u.y = ny;
+      events.push({ text: `The current carries ${u.name} along.` });
+    }
+    // Waterwheels turn the currents every third turn.
+    if (b.tiles.includes('waterwheel') && b.turn % 3 === 0) {
+      b.currentDir = [-dx, -dy] as [number, number];
+      events.push({ text: 'The waterwheel turns: the currents reverse.' });
+    }
+  }
+  // Weighted switches: something heavy opens the Time Blocks while it stays put.
+  const pressed = b.tiles.some((t, k) => {
+    if (t !== 'weightedSwitch') return false;
+    const u = unitAt(b, k % b.width, Math.floor(k / b.width));
+    return !!u && ((u.baseSize ?? u.size) >= 2 || u.stats.con >= 14);
+  });
+  if (pressed !== !!b.switchHeld && hasTimeBlocks(b)) {
+    b.switchHeld = pressed;
+    b.tiles.forEach((t, k) => {
+      if (pressed && t === 'timeBlock') b.tiles[k] = 'timeGap';
+      else if (!pressed && t === 'timeGap' && !unitAt(b, k % b.width, Math.floor(k / b.width))) b.tiles[k] = 'timeBlock';
+    });
+    events.push({ text: pressed ? 'A weighted switch sinks: the Time Blocks drop away.' : 'The switch rises: Time Blocks return.' });
+  }
+}
+
+/** Stepping on an Inversion Switch flips the marked walls and floors. */
+export function pressInversion(b: Battle, u: Unit): boolean {
+  if (b.tiles[keyOf(b, u.x, u.y)] !== 'inversionSwitch' || !b.invertTiles?.length) return false;
+  for (const k of b.invertTiles) {
+    const x = k % b.width, y = Math.floor(k / b.width);
+    if (b.tiles[k] === 'wall') b.tiles[k] = 'plain';
+    else if (b.tiles[k] === 'plain' && !unitAt(b, x, y)) b.tiles[k] = 'wall';
+  }
+  return true;
+}
+
+/** Mailboxes next to the unit that haven't been opened. */
+export function adjacentMailboxes(b: Battle, u: Unit): number[] {
+  const out: number[] = [];
+  for (const p of footprint(u.x, u.y, u.size)) {
+    for (const [dx, dy] of DIRS) {
+      const x = p.x + dx, y = p.y + dy;
+      if (!inBounds(b, x, y)) continue;
+      const k = keyOf(b, x, y);
+      if (b.tiles[k] === 'mailbox' && !(b.mailOpened ?? []).includes(k) && !out.includes(k)) out.push(k);
+    }
+  }
+  return out;
+}
+
+const MAIL_LOOT = ['redPotion', 'greenPotion', 'mysteryMilk', 'magicMushroom', 'springWater', 'bomb', 'chateauRomani'];
+
+/** Check a mailbox: Rupees, an item, or a letter. The Postman's Hat doubles it. */
+export function openMailbox(b: Battle, u: Unit, rng: RNG): string {
+  const k = adjacentMailboxes(b, u)[0];
+  if (k === undefined) return '';
+  (b.mailOpened ??= []).push(k);
+  const twice = hasEffect(u, 'postman') ? 2 : 1;
+  const parts: string[] = [];
+  for (let i = 0; i < twice; i++) {
+    if (rng.chance(55)) {
+      const id = rng.pick(MAIL_LOOT.filter((x) => ITEMS[x]));
+      (b.loot ??= []).push(id);
+      parts.push(ITEMS[id].name);
+    } else {
+      const r = rng.pick([20, 50, 100]);
+      b.bonusRupees = (b.bonusRupees ?? 0) + r;
+      parts.push(`₹${r}`);
+    }
+  }
+  return `Inside the mailbox: ${parts.join(' and ')}.`;
 }

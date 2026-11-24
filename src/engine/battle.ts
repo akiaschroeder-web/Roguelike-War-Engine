@@ -1,11 +1,13 @@
-import { bossPool, ENEMIES, rosterFor, TEMPLATES, worldDef } from '../data/registry';
+import { bossPool, ENEMIES, GEAR, rosterFor, TEMPLATES, worldDef } from '../data/registry';
 import { anchorCost, footprint, keyOf, unitAt, unitDist } from './grid';
 import { generateMap } from './mapgen';
 import { RNG } from './rng';
 import { INF, LAVA_DAMAGE_PCT, TERRAIN_BONUS } from './rules';
-import { tickStatuses } from './status';
+import { addStatus, tickStatuses } from './status';
 import { decorateField } from './field';
-import { canRide, hasEffect, isLavaImmune, isMounted, makeEnemy, mountOf, sizeWhen, makeEnemyFromTemplate, prepareForBattle } from './units';
+import { revertMask } from './terminaAbilities';
+import { roomFor } from './transform';
+import { canRide, unitTags, hasEffect, isLavaImmune, isMounted, makeEnemy, mountOf, sizeWhen, makeEnemyFromTemplate, prepareForBattle } from './units';
 import type { Battle, BossDef, EnemyArchetype, EnemyForce, NodeType, Objective, ObjectiveType, Pos, Team, Terrain, Unit, WorldId } from './types';
 
 export interface BattleSetup {
@@ -271,6 +273,7 @@ export function startPhase(b: Battle, team: Team): TurnStartEvent[] {
     if (hasEffect(u, 'mpRegen')) u.mp = Math.min(u.stats.mp, u.mp + 2);
     u.sta = Math.min(u.stats.sta, (u.sta ?? u.stats.sta) + 2 + (hasEffect(u, 'staRegen') ? 2 : 0));
     for (const k of Object.keys(u.cooldowns ?? {})) if (--u.cooldowns![k] <= 0) delete u.cooldowns![k];
+    terminaUpkeep(b, u, events);
     const max = u.stats.hp;
     const tiles = footprint(u.x, u.y, u.size).map((p) => b.tiles[keyOf(b, p.x, p.y)]);
     const anchor = tiles[0];
@@ -286,7 +289,10 @@ export function startPhase(b: Battle, team: Team): TurnStartEvent[] {
       if (a.skills.includes('guardianOfTheForest') && unitDist(u, a) <= 3) { pct += 10; sources.push('Deku Tree'); }
       if (a.skills.includes('songOfTheRanch') && isMounted(u) && unitDist(u, a) <= 1) { pct += 10; sources.push('Song of the Ranch'); }
       if (hasEffect(a, 'lightAura') && unitDist(u, a) <= 1) { flat += 3; sources.push('Light Medallion'); }
+      if (a.skills.includes('guardianOfTheZora') && u.race === 'zora' && unitDist(u, a) <= 4) { pct += 5; sources.push('Jabu-Jabu'); }
     }
+    if (u.skills.includes('forestGuardian') && tiles.includes('forest')) { pct += 10; sources.push('Forest Guardian'); }
+    if (b.night && b.bonus === 'undeadArmy' && unitTags(u).includes('undead') && u.team === 'player') { pct += 5; sources.push('night'); }
     let damage = 0;
     if (tiles.includes('lava') && !isLavaImmune(u)) {
       damage = Math.min(u.hp - 1, Math.ceil((max * LAVA_DAMAGE_PCT) / 100));
@@ -301,7 +307,7 @@ export function startPhase(b: Battle, team: Team): TurnStartEvent[] {
 
 /** Spawn reinforcements in survive maps. */
 export function spawnReinforcements(b: Battle): Unit[] {
-  if (b.objective.type !== 'survive' || b.turn % 2 !== 0) return [];
+  if (b.objective.type !== 'survive' || b.turn % 2 !== 0 || (b.timeSlowed ?? 0) > 0) return [];
   const rng = new RNG(b.rngState);
   const spawned: Unit[] = [];
   const edge = b.width - 1;
@@ -466,4 +472,45 @@ export function freeCaptive(b: Battle, u: Unit, captiveUid: string): Unit | null
 export function adjacentCaptives(b: Battle, u: Unit): Unit[] {
   if (u.npc || u.team !== 'player') return [];
   return b.units.filter((c) => c.captive && unitDist(u, c) === 1);
+}
+
+// ───────────────────────── Termina upkeep ─────────────────────────
+
+/** Start-of-phase effects from Majora's Mask units, masks and battlefield spaces. */
+function terminaUpkeep(b: Battle, u: Unit, events: TurnStartEvent[]) {
+  // Fierce Deity and Giant forms drain MP; out of MP, the mask comes off.
+  const mask = u.maskForm ? GEAR[u.maskForm] : undefined;
+  if (mask?.upkeep) {
+    const cost = Math.ceil(mask.upkeep * (b.bonus === 'transformThrift' && u.team === 'player' ? 0.75 : 1));
+    if (u.mp >= cost) u.mp -= cost;
+    else if (roomFor(b, u, u.originalForm?.size ?? 1)) {
+      revertMask(u);
+      events.push({ uid: u.uid, heal: 0, damage: 0, source: 'The mask slips off (out of MP)' });
+    }
+  }
+  const foes = b.units.filter((e) => e.team !== u.team);
+  // Sharp's Song of Sorrow drains MP.
+  if (foes.some((e) => e.skills.includes('songOfSorrow') && unitDist(e, u) <= 3)) u.mp = Math.max(0, u.mp - 2);
+  // Odolwa's insect swarm stings nearby enemies at the start of his side's turn.
+  if (u.skills.includes('jungleRitual')) {
+    for (const e of foes) {
+      if (unitDist(e, u) > 2 || e.hp <= 1) continue;
+      const d = Math.min(e.hp - 1, Math.ceil(e.stats.hp * 0.08));
+      e.hp -= d;
+      events.push({ uid: e.uid, heal: 0, damage: d, source: "Odolwa's swarm" });
+    }
+  }
+  const here = b.tiles[keyOf(b, u.x, u.y)];
+  // Deku Flowers launch Deku into a glide; Gorons get a run-up from ramps.
+  if ((u.race === 'deku') && (here === 'dekuFlower' || here === 'goldFlower')) {
+    u.buffs.push({ id: 'glide', name: here === 'goldFlower' ? 'Golden Flower Glide' : 'Flower Glide', turns: 1, stats: { mov: here === 'goldFlower' ? 4 : 2 } });
+  }
+  if (u.race === 'goron' && here === 'rollingRamp') u.buffs.push({ id: 'ramp', name: 'Ramp Launch', turns: 1, stats: { mov: 3 } });
+  // Garo robes: a turn without attacking hides the wearer.
+  if (hasEffect(u, 'concealOnWait') && !u.attacked) addStatus(u, 'veiled', 1);
+  u.attacked = false;
+  // The Woodfall Giant grows forests where it stands.
+  if (u.skills.includes('forestGuardian')) {
+    for (const p of footprint(u.x, u.y, u.size)) if (b.tiles[keyOf(b, p.x, p.y)] === 'plain') b.tiles[keyOf(b, p.x, p.y)] = 'forest';
+  }
 }

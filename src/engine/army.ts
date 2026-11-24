@@ -129,7 +129,7 @@ export function orderTargets(b: Battle, id: OrderId): Unit[] {
   return [];
 }
 
-function reinforceTile(b: Battle, u: Unit): Pos | null {
+export function reinforceTile(b: Battle, u: Unit): Pos | null {
   for (let x = 0; x < Math.min(4, b.width); x++) {
     for (let y = 0; y < b.height; y++) {
       if (anchorCost(b, u, x, y) >= INF) continue;

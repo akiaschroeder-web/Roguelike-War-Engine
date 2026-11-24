@@ -1,11 +1,12 @@
-import { ABILITIES, CLASSES, ITEMS, WEAPONS } from '../data/registry';
+import { ABILITIES, CLASSES, GEAR, ITEMS, RACES, WEAPONS } from '../data/registry';
 import { gainSupport, supportBonus } from './supports';
 import { coordinatedBonus, moraleBonus } from './army';
 import { isHelpless, onDamaged, rollElement, statusMods, weatherMight } from './status';
 import { keyOf, terrainAt, unitDist } from './grid';
+import { meltSunBlocks, thawMechanisms } from './field';
 import type { RNG } from './rng';
 import { isMagical, TERRAIN_BONUS, TRIANGLE } from './rules';
-import { effectiveStats, forgeLevel, gainXp, gearBonus, hasEffect, isMounted, spendUse, unitTags } from './units';
+import { canSwim, effectiveStats, forgeLevel, gainXp, gearBonus, hasEffect, isMounted, spendUse, unitTags } from './units';
 import type { AbilityDef, Battle, Element, Pos, StatKey, StatusKind, Unit, WeaponDef } from './types';
 
 export interface SideForecast {
@@ -42,7 +43,9 @@ export interface Strike {
   byHp: number;
   killed: boolean;
   blocked?: boolean;
-  saved?: 'triforce' | 'fairy';
+  saved?: 'triforce' | 'fairy' | 'revive';
+  /** Collateral damage from a sweeping attack. */
+  splash?: boolean;
   /** Statuses inflicted by this hit. */
   statuses?: StatusKind[];
   /** The target's ice shattered. */
@@ -82,7 +85,9 @@ export function weaponOf(u: Unit): WeaponDef {
 }
 
 export function canWield(u: Unit, w: WeaponDef): boolean {
-  return w.type === 'natural' || w.type === 'instrument' || !!CLASSES[u.classId]?.weapons.includes(w.type);
+  if (w.races && !w.races.includes(u.race)) return false;
+  if (w.minSize && (u.baseSize ?? u.size) < w.minSize) return false;
+  return w.type === 'natural' || w.type === 'instrument' || !!w.anyClass || !!CLASSES[u.classId]?.weapons.includes(w.type);
 }
 
 export function canReach(w: WeaponDef, d: number): boolean {
@@ -158,8 +163,34 @@ export function situational(b: Battle, u: Unit, pos: Pos, foe: Unit, initiating:
     m.avoid += mb;
     if (initiating) m.dmg += coordinatedBonus(b, u, foe);
   }
+  // ── Termina skills and auras ──
+  const watery = (t: string) => t === 'water' || t === 'poisonWater' || t === 'current';
+  if (has('aquaticGrace') && watery(terrain)) m.avoid += 15;
+  if (has('royalTemper') && u.lastHitBy === foe.uid) m.str += 4;
+  if (has('spikedRoll') && initiating && u.movedDist >= 3) m.dmg += 4;
+  if (has('determination') && [...u.weapons.map((id) => WEAPONS[id]), ...Object.values(u.gear ?? {}).map((id) => GEAR[id!])].some((x) => x?.unique)) { m.spd += 2; m.skl += 2; }
+  if (has('dekuPhalanx') && allies.some((a) => a.templateId === 'dekuSoldier' && near(a, 1))) m.def += 2;
+  const igos = allies.find((a) => a.skills.includes('undyingKingdom'));
+  if (has('kingsBlade') && igos && near(igos, 3)) { m.str += 3; m.spd += 2; m.crit += 10; }
+  const loyal = [u, ...allies].filter((a) => a.skills.includes('undyingKingdom') || a.skills.includes('kingsBlade') || a.skills.includes('kingsShield'));
+  if (loyal.includes(u) && loyal.some((a) => a.skills.includes('undyingKingdom')) && loyal.some((a) => a.skills.includes('kingsBlade')) && loyal.some((a) => a.skills.includes('kingsShield'))) {
+    m.str += 2; m.def += 2; m.res += 2; m.hit += 10;
+  }
+  const tags = unitTags(u);
+  for (const a of allies) {
+    if (a.skills.includes('callTheGiants') && (u.baseSize ?? u.size) >= 3 && near(a, 3)) { m.str += 2; m.res += 2; }
+    if (a.skills.includes('royalCommand') && u.race === 'deku' && near(a, 2)) { m.str += 2; m.def += 2; }
+    if (a.skills.includes('mountainHero') && u.race === 'goron' && near(a, 1)) m.def += 2;
+    if (a.skills.includes('captainsOrders') && tags.includes('undead') && near(a, 4)) { m.str += 2; m.skl += 2; }
+    if (hasEffect(a, 'captain') && tags.includes('undead') && near(a, 3)) m.skl += 2;
+    if (a.skills.includes('spiritGuardian') && near(a, 3)) m.res += 3;
+    if (a.skills.includes('guardianOfTheZora') && u.race === 'zora' && near(a, 4)) { m.def += 3; m.res += 3; }
+    if (hasEffect(a, 'dekuCrown') && u.race === 'deku' && near(a, 2)) m.res += 1;
+  }
+  if (b.bonus === 'rolling' && initiating && u.movedDist >= 3 && (u.race === 'goron' || hasEffect(u, 'charge') || has('spikedRoll') || has('runawayMachine'))) m.dmg += 3;
   const sup = supportBonus(b, u, pos);
-  m.hit += sup.hit; m.avoid += sup.avoid; m.crit += sup.crit; m.def += sup.def; m.res += sup.def;
+  const cm = hasEffect(u, 'couple') ? 1.25 : 1;
+  m.hit += Math.round(sup.hit * cm); m.avoid += Math.round(sup.avoid * cm); m.crit += Math.round(sup.crit * cm); m.def += sup.def; m.res += sup.def;
   return m;
 }
 
@@ -169,7 +200,8 @@ function sideStats(
 ): SideForecast {
   const d = unitDist({ ...atk, ...atkPos }, { ...def, ...defPos });
   const helpless = !initiating && isHelpless(atk);
-  if (!weapon || weapon.type === 'staff' || weapon.type === 'instrument' || !canReach(weapon, d) || helpless) {
+  const beaming = !!weapon?.beam && d > 1;
+  if (!weapon || weapon.type === 'staff' || weapon.type === 'instrument' || !canReach(weapon, d) || helpless || (beaming && atk.mp < weapon.beam!)) {
     return { uid: atk.uid, weaponId: weapon?.id ?? null, canAttack: false, dmg: 0, hit: 0, crit: 0, attacks: 0, triangle: 0, effective: false, block: 0, arrowId: null };
   }
   const as = effectiveStats(atk);
@@ -180,7 +212,7 @@ function sideStats(
   const db = gearBonus(def);
   const terrain = TERRAIN_BONUS[b.tiles[keyOf(b, defPos.x, defPos.y)]];
   const tri = triangleOf(weapon, foeWeapon);
-  const magical = isMagical(weapon.type);
+  const magical = isMagical(weapon.type) || beaming;
   const tags = unitTags(def);
   const effective = !![...(weapon.effective ?? []), ...(arrow?.effective ?? [])].some((t) => tags.includes(t));
   const element = arrow?.element ?? weapon.element;
@@ -188,25 +220,52 @@ function sideStats(
   const sd = statusMods(def);
 
   let might = (weapon.might + forgeLevel(atk, weapon.id) + (arrow?.might ?? 0)) * (effective ? 2 : 1) + weatherMight(b, element);
+  if (initiating) {
+    const moved = atk.movedDist ?? 0;
+    if (weapon.momentum) might += Math.min(weapon.momentum, moved);
+    if (atk.skills.includes('runawayMachine')) might += Math.min(8, moved);
+    if (hasEffect(atk, 'remainsMomentum')) might += Math.min(5, moved);
+  }
+  if (weapon.curseEater && def.statuses?.some((x) => x.kind === 'curse')) might += 4;
   if (atk.skills.includes('heavyForging') && weapon.twoHanded) might += 2;
   const power = (magical ? as.mag + am.mag : as.str + am.str) + might + tri + am.dmg + sa.dmg;
   let defense = magical ? ds.res + dm.res : Math.max(0, ds.def + dm.def + sd.def) + terrain.def;
   if (weapon.pierce) defense = Math.floor(defense * (1 - weapon.pierce));
   let dmg = Math.max(0, power - defense);
   if (hasEffect(atk, 'desperation') && atk.hp < atk.stats.hp / 2) dmg = Math.floor(dmg * 1.25);
+  dmg = Math.floor(dmg * terminaMultiplier(b, atk, def, defPos, element, magical, weapon));
   if (atk.isBoss && atk.team === 'enemy' && (b.bossTier ?? 2) < 2) dmg = Math.floor(dmg * (b.bossTier === 0 ? 0.7 : 0.85)); // early bosses hit softer
-  if (def.buffs?.some((x) => x.barrier)) dmg = 0; // Nayru's Love
+  if (def.buffs?.some((x) => x.barrier || x.id === 'bubble')) dmg = 0; // Nayru's Love, Wart's bubbles
 
   const atkSpd = as.spd + am.spd - Math.max(0, weapon.weight - as.con);
   const defW = foeWeapon ?? weapon;
   const defSpd = ds.spd + dm.spd - Math.max(0, (foeWeapon ? defW.weight : 0) - ds.con);
   const hit = clamp(weapon.hit + (arrow?.hit ?? 0) + (as.skl + am.skl) * 2 + Math.floor(as.lck / 2) + tri * 15 + am.hit + ab.hit + sa.hit - (b.weather?.kind === 'sandstorm' ? 15 : 0)
     - (Math.max(0, defSpd) * 2 + ds.lck + terrain.avoid + dm.avoid + db.avoid + sd.avoid));
-  const crit = clamp(weapon.crit + (arrow?.crit ?? 0) + Math.floor((as.skl + am.skl) / 2) + am.crit + ab.crit - ds.lck);
+  const concealed = atk.statuses?.some((x) => x.kind === 'veiled');
+  const crit = initiating && concealed && atk.skills.includes('masterOfAmbush') ? 100
+    : clamp(weapon.crit + (arrow?.crit ?? 0) + Math.floor((as.skl + am.skl) / 2) + am.crit + ab.crit - ds.lck);
 
   let attacks = atkSpd - defSpd >= 4 ? 2 : 1;
-  if (weapon.brave && initiating) attacks *= 2;
+  if ((weapon.brave || (weapon.braveConcealed && concealed) || (atk.skills.includes('tripleShot') && atk.movedDist === 0)) && initiating) attacks *= 2;
   return { uid: atk.uid, weaponId: weapon.id, canAttack: true, dmg, hit, crit, attacks, triangle: tri, effective, block: Math.min(80, db.block), arrowId: arrow?.id ?? null, element };
+}
+
+/** Termina damage modifiers: boss slayers, aquatic predators, bat swarms, weaknesses, giants. */
+function terminaMultiplier(b: Battle, atk: Unit, def: Unit, defPos: Pos, element: Element | undefined, magical: boolean, weapon: WeaponDef): number {
+  let mult = 1;
+  const t = terrainAt(b, defPos.x, defPos.y);
+  const watery = t === 'water' || t === 'poisonWater' || t === 'current';
+  if (atk.skills.includes('wrathOfTheDeity') && def.isBoss) mult *= 1.5;
+  if (atk.skills.includes('predatorOfTheDeep') && watery && !canSwim(def)) mult *= 2;
+  if (def.skills.includes('batSwarm') && element !== 'light') mult *= 0.5;
+  if (def.skills.includes('divineBulk') && !magical) mult *= 0.75;
+  if (element && (RACES[def.race]?.weakTo?.includes(element) || (element === 'fire' && hasEffect(def, 'fireWeak')))) mult *= 1.5;
+  if (hasEffect(atk, 'remainsForest') && t === 'forest') mult *= 1.25;
+  if (hasEffect(atk, 'remainsAquatic') && canSwim(def)) mult *= 1.25;
+  if (hasEffect(def, 'remainsGiant') && atk.size > def.size) mult *= 0.75;
+  if (hasEffect(def, 'balloon') && (weapon.type === 'bow' || weapon.type === 'sling')) mult *= 2;
+  return mult;
 }
 
 /** The defender counters with the first carried weapon that reaches. */
@@ -267,11 +326,58 @@ function killUnit(b: Battle, u: Unit) {
   b.fallen.push(u);
 }
 
+/** Enemies caught by a weapon's (or skill's) sweep. */
+function splashTargets(b: Battle, atk: Unit, target: Unit, w: WeaponDef | undefined): Unit[] {
+  const kind = w?.splash ?? (atk.skills.includes('colossalStrength') || atk.skills.includes('burrowingTerror') ? 'adjacent'
+    : atk.skills.includes('cursedRotation') ? 'around' : undefined);
+  if (!kind) return [];
+  const foes = b.units.filter((e) => e.team !== atk.team && e !== target && !e.captive && e.hp > 0);
+  if (kind === 'adjacent') return foes.filter((e) => unitDist(e, target) === 1);
+  if (kind === 'around') return foes.filter((e) => unitDist(e, atk) === 1);
+  // 'line': keep going past the target in the same direction.
+  const dx = Math.sign(target.x - atk.x), dy = Math.sign(target.y - atk.y);
+  if (dx && dy) return foes.filter((e) => unitDist(e, target) === 1);
+  const out: Unit[] = [];
+  for (let i = 1; i <= 4; i++) {
+    const x = target.x + dx * (target.size - 1 + i) * (dx > 0 ? 1 : 1), y = target.y + dy * (target.size - 1 + i);
+    const e = foes.find((f) => x >= f.x && y >= f.y && x < f.x + f.size && y < f.y + f.size);
+    if (e && !out.includes(e)) out.push(e);
+  }
+  return out;
+}
+
+/** Giant Link's blows knock down walls around the target. */
+function smashWalls(b: Battle, target: Unit) {
+  for (let y = target.y - 1; y <= target.y + target.size; y++) {
+    for (let x = target.x - 1; x <= target.x + target.size; x++) {
+      if (x < 0 || y < 0 || x >= b.width || y >= b.height) continue;
+      const k = keyOf(b, x, y);
+      if (b.tiles[k] === 'wall' || b.tiles[k] === 'cracked') b.tiles[k] = 'plain';
+    }
+  }
+}
+
+function onKillEffects(b: Battle, by: Unit, w: WeaponDef | undefined) {
+  if (!w || by.hp <= 0) return;
+  if (w.healOnKill) by.hp = Math.min(by.stats.hp, by.hp + Math.ceil(by.stats.hp * w.healOnKill));
+  if (w.onKill === 'batSwarm') by.statuses.push({ kind: 'veiled', turns: 2 });
+  if (w.onKill === 'undeadRally') {
+    for (const a of b.units) {
+      if (a.team === by.team && unitDist(a, by) <= 3 && unitTags(a).includes('undead')) a.buffs.push({ id: 'keetaRally', name: "Keeta's Rally", turns: 2, stats: { str: 2 } });
+    }
+  }
+}
+
 /** Resolve a full exchange. Mutates the battle (HP, deaths, XP, level-ups). */
 export function resolveCombat(b: Battle, attacker: Unit, defender: Unit, rng: RNG, weaponId?: string, arrowId?: string): CombatResult {
   const fc = forecast(b, attacker, attacker, defender, weaponId, arrowId);
   // Using a weapon equips it; elemental arrows cost MP once per combat.
   if (fc.attacker.weaponId) equip(attacker, fc.attacker.weaponId);
+  const aw = weaponDef(fc.attacker.weaponId);
+  if (aw?.beam && fc.distance > 1) attacker.mp -= aw.beam; // Double Helix sword beam
+  attacker.attacked = true;
+  // Attacking gives away a concealed position.
+  if (attacker.statuses.some((x) => x.kind === 'veiled')) attacker.statuses = attacker.statuses.filter((x) => x.kind !== 'veiled');
   if (fc.attacker.arrowId) {
     const mod = ABILITIES[fc.attacker.arrowId];
     if (mod.sta) attacker.sta -= mod.sta;
@@ -304,6 +410,10 @@ export function resolveCombat(b: Battle, attacker: Unit, defender: Unit, rng: RN
     const hit = rng.chance(side.hit);
     const crit = hit && rng.chance(side.crit);
     let dmg = hit ? side.dmg * (crit ? (hasEffect(target, 'critGuard') ? 2 : 3) : 1) : 0;
+    if (hit) {
+      const bubble = target.buffs.findIndex((x) => x.id === 'bubble');
+      if (bubble >= 0) { target.buffs.splice(bubble, 1); dmg = 0; b.log.push(`${target.name}'s bubble pops!`); }
+    }
     const blocked = hit && dmg > 0 && side.block > 0 && rng.chance(side.block);
     if (blocked) dmg = Math.floor(dmg / 2);
     dmg = Math.min(dmg, target.hp);
@@ -314,7 +424,16 @@ export function resolveCombat(b: Battle, attacker: Unit, defender: Unit, rng: RN
       saved = 'triforce';
     }
     target.hp -= dmg;
+    if (dmg > 0) target.lastHitBy = by.uid;
     if (target.hp <= 0 && useFairy(target)) saved = 'fairy';
+    // Igos du Ikana and his servants pull themselves back together (unless struck by light).
+    if (target.hp <= 0 && (target.skills.includes('undyingKingdom') || target.skills.includes('skeletalReassembly'))
+      && side.element !== 'light' && !target.usedAbilities?.includes('revive')) {
+      (target.usedAbilities ??= []).push('revive');
+      target.hp = Math.max(1, Math.ceil(target.stats.hp * 0.25));
+      saved = 'revive';
+      b.log.push(`${target.name} rises again!`);
+    }
     if (dmg > 0) dealt.add(by.uid);
     let heal = 0;
     if (dmg > 0 && by.skills.includes('lifesteal')) {
@@ -334,10 +453,40 @@ export function resolveCombat(b: Battle, attacker: Unit, defender: Unit, rng: RN
       deaths.push(target.uid);
       b.log.push(`${by.name} defeated ${target.name}.`);
       killUnit(b, target);
+      onKillEffects(b, by, weaponDef(side.weaponId));
       break;
     }
   }
+  // Sweeping, piercing and spinning attacks spill onto nearby enemies.
+  const landed = strikes.some((s) => s.by === attacker.uid && s.hit && s.dmg > 0);
+  if (landed && attacker.hp > 0) {
+    const splash = splashTargets(b, attacker, defender, aw);
+    const half = Math.max(1, Math.floor(fc.attacker.dmg / 2));
+    for (const e of splash) {
+      const dmg = Math.min(e.hp, half);
+      e.hp -= dmg;
+      if (e.hp <= 0 && useFairy(e)) { /* saved */ }
+      const killed = e.hp <= 0;
+      strikes.push({ by: attacker.uid, target: e.uid, hit: true, crit: false, dmg, heal: 0, targetHp: e.hp, byHp: attacker.hp, killed, blocked: false, splash: true });
+      if (killed) { attacker.kills++; deaths.push(e.uid); killUnit(b, e); b.log.push(`${attacker.name}'s sweep defeated ${e.name}.`); }
+    }
+    if (attacker.skills.includes('colossalStrength')) smashWalls(b, defender);
+    if (fc.attacker.element === 'fire') thawMechanisms(b, defender, 1);
+    if (fc.attacker.element === 'light') meltSunBlocks(b, defender, 1);
+    if (attacker.skills.includes('natureMend')) {
+      for (const a of b.units) if (a.team === attacker.team && unitDist(a, attacker) <= 2) a.hp = Math.min(a.stats.hp, a.hp + 2);
+    }
+  }
 
+  // Zora Link's Electric Barrier shocks whoever strikes him up close.
+  for (const [me, foe] of [[attacker, defender], [defender, attacker]] as const) {
+    if (me.hp > 0 && foe.hp > 1 && me.buffs.some((x) => x.id === 'electric') && unitDist(me, foe) === 1 && strikes.some((s) => s.by === foe.uid)) {
+      const d = Math.min(foe.hp - 1, 4);
+      foe.hp -= d;
+      strikes.push({ by: me.uid, target: foe.uid, hit: true, crit: false, dmg: d, heal: 0, targetHp: foe.hp, byHp: me.hp, killed: false, blocked: false, splash: true, statuses: ['shock'] });
+      foe.statuses.push({ kind: 'shock', turns: 1 });
+    }
+  }
   for (const me of [attacker, defender]) if (me.hp > 0) gainSupport(b, me);
   const xp: { uid: string; amount: number }[] = [];
   const levelUps: LevelUp[] = [];
@@ -385,6 +534,9 @@ export function resolveHeal(b: Battle, healer: Unit, target: Unit, rng: RNG, sta
 export function findInterceptor(b: Battle, attacker: Unit, target: Unit, weaponId?: string): Unit | undefined {
   if (b.interceptUsed || target.team !== 'player') return undefined;
   const w = (weaponId ? WEAPONS[weaponId] : undefined) ?? weaponOf(attacker);
-  return b.units.find((p) => p !== target && p.team === target.team && p.skills.includes('royalProtector')
-    && unitDist(p, target) <= 1 && canReach(w, unitDist(attacker, p)));
+  const royal = (t: Unit) => ['dekuKing', 'dekuPrincess'].includes(t.templateId ?? '');
+  return b.units.find((p) => p !== target && p.team === target.team && canReach(w, unitDist(attacker, p)) && (
+    (p.skills.includes('royalProtector') && unitDist(p, target) <= 1)
+    || (p.skills.includes('kingsShield') && target.skills.includes('undyingKingdom') && unitDist(p, target) <= 2)
+    || (p.skills.includes('royalGuardDeku') && royal(target) && unitDist(p, target) <= 1)));
 }

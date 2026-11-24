@@ -1,10 +1,12 @@
 // Status effects (burn, freeze, shock, poison, stun), elemental on-hit effects
 // and timed buffs.
 
+import { GEAR, WEAPONS } from '../data/registry';
 import type { RNG } from './rng';
 import type { Battle, Element, StatusKind, Unit } from './types';
 
 export const STATUS_INFO: Record<StatusKind, { name: string; icon: string; desc: string; good?: boolean }> = {
+  dazed: { name: 'Dazed', icon: '💃', desc: '−15 Hit and −15 Avoid (Kamaro\'s dance).' },
   burn: { name: 'Burning', icon: '🔥', desc: 'Loses 10% max HP each turn and has −2 DEF.' },
   freeze: { name: 'Frozen', icon: '❄', desc: 'Cannot act. Taking damage breaks the ice.' },
   shock: { name: 'Shocked', icon: '⚡', desc: '−15 Hit.' },
@@ -48,7 +50,18 @@ export function hasStatus(u: Unit, kind: StatusKind): boolean {
   return u.statuses.some((s) => s.kind === kind);
 }
 
+/** Gear and skills that make a unit immune to a status. */
+export function immuneTo(u: Unit, kind: StatusKind): boolean {
+  const gear = (effect: string) => Object.values(u.gear ?? {}).some((id) => GEAR[id!]?.effects?.includes(effect as never));
+  if (kind === 'sleep' && gear('sleepImmune')) return true;
+  if (kind === 'fear' && (gear('fearImmune') || gear('gibdo') || u.skills.includes('mountainHero'))) return true;
+  if (kind === 'curse' && gear('curseImmune')) return true;
+  if (kind === 'shock' && gear('shockImmune')) return true;
+  return false;
+}
+
 export function addStatus(u: Unit, kind: StatusKind, turns: number) {
+  if (immuneTo(u, kind)) return;
   const cur = u.statuses.find((s) => s.kind === kind);
   if (cur) cur.turns = Math.max(cur.turns, turns);
   else u.statuses.push({ kind, turns });
@@ -63,8 +76,8 @@ export function statusMods(u: Unit): { def: number; hit: number; avoid: number; 
   const has = (k: StatusKind) => hasStatus(u, k);
   return {
     def: 0,
-    hit: (has('shock') ? -15 : 0) + (has('blind') ? -30 : 0) + (has('fear') ? -20 : 0) + (has('inspired') ? 10 : 0),
-    avoid: (has('inspired') ? 10 : 0) + (has('veiled') ? 30 : 0),
+    hit: (has('shock') ? -15 : 0) + (has('blind') ? -30 : 0) + (has('fear') ? -20 : 0) + (has('inspired') ? 10 : 0) + (has('dazed') ? -15 : 0),
+    avoid: (has('inspired') ? 10 : 0) + (has('veiled') ? 30 : 0) + (has('dazed') ? -15 : 0),
     dmg: (has('fear') ? -3 : 0) + (has('inspired') ? 2 : 0),
   };
 }
@@ -97,6 +110,14 @@ const MONSTER_INFLICT: Record<string, [StatusKind, number, number]> = {
 
 export function rollElement(b: Battle, by: Unit, target: Unit, el: Element | undefined, rng: RNG, weaponId?: string): StatusKind[] {
   const out: StatusKind[] = [];
+  const extra = target.team === 'enemy' && b.statusBonus ? b.statusBonus : 0; // Skull Kid's army
+  const w = weaponId ? WEAPONS[weaponId] : undefined;
+  if (w?.inflict && rng.chance(w.inflict.chance)) { addStatus(target, w.inflict.status, w.inflict.turns + extra); out.push(w.inflict.status); }
+  if (by.skills.includes('mountainGuardian') && rng.chance(25)) { addStatus(target, 'freeze', 1 + extra); out.push('freeze'); }
+  if (w && (w.type === 'magic') && Object.values(by.gear ?? {}).some((id) => GEAR[id!]?.effects?.includes('majoraEye'))) {
+    const kind = rng.pick(['curse', 'poison', 'blind', 'weaken', 'exposed', 'fear'] as StatusKind[]);
+    addStatus(target, kind, 2 + extra); out.push(kind);
+  }
   const m = MONSTER_INFLICT[by.artId ?? ''] ?? MONSTER_INFLICT[by.templateId ?? ''] ?? MONSTER_INFLICT[by.bossId ?? ''];
   if (m && m[1] && rng.chance(m[1])) { addStatus(target, m[0], m[2]); out.push(m[0]); }
   if (weaponId && /dagger|knife|kunai/i.test(weaponId) && rng.chance(15) && !out.includes('bleed')) { addStatus(target, 'bleed', 2); out.push('bleed'); }

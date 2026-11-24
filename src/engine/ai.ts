@@ -1,7 +1,7 @@
 import { attackWeapons, expectedDamage, forecast, healAmount, healWeapons } from './combat';
 import { computeMoves, distanceField, footDist, keyOf, posOf, unitDist, type Moves } from './grid';
 import { LAVA_DAMAGE_PCT, TERRAIN_BONUS } from './rules';
-import { isLavaImmune } from './units';
+import { hasEffect, isLavaImmune } from './units';
 import type { Battle, Pos, Unit } from './types';
 
 export interface AIPlan {
@@ -25,7 +25,11 @@ export function planAction(b: Battle, unit: Unit): AIPlan {
     }
     return exits.length ? approach(b, unit, moves, exits) : { unit: unit.uid, path: [stay], dest: stay, action: null };
   }
-  const foes = b.units.filter((u) => u.team !== unit.team && !u.captive && !(unit.team === 'player' && u.hidden));
+  const foes = b.units.filter((u) => u.team !== unit.team && !u.captive && !(unit.team === 'player' && u.hidden)
+    // Stone Mask: unnoticed beyond 2 spaces until the wearer attacks.
+    && !(hasEffect(u, 'stoneMask') && !u.attacked && unitDist(unit, u) > 2)
+    // Gibdo Mask: Gibdos and ReDeads leave the wearer alone unless provoked.
+    && !(hasEffect(u, 'gibdo') && ['gibdo', 'redead'].includes(unit.artId ?? '') && unit.lastHitBy !== u.uid));
   const friends = b.units.filter((u) => u.team === unit.team && u !== unit);
   const lavaPenalty = (k: number) => (b.tiles[k] === 'lava' && !isLavaImmune(unit) ? LAVA_DAMAGE_PCT / 4 : 0);
 

@@ -11,6 +11,7 @@ export type WeaponType =
 export type Element = 'fire' | 'ice' | 'lightning' | 'water' | 'light' | 'dark' | 'nature';
 
 export type StatusKind =
+  | 'dazed'
   | 'burn' | 'freeze' | 'shock' | 'poison' | 'stun'
   | 'silence' | 'root' | 'blind' | 'curse' | 'confuse' | 'sleep' | 'bleed' | 'fear' | 'weaken' | 'exposed'
   | 'regen' | 'inspired' | 'protected' | 'haste' | 'veiled';
@@ -32,7 +33,7 @@ export interface Buff {
 export type AbilityKind = 'spell' | 'song' | 'arrow' | 'technique' | 'personal';
 
 /** Where a warp song can take the performer. */
-export type WarpKind = 'forest' | 'fire' | 'water' | 'spirit' | 'shadow' | 'light';
+export type WarpKind = 'forest' | 'fire' | 'water' | 'spirit' | 'shadow' | 'light' | 'owl';
 
 /** Spells, songs, elemental arrows and once-per-battle personal abilities. */
 export interface AbilityDef {
@@ -59,7 +60,11 @@ export interface AbilityDef {
   /** Personal abilities: usable once per battle. */
   oncePerBattle?: boolean;
   /** Known automatically by anyone carrying one of these weapons or having this skill. */
-  grantedBy?: { weapons?: string[]; skill?: string };
+  grantedBy?: { weapons?: string[]; skill?: string; gear?: string[]; race?: string; templates?: string[] };
+  /** Songs: affects every ally/enemy within this many spaces (default 3). */
+  radius?: number;
+  /** Used once per turn at most (doesn't use the turn's action). */
+  perTurn?: boolean;
   /** Doesn't end the unit's turn (Hookshot: you can still attack). */
   freeAction?: boolean;
   implemented: boolean;
@@ -73,7 +78,10 @@ export type MoveType = 'foot' | 'cavalry' | 'armor' | 'flying' | 'fixed';
 
 export type BaseTerrain = 'plain' | 'forest' | 'mountain' | 'water' | 'wall' | 'fort' | 'lava';
 /** Special terrain: cracked walls (bombs break them), Time Blocks (Song of Time), bridges (Magic Beans, Master Builder). */
-export type Terrain = BaseTerrain | 'cracked' | 'timeBlock' | 'timeGap' | 'bridge';
+export type Terrain = BaseTerrain | 'cracked' | 'timeBlock' | 'timeGap' | 'bridge'
+  // Termina battlefield spaces
+  | 'dekuFlower' | 'goldFlower' | 'owlStatue' | 'poisonWater' | 'frozenMech' | 'rollingRamp'
+  | 'current' | 'waterwheel' | 'sunBlock' | 'weightedSwitch' | 'inversionSwitch' | 'mailbox';
 
 export type Team = 'player' | 'enemy';
 
@@ -100,6 +108,10 @@ export interface RaceDef {
   forestWalker?: boolean;
   lavaImmune?: boolean;
   flies?: boolean;
+  /** Can only move through water (Lord Jabu-Jabu). */
+  waterOnly?: boolean;
+  /** Takes +50% damage from these elements. */
+  weakTo?: Element[];
   growthMods?: Partial<Growths>;
 }
 
@@ -147,6 +159,31 @@ export interface WeaponDef {
   desc?: string;
   /** Not sold in shops (boss drops, signature gear, natural weapons). */
   unique?: boolean;
+  /** Chance to inflict a status on a damaging hit. */
+  inflict?: { status: StatusKind; chance: number; turns: number };
+  /** After a hit, half damage also lands on: enemies next to the target ('adjacent'),
+   *  enemies further along the line ('line'), or enemies next to the wielder ('around'). */
+  splash?: 'adjacent' | 'line' | 'around';
+  /** Heal this fraction of max HP after defeating an enemy. */
+  healOnKill?: number;
+  /** Attacks beyond 1 space are magical sword beams costing this much MP. */
+  beam?: number;
+  /** Durability lost per use (default 1; 0.5 = wears half as fast). */
+  wearRate?: number;
+  /** +1 Might per space moved before attacking, up to this cap. */
+  momentum?: number;
+  /** Only these races can wield it. */
+  races?: string[];
+  /** Wielder must be at least this size. */
+  minSize?: number;
+  /** Strikes twice when the wielder attacks from concealment (Veiled). */
+  braveConcealed?: boolean;
+  /** After defeating an enemy. */
+  onKill?: 'undeadRally' | 'batSwarm';
+  /** Purges the target's curse for bonus damage. */
+  curseEater?: boolean;
+  /** Can be wielded without matching the class's weapon types (signature gear). */
+  anyClass?: boolean;
 }
 
 export type Rarity = 'common' | 'uncommon' | 'rare' | 'epic' | 'legendary' | 'mythic';
@@ -172,6 +209,12 @@ export interface GearDef {
   /** Art id for the battle animation (mounts). */
   art?: string;
   unique?: boolean;
+  /** Transformation masks: the form the wearer takes (Link's forms; Majora's Mask). */
+  transform?: string;
+  /** Can only be worn by units at least this size. */
+  minSize?: number;
+  /** MP spent each turn while transformed with this mask. */
+  upkeep?: number;
 }
 
 export type GearEffect =
@@ -194,16 +237,41 @@ export type GearEffect =
   | 'charge' // +2 damage when attacking after moving 3+ spaces
   | 'intimidate' // enemies within 2 spaces have −5 Avoid
   | 'staRegen' // +2 extra stamina per turn
-  | 'flight'; // the rider flies (Loftwing)
+  | 'flight' // the rider flies (Loftwing)
+  | 'sleepImmune' | 'fearImmune' | 'curseImmune' | 'shockImmune'
+  | 'stoneMask' // enemies ignore the wearer beyond 2 spaces until it attacks
+  | 'healBoost' // +25% healing received
+  | 'couple' // double support gains, +25% support bonuses
+  | 'scents' // reveals buried treasure and traps within 4
+  | 'garoSight' // reveals hidden enemies within 4
+  | 'captain' // allied undead within 3 gain +2 SKL; undead recruits
+  | 'gibdo' // Gibdos and ReDeads won't attack the wearer
+  | 'postman' // double mailbox rewards
+  | 'dekuCrown' // Deku allies within 2 gain +1 RES
+  | 'fireWeak' // takes +50% fire damage
+  | 'concealOnWait' // Veiled after a turn without attacking
+  | 'remainsForest' | 'remainsMomentum' | 'remainsAquatic' | 'remainsGiant'
+  | 'bubble' // negates the first damaging hit each battle
+  | 'magicRange' // +1 range on magic
+  | 'songThrift' // songs cost 25% less MP
+  | 'timeThrift' // time songs cost 50% less MP
+  | 'majoraEye' // offensive magic inflicts a random negative status
+  | 'giantTear' // +5 max HP per point of size
+  | 'phaseThrough' // move through enemy units
+  | 'rollBoost' // rolling/charging +2 range and cheaper
+  | 'balloon' // flight; takes double damage from bows and slings
+  | 'jumpUnits'; // can pass through units
 
 export type ItemKind =
   | 'heal' | 'fullHeal' | 'mp' | 'sta' | 'fairy' | 'bomb' | 'stun' | 'learn'
+  /** Majora's Mask specials, resolved by id in engine/items.ts. */
+  | 'special'
   /** cure: removes statuses; buff: timed stat boost; fruit: elemental throw; cloud: veils allies; muddle: confuses; bean: plants a sprout. */
   | 'cure' | 'buff' | 'fruit' | 'cloud' | 'muddle' | 'bean'
   /** Reusable tools (never used up). */
   | 'tool';
 
-export type ToolKind = 'hookshot' | 'longshot' | 'lens' | 'fishing' | 'shovel';
+export type ToolKind = 'hookshot' | 'longshot' | 'lens' | 'fishing' | 'shovel' | 'pictograph';
 
 /** Consumables carried in a unit's 6-slot pack. */
 export interface ItemDef {
@@ -232,6 +300,12 @@ export interface ItemDef {
   buff?: Partial<Record<StatKey | 'mov', number>>;
   buffTurns?: number;
   tool?: ToolKind;
+  /** bombs: only Gorons or units with this much CON can use it. */
+  minCon?: number;
+  /** bombs: also break ordinary walls. */
+  breaksWalls?: boolean;
+  /** special: targets a tile within minRange..maxRange (otherwise self). */
+  targeted?: boolean;
   desc: string;
 }
 
@@ -370,7 +444,8 @@ export interface CommanderDef {
   startingItems?: string[];
 }
 
-export type CommanderBonus = 'extraTreasure' | 'healing' | 'forging' | 'postBattleHeal' | 'rupees' | 'monsters';
+export type CommanderBonus = 'extraTreasure' | 'healing' | 'forging' | 'postBattleHeal' | 'rupees' | 'monsters'
+  | 'transformThrift' | 'rolling' | 'aquatic' | 'dekuArmy' | 'undeadArmy' | 'lingeringStatus';
 
 export type SkillId = string;
 
@@ -442,6 +517,16 @@ export interface Unit {
   captive?: boolean;
   /** A freed prisoner (joins the army after a victory). */
   rescued?: boolean;
+  /** Transformation mask currently in effect (gear id). */
+  maskForm?: string;
+  /** Turn on which a mask was last swapped (Hero of Masks: one free swap per turn). */
+  maskTurn?: number;
+  /** Deku Princess: who hurt her last round. */
+  lastHitBy?: string;
+  /** Has attacked this battle (breaks Stone Mask / concealment). */
+  attacked?: boolean;
+  /** Elegy of Emptiness statue / Bio Deku Baba sprout: removed after battle. */
+  summoned?: boolean;
   // Battle state
   x: number; // top-left of footprint
   y: number;
@@ -509,7 +594,7 @@ export interface Battle {
   /** Magic Bean sprouts: grow into a bridge (on water) or thicket after `turns`. */
   sprouts?: { x: number; y: number; turns: number }[];
   /** Hidden spike traps (hurt and root player units; the Lens of Truth reveals them). */
-  traps?: { x: number; y: number; hidden: boolean }[];
+  traps?: { x: number; y: number; hidden: boolean; /** Player-placed (Death Armos Core): springs on enemies. */ armed?: boolean }[];
   /** Buried treasure: dig with a Shovel (or Dampé). */
   digSpots?: Pos[];
   /** Fog of war: enemies are only visible near your units. */
@@ -536,6 +621,24 @@ export interface Battle {
   healMult: number;
   /** Loot dropped by bosses this battle. */
   drops: string[];
+  /** Direction underwater currents push (Termina). */
+  currentDir?: [number, number];
+  /** Inversion switches flip these tiles between wall and plain. */
+  invertTiles?: number[];
+  /** Mailboxes already opened. */
+  mailOpened?: number[];
+  /** Inverted Song of Time: turns left with reinforcements and hazards delayed. */
+  timeSlowed?: number;
+  /** Weighted switch currently held. */
+  switchHeld?: boolean;
+  /** Skull Kid's army: inflicted statuses last longer. */
+  statusBonus?: number;
+  /** Termina night: undead regenerate (Igos's army). */
+  night?: boolean;
+  /** Enemies purified by the Song of Healing (they may join after the battle). */
+  purified?: Unit[];
+  /** Commander bonus active in this battle. */
+  bonus?: CommanderBonus;
 }
 
 export interface Army {
@@ -604,6 +707,12 @@ export interface Run {
   army?: Army;
   /** Which campaign: the endless Hyrule war, or Termina with its three-day cycle. */
   campaign?: 'hyrule' | 'termina';
+  /** Termina: hours passed in the current three-day cycle (0-71) and resets so far. */
+  clock?: { hours: number; resets: number };
+  /** Termina: Rupees safe in the Clock Town bank (kept through the Song of Time). */
+  bank?: number;
+  /** Quest items (don't use pack slots). */
+  questItems?: string[];
   /** Chamber of Trials modifiers for this campaign. */
   trials?: string[];
   /** Permanent bonuses bought between runs. */

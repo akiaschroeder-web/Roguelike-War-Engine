@@ -10,6 +10,7 @@ import { adjacentCaptives, checkResult, freeCaptive, mountToggleBlocked, moveUni
 import {
   attackMods, attackWeapons, findInterceptor, forecast, healAmount, healWeapons, maxAttackRange, resolveCombat, resolveHeal, weaponDef,
   type Forecast, type LevelUp,
+  type Strike,
 } from '../engine/combat';
 import { computeMoves, footprint, keyOf, posOf, terrainAt, tilesInRange, unitAt, unitDist, type Moves } from '../engine/grid';
 import { RNG } from '../engine/rng';
@@ -940,7 +941,7 @@ export class BattleView {
 
     if (animationsEnabled()) {
       await playCinematic({
-        attacker: att, defender: def, startHp, strikes: res.strikes, world: this.b.world,
+        attacker: att, defender: def, startHp, strikes: res.strikes.filter((s) => !s.splash), world: this.b.world,
         info: { [att.uid]: side(fc.attacker, att), [def.uid]: side(fc.defender, def) },
       });
       for (const s of res.strikes) {
@@ -950,11 +951,12 @@ export class BattleView {
       }
       this.reportBroken(res.broken);
       this.renderAll();
+      await this.showSplash(res.strikes);
       await this.levelUps(res.levelUps);
       return res.deaths.includes(def.uid);
     }
 
-    for (const s of res.strikes) {
+    for (const s of res.strikes.filter((x) => !x.splash)) {
       const by = this.unitById(s.by)!;
       const tg = this.unitById(s.target)!;
       const body = this.unitEls.get(s.by)?.querySelector('.u-body') as HTMLElement | null;
@@ -978,7 +980,7 @@ export class BattleView {
       } else this.float(tg, 'MISS', 'miss');
       this.setHpBar(s.target, s.targetHp, tg.stats.hp);
       if (s.heal) { this.float(by, `+${s.heal}`, 'heal'); this.setHpBar(s.by, s.byHp, by.stats.hp); }
-      if (s.saved) this.float(tg, s.saved === 'fairy' ? 'FAIRY!' : 'TRIFORCE!', 'heal');
+      if (s.saved) this.float(tg, s.saved === 'fairy' ? 'FAIRY!' : s.saved === 'revive' ? 'RISES AGAIN!' : 'TRIFORCE!', 'heal');
       if (s.blocked) this.float(tg, 'BLOCK', 'miss');
       if (s.thawed) this.float(tg, 'THAWED', 'heal');
       for (const st of s.statuses ?? []) setTimeout(() => this.float(tg, STATUS_INFO[st].name.toUpperCase(), 'crit'), 300);
@@ -994,8 +996,26 @@ export class BattleView {
     }
     this.reportBroken(res.broken);
     this.renderAll();
+    await this.showSplash(res.strikes);
     await this.levelUps(res.levelUps);
     return res.deaths.includes(def.uid);
+  }
+
+  /** Collateral hits from sweeping attacks. */
+  private async showSplash(strikes: Strike[]) {
+    const sp = strikes.filter((s) => s.splash);
+    if (!sp.length) return;
+    sfx('hit');
+    for (const s of sp) {
+      const tg = this.unitById(s.target) ?? this.b.fallen.find((u) => u.uid === s.target);
+      if (!tg) continue;
+      this.float(tg, String(s.dmg), 'dmg');
+      this.setHpBar(s.target, s.targetHp, tg.stats.hp);
+      this.addLog(`💥 The sweep hits ${esc(tg.name)} for ${s.dmg}.`);
+      if (s.killed) { this.unitEls.get(s.target)?.classList.add('dying'); this.addLog(`☠ ${esc(tg.name)} has fallen.`); }
+    }
+    await sleep(500);
+    this.renderAll();
   }
 
   private reportBroken(broken: { uid: string; weaponId: string; into?: string }[]) {

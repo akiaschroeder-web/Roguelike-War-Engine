@@ -169,7 +169,7 @@ export function playCinematic(opts: CinematicOptions): Promise<void> {
       if (s.blocked) setTimeout(() => pop(s.target, 'BLOCK', 'miss'), 120);
       if (s.thawed) setTimeout(() => pop(s.target, 'THAWED', 'heal'), 160);
       if (s.statuses?.length) setTimeout(() => pop(s.target, s.statuses!.map((st) => STATUS_INFO[st].name.toUpperCase()).join(' + '), 'crit'), 280);
-      if (s.saved) banner(s.saved === 'fairy' ? 'A FAIRY REVIVES THEM!' : 'TRIFORCE OF COURAGE!');
+      if (s.saved) banner(s.saved === 'fairy' ? 'A FAIRY REVIVES THEM!' : s.saved === 'revive' ? 'IT RISES AGAIN!' : 'TRIFORCE OF COURAGE!');
       await lunge;
       if (s.killed) {
         sfx('death');

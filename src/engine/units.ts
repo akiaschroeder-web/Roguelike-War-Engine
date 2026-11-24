@@ -112,6 +112,7 @@ export function makeEnemy(arch: EnemyArchetype | BossDef, world: WorldId, level:
 export function moveTypeOf(u: Unit): MoveType {
   const cls = CLASSES[u.classId];
   if (cls?.moveType === 'fixed') return 'fixed';
+  if (isGliding(u)) return 'flying';
   if (RACES[u.race]?.flies) return 'flying';
   if (isMounted(u)) return mountOf(u)!.effects?.includes('flight') ? 'flying' : 'cavalry';
   return cls?.moveType ?? 'foot';
@@ -163,6 +164,7 @@ export function activeGear(unit: Unit): GearDef[] {
 export function effectiveStats(unit: Unit): Stats {
   const s = { ...unit.stats };
   const masks = unit.skills?.includes('maskCollector');
+  if (hasEffect(unit, 'giantTear')) s.hp += 5 * (unit.baseSize ?? unit.size);
   for (const g of activeGear(unit)) {
     const mult = masks && g.slot === 'head' && /mask/i.test(g.name) ? 1.5 : 1;
     for (const [k, v] of Object.entries(g.stats)) {
@@ -201,7 +203,12 @@ export function isLavaImmune(u: Unit): boolean {
 }
 
 export function canSwim(u: Unit): boolean {
-  return !!RACES[u.race]?.swims || hasEffect(u, 'swim');
+  return !!RACES[u.race]?.swims || hasEffect(u, 'swim') || hasEffect(u, 'remainsAquatic') || !!u.buffs?.some((b) => b.id === 'seahorse');
+}
+
+/** Temporarily airborne (Deku Flower glide, Twinmold Wing Fragment, Tingle's balloon). */
+export function isGliding(u: Unit): boolean {
+  return !!u.buffs?.some((b) => b.id === 'glide' || b.id === 'wing') || hasEffect(u, 'balloon');
 }
 
 /** Which slot a gear piece goes into on this unit (second accessory slot if the first is taken). */
@@ -240,13 +247,18 @@ export function addToPack(unit: Unit, itemId: string, uses?: number): boolean {
 export function prepareForBattle(unit: Unit): Unit {
   const baseSize = unit.baseSize ?? unit.size;
   const riding = !!mountOf(unit) && canRide({ ...unit, baseSize });
-  return {
+  const out: Unit = {
     ...unit, baseSize, mounted: riding, size: riding ? Math.max(baseSize, mountOf(unit)!.size ?? 2) : baseSize,
     stats: { ...unit.stats }, growths: { ...unit.growths }, skills: [...unit.skills], weapons: [...unit.weapons],
     gear: { ...unit.gear }, pack: unit.pack.map((p) => ({ ...p })), abilities: [...unit.abilities],
     mp: unit.stats.mp, sta: unit.stats.sta, statuses: [], buffs: [], usedAbilities: [], faroreMark: undefined, cooldowns: {},
-    hp: Math.max(1, unit.hp), moved: false, acted: false, kills: 0, movedDist: 0, survivedOnce: false,
+    hp: Math.max(1, unit.hp), moved: false, acted: false, kills: 0, movedDist: 0, survivedOnce: false, attacked: false, lastHitBy: undefined,
   };
+  // Wart's bubbles: the first damaging hit of each battle is absorbed.
+  if (out.skills.includes('bubbleShield') || hasEffect(out, 'bubble')) out.buffs.push({ id: 'bubble', name: 'Bubble', turns: 99 });
+  // The Garo Master starts the battle hidden in the shadows.
+  if (out.skills.includes('masterOfAmbush')) out.statuses.push({ kind: 'veiled', turns: 2 });
+  return out;
 }
 
 // ───────── Weapon durability and forging ─────────
@@ -279,7 +291,7 @@ export function spendUse(u: Unit, weaponId: string): { broke: boolean; into?: st
   const max = maxUses(WEAPONS[weaponId]);
   if (!max) return { broke: false };
   u.wear ??= {};
-  u.wear[weaponId] = (u.wear[weaponId] ?? 0) + 1;
+  u.wear[weaponId] = (u.wear[weaponId] ?? 0) + (WEAPONS[weaponId]?.wearRate ?? 1);
   if (u.wear[weaponId] < max) return { broke: false };
   delete u.wear[weaponId];
   if (u.forge) delete u.forge[weaponId];

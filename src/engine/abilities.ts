@@ -1,7 +1,8 @@
 // Casting spells, performing songs and using personal abilities in battle.
 
 import { ABILITIES, ITEMS, TEMPLATES, WEAPONS } from '../data/registry';
-import { buildAt, buildTargets, canDig, dig, hasTimeBlocks, ignite, toggleTimeBlocks } from './field';
+import { castTermina, ENEMY_TRANSFORMS, terminaNeedsTarget, terminaTargets, terminaUnusable } from './terminaAbilities';
+import { buildAt, buildTargets, canDig, dig, hasTimeBlocks, ignite, meltSunBlocks, toggleTimeBlocks } from './field';
 import { roomFor, transformInto } from './transform';
 import { useFairy, type LevelUp } from './combat';
 import { anchorCost, footDist, footprint, tilesInRange, unitAt, unitDist } from './grid';
@@ -9,7 +10,7 @@ import type { RNG } from './rng';
 import { INF } from './rules';
 import { addStatus, clearStatus, hasStatus, onDamaged, STATUS_INFO, weatherMight } from './status';
 import { mountToggleBlocked } from './battle';
-import { effectiveStats, gainXp, isMounted, mountOf, sizeWhen, unitTags } from './units';
+import { effectiveStats, gainXp, hasEffect, isMounted, mountOf, sizeWhen, unitTags } from './units';
 import type { AbilityDef, Battle, Pos, StatusKind, Unit } from './types';
 
 /** Best instrument discount among carried instruments, or null with no instrument. */
@@ -22,8 +23,12 @@ export function instrumentDiscount(u: Unit): number | null {
 /** MP (or stamina, for techniques) an ability costs this unit. */
 export function abilityCost(u: Unit, def: AbilityDef): number {
   if (def.sta) return def.sta;
+  if (def.mp && u.buffs?.some((x) => x.id === 'chateau')) return 0; // Chateau Romani
   if (def.kind !== 'song') return def.mp;
-  return Math.max(1, def.mp - (instrumentDiscount(u) ?? 0));
+  let cost = Math.max(1, def.mp - (instrumentDiscount(u) ?? 0));
+  if (hasEffect(u, 'songThrift')) cost = Math.ceil(cost * 0.75);
+  if (hasEffect(u, 'timeThrift') && /time|soaring/i.test(def.id)) cost = Math.ceil(cost * 0.5);
+  return Math.max(1, cost);
 }
 
 export function costLabel(u: Unit, def: AbilityDef): string {
@@ -37,7 +42,9 @@ export function knownAbilities(u: Unit): AbilityDef[] {
   const learned = u.abilities.map((id) => ABILITIES[id]).filter(Boolean);
   const types = new Set(u.weapons.map((id) => WEAPONS[id]?.type));
   const innate = Object.values(ABILITIES).filter((a) => (a.kind === 'technique' && a.area && a.weaponTypes?.some((t) => types.has(t)))
-    || (a.grantedBy?.weapons?.some((w) => u.weapons.includes(w))) || (a.grantedBy?.skill && u.skills.includes(a.grantedBy.skill)));
+    || (a.grantedBy?.weapons?.some((w) => u.weapons.includes(w))) || (a.grantedBy?.skill && u.skills.includes(a.grantedBy.skill))
+    || (a.grantedBy?.gear?.some((g) => Object.values(u.gear ?? {}).includes(g) || u.maskForm === g))
+    || (a.grantedBy?.race && u.race === a.grantedBy.race) || (a.grantedBy?.templates?.includes(u.templateId ?? '')));
   return [...learned, ...innate.filter((a) => !learned.includes(a))];
 }
 
@@ -58,6 +65,7 @@ export function warpTiles(b: Battle, u: Unit, def: AbilityDef): Pos[] {
         : def.warp === 'water' ? near(x, y, 'water')
         : def.warp === 'spirit' ? here === 'fort'
         : def.warp === 'shadow' ? near(x, y, 'wall')
+        : def.warp === 'owl' ? near(x, y, 'owlStatue')
         : x < 3; // light: deployment zone
       if (ok) out.push({ x, y });
     }
@@ -75,6 +83,8 @@ export function unusableReason(b: Battle, u: Unit, def: AbilityDef): string | nu
   if (def.oncePerBattle && u.usedAbilities?.includes(def.id)) return 'Already used this battle';
   if (u.cooldowns?.[def.id]) return `Recharging (${u.cooldowns[def.id]} turn${u.cooldowns[def.id] > 1 ? 's' : ''})`;
   if (def.sta ? u.sta < def.sta : u.mp < abilityCost(u, def)) return def.sta ? 'Not enough stamina' : 'Not enough MP';
+  const tr = terminaUnusable(b, u, def);
+  if (tr !== undefined) return tr;
   if (def.id === 'spinAttack' && !b.units.some((e) => e.team !== u.team && unitDist(u, e) === 1)) return 'No adjacent enemies';
   if (def.warp && !warpTiles(b, u, def).length) return 'No suitable destination on this map';
   if (def.id === 'hookshotPull') {
@@ -161,6 +171,7 @@ function transportee(b: Battle, u: Unit): Unit | undefined {
 
 /** Units an ability can be aimed at (only abilities that need a target). */
 export function abilityTargets(b: Battle, u: Unit, def: AbilityDef): Unit[] {
+  if (terminaNeedsTarget(def)) return terminaTargets(b, u, def);
   if (def.id === 'masterCraftsman') {
     return b.units.filter((a) => a.team === u.team && unitDist(u, a) <= 1 && a.weapons.some((w) => (a.wear?.[w] ?? 0) > 0));
   }
@@ -171,6 +182,7 @@ export function abilityTargets(b: Battle, u: Unit, def: AbilityDef): Unit[] {
 }
 
 export function needsTarget(def: AbilityDef): boolean {
+  if (terminaNeedsTarget(def)) return true;
   return def.id === 'greatFairysBlessing' || def.id === 'masterCraftsman';
 }
 
@@ -208,6 +220,8 @@ export interface AbilityResult {
   transformed?: string;
   /** Extra log lines. */
   lines: string[];
+  /** Didn't use the unit's action (Hero of Masks, gliding). */
+  free?: boolean;
   levelUps: LevelUp[];
 }
 
@@ -281,6 +295,7 @@ export function castAbility(b: Battle, u: Unit, id: string, rng: RNG, targetUid?
       }
       break;
     case 'sunsSong':
+      if (meltSunBlocks(b, u, 4)) res.lines.push('Sunlight melts away the Sun Blocks!');
       for (const e of foes(3)) {
         if (!unitTags(e).includes('undead')) continue;
         addStatus(e, 'stun', 1);
@@ -394,6 +409,21 @@ export function castAbility(b: Battle, u: Unit, id: string, rng: RNG, targetUid?
       break;
     }
     default:
+      if (!def.warp) {
+        const tm = castTermina(b, u, def, rng, target, at);
+        if (!tm) return null;
+        res.hits.push(...tm.hits);
+        res.heals.push(...tm.heals);
+        res.statuses.push(...tm.statuses);
+        res.cleansed.push(...tm.cleansed);
+        res.buffed.push(...tm.buffed);
+        res.lines.push(...tm.lines);
+        if (tm.transformed) res.transformed = tm.transformed;
+        if (tm.warped) res.warped = tm.warped;
+        res.free = tm.free;
+        xp = tm.hits.length ? 15 + tm.hits.length * 6 : 10;
+        break;
+      }
       if (def.warp && at) {
         res.warped = { from: { x: u.x, y: u.y }, to: { ...at } };
         u.x = at.x;
@@ -421,7 +451,7 @@ function sister(b: Battle, u: Unit): Unit | undefined {
 /** Enemy Ganondorf and the witch sisters transform on their own when they can. */
 export function enemyAutoTransform(b: Battle, u: Unit, rng: RNG): AbilityResult | null {
   if (u.team !== 'enemy') return null;
-  for (const id of ['transformGanon', 'twinrovaFusion']) {
+  for (const id of ['transformGanon', 'twinrovaFusion', ...ENEMY_TRANSFORMS]) {
     if (!u.abilities.includes(id)) continue;
     const def = ABILITIES[id];
     if (def && !unusableReason(b, u, def)) return castAbility(b, u, id, rng);
