@@ -3,6 +3,7 @@
 // installing them here.
 
 import { OCARINA } from '../content/ocarina';
+import { MAJORA, QUEST_ITEMS as MM_QUEST } from '../content/majora';
 import { SPECIAL_TERRAIN } from '../engine/rules';
 import type { ContentPack } from '../content/types';
 import type {
@@ -102,6 +103,10 @@ function addTemplate(t: UnitTemplate) {
 }
 
 installPack(OCARINA);
+installPack(MAJORA);
+
+/** Quest items (shared quest inventory). */
+export const QUEST_ITEMS: Record<string, { id: string; name: string; desc: string }> = Object.fromEntries(MM_QUEST.map((q) => [q.id, q]));
 
 // ───────── Safe lookups ─────────
 

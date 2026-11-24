@@ -4,6 +4,7 @@
 
 import { SUPPORT_S_PAIRS } from '../data/registry';
 import { unitDist } from './grid';
+import { hasEffect } from './units';
 import type { Battle, Pos, Unit } from './types';
 
 export type SupportRank = '' | 'C' | 'B' | 'A' | 'S';
@@ -62,6 +63,7 @@ export function gainSupport(b: Battle, u: Unit, amount = 1, partner?: Unit) {
   const friends = partner ? [partner] : b.units.filter((a) => a !== u && a.team === 'player' && !a.npc && unitDist(u, a) <= 2);
   for (const a of friends) {
     const k = supportKey(u.uid, a.uid);
-    b.supports[k] = Math.min(pointCap(isSPair(u, a)), (b.supports[k] ?? 0) + amount);
+    const gain = amount * (hasEffect(u, 'couple') || hasEffect(a, 'couple') ? 2 : 1); // Couple's Mask
+    b.supports[k] = Math.min(pointCap(isSPair(u, a)), (b.supports[k] ?? 0) + gain);
   }
 }

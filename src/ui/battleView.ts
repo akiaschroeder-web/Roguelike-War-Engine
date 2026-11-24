@@ -3,7 +3,7 @@ import { canRide, effectiveStats, hasEffect, isMounted, mountOf } from '../engin
 import { enemyAutoTransform, abilityRadius, abilityTargets, castAbility, castableAbilities, costLabel, knownAbilities, needsTarget, needsTile, unusableReason, abilityTiles } from '../engine/abilities';
 import { STATUS_INFO } from '../engine/status';
 import { canUse, canUseHere, isTargeted, targetTiles, useItem } from '../engine/items';
-import { environmentPhase, isSeen, revealNearby, triggerTraps, visibleTiles } from '../engine/field';
+import { adjacentMailboxes, environmentPhase, isSeen, openMailbox, pressInversion, revealNearby, triggerTraps, visibleTiles } from '../engine/field';
 import { planAction } from '../engine/ai';
 import { sideQuestText } from '../engine/run';
 import { adjacentCaptives, checkResult, freeCaptive, mountToggleBlocked, moveUnit, toggleMount, objectiveText, spawnReinforcements, startPhase, type TurnStartEvent } from '../engine/battle';
@@ -27,6 +27,8 @@ type Mode = 'orders' | 'orderTarget' | 'idle' | 'select' | 'action' | 'attack' |
 const TERRAIN_GLYPH: Record<string, string> = {
   plain: '', forest: '♣', mountain: '▲', water: '≈', wall: '▦', fort: '⌂', lava: '♨',
   cracked: '▤', timeBlock: '⧗', timeGap: '·', bridge: '═',
+  dekuFlower: '✿', goldFlower: '❀', owlStatue: '🦉', poisonWater: '≈', frozenMech: '❄', rollingRamp: '◢',
+  current: '➶', waterwheel: '⚙', sunBlock: '☀', weightedSwitch: '⊙', inversionSwitch: '⇅', mailbox: '📬',
 };
 
 export class BattleView {
@@ -463,6 +465,7 @@ export class BattleView {
         ${this.healTargets(this.sel).length ? '<button class="btn primary" data-act="heal">Heal</button>' : ''}
         ${menuAbilities(this.sel).some((d) => d.implemented) ? `<button class="btn" data-act="magic" ${castableAbilities(this.b, this.sel).length ? '' : 'disabled'}>Abilities</button>` : ''}
         ${adjacentCaptives(this.b, this.sel).length ? '<button class="btn primary" data-act="free">Free Prisoner</button>' : ''}
+        ${adjacentMailboxes(this.b, this.sel).length ? '<button class="btn" data-act="mail">📬 Check Mailbox</button>' : ''}
         ${this.sel.pack.some((_, i) => canUseHere(this.b, this.sel!, i)) ? '<button class="btn" data-act="items">Item</button>' : ''}
         <button class="btn" data-act="wait">Wait</button>
         <button class="btn" data-act="undo">Undo Move</button>`;
@@ -818,6 +821,16 @@ export class BattleView {
       case 'wait':
         if (this.sel) await this.finishUnit(this.sel);
         return;
+      case 'mail': {
+        const u = this.sel;
+        if (!u) return;
+        const rng = new RNG(b.rngState);
+        const text = openMailbox(b, u, rng);
+        b.rngState = rng.state;
+        if (text) { sfx('chest'); this.addLog(`📬 ${esc(text)}`); this.float(u, 'MAIL!', 'heal'); }
+        await this.finishUnit(u);
+        return;
+      }
       case 'free': {
         const u = this.sel;
         const c = u && adjacentCaptives(b, u)[0];
@@ -852,7 +865,7 @@ export class BattleView {
         }
         // Epona: move again with leftover movement after attacking.
         const leftover = effectiveStats(u).mov - u.movedDist;
-        if (hasEffect(u, 'canto') && leftover > 0 && b.units.includes(u) && !checkResult(b)) {
+        if ((hasEffect(u, 'canto') || u.skills.includes('frenziedMovement')) && leftover > 0 && b.units.includes(u) && !checkResult(b)) {
           this.moves = computeMoves(b, u, leftover);
           this.pending = null;
           this.mode = 'canto';
@@ -867,6 +880,7 @@ export class BattleView {
 
   /** After a player unit moves: traps spring, hidden things are revealed. */
   private afterMove(u: Unit) {
+    if (pressInversion(this.b, u)) { sfx('secret'); this.addLog('🔄 The Inversion Switch flips the walls and floors!'); }
     const dmg = triggerTraps(this.b, u);
     if (dmg) { sfx('hit'); this.float(u, `TRAP −${dmg}`, 'dmg'); this.addLog(`⚠ <b class="player">${esc(u.name)}</b> stepped on a spike trap (−${dmg} HP, rooted)!`); }
     for (const name of revealNearby(this.b)) {
@@ -1069,7 +1083,7 @@ export class BattleView {
     this.abilityId = null;
     this.renderAll();
     await this.levelUps(res.levelUps);
-    if (res.def.freeAction && this.b.units.includes(u)) {
+    if ((res.def.freeAction || res.free) && this.b.units.includes(u)) {
       this.afterMove(u);
       this.origin = null;
       this.mode = 'action';
@@ -1267,6 +1281,10 @@ export class BattleView {
       const plan = planAction(b, e);
       const moved = plan.path.length > 1;
       if (moved) await this.walk(e, plan.path);
+      if (moved) {
+        const trap = triggerTraps(b, e);
+        if (trap) { sfx('bomb'); this.float(e, `TRAP −${trap}`, 'dmg'); this.addLog(`💥 ${esc(e.name)} sets off your Death Armos Core (−${trap})!`); }
+      }
       else moveUnit(e, plan.dest.x, plan.dest.y);
       let target = plan.action ? b.units.find((u) => u.uid === plan.action!.target) : undefined;
       if (target && plan.action!.type === 'attack') {

@@ -333,6 +333,8 @@ export interface WorldDef {
   color: string;
   terrainNames: Record<BaseTerrain, string>;
   terrainColors: Record<BaseTerrain, string>;
+  /** Regions of the Termina campaign (with the three-day cycle). */
+  campaign?: 'termina';
   map: MapStyle;
 }
 
@@ -359,6 +361,8 @@ export interface UnitTemplate {
   growths?: Partial<Growths>;
   weapons: string[];
   skill?: SkillId;
+  /** Additional personal skills. */
+  extraSkills?: SkillId[];
   /** Spells/songs/arrows known from the start. */
   abilities?: string[];
   /** Gear equipped from the start (e.g. a mount). */
@@ -440,6 +444,8 @@ export interface CommanderDef {
   units: string[]; // template ids, excluding the commander
   bonus: CommanderBonus;
   bonusText: string;
+  /** Campaign this commander starts in by default. */
+  campaign?: 'termina';
   /** Weapons, gear and items handed out to the army at the start (commander first). */
   startingItems?: string[];
 }
@@ -743,7 +749,21 @@ export type EventEffect =
   /** A random unit gains a permanent stat bonus. */
   | { kind: 'stat'; stat: StatKey; amount: number }
   /** Every pair in the army gains support points. */
-  | { kind: 'support'; amount: number };
+  | { kind: 'support'; amount: number }
+  /** Quest items (Termina). */
+  | { kind: 'quest'; id: string }
+  | { kind: 'takeQuest'; id: string };
+
+/** Conditions for an event or a single choice. */
+export interface EventRequires {
+  quest?: string[];
+  noQuest?: string[];
+  /** Equipment owned by anyone in the army (or the convoy). */
+  gear?: string[];
+  noGear?: string[];
+  /** Number of masks owned. */
+  maskCount?: number;
+}
 
 export interface EventOutcome {
   text: string;
@@ -752,6 +772,7 @@ export interface EventOutcome {
 
 export interface EventChoice {
   label: string;
+  requires?: EventRequires;
   /** Rupees paid up front (the choice is greyed out if you can't afford it). */
   cost?: number;
   /** Plain outcome, or a gamble. */
@@ -767,5 +788,6 @@ export interface EventDef {
   art?: string;
   /** Only in these regions (all if omitted). */
   regions?: WorldId[];
+  requires?: EventRequires;
   choices: EventChoice[];
 }

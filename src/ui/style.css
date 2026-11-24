@@ -495,3 +495,8 @@ p { margin: 8px 0; }
 .opt-row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; margin: 6px 0; }
 .opt-row select { background: #1a1d2e; color: inherit; border: 1px solid #fff3; border-radius: 6px; padding: 4px 8px; }
 .trial-list { display: flex; flex-wrap: wrap; gap: 6px 14px; }
+
+.pack-head { margin: 22px 0 8px; font-size: 1.1rem; color: var(--gold); }
+.tb-clock b { font-variant-numeric: tabular-nums; }
+.tb-clock.warn b { color: var(--warn); }
+.tb-clock.bad b { color: var(--bad); animation: blink 1s infinite; }

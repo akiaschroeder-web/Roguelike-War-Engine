@@ -27,6 +27,8 @@ export function decorateField(b: Battle, rng: RNG, nodeType: string) {
     if (timeBlocks && rng.chance(45)) b.tiles[k] = 'timeBlock';
     else if (rng.chance(30)) b.tiles[k] = 'cracked';
   });
+  // Termina spaces go down first so treasure and traps land on open ground.
+  decorateTermina(b, rng);
   // Fog of war
   b.fog = rng.chance(FOGGY[world] ?? 6);
   // Buried treasure
@@ -46,7 +48,6 @@ export function decorateField(b: Battle, rng: RNG, nodeType: string) {
     if ((e.artId === 'poe' || e.artId === 'wallmaster' || (tags.includes('undead') && world === 'kakarikoGraveyard')) && rng.chance(60)) e.hidden = true;
   }
   // Desert storms
-  decorateTermina(b, rng);
   if (world === 'gerudoDesert' && rng.chance(30)) b.weather = { kind: 'sandstorm', turns: 4 };
   if (world === 'zorasDomain' && rng.chance(20)) b.weather = { kind: 'rain', turns: 4 };
 }

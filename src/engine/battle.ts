@@ -1,4 +1,4 @@
-import { bossPool, ENEMIES, GEAR, rosterFor, TEMPLATES, worldDef } from '../data/registry';
+import { bossPool, CLASSES, ENEMIES, GEAR, rosterFor, TEMPLATES, worldDef } from '../data/registry';
 import { anchorCost, footprint, keyOf, unitAt, unitDist } from './grid';
 import { generateMap } from './mapgen';
 import { RNG } from './rng';
@@ -24,6 +24,10 @@ export interface BattleSetup {
   supports?: Record<string, number>;
   /** Chamber of Trials modifiers. */
   trials?: string[];
+  /** Extra enemy levels (Termina: each Song of Time reset, and the third day). */
+  levelBonus?: number;
+  /** Equipment the army owns (some masks change encounters). */
+  gearOwned?: string[];
 }
 
 /** Enemy level for a given depth. Keeps climbing in endless mode. */
@@ -43,7 +47,7 @@ export function createBattle(setup: BattleSetup): Battle {
   const rng = new RNG(setup.seed);
   const pc = setup.roster.length;
   const isBossFight = setup.nodeType === 'boss' || setup.nodeType === 'elite';
-  const level = enemyLevelFor(setup.depth, setup.nodeType) + (setup.trials?.includes('hardened') ? 2 : 0);
+  const level = enemyLevelFor(setup.depth, setup.nodeType) + (setup.trials?.includes('hardened') ? 2 : 0) + (setup.levelBonus ?? 0);
   const world = worldDef(setup.world);
 
   let objective: Objective = { type: 'rout' };
@@ -51,7 +55,7 @@ export function createBattle(setup: BattleSetup): Battle {
   else if (setup.nodeType === 'siege') objective = { type: 'seize' };
   else if (setup.nodeType === 'ambush') objective = { type: 'rout' };
   else if (setup.depth >= 1) {
-    objective = { type: rng.weighted<ObjectiveType>([['rout', 36], ['survive', 10], ['seize', 14], ['defend', 9], ['escape', 8], ['capture', 10], ['escort', 8], ['rescue', 8]]) };
+    objective = { type: rng.weighted<ObjectiveType>([['rout', 36], ['survive', 10], ['seize', 14], ['defend', 9], ['escape', 8], ['capture', 10], ['escort', 8], ['rescue', setup.gearOwned?.includes('kafeiMask') ? 16 : 8]]) };
     if (objective.type === 'survive' || objective.type === 'defend') objective.turns = 6;
   }
 
@@ -101,6 +105,8 @@ export function createBattle(setup: BattleSetup): Battle {
     units.push(e);
   });
   if (setup.nodeType === 'ambush') ambushPositions(rng, map, units);
+  // Circus Leader's Mask: hostile riders lose their nerve and hold position.
+  if (setup.gearOwned?.includes('circusLeaderMask')) for (const e of units) if (e.team === 'enemy' && !e.isBoss && CLASSES[e.classId]?.moveType === 'cavalry') e.ai = 'guard';
   if (objective.type === 'seize' && objective.tiles?.[0]) {
     // Someone holds the throne: the toughest one-tile enemy, who won't leave it.
     const t = objective.tiles[0];

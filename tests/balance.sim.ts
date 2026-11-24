@@ -83,6 +83,7 @@ it('region 1 balance', () => {
         else if (ev.type === 'fountain') fountainHeal(run);
         else if (ev.type === 'treasure') takeTreasure(run, null, null);
         else if (ev.type === 'event') { if (!chooseEvent(run, 0)) chooseEvent(run, 1); run.event = undefined; }
+        else if (ev.type === 'moonfall') { alive = false; break; }
         else run.event = undefined;
       }
     }

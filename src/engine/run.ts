@@ -1,5 +1,5 @@
 import {
-  EVENTS, FACTIONS, GEAR, ITEMS, MONSTER_CHANCE, BOSSES, bossPool, COMMANDERS, PERMANENT_ITEMS, REGION_IDS, TEMPLATE_LIST, TEMPLATES, WEAPONS,
+  EVENTS, FACTIONS, GEAR, QUEST_ITEMS, RACES, WORLDS, ITEMS, MONSTER_CHANCE, BOSSES, bossPool, COMMANDERS, PERMANENT_ITEMS, REGION_IDS, TEMPLATE_LIST, TEMPLATES, WEAPONS,
 } from '../data/registry';
 import { createBattle } from './battle';
 import { isSPair, rankOf, supportKey, type SupportRank } from './supports';
@@ -11,7 +11,7 @@ import { adjustMorale, adjustReputation, applyArmyBuffs, armyCap, armyOf, deploy
 import { prepareForBattle } from './units';
 import { emptyProgress, type MetaProgress } from './meta';
 import { addToPack, canRide, forgeLevel, gainXp, makeHero, maxUses, rollLevelUp, slotFor } from './units';
-import type { Battle, BossDef, CommanderDef, EventDef, EventEffect, EventOutcome, EnemyForce, FactionDef, GearSlot, MapNode, NodeType, Rarity, Run, RunMap, Unit, UnitTemplate, WorldId } from './types';
+import type { Battle, BossDef, CommanderDef, EventDef, EventEffect, EventOutcome, EventRequires, EnemyForce, FactionDef, GearSlot, MapNode, NodeType, Rarity, Run, RunMap, Unit, UnitTemplate, WorldId } from './types';
 
 export const ROWS_PER_REGION = 7; // last row is the regional boss
 export { ARMY_CAPACITY, DEPLOY_CAPACITY };
@@ -31,11 +31,13 @@ export function commanderOf(run: Run): CommanderDef {
   return COMMANDERS.find((c) => c.heroId === run.commanderId) ?? COMMANDERS[0];
 }
 
-export function newRun(seed: number, commanderId: string): RunWithEvent {
+export function newRun(seed: number, commanderId: string, campaign?: 'hyrule' | 'termina'): RunWithEvent {
   const rng = new RNG(seed);
   const cmd = COMMANDERS.find((c) => c.heroId === commanderId) ?? COMMANDERS[0];
+  const camp = campaign ?? cmd.campaign ?? 'hyrule';
   const home = TEMPLATES[cmd.heroId].home;
-  const region = home === 'hyruleCastle' ? 'hyruleField' : home;
+  // Hyrule campaigns start in the commander's home region; Termina always starts in Clock Town.
+  const region = camp === 'termina' ? 'clockTown' : WORLDS[home]?.campaign === 'termina' ? 'hyruleField' : home === 'hyruleCastle' ? 'hyruleField' : home;
   const run: RunWithEvent = {
     seed, rngState: 0, act: 1, region, regionsVisited: [region], map: { rows: 0, nodes: [] }, currentNodeId: null,
     roster: [], fallen: [], rupees: 200, convoy: [], commanderId: cmd.heroId, bonus: cmd.bonus,
@@ -56,6 +58,8 @@ export function newRun(seed: number, commanderId: string): RunWithEvent {
   }
   run.map = generateRegionMap(rng, run.act, region);
   run.rngState = rng.state;
+  run.campaign = camp;
+  if (camp === 'termina') { run.clock = { hours: 0, resets: 0 }; run.bank = 0; run.questItems = []; }
   return run;
 }
 
@@ -139,7 +143,8 @@ export type RunEvent =
   | { type: 'region'; options: WorldId[] }
   | { type: 'blacksmith'; forgeOffers: string[]; sold: string[] }
   | { type: 'event'; eventId: string; result?: { text: string; lines: string[] } }
-  | { type: 'dungeon'; floor: number; of: number };
+  | { type: 'dungeon'; floor: number; of: number }
+  | { type: 'moonfall' };
 
 /** Node types that are fought. */
 export const BATTLE_NODES: NodeType[] = ['battle', 'elite', 'ambush', 'siege', 'dungeon', 'boss'];
@@ -191,6 +196,7 @@ export function enterNode(run: RunWithEvent, nodeId: string): void {
   run.currentNodeId = nodeId;
   node.visited = true;
   run.event = undefined;
+  if (advanceClock(run, hoursFor(node.type))) { run.event = { type: 'moonfall' }; return; }
   if (BATTLE_NODES.includes(node.type)) {
     if (node.type === 'dungeon') run.dungeon = { floor: 1, of: DUNGEON_FLOORS };
     marchToBattle(run);
@@ -227,7 +233,7 @@ export function enterNode(run: RunWithEvent, nodeId: string): void {
         run.event = { type: 'treasure', rewards: treasureRewards(run, rng), rupees: 100 + run.act * 60 };
         break;
       case 'event': {
-        const pool = Object.values(EVENTS).filter((e) => !e.regions || e.regions.includes(node.world));
+        const pool = Object.values(EVENTS).filter((e) => (!e.regions || e.regions.includes(node.world)) && meetsRequires(run, e.requires));
         const fresh = pool.filter((e) => !(run.eventsSeen ?? []).includes(e.id));
         const ev = rng.pick(fresh.length ? fresh : pool);
         (run.eventsSeen ??= []).push(ev.id);
@@ -266,7 +272,12 @@ export function startBattle(run: RunWithEvent, uids: string[]): void {
     run.battle = createBattle({
       world: node.world, nodeType: node.type === 'dungeon' ? kind : node.type, depth: depthOf(run, node) + floorBonus, roster: chosen,
       seed: rng.int(0, 2 ** 31), boss, healMult: run.bonus === 'healing' ? 1.2 : 1, force, supports: run.supports, trials: run.trials,
+      levelBonus: (run.clock?.resets ?? 0) * 2 + (run.clock && clockLabel(run).day === 3 ? 1 : 0),
+      gearOwned: [...ownedGear(run)],
     });
+    run.battle.bonus = run.bonus;
+    run.battle.night = run.clock ? clockLabel(run).night : true;
+    run.battle.statusBonus = run.bonus === 'lingeringStatus' ? 1 : 0;
     run.battle.reserves = run.roster.filter((u) => !chosen.includes(u)).map((u) => ({ ...prepareForBattle(u), x: -1, y: -1 }));
     applyArmyBuffs(run, run.battle);
   });
@@ -333,8 +344,10 @@ export function recruitOffers(run: Run, rng: RNG, world: WorldId): string[] {
   const have = new Set(run.roster.map((u) => u.templateId));
   // Every unit is in the pool. Named characters (heroes, villains, bosses) join once;
   // generic soldiers and creatures can join many times.
+  const day = run.clock ? clockLabel(run).day : 0;
   const available = TEMPLATE_LIST.filter((t) => !t.generic && !have.has(t.id)
-    && !run.fallen.some((f) => f.templateId === t.id) && !conflicts(run, t));
+    && !run.fallen.some((f) => f.templateId === t.id) && !conflicts(run, t)
+    && (!day || !TERMINA_SCHEDULE[t.id] || TERMINA_SCHEDULE[t.id].includes(day)));
   const fresh = available.filter((t) => !run.seenHeroes.includes(t.id));
   const pool = fresh.length >= 2 ? fresh : available;
   const heroes = pool.filter((t) => !t.rare);
@@ -349,8 +362,18 @@ export function recruitOffers(run: Run, rng: RNG, world: WorldId): string[] {
   }
   const generics = TEMPLATE_LIST.filter((t) => t.generic);
   const monsterWeight = run.bonus === 'monsters' ? 3 : 1;
+  const owned = ownedGear(run);
+  const undeadBoost = run.bonus === 'undeadArmy' || owned.has('captainsHat');
+  const beastBoost = owned.has('bremenMask') || owned.has('maskOfTruth');
+  const weightOf = (t: UnitTemplate) => {
+    let wgt = t.monster ? monsterWeight : 2;
+    if (run.bonus === 'dekuArmy' && t.race === 'deku') wgt *= 3;
+    if (undeadBoost && t.race === 'undead') wgt *= 3;
+    if (beastBoost && RACES[t.race]?.tags?.includes('beast')) wgt *= 2;
+    return wgt;
+  };
   while (offers.length < 3 && generics.length) {
-    const pick = rng.weighted(generics.map((t) => [t, t.monster ? monsterWeight : 2] as [UnitTemplate, number]));
+    const pick = rng.weighted(generics.map((t) => [t, weightOf(t)] as [UnitTemplate, number]));
     if (!offers.includes(pick.id)) offers.push(pick.id);
   }
   return offers;
@@ -422,7 +445,7 @@ export function finishBattle(run: RunWithEvent): BattleSummary {
       // Benched units rest a little more than those who fought.
       const pct = deployed.has(u.uid) ? heal : heal + 0.2;
       next.hp = Math.min(next.stats.hp, next.hp + Math.ceil(next.stats.hp * pct));
-      return { ...next, moved: false, acted: false, kills: 0, movedDist: 0, survivedOnce: false, statuses: [], buffs: [], mp: next.stats.mp, sta: next.stats.sta, faroreMark: undefined, cooldowns: {} };
+      return { ...next, moved: false, acted: false, kills: 0, movedDist: 0, survivedOnce: false, statuses: [], buffs: [], mp: next.stats.mp, sta: next.stats.sta, faroreMark: undefined, cooldowns: {}, maskForm: undefined, maskTurn: undefined, usedAbilities: [] };
     });
   run.fallen.push(...fallen.map((u) => ({ ...u, hp: 0 })));
   // Victory experience for everyone who fought and lived (bigger for tougher fights).
@@ -438,7 +461,8 @@ export function finishBattle(run: RunWithEvent): BattleSummary {
   const found: string[] = [];
   const joined: string[] = [];
   if (won) {
-    rupees = Math.round(b.rewardRupees * (run.bonus === 'rupees' ? 1.25 : 1)) + (b.bonusRupees ?? 0);
+    const badge = ownedGear(run).has('bombersBadge') ? 1.1 : 1;
+    rupees = Math.round(b.rewardRupees * (run.bonus === 'rupees' ? 1.25 : 1) * badge) + (b.bonusRupees ?? 0);
     run.rupees += rupees;
     // Things found on the field (digging, fishing)
     for (const id of b.loot ?? []) { giveItem(run, id, null); found.push(id); }
@@ -450,7 +474,7 @@ export function finishBattle(run: RunWithEvent): BattleSummary {
     }
     // Freed prisoners join (if there's room)
     withRng(run, (rng) => {
-      for (const c of b.units.filter((x) => x.rescued)) {
+      for (const c of [...b.units.filter((x) => x.rescued), ...(b.purified ?? [])]) {
         if (run.roster.length >= armyCap(run) || !c.templateId) continue;
         if (!TEMPLATES[c.templateId]?.generic && run.roster.some((r) => r.templateId === c.templateId)) continue;
         const u = makeHero(c.templateId, nextUid(run), recruitLevel(run), rng);
@@ -464,7 +488,7 @@ export function finishBattle(run: RunWithEvent): BattleSummary {
       for (const boss of b.fallen.filter((u) => u.isBoss && u.bossId)) {
         const options = (BOSSES[boss.bossId!]?.drops ?? []).filter((id) => !owned.has(id));
         if (options.length) {
-          const id = rng.pick(options);
+          const id = options.find((x) => x.endsWith('Remains')) ?? rng.pick(options); // Boss Remains always drop first
           drops.push(id);
           run.convoy.push(id);
           owned.add(id);
@@ -592,7 +616,34 @@ export function eventDef(run: RunWithEvent): EventDef | undefined {
 
 export function canChoose(run: Run, def: EventDef, index: number): boolean {
   const c = def.choices[index];
-  return !!c && run.rupees >= (c.cost ?? 0);
+  return !!c && run.rupees >= (c.cost ?? 0) && meetsRequires(run, c.requires);
+}
+
+/** Every piece of equipment the army owns (worn or in the convoy). */
+export function ownedGear(run: Run): Set<string> {
+  return new Set([...run.convoy, ...run.roster.flatMap((u) => [...u.weapons, ...Object.values(u.gear ?? {}).filter((x): x is string => !!x)])]);
+}
+
+export function meetsRequires(run: Run, r: EventRequires | undefined): boolean {
+  if (!r) return true;
+  const q = run.questItems ?? [];
+  if (r.quest && !r.quest.every((id) => q.includes(id))) return false;
+  if (r.noQuest && r.noQuest.some((id) => q.includes(id))) return false;
+  const owned = ownedGear(run);
+  if (r.gear && !r.gear.every((id) => owned.has(id))) return false;
+  if (r.noGear && r.noGear.some((id) => owned.has(id))) return false;
+  if (r.maskCount && [...owned].filter((id) => GEAR[id]?.slot === 'head' && /mask|hat|hood/i.test(GEAR[id].name)).length < r.maskCount) return false;
+  return true;
+}
+
+/** Add a quest item. The Sun's and Moon's Masks combine into the Couple's Mask. */
+export function addQuestItem(run: Run, id: string) {
+  const q = (run.questItems ??= []);
+  q.push(id);
+  if (q.includes('sunsMask') && q.includes('moonsMask')) {
+    run.questItems = q.filter((x) => x !== 'sunsMask' && x !== 'moonsMask');
+    if (!ownedGear(run).has('couplesMask')) run.convoy.push('couplesMask');
+  }
 }
 
 /** Pick an event choice: pay, roll a gamble, apply effects. Returns the result shown to the player. */
@@ -653,6 +704,15 @@ function applyEffect(run: Run, e: EventEffect, rng: RNG): string | null {
       if (e.stat === 'hp') u.hp += e.amount;
       return `${u.name}: +${e.amount} ${STAT_NAMES[e.stat]}`;
     }
+    case 'quest':
+      addQuestItem(run, e.id);
+      return `Quest item: ${QUEST_ITEMS[e.id]?.name ?? e.id}${!(run.questItems ?? []).includes(e.id) && e.id.endsWith('sMask') ? ' (combined into the Couple\'s Mask!)' : ''}`;
+    case 'takeQuest': {
+      const q = run.questItems ?? [];
+      const i = q.indexOf(e.id);
+      if (i >= 0) q.splice(i, 1);
+      return null;
+    }
     case 'support': {
       const s = (run.supports ??= {});
       for (let i = 0; i < run.roster.length; i++)
@@ -673,13 +733,120 @@ export function isRegionComplete(run: Run): boolean {
 /** After a regional boss: offer the next region to march on. */
 export function offerRegions(run: RunWithEvent): void {
   withRng(run, (rng) => {
+    if (run.campaign === 'termina') {
+      const t = terminaNextRegions(run);
+      if (t.length) { run.event = { type: 'region', options: t }; return; }
+    }
     const recent = run.regionsVisited.slice(-2);
-    const options = rng.shuffle(REGION_IDS.filter((r) => !recent.includes(r))).slice(0, 3);
+    // Hyrule's war stays in Hyrule until the Free-for-All, when Termina's regions join in.
+    const pool = REGION_IDS.filter((r) => !recent.includes(r) && (run.act + 1 >= FREE_FOR_ALL_REGION || WORLDS[r]?.campaign !== 'termina') && r !== 'moon');
+    const options = rng.shuffle(pool).slice(0, 3);
     run.event = { type: 'region', options };
   });
 }
 
+// ───────────────────────── Termina campaign ─────────────────────────
+
+export const TERMINA_TEMPLES: WorldId[] = ['woodfall', 'snowhead', 'greatBay', 'ikana'];
+const REMAINS: Record<string, string> = { woodfall: 'odolwaRemains', snowhead: 'gohtRemains', greatBay: 'gyorgRemains', ikana: 'twinmoldRemains' };
+export const CYCLE_HOURS = 72;
+
+/** Boss Remains the army holds. */
+export function remainsHeld(run: Run): string[] {
+  const owned = ownedGear(run);
+  return Object.values(REMAINS).filter((id) => owned.has(id));
+}
+
+/** Clock Town → Termina Field → the four regions (any order) → the Moon once all four Remains are held. Then endless. */
+function terminaNextRegions(run: Run): WorldId[] {
+  if (run.region === 'clockTown' && !run.regionsVisited.includes('terminaField')) return ['terminaField'];
+  if (run.region === 'moon') return [];
+  const held = remainsHeld(run);
+  if (held.length >= 4) return ['moon'];
+  const open = TERMINA_TEMPLES.filter((r) => !held.includes(REMAINS[r]));
+  return open.length ? open : ['moon'];
+}
+
+/** Hours in the cycle each kind of encounter takes. */
+export function hoursFor(type: NodeType): number {
+  return BATTLE_NODES.includes(type) ? 6 : 3;
+}
+
+export function clockLabel(run: Run): { day: number; time: string; night: boolean; hoursLeft: number } {
+  const h = run.clock?.hours ?? 0;
+  const day = Math.min(3, Math.floor(h / 24) + 1);
+  const clock = (6 + h) % 24;
+  const night = h % 24 >= 12;
+  const hh = clock % 12 === 0 ? 12 : clock % 12;
+  return { day, time: `${hh}:00 ${clock < 12 ? 'a.m.' : 'p.m.'}`, night, hoursLeft: Math.max(0, CYCLE_HOURS - h) };
+}
+
+/** Advance the Moon's clock. Returns true if the Moon has fallen. */
+export function advanceClock(run: Run, hours: number): boolean {
+  if (run.campaign !== 'termina' || !run.clock || run.region === 'moon') return false;
+  run.clock.hours += hours;
+  return run.clock.hours >= CYCLE_HOURS;
+}
+
+/** Items that are lost when time is reset (ordinary consumables). */
+const KEEP_KINDS = new Set(['tool', 'learn']);
+const KEEP_QUEST = new Set(['bombersNotebook', 'fishingPass']);
+
+/** The Song of Time: back to the dawn of the first day, at a price. */
+export function songOfTimeReset(run: RunWithEvent): string[] {
+  if (run.campaign !== 'termina' || run.battle || !run.clock) return [];
+  const lost: string[] = [];
+  run.clock.hours = 0;
+  run.clock.resets++;
+  if (run.rupees) lost.push(`₹${run.rupees} unbanked Rupees`);
+  run.rupees = 0;
+  let items = 0;
+  for (const u of run.roster) {
+    const before = u.pack.length;
+    u.pack = u.pack.filter((p) => KEEP_KINDS.has(ITEMS[p.id]?.kind ?? '') || p.id === 'strayFairy');
+    items += before - u.pack.length;
+  }
+  const cBefore = run.convoy.length;
+  run.convoy = run.convoy.filter((id) => !ITEMS[id] || KEEP_KINDS.has(ITEMS[id].kind) || id === 'strayFairy');
+  items += cBefore - run.convoy.length;
+  if (items) lost.push(`${items} consumable item${items > 1 ? 's' : ''}`);
+  const q = run.questItems ?? [];
+  const goneQuest = q.filter((id) => !KEEP_QUEST.has(id));
+  if (goneQuest.length) lost.push(`${goneQuest.length} quest item${goneQuest.length > 1 ? 's' : ''}`);
+  run.questItems = q.filter((id) => KEEP_QUEST.has(id));
+  const a = armyOf(run);
+  a.blessing = undefined;
+  a.feast = false;
+  // The current route starts over.
+  withRng(run, (rng) => { run.map = generateRegionMap(rng, run.act, run.region); });
+  run.currentNodeId = null;
+  run.event = undefined;
+  return lost;
+}
+
+export function deposit(run: Run, amount: number): boolean {
+  if (run.campaign !== 'termina' || amount <= 0 || amount > run.rupees) return false;
+  run.rupees -= amount;
+  run.bank = (run.bank ?? 0) + amount;
+  return true;
+}
+
+export function withdraw(run: Run, amount: number): boolean {
+  if (run.campaign !== 'termina' || amount <= 0 || amount > (run.bank ?? 0)) return false;
+  run.bank! -= amount;
+  run.rupees += amount;
+  return true;
+}
+
+/** Who can be recruited on which day of the cycle (Bombers' Notebook). */
+export const TERMINA_SCHEDULE: Record<string, number[]> = {
+  anju: [1, 2], kafei: [3], mikau: [1, 2], lulu: [2, 3], darmani: [1, 2, 3], tingle: [1, 2], skullKid: [3], tatl: [1, 2, 3], tael: [3],
+  sharp: [2, 3], flat: [1, 2], garoMaster: [2, 3], captainKeeta: [3], dekuPrincess: [1], dekuKing: [2, 3],
+};
+
 export function advanceRegion(run: RunWithEvent, region: WorldId): void {
+  // After the Moon, the three-day cycle is over: Termina's war goes on without a clock.
+  if (run.region === 'moon') delete run.clock;
   run.act++;
   run.region = region;
   run.regionsVisited.push(region);
@@ -700,7 +867,8 @@ export function recruitLevel(run: Run): number {
 
 export function recruit(run: RunWithEvent, templateId: string): Unit | null {
   if (run.roster.length >= armyCap(run)) return null;
-  const unit = withRng(run, (rng) => makeHero(templateId, nextUid(run), recruitLevel(run), rng));
+  const bonusLvl = run.bonus === 'dekuArmy' && TEMPLATES[templateId]?.race === 'deku' ? 1 : 0;
+  const unit = withRng(run, (rng) => makeHero(templateId, nextUid(run), recruitLevel(run) + bonusLvl, rng));
   run.roster.push(unit);
   if (run.event?.type === 'recruit') {
     for (const id of run.event.offers) if (ownedTemplateUnique(id) && !run.seenHeroes.includes(id)) run.seenHeroes.push(id);
@@ -835,7 +1003,11 @@ export function useItemOutside(run: Run, uid: string, index: number): boolean {
   const p = u?.pack[index];
   const def = p && ITEMS[p.id];
   if (!u || !p || !def || !canUseOutside(u, index)) return false;
-  if (def.kind === 'learn') u.abilities.push(def.teaches!);
+  if (def.id === 'goldDust') {
+    const razor = u.weapons.indexOf('razorSword');
+    if (razor >= 0) { u.weapons[razor] = 'gildedSword'; if (u.wear) delete u.wear.razorSword; }
+    else { const w = u.weapons[0]; (u.forge ??= {})[w] = Math.min(MAX_FORGE, forgeLevel(u, w) + 1); }
+  } else if (def.kind === 'learn') u.abilities.push(def.teaches!);
   else if (def.kind === 'heal' || def.kind === 'fullHeal') u.hp = Math.min(u.stats.hp, u.hp + (def.kind === 'fullHeal' ? u.stats.hp : def.power));
   // (MP refills at the start of every battle, so MP items are only useful in battle.)
   if (--p.uses <= 0) u.pack.splice(index, 1);
@@ -847,7 +1019,26 @@ export function canUseOutside(u: Unit, index: number): boolean {
   if (!def) return false;
   if (def.kind === 'learn') return !!def.teaches && !u.abilities.includes(def.teaches);
   if (def.kind === 'heal' || def.kind === 'fullHeal') return u.hp < u.stats.hp;
+  if (def.id === 'goldDust') return u.weapons.includes('razorSword') || (!!u.weapons[0] && forgeLevel(u, u.weapons[0]) < MAX_FORGE && !!WEAPONS[u.weapons[0]] && WEAPONS[u.weapons[0]].type !== 'natural');
   return false;
+}
+
+/** Great Fairy: hand in a Stray Fairy for a free blessing (doesn't use up the visit). */
+export function returnStrayFairy(run: RunWithEvent, uid: string): string | null {
+  if (run.event?.type !== 'fountain') return null;
+  const holder = run.roster.find((u) => u.pack.some((p) => p.id === 'strayFairy'));
+  const ci = run.convoy.indexOf('strayFairy');
+  if (holder) { const i = holder.pack.findIndex((p) => p.id === 'strayFairy'); if (--holder.pack[i].uses <= 0) holder.pack.splice(i, 1); }
+  else if (ci >= 0) run.convoy.splice(ci, 1);
+  else return null;
+  const ev = run.event;
+  const got = fountainBless(run, uid);
+  run.event = ev; // the fountain visit continues
+  return got;
+}
+
+export function strayFairyCount(run: Run): number {
+  return run.convoy.filter((id) => id === 'strayFairy').length + run.roster.reduce((n, u) => n + u.pack.filter((p) => p.id === 'strayFairy').reduce((a, p) => a + p.uses, 0), 0);
 }
 
 /** Great Fairy spells a unit could still learn. */
@@ -930,8 +1121,9 @@ export function campRest(run: RunWithEvent): void {
   const a = armyOf(run);
   const fed = a.supplies >= 4;
   if (fed) a.supplies -= 4;
-  for (const u of run.roster) u.hp = Math.min(u.stats.hp, u.hp + Math.ceil(u.stats.hp * (fed ? 1 : 0.5)));
-  adjustMorale(run, fed ? 5 : 0);
+  const anju = run.roster.some((u) => u.skills.includes('hospitality')); // Anju's Hospitality
+  for (const u of run.roster) u.hp = Math.min(u.stats.hp, u.hp + Math.ceil(u.stats.hp * (fed ? 1 : anju ? 0.75 : 0.5)));
+  adjustMorale(run, (fed ? 5 : 0) + (anju ? 5 : 0));
   run.event = undefined;
 }
 

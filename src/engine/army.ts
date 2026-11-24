@@ -4,6 +4,7 @@
 import { anchorCost, footprint, unitAt, unitDist } from './grid';
 import { INF } from './rules';
 import { addStatus } from './status';
+import { canSwim } from './units';
 import type { Army, Battle, OrderId, Pos, Run, Unit } from './types';
 
 export function newArmy(): Army {
@@ -240,6 +241,7 @@ export function applyArmyBuffs(run: Run, b: Battle) {
     if (a.blessing === 'din') u.buffs.push({ id: 'din', name: "Din's Blessing", turns: 99, stats: { str: 2, mag: 2 } });
     if (a.blessing === 'nayru') u.buffs.push({ id: 'nayru', name: "Nayru's Blessing", turns: 99, stats: { def: 2, res: 2 } });
     if (a.feast) addStatus(u, 'inspired', 2);
+    if (run.bonus === 'aquatic' && canSwim(u)) u.buffs.push({ id: 'aquaticArmy', name: 'Great Bay Warriors', turns: 99, stats: { mov: 1 } });
   }
   a.blessing = undefined;
   a.feast = false;

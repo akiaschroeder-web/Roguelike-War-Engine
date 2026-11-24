@@ -90,5 +90,6 @@ export const WEAPONS: WeaponDef[] = [
   w('beamosEye', 'Laser Eye', 'magic', 'common', 8, 85, 0, 0, 2, 4, { unique: true }),
   w('drainTouch', 'Life Drain', 'natural', 'common', 6, 80, 0, 0, 1, 1, { unique: true }),
   w('bossClaws', 'Great Claws', 'natural', 'common', 12, 80, 5, 0, 1, 2, { unique: true }),
+  w('jabuTide', 'Tidal Spray', 'magic', 'common', 9, 85, 0, 0, 1, 3, { unique: true, element: 'water' }),
   w('bossBeam', 'Arcane Blast', 'magic', 'common', 11, 80, 5, 0, 1, 3, { unique: true, element: 'lightning' }),
 ];

@@ -74,6 +74,19 @@ src/
 tests/               Vitest suite
 ```
 
+## Majora's Mask pack (Termina)
+
+- **Termina campaign** (pick it at commander select): Clock Town → Termina Field → Woodfall, Snowhead, Great Bay and Ikana in any order → the Moon once you hold all four Boss Remains → endless war. A **three-day clock** advances with every encounter; when the third day ends, the Moon falls. The **Song of Time** resets to the first dawn: you keep your army, levels, gear, masks, Remains and banked Rupees, but lose unbanked Rupees, ordinary consumables, most quest items and the current route, and enemies grow stronger after every reset. Day and night matter (undead regenerate at night for Igos's army; recruits follow a day schedule shown in the Bombers' Notebook).
+- **52 new units**: Link (Termina) and his Deku, Goron, Zora, Fierce Deity and Giant forms; 16 Terminians; Odolwa, Goht, Gyorg, both Twinmolds and Majora's three forms; the Four Giants; 10 monsters; 6 new Deku generics; Igos's two Royal Servants. Plus **Lord Jabu-Jabu** for Ocarina of Time. Every one is recruitable.
+- **Transformation masks**: Link puts on the Deku, Goron, Zora, Fierce Deity (3 MP/turn) and Giant's (4 MP/turn) Masks mid-battle; HP ratio and levels carry over, and Hero of Masks makes one swap per turn free. Majora's Mask changes into its Incarnation and Wrath below half HP.
+- **Masks, gear and items**: 21 new masks (Stone Mask hides you, Gibdo Mask pacifies the dead, Kamaro's dance dazes, Couple's Mask doubles supports…), Boss Remains, Termina weapons (Razor/Gilded/Great Fairy's/Double Helix swords, Garo blades, Keeta's greatsword…), instruments, 9 new songs (Healing purifies and recruits, Soaring warps to Owl Statues, Elegy leaves a shell, Goron Lullaby sleeps…), and new consumables (Powder Keg, Chateau Romani, Bio Deku Baba seeds, Death Armos Core traps…). Quest items drive event chains (title deeds, Kafei and Anju, the Couple's Mask, Zora Eggs, the Deku Princess).
+- **Battlefield spaces**: Deku Flowers, Owl Statues, poisoned water, frozen mechanisms, rolling ramps, underwater currents and waterwheels, Sun Blocks, weighted and inversion switches, and mailboxes.
+- **6 new commanders**: Link, Darmani, Mikau, the Deku King, Igos du Ikana and Skull Kid.
+
+## Sound
+
+Sound effects are synthesized in the browser. Music is optional: put files in `public/music/` named `title`, `map`, `battle`, `boss`, `victory`, `gameover`, `camp`, `shop`, `termina` or `moon` (`.mp3`, `.ogg`, `.m4a` or `.wav`). Volume and mute are in the Sound menu.
+
 ## Possible future additions
 
 - More content packs (Majora's Mask, Wind Waker…) and the tools from other games (Clawshot, Gust Bellows, Dominion Rod…)

@@ -96,7 +96,9 @@ export function canReach(w: WeaponDef, d: number): boolean {
 
 /** Offensive weapons the unit can use at distance d (equipped first). */
 export function attackWeapons(u: Unit, d: number): WeaponDef[] {
-  return u.weapons.map((id) => WEAPONS[id]).filter((w) => w && w.type !== 'staff' && w.type !== 'instrument' && canWield(u, w) && canReach(w, d));
+  const extra = hasEffect(u, 'magicRange');
+  return u.weapons.map((id) => WEAPONS[id]).filter((w) => w && w.type !== 'staff' && w.type !== 'instrument' && canWield(u, w)
+    && (canReach(w, d) || (extra && w.type === 'magic' && d === w.maxRange + 1)));
 }
 
 export function healWeapons(u: Unit, d: number): WeaponDef[] {

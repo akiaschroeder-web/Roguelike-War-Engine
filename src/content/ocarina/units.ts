@@ -94,6 +94,9 @@ export const NAMED: UnitTemplate[] = [
   u({ id: 'greatFairy', name: 'Great Fairy', title: 'Fairy Matriarch', race: 'fairy', classId: 'fairyMatriarch', size: 2, home: 'deathMountain', glyph: 'GF',
     stats: st(25, 2, 12, 10, 4, 6, 6, 17, 16, 14, 10, 35), weapons: ['greatFairyWand', 'forestSageStaff'], skill: 'greatFairysBlessing', abilities: ['dinsFire', 'faroresWind', 'nayrusLove'],
     bio: 'Her laughter echoes through the fountain. Her blessings are worth the wait.' }),
+  u({ id: 'jabuJabu', name: 'Lord Jabu-Jabu', title: 'Guardian of the Zora', race: 'aquaticDeity', classId: 'guardianBeast', size: 5, home: 'zorasDomain', glyph: 'JJ',
+    stats: st(95, 16, 5, 3, 22, 40, 4, 10, 18, 10, 40, 25), weapons: ['jabuTide'], skill: 'guardianOfTheZora', extraSkills: ['divineBulk'], rare: true,
+    bio: 'The great fish deity of Zora\'s Fountain. A living fortress that can only move through deep water.' }),
 ];
 
 // ───────────────────────── Generic recruitable units ─────────────────────────

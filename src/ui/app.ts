@@ -1,8 +1,8 @@
-import { ABILITIES, artFor, BOSSES, ENEMIES, GEAR, ITEMS, CLASSES, COMMANDERS, PERMANENT_ITEMS, REGION_IDS, TEMPLATE_LIST, TEMPLATES, WEAPONS, worldDef } from '../data/registry';
+import { ABILITIES, artFor, BOSSES, ENEMIES, GEAR, QUEST_ITEMS, ITEMS, CLASSES, COMMANDERS, PERMANENT_ITEMS, REGION_IDS, TEMPLATE_LIST, TEMPLATES, WEAPONS, worldDef } from '../data/registry';
 import { canWield, type LevelUp } from '../engine/combat';
 import { randomSeed } from '../engine/rng';
 import {
-  advanceRegion, buySupplies, supplyPrice, give, campFeast, commanderOf, FEAST_COST, improveMaterials, reviveWithDust, SUPPLY_PACK, availableNodes, buy, campDrill, campRest, campTrain, currentNode, depthOf, enterNode,
+  advanceRegion, buySupplies, supplyPrice, give, clockLabel, songOfTimeReset, TERMINA_SCHEDULE, deposit, withdraw, returnStrayFairy, strayFairyCount, campFeast, commanderOf, FEAST_COST, improveMaterials, reviveWithDust, SUPPLY_PACK, availableNodes, buy, campDrill, campRest, campTrain, currentNode, depthOf, enterNode,
   equipFromConvoy, finishBattle, fountainBless, fountainHeal, fountainRevive, isRegionComplete, loadMeta, loadRun, newRun, offerRegions,
   recruit, recruitLevel, saveMeta, saveRun, canTake, canUseOutside, forgePrice, forgeWeapon, improveCost, improveWeapon, MAX_FORGE, repairCost, repairWeapon, FREE_FOR_ALL_REGION, isFreeForAll, fountainTeach, unlearnedFairySpells, priceOf, stashGear, stashItem, stashWeapon, useItemOutside, type ItemKindTag, startBattle, takeTreasure,
   canChoose, chooseEvent, descendDungeon, eventDef, leaveDungeon,
@@ -272,7 +272,8 @@ export class App {
         <div class="page">
           <div class="page-head"><button class="btn" data-nav="back">← Back</button><h1>Choose your Commander</h1><span></span></div>
           <p class="dim center-text">Each commander brings their own army and a special bonus. If the commander falls, the campaign is over.</p>
-          <div class="card-grid">${COMMANDERS.map((c) => {
+          ${(['hyrule', 'termina'] as const).map((pack) => `<h2 class="pack-head">${pack === 'hyrule' ? 'Ocarina of Time · Hyrule' : "Majora's Mask · Termina"}</h2>
+          <div class="card-grid">${COMMANDERS.filter((c) => (c.campaign ?? 'hyrule') === pack).map((c) => {
             const t = TEMPLATES[c.heroId];
             const army = c.units.map((id) => TEMPLATES[id]);
             return `<div class="pick ${chosen === c.heroId ? 'chosen' : ''}" data-nav="pick" data-id="${c.heroId}">${templateCard(t, `
@@ -283,10 +284,14 @@ export class App {
                 ${c.startingItems?.length ? `<div class="small"><span class="dim">Starting gear:</span> ${c.startingItems.map((id) => esc(itemName(id))).join(', ')}</div>` : ''}
                 ${c.pendingGear?.length ? `<div class="dim small">Coming later: ${esc(c.pendingGear.join(', '))}</div>` : ''}
               </div>`)}</div>`;
-          }).join('')}</div>
+          }).join('')}</div>`).join('')}
           ${`
           <div class="run-options">
             <h3>Campaign options</h3>
+            <div class="opt-row"><span class="dim small">Campaign</span><select data-opt="campaign">
+              <option value="">Commander's home${chosen ? ` (${(COMMANDERS.find((c) => c.heroId === chosen)?.campaign ?? 'hyrule') === 'termina' ? 'Termina' : 'Hyrule'})` : ''}</option>
+              <option value="hyrule" ${choices.campaign === 'hyrule' ? 'selected' : ''}>Hyrule: the endless war</option>
+              <option value="termina" ${choices.campaign === 'termina' ? 'selected' : ''}>Termina: three days until the Moon falls</option></select></div>
             ${p.heroes.length ? `<div class="opt-row"><span class="dim small">Companion (Hall of Heroes)</span><select data-opt="hero"><option value="">None</option>${p.heroes.map((id) => `<option value="${id}" ${choices.hero === id ? 'selected' : ''}>${esc(TEMPLATES[id]?.name ?? id)}</option>`).join('')}</select></div>` : ''}
             ${p.kits.length ? `<div class="opt-row"><span class="dim small">Starting kit (Royal Treasury)</span><select data-opt="kit"><option value="">None</option>${KITS.filter((k) => p.kits.includes(k.id)).map((k) => `<option value="${k.id}" ${choices.kit === k.id ? 'selected' : ''}>${esc(k.name)}</option>`).join('')}</select></div>` : ''}
             ${p.formations.length ? `<div class="opt-row"><span class="dim small">Formation (Military Academy)</span><select data-opt="formation"><option value="">Standard</option>${FORMATIONS.filter((f) => p.formations.includes(f.id)).map((f) => `<option value="${f.id}" ${choices.formation === f.id ? 'selected' : ''}>${esc(f.name)}</option>`).join('')}</select></div>` : ''}
@@ -302,7 +307,7 @@ export class App {
         pick: (el) => { chosen = el.dataset.id!; const y = window.scrollY; render(); window.scrollTo(0, y); },
         start: () => {
           if (!chosen) return;
-          this.run = newRun(randomSeed(), chosen);
+          this.run = newRun(randomSeed(), chosen, choices.campaign);
           const run = this.run;
           applyMetaToRun(run, p, choices,
             (id) => { recruit(run, id); run.event = undefined; },
@@ -352,6 +357,8 @@ export class App {
         <div><span class="dim small">Army</span> <b>${run.roster.length}/${armyCap(run)}</b></div>
         <div class="tb-res"><span class="dim small">Supplies</span> <b class="${armyOf(run).supplies < 5 ? 'bad' : ''}">${armyOf(run).supplies}</b></div>
         <div class="tb-res"><span class="dim small">Morale</span> <b>${armyOf(run).morale}</b></div>
+        ${run.clock ? (() => { const c = clockLabel(run); return `<div class="tb-clock ${c.hoursLeft <= 12 ? 'bad' : c.day === 3 ? 'warn' : ''}" title="The Moon falls when the third day ends."><span class="dim small">Day ${c.day} ${c.night ? '☾' : '☀'}</span> <b>${c.time}</b> <span class="dim small">${c.hoursLeft}h left</span></div>
+          <button class="btn small" data-nav="songoftime" title="Return to the dawn of the first day">🎵 Song of Time</button>`; })() : ''}
         <div class="spacer"></div>
         <button class="btn small" data-nav="armyinfo">⚑ Army Lv ${armyOf(run).level}</button>
         <button class="btn small" data-nav="convoy">Convoy (${run.convoy.length})</button>
@@ -397,6 +404,16 @@ export class App {
       unit: (el: HTMLElement) => this.unitModal(el.dataset.uid!, rerender),
       convoy: () => this.convoyModal(rerender),
       armyinfo: () => this.armyModal(rerender),
+      songoftime: async () => {
+        const run = this.run!;
+        const c = run.clock!;
+        if (!(await confirmDialog(`Play the Song of Time and return to the dawn of the first day?<br><br>You keep your army, levels, gear, masks, Boss Remains, learned songs and banked Rupees (₹${run.bank ?? 0}).<br>You lose your ₹${run.rupees} unbanked Rupees, ordinary consumables and most quest items, and this region's route starts over.<br>Enemies grow stronger after every reset (resets so far: ${c.resets}).`, 'Play it'))) return;
+        const lost = songOfTimeReset(run);
+        sfx('song');
+        this.save();
+        modal(`<h2>🎵 Song of Time</h2><p>Dawn of the first day. 72 hours remain.</p>${lost.length ? `<p class="dim small">Lost: ${lost.map(esc).join(', ')}.</p>` : ''}<div class="center-text"><button class="btn primary" data-close>Continue</button></div>`, { dismissable: true });
+        this.mapScreen();
+      },
     };
   }
 
@@ -421,6 +438,9 @@ export class App {
         ${row('Army Capacity', `${run.roster.length}/${armyCap(run)}`)}
         ${row('Deployment', String(deployCap(run)))}
       </div>
+      ${run.questItems?.length ? `<h3>Quest items</h3><div class="equip-list">${run.questItems.map((id) => row(`📜 ${esc(QUEST_ITEMS[id]?.name ?? id)}`, '', esc(QUEST_ITEMS[id]?.desc ?? ''))).join('')}</div>` : ''}
+      ${run.clock && run.questItems?.includes('bombersNotebook') ? `<h3>Bombers' Notebook <span class="dim small">who can be recruited when</span></h3><div class="equip-list">${Object.entries(TERMINA_SCHEDULE).map(([id, days]) => row(esc(TEMPLATES[id]?.name ?? id), days.map((d) => `Day ${d}`).join(', '), days.includes(clockLabel(run).day) ? 'available today' : '')).join('')}</div>` : ''}
+      ${run.clock ? `<p class="small">🏦 Clock Town Bank: <b>₹${run.bank ?? 0}</b> (safe through the Song of Time; deposit at any Termina merchant).</p>` : ''}
       <h3>Orders <span class="dim small">given in battle with Command Points</span></h3>
       <div class="equip-list">${ordersFor(run.commanderId).map((id) => row(`${esc(ORDERS[id].name)}`, `${ORDERS[id].cp} CP`, esc(ORDERS[id].desc))).join('')}</div>
       <h3>Sacred Energy blessings</h3>
@@ -719,6 +739,7 @@ export class App {
       case 'blacksmith': return this.blacksmithScreen();
       case 'event': return this.randomEventScreen();
       case 'dungeon': return this.dungeonScreen();
+      case 'moonfall': this.recordEnd(); return this.gameOver('The Moon has fallen on Termina. (Play the Song of Time before the third day ends!)');
     }
   }
 
@@ -871,6 +892,8 @@ export class App {
             <h3>Gear</h3><div class="shop-list">${ev.gear.map((id) => row('gear', id, priceOf(run, 'gear', id))).join('') || '<div class="dim">None in stock.</div>'}</div>
             <h3>Items <span class="dim small">restocked: buy as many as you like</span></h3><div class="shop-list">${ev.items.map((id) => row('item', id, priceOf(run, 'item', id))).join('') || '<div class="dim">None in stock.</div>'}</div>
             <h3>Permanent upgrades</h3><div class="shop-list">${ev.permanents.map((id) => row('permanent', id, priceOf(run, 'permanent', id))).join('')}</div>
+            ${run.clock ? `<h3>🏦 Clock Town Bank <span class="dim small">balance ₹${run.bank ?? 0}: safe through the Song of Time</span></h3>
+            <div class="row"><button class="btn small" data-nav="deposit" ${run.rupees ? '' : 'disabled'}>Deposit all (₹${run.rupees})</button><button class="btn small" data-nav="withdraw" ${run.bank ? '' : 'disabled'}>Withdraw all</button></div>` : ''}
             <h3>Supplies <span class="dim small">${armyOf(run).supplies}/${supplyCap(run)}</span></h3>
             <div class="shop-list"><div class="shop-item"><div><b>Crate of supplies</b> <span class="dim small">+${SUPPLY_PACK.amount} supplies (food, bandages, horse feed)</span></div><button class="btn small" data-nav="supplies" ${run.rupees < supplyPrice(run) || armyOf(run).supplies >= supplyCap(run) ? 'disabled' : ''}>₹${supplyPrice(run)}</button></div></div>
             <div class="center-text"><button class="btn primary big" data-nav="leave">Leave</button></div>
@@ -886,6 +909,8 @@ export class App {
           if (uid && buy(run, kind, id, uid)) { sfx('coin'); this.save(); render(); }
         },
         supplies: () => { if (buySupplies(run)) { this.save(); render(); } },
+        deposit: () => { if (deposit(run, run.rupees)) { sfx('coin'); this.save(); render(); } },
+        withdraw: () => { if (withdraw(run, run.bank ?? 0)) { sfx('coin'); this.save(); render(); } },
         leave: () => this.finishEvent(),
       });
     };
@@ -949,12 +974,22 @@ export class App {
             <button class="choice" data-nav="teach"><b>✦ Magic</b><span>The Great Fairy teaches a unit one of her spells: Din's Fire, Farore's Wind or Nayru's Love.</span></button>
             <button class="choice" data-nav="revive" ${canRevive ? '' : 'disabled'}><b>☥ Revival</b><span>${run.fallen.length ? 'Bring one fallen ally back at full HP.' : 'No fallen allies.'}</span></button>
           </div>
+          ${strayFairyCount(run) ? `<div class="center-text"><button class="btn" data-nav="stray">🧚 Return a Stray Fairy (${strayFairyCount(run)}): a free blessing</button></div>` : ''}
         </div>
         ${this.partyHtml()}
       </div>`);
     this.on({
       ...this.common(() => this.fountainScreen()),
       heal: () => { fountainHeal(run); this.finishEvent(); },
+      stray: async () => {
+        const uid = await this.unitPicker('Who receives the Stray Fairy\'s blessing?', () => true, (u) => `Lv ${u.level}`);
+        if (!uid) return;
+        const id = returnStrayFairy(run, uid);
+        sfx('levelUp');
+        this.save();
+        modal(`<div class="center-text"><h2>The fairy returns home</h2><p>${id ? itemLine(id) : ''}</p><button class="btn primary" data-close>Thank you</button></div>`, { dismissable: true });
+        this.fountainScreen();
+      },
       bless: async () => {
         const uid = await this.unitPicker('Who receives the blessing?', () => true, (u) => `Lv ${u.level}`);
         if (!uid) return;

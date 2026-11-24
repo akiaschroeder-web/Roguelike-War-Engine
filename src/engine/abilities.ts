@@ -44,7 +44,7 @@ export function knownAbilities(u: Unit): AbilityDef[] {
   const innate = Object.values(ABILITIES).filter((a) => (a.kind === 'technique' && a.area && a.weaponTypes?.some((t) => types.has(t)))
     || (a.grantedBy?.weapons?.some((w) => u.weapons.includes(w))) || (a.grantedBy?.skill && u.skills.includes(a.grantedBy.skill))
     || (a.grantedBy?.gear?.some((g) => Object.values(u.gear ?? {}).includes(g) || u.maskForm === g))
-    || (a.grantedBy?.race && u.race === a.grantedBy.race) || (a.grantedBy?.templates?.includes(u.templateId ?? '')));
+    || (a.grantedBy?.race && u.race === a.grantedBy.race) || (a.grantedBy?.templates?.includes(u.templateId ?? u.bossId ?? '')));
   return [...learned, ...innate.filter((a) => !learned.includes(a))];
 }
 

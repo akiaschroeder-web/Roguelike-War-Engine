@@ -7,7 +7,7 @@ import type { RNG } from './rng';
 import { INF } from './rules';
 import { addStatus } from './status';
 import { restoreForm, roomFor, transformInto } from './transform';
-import { canSwim, effectiveStats, unitTags } from './units';
+import { canSwim, effectiveStats, hasEffect, unitTags } from './units';
 import type { AbilityDef, Battle, Pos, StatusKind, Unit } from './types';
 
 /** Characters who can wear Link's transformation masks. */
@@ -213,7 +213,7 @@ export function castTermina(b: Battle, u: Unit, def: AbilityDef, rng: RNG, targe
       buff(u, 'curl', 'Defensive Curl', 1, { def: 6, res: 3 });
       break;
     case 'goronRoll':
-      buff(u, 'roll', 'Goron Roll', 1, { mov: 3 });
+      buff(u, 'roll', 'Goron Roll', 1, { mov: 3 + (hasEffect(u, 'rollBoost') ? 2 : 0) });
       out.free = true;
       break;
     case 'rapidSwim':

@@ -16,7 +16,7 @@ import { canUse, useItem } from '../src/engine/items';
 import { castAbility } from '../src/engine/abilities';
 import { fountainTeach, improveWeapon, pickForce, repairWeapon, useItemOutside } from '../src/engine/run';
 import { gainSupport, isSPair, rankOf, supportKey } from '../src/engine/supports';
-import { chooseEvent, descendDungeon, migrateRun } from '../src/engine/run';
+import { canChoose, chooseEvent, descendDungeon, migrateRun } from '../src/engine/run';
 import { addStatus, onDamaged, tickStatuses } from '../src/engine/status';
 import { dig, environmentPhase, ignite, isSeen, plantBean, revealNearby, triggerTraps } from '../src/engine/field';
 import { hookTiles } from '../src/engine/abilities';
@@ -25,7 +25,10 @@ import { armyCap, deployCap, gainArmyXp, issueOrder, orderUnusable, useBlessing 
 import { campFeast } from '../src/engine/run';
 import { applyMetaToRun, awardMedals, bump, buyUpgrade, claimBounties, emptyProgress, trialMultiplier, unlockFormation, unlockKit } from '../src/engine/meta';
 import { conversationFor } from '../src/content/ocarina/conversations';
-import { SUPPORT_S_PAIRS } from '../src/data/registry';
+import { ABILITIES, QUEST_ITEMS, SUPPORT_S_PAIRS } from '../src/data/registry';
+import { enemyAutoTransform, unusableReason } from '../src/engine/abilities';
+import { addQuestItem, clockLabel, deposit, songOfTimeReset } from '../src/engine/run';
+import { canUseHere } from '../src/engine/items';
 import { EVENTS } from '../src/data/registry';
 import type { Battle, Team, Unit } from '../src/engine/types';
 
@@ -70,7 +73,7 @@ describe('content integrity', () => {
     }
     for (const b of Object.values(BOSSES)) for (const d of b.drops ?? []) expect(WEAPONS[d] ?? GEAR[d], d).toBeDefined();
     for (const c of COMMANDERS) for (const id of c.startingItems ?? []) expect(WEAPONS[id] ?? GEAR[id] ?? ITEMS[id], id).toBeDefined();
-    expect(COMMANDERS.length).toBe(6);
+    expect(COMMANDERS.length).toBe(12);
     for (const c of COMMANDERS) {
       expect(TEMPLATES[c.heroId]).toBeDefined();
       for (const id of c.units) expect(TEMPLATES[id], id).toBeDefined();
@@ -281,7 +284,7 @@ describe('run flow', () => {
     enterNode(run, availableNodes(run)[0].id);
     expect(run.event?.type).toBe('deploy');
     startBattle(run, run.roster.slice(0, 8).map((u) => u.uid));
-    expect(run.battle!.units.filter((u) => u.team === 'player').length).toBe(8);
+    expect(run.battle!.units.filter((u) => u.team === 'player' && !u.npc).length).toBe(8);
   });
 
   it('never offers Link and Young Link together', () => {
@@ -851,6 +854,7 @@ describe('objectives and encounters', () => {
         const run = newRun(i + 7, 'link') as RunWithEvent;
         run.rupees = 1000;
         run.event = { type: 'event', eventId: ev.id };
+        if (!canChoose(run, ev, i)) continue; // gated behind quest items or masks
         const res = chooseEvent(run, i);
         expect(res, `${ev.id}#${i}`).not.toBeNull();
         expect(run.roster.every((u) => u.hp >= 1)).toBe(true);
@@ -1148,5 +1152,165 @@ describe('cross-run progression and support conversations', () => {
     }
     const g = conversationFor('hyruleSoldier', 'moblin', 'B', { a: 'Sol', b: 'Mob' });
     expect(g.lines.some(([, t]) => t.includes('{'))).toBe(false);
+  });
+});
+
+describe("Majora's Mask pack", () => {
+  it('every MM unit, monster and boss exists and is recruitable', () => {
+    for (const id of ['terminaLink', 'dekuLink', 'goronLink', 'zoraLink', 'fierceDeityLink', 'giantLink', 'skullKid', 'tatl', 'tael', 'kafei', 'anju',
+      'dekuPrincess', 'dekuKing', 'darmani', 'mikau', 'lulu', 'captainKeeta', 'igosDuIkana', 'sharp', 'flat', 'garoMaster', 'tingle',
+      'odolwa', 'goht', 'gyorg', 'redTwinmold', 'blueTwinmold', 'majorasMask', 'majorasIncarnation', 'majorasWrath',
+      'woodfallGiant', 'snowheadGiant', 'greatBayGiant', 'ikanaGiant', 'wart', 'gomess', 'gekko', 'snapper', 'deathArmos', 'eyegore',
+      'deepPython', 'hiploop', 'bioDekuBaba', 'giantTurtle', 'dekuSoldier', 'dekuRoyalGuard', 'dekuFlowerScout', 'dekuMystic', 'dekuBombardier',
+      'madScrub', 'ikanaServant1', 'ikanaServant2', 'jabuJabu']) {
+      expect(TEMPLATES[id], id).toBeDefined();
+    }
+    expect(TEMPLATES.giantLink.size).toBe(5);
+    expect(TEMPLATES.goronLink.size).toBe(2);
+  });
+
+  it('Termina Link transforms with masks, keeps HP ratio, and reverts', () => {
+    const b = emptyBattle();
+    const l = place(makeHero('terminaLink', 'p1', 5, rng()), 3, 3, 'player');
+    l.gear.head = 'dekuMask';
+    l.hp = Math.floor(l.stats.hp / 2);
+    b.units = [l];
+    const res = castAbility(b, l, 'mask_dekuMask', rng());
+    expect(res).not.toBeNull();
+    expect(l.templateId).toBe('dekuLink');
+    expect(l.hp / l.stats.hp).toBeGreaterThan(0.3);
+    expect(res!.free).toBe(true); // Hero of Masks
+    l.gear.head = 'giantsMask';
+    expect(unusableReason(b, l, ABILITIES.mask_giantsMask)).toBeNull();
+    castAbility(b, l, 'mask_giantsMask', rng());
+    expect(l.size).toBe(5);
+    l.mp = 0;
+    startPhase(b, 'player');
+    expect(l.templateId).toBe('terminaLink'); // out of MP: the mask slips off
+  });
+
+  it('Majora changes form below half HP', () => {
+    const b = emptyBattle();
+    const m = place(makeEnemy(BOSSES.majorasMask, 'moon', 10, 'm', rng(), { boss: true }), 6, 3, 'enemy');
+    b.units = [m];
+    m.hp = 5;
+    const tr = enemyAutoTransform(b, m, rng());
+    expect(tr?.transformed).toBeTruthy();
+    expect(m.name).toBe("Majora's Incarnation");
+  });
+
+  it('Igos rises again unless struck by light; Wart\'s bubble absorbs a hit', () => {
+    const b = emptyBattle();
+    const igos = place(makeHero('igosDuIkana', 'p1', 1, rng()), 2, 2, 'enemy');
+    igos.hp = 1;
+    const link = place(makeHero('link', 'p2', 20, rng()), 4, 2, 'player');
+    b.units = [igos, link];
+    for (let seed = 1; seed < 40 && !igos.usedAbilities?.includes('revive'); seed++) { igos.hp = 1; resolveCombat(b, link, igos, new RNG(seed)); }
+    expect(igos.usedAbilities).toContain('revive');
+    const wart = prepareForBattleFn(makeEnemy(ENEMIES.wart, 'greatBay', 5, 'w', rng()));
+    expect(wart.buffs.some((x) => x.id === 'bubble')).toBe(true);
+  });
+
+  it('splash weapons hit neighbours and the Double Helix beam costs MP', () => {
+    const b = emptyBattle();
+    const fd = place(makeHero('fierceDeityLink', 'p1', 10, rng()), 0, 0, 'player');
+    const e1 = place(makeEnemy(ENEMIES.octorok ?? Object.values(ENEMIES)[0], 'hyruleField', 1, 'e1', rng()), 4, 0, 'enemy');
+    b.units = [fd, e1];
+    const mp = fd.mp;
+    const fc = forecast(b, fd, fd, e1);
+    expect(fc.attacker.canAttack).toBe(true);
+    resolveCombat(b, fd, e1, new RNG(1));
+    expect(fd.mp).toBe(mp - 3);
+    const g = place(makeHero('giantLink', 'p3', 5, rng()), 0, 0, 'player');
+    const a = place(makeEnemy(ENEMIES.octorok ?? Object.values(ENEMIES)[0], 'hyruleField', 1, 'a', rng()), 5, 0, 'enemy');
+    const c2 = place(makeEnemy(ENEMIES.octorok ?? Object.values(ENEMIES)[0], 'hyruleField', 1, 'c', rng()), 6, 0, 'enemy');
+    a.stats.hp = a.hp = 99; c2.stats.hp = c2.hp = 99;
+    b.units = [g, a, c2];
+    const res = resolveCombat(b, g, a, new RNG(5));
+    if (res.strikes.some((s) => s.by === g.uid && s.hit && s.dmg > 0)) expect(c2.hp).toBeLessThan(99);
+  });
+
+  it('Termina campaign: clock, Song of Time reset, bank and region order', () => {
+    const run = newRun(5, 'terminaLink') as RunWithEvent;
+    expect(run.campaign).toBe('termina');
+    expect(run.region).toBe('clockTown');
+    expect(clockLabel(run).day).toBe(1);
+    enterNode(run, availableNodes(run)[0].id);
+    expect(run.clock!.hours).toBeGreaterThan(0);
+    run.battle = undefined; run.event = undefined;
+    run.rupees = 300;
+    expect(deposit(run, 100)).toBe(true);
+    run.roster[0].pack = [{ id: 'redPotion', uses: 1 }, { id: 'lensOfTruth', uses: 1 }];
+    const lost = songOfTimeReset(run);
+    expect(lost.length).toBeGreaterThan(0);
+    expect(run.rupees).toBe(0);
+    expect(run.bank).toBe(100);
+    expect(run.clock!.hours).toBe(0);
+    expect(run.clock!.resets).toBe(1);
+    expect(run.roster[0].pack.map((p) => p.id)).toEqual(['lensOfTruth']);
+    // After Clock Town: Termina Field, then the four regions, then the Moon once all Remains are held.
+    run.region = 'clockTown';
+    offerRegions(run);
+    expect((run.event as { options: string[] }).options).toEqual(['terminaField']);
+    run.regionsVisited.push('terminaField');
+    run.region = 'terminaField';
+    offerRegions(run);
+    expect((run.event as { options: string[] }).options.sort()).toEqual(['greatBay', 'ikana', 'snowhead', 'woodfall']);
+    run.convoy.push('odolwaRemains', 'gohtRemains', 'gyorgRemains', 'twinmoldRemains');
+    offerRegions(run);
+    expect((run.event as { options: string[] }).options).toEqual(['moon']);
+  });
+
+  it('the Moon falls when the third day ends', () => {
+    const run = newRun(6, 'terminaLink') as RunWithEvent;
+    run.clock!.hours = 70;
+    enterNode(run, availableNodes(run)[0].id);
+    expect(run.event?.type).toBe('moonfall');
+  });
+
+  it('quest chains: the Sun and Moon Masks combine into the Couple\'s Mask', () => {
+    const run = newRun(7, 'terminaLink') as RunWithEvent;
+    addQuestItem(run, 'sunsMask');
+    addQuestItem(run, 'moonsMask');
+    expect(run.convoy).toContain('couplesMask');
+    expect(run.questItems).toEqual([]);
+  });
+
+  it('every Termina event references real content', () => {
+    for (const ev of Object.values(EVENTS)) {
+      for (const c of ev.choices) {
+        for (const o of c.gamble ? [c.gamble.win, c.gamble.lose] : [c.outcome!]) for (const e of o.effects) {
+          if (e.kind === 'loot') for (const id of e.ids) expect(WEAPONS[id] || GEAR[id] || ITEMS[id] || PERMANENT_ITEMS[id], `${ev.id}:${id}`).toBeTruthy();
+          if (e.kind === 'recruit') for (const id of e.pool) expect(TEMPLATES[id], `${ev.id}:${id}`).toBeDefined();
+          if (e.kind === 'quest' || e.kind === 'takeQuest') expect(QUEST_ITEMS[e.id], `${ev.id}:${e.id}`).toBeDefined();
+        }
+      }
+    }
+  });
+
+  it('Termina maps place their special spaces and battles run', () => {
+    for (const [i, world] of ['clockTown', 'terminaField', 'woodfall', 'snowhead', 'greatBay', 'ikana', 'moon'].entries()) {
+      const run = newRun(i + 40, 'terminaLink');
+      const b = createBattle({ world, nodeType: 'battle', depth: 3, roster: run.roster, seed: i + 3 });
+      expect(b.tiles.length).toBe(b.width * b.height);
+      environmentPhase(b);
+    }
+    const run = newRun(9, 'terminaLink');
+    const b = createBattle({ world: 'woodfall', nodeType: 'boss', depth: 6, roster: run.roster, seed: 3, boss: BOSSES.odolwa });
+    expect(b.units.some((u) => u.bossId === 'odolwa')).toBe(true);
+  });
+
+  it('powder kegs break walls and need a strong carrier', () => {
+    const b = emptyBattle();
+    const weak = place(makeHero('terminaLink', 'p1', 1, rng()), 1, 1, 'player');
+    weak.pack = [{ id: 'powderKeg', uses: 1 }];
+    b.units = [weak];
+    expect(canUseHere(b, weak, 0)).toBe(false);
+    const gor = place(makeHero('darmani', 'p2', 1, rng()), 1, 4, 'player');
+    gor.pack = [{ id: 'powderKeg', uses: 1 }];
+    b.units = [gor];
+    b.tiles[keyOf(b, 4, 4)] = 'wall';
+    expect(useItem(b, gor, 0, rng(), { x: 4, y: 4 })).not.toBeNull();
+    expect(b.tiles[keyOf(b, 4, 4)]).toBe('plain');
   });
 });

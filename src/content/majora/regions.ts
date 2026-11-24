@@ -1,0 +1,51 @@
+import type { BaseTerrain, MapStyle, WorldDef } from '../../engine/types';
+
+const t = (plain: string, forest: string, mountain: string, water: string, wall: string, fort: string, lava: string): Record<BaseTerrain, string> =>
+  ({ plain, forest, mountain, water, wall, fort, lava });
+const r = (id: string, name: string, genre: string, blurb: string, color: string, terrainNames: Record<BaseTerrain, string>, terrainColors: Record<BaseTerrain, string>, map: MapStyle): WorldDef =>
+  ({ id, name, genre, blurb, color, terrainNames, terrainColors, map, campaign: 'termina' });
+
+export const REGIONS: WorldDef[] = [
+  r('clockTown', 'Clock Town', 'Settlement · merchants · timed quests',
+    'The heart of Termina, preparing for a carnival while the Moon stares down. Merchants, recruits and secrets around every corner.',
+    '#e0b050',
+    t('Cobblestone', 'Garden', 'Clock Tower Steps', 'Laundry Pool', 'Town Wall', 'Stock Pot Inn', 'Bonfire'),
+    t('#a89a80', '#4a7a3a', '#8a7a6a', '#4a80b0', '#6a5a4a', '#b08a5a', '#c05a2a'),
+    { forest: 1, mountain: 0.5, water: 'lake', walls: 6, forts: 3 }),
+  r('terminaField', 'Termina Field', 'Open plains · crossroads',
+    'Wide plains linking the four corners of Termina. Monsters roam, and the Moon\'s shadow grows longer every hour.',
+    '#8ac06a',
+    t('Grassland', 'Copse', 'Rocky Rise', 'Stream', 'Ruined Wall', 'Observatory', 'Scorched Grass'),
+    t('#7aae58', '#3f7a34', '#8f8a62', '#3c6e9e', '#6a6458', '#a8945a', '#b24a22'),
+    { forest: 2, mountain: 1.5, water: 'river', walls: 1, forts: 2 }),
+  r('woodfall', 'Southern Swamp & Woodfall', 'Poisoned waterways · dense forests · Deku armies',
+    'A swamp gone sour. Poisoned water winds through thick forests, and the Deku guard their palace jealously.',
+    '#7a5aa0',
+    t('Bog Path', 'Swamp Woods', 'Mossy Rock', 'Swamp Water', 'Thicket', 'Deku Palace', 'Rot'),
+    t('#5a7a4a', '#2a5a2c', '#5a5a4a', '#3a5a6a', '#2a3a20', '#9a7a3a', '#6a3a7a'),
+    { forest: 6, mountain: 0.5, water: 'many', walls: 2, forts: 1 }),
+  r('snowhead', 'Snowhead', 'Frozen passes · rolling ramps · icy hazards',
+    'Endless winter grips the mountains. Narrow passes, frozen machinery and slopes made for rolling.',
+    '#a8d0e8',
+    t('Snowfield', 'Frosted Pines', 'Ice Crag', 'Frozen Lake', 'Glacier Wall', 'Goron Shrine', 'Hot Spring'),
+    t('#d8e4ec', '#5a7a7a', '#9aaab8', '#7ab0d0', '#8a9aaa', '#b0a08a', '#d09060'),
+    { forest: 1, mountain: 4, water: 'lake', walls: 3, forts: 1 }),
+  r('greatBay', 'Great Bay', 'Aquatic warfare · islands · pirate fortresses',
+    'Warm seas turned murky. Islands, pirate fortresses and churning currents.',
+    '#3a8ac0',
+    t('Beach', 'Palm Grove', 'Sea Cliff', 'Open Sea', 'Fortress Wall', 'Zora Hall', 'Volcanic Vent'),
+    t('#d8c890', '#4a8a4a', '#8a7a62', '#2a6aa8', '#6a5a50', '#5a9ab0', '#b24a22'),
+    { forest: 1.5, mountain: 1, water: 'many', walls: 3, forts: 2 }),
+  r('ikana', 'Ikana Canyon & Stone Tower', 'Undead armies · ancient ruins · curses',
+    'A cursed canyon where the dead still march. Ancient ruins hide light puzzles and inverted halls.',
+    '#9a8a70',
+    t('Canyon Floor', 'Dead Brush', 'Rock Spire', 'Ikana River', 'Stone Tower Wall', 'Ikana Castle', 'Cursed Ground'),
+    t('#a8956a', '#6a6040', '#8a7a62', '#4a6a8a', '#7a7268', '#8a7a8a', '#5a3a5a'),
+    { forest: 0.5, mountain: 3, water: 'river', walls: 5, forts: 2 }),
+  r('moon', 'The Moon', 'Strange fields · final battle',
+    'Inside the Moon: an endless green field under a single tree, where masked children play.',
+    '#c070c0',
+    t('Moon Meadow', 'Lone Tree', 'Moon Rock', 'Moon Pool', 'Mask Wall', 'Child\'s Ring', 'Moon Fire'),
+    t('#7ac06a', '#3a7a3a', '#9a8aa0', '#5a7ab0', '#7a5a8a', '#c0a0c0', '#c05a8a'),
+    { forest: 1, mountain: 1, water: 'none', walls: 2, forts: 1 }),
+];

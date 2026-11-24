@@ -67,7 +67,7 @@ export function makeHero(template: UnitTemplate | string, uid: string, level: nu
   const unit = blank({
     uid, templateId: t.id, name: t.name, title: t.title, race: t.race, home: t.home, classId: t.classId,
     team: 'player', size: t.size, stats, growths: growthsFor(t.classId, t.race, t.growths),
-    weapons: [...t.weapons], skills: t.skill ? [t.skill] : [], glyph: t.glyph,
+    weapons: [...t.weapons], skills: [...(t.skill ? [t.skill] : []), ...(t.extraSkills ?? [])], glyph: t.glyph,
     abilities: [...(t.abilities ?? []), ...(t.skill && ABILITIES[t.skill] ? [t.skill] : [])],
   });
   if (t.gear) unit.gear = { ...t.gear };
@@ -113,6 +113,7 @@ export function moveTypeOf(u: Unit): MoveType {
   const cls = CLASSES[u.classId];
   if (cls?.moveType === 'fixed') return 'fixed';
   if (isGliding(u)) return 'flying';
+  if (activeGear(u).some((g) => g.slot === 'accessory' && g.effects?.includes('flight'))) return 'flying'; // Deku Flower Petal
   if (RACES[u.race]?.flies) return 'flying';
   if (isMounted(u)) return mountOf(u)!.effects?.includes('flight') ? 'flying' : 'cavalry';
   return cls?.moveType ?? 'foot';
