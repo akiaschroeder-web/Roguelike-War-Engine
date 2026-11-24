@@ -59,7 +59,9 @@ export function planAction(b: Battle, unit: Unit): AIPlan {
   if (bestHeal && (!best || bestHeal.score > best.score)) return plan(bestHeal, 'heal');
   if (best) return plan(best, 'attack');
 
-  if (unit.ai === 'guard' || unit.ai === 'stationary') return { unit: unit.uid, path: [stay], dest: stay, action: null };
+  // Guards hold position, but march once the battle drags on or their side is nearly beaten.
+  const restless = b.turn >= 6 || friends.length <= 1;
+  if (unit.ai === 'stationary' || (unit.ai === 'guard' && !restless)) return { unit: unit.uid, path: [stay], dest: stay, action: null };
   return approach(b, unit, moves, foes.length ? foes : friends);
 }
 

@@ -199,6 +199,22 @@ function autoPlay(b: Battle, seed: number, maxTurns = 40): Battle['result'] {
   return checkResult(b);
 }
 
+describe('ai', () => {
+  it('guards eventually advance so battles cannot stall', () => {
+    const b = emptyBattle(14, 6);
+    const p = place(makeHero('link', 'l', 1, rng()), 0, 2);
+    const g = place(makeEnemy(ENEMIES.stalchild, 'hyruleField', 1, 'g', rng()), 13, 2);
+    g.ai = 'guard';
+    const g2 = place(makeEnemy(ENEMIES.stalchild, 'hyruleField', 1, 'g2', rng()), 13, 4);
+    const g3 = place(makeEnemy(ENEMIES.stalchild, 'hyruleField', 1, 'g3', rng()), 13, 0);
+    g2.ai = g3.ai = 'guard';
+    b.units = [p, g, g2, g3];
+    expect(planAction(b, g).dest).toEqual({ x: 13, y: 2 }); // early: holds position
+    b.turn = 6;
+    expect(planAction(b, g).dest.x).toBeLessThan(13); // later: advances
+  });
+});
+
 describe('simulation', () => {
   it('each starting army can win an early battle with naive AI play', () => {
     for (const c of COMMANDERS) {
