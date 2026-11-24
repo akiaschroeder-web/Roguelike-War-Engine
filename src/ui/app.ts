@@ -1,10 +1,11 @@
-import { ABILITIES, GEAR, ITEMS, CLASSES, COMMANDERS, PERMANENT_ITEMS, REGION_IDS, TEMPLATE_LIST, TEMPLATES, WEAPONS, worldDef } from '../data/registry';
+import { ABILITIES, artFor, GEAR, ITEMS, CLASSES, COMMANDERS, PERMANENT_ITEMS, REGION_IDS, TEMPLATE_LIST, TEMPLATES, WEAPONS, worldDef } from '../data/registry';
 import { canWield, type LevelUp } from '../engine/combat';
 import { randomSeed } from '../engine/rng';
 import {
   ARMY_CAPACITY, DEPLOY_CAPACITY, advanceRegion, availableNodes, buy, campDrill, campRest, campTrain, currentNode, depthOf, enterNode,
   equipFromConvoy, finishBattle, fountainBless, fountainHeal, fountainRevive, isRegionComplete, loadMeta, loadRun, newRun, offerRegions,
   recruit, recruitLevel, saveMeta, saveRun, canTake, canUseOutside, forgePrice, forgeWeapon, improveCost, improveWeapon, MAX_FORGE, repairCost, repairWeapon, FREE_FOR_ALL_REGION, isFreeForAll, fountainTeach, unlearnedFairySpells, priceOf, stashGear, stashItem, stashWeapon, useItemOutside, type ItemKindTag, startBattle, takeTreasure, weaponPrice,
+  canChoose, chooseEvent, descendDungeon, eventDef, leaveDungeon,
   type Meta, type Reward, type RunEvent, type RunWithEvent,
 } from '../engine/run';
 import { equip } from '../engine/combat';
@@ -19,6 +20,10 @@ import {
 const NODE_INFO: Record<NodeType, { icon: string; label: string; desc: string }> = {
   battle: { icon: '⚔', label: 'Battle', desc: 'A standard battle. Earn Rupees and experience.' },
   elite: { icon: '☠', label: 'Elite Battle', desc: 'A dangerous foe and their guard. Better rewards.' },
+  ambush: { icon: '⚡', label: 'Ambush', desc: 'The enemy springs a trap: they start on your flank and strike first. Better pay.' },
+  siege: { icon: '🏰', label: 'Siege', desc: 'Storm a walled keep and seize its throne.' },
+  dungeon: { icon: '⛓', label: 'Dungeon', desc: `${3} battles in a row with no rest in between, then a rich vault.` },
+  event: { icon: '?', label: 'Event', desc: 'Something happens on the road. Choose wisely.' },
   recruit: { icon: '✧', label: 'Recruitment', desc: 'Heroes and soldiers offer to join your army.' },
   shop: { icon: '₹', label: 'Merchant', desc: 'Buy weapons, accessories and permanent upgrades.' },
   camp: { icon: '⛺', label: 'Camp', desc: 'Rest, train one unit, or drill the whole army.' },
@@ -396,13 +401,15 @@ export class App {
     const bosses = run.battle!.fallen.filter((u) => u.isBoss && u.bossId).map((u) => u.bossId!);
     const summary = finishBattle(run);
     this.recordEnd();
-    if (result === 'lost') return this.gameOver(commanderFell ? 'Your Commander has fallen.' : 'Your army was wiped out.');
+    if (result === 'lost' && !summary.retreated) return this.gameOver(commanderFell ? 'Your Commander has fallen.' : 'Your army was wiped out.');
     for (const id of bosses) if (!this.meta.bossesDefeated.includes(id)) this.meta.bossesDefeated.push(id);
     saveMeta(this.meta);
     this.save();
     this.setScreen(`
       <div class="results">
-        <h1 class="win">Victory</h1>
+        ${summary.retreated ? '<h1 class="lose">Retreat</h1><p class="dim">The enemy took the point. Your army falls back to fight another day (no reward).</p>' : '<h1 class="win">Victory</h1>'}
+        ${summary.sideQuest ? `<div class="res-row"><span>Side quest: ${esc(summary.sideQuest.text)}</span><b class="${summary.sideQuest.done ? 'win' : 'dim'}">${summary.sideQuest.done ? `✔ ${esc(summary.sideQuest.reward)}` : '✘ Failed'}</b></div>` : ''}
+        ${summary.dungeon ? `<div class="res-row"><span>Dungeon</span><b>${summary.dungeon.cleared ? 'Cleared! The vault is open.' : `Onward to floor ${summary.dungeon.floor} of ${summary.dungeon.of}`}</b></div>` : ''}
         <div class="res-row"><span>Rupees</span><b class="rupee">+₹${summary.rupees}</b></div>
         <div class="res-row"><span>Enemies defeated</span><b>${summary.kills}</b></div>
         ${summary.drops.length ? `<div class="res-drops"><div class="dim small">Boss drop (sent to convoy)</div>${summary.drops.map((d) => `<div>${itemLine(d)}</div>`).join('')}</div>` : ''}
@@ -457,7 +464,66 @@ export class App {
       case 'treasure': return this.treasureScreen();
       case 'region': return this.regionScreen();
       case 'blacksmith': return this.blacksmithScreen();
+      case 'event': return this.randomEventScreen();
+      case 'dungeon': return this.dungeonScreen();
     }
+  }
+
+  private randomEventScreen() {
+    const run = this.run!;
+    const ev = run.event as EventOf<'event'>;
+    const def = eventDef(run);
+    if (!def) return this.finishEvent();
+    const art = artFor(def.art);
+    const body = ev.result
+      ? `<p class="event-result">${esc(ev.result.text)}</p>
+         ${ev.result.lines.length ? `<ul class="event-lines">${ev.result.lines.map((l) => `<li>${esc(l)}</li>`).join('')}</ul>` : ''}
+         <div class="center-text"><button class="btn primary big" data-nav="done">Continue</button></div>`
+      : `<div class="choice-grid">${def.choices.map((c, i) => `
+          <button class="choice" data-nav="pick" data-i="${i}" ${canChoose(run, def, i) ? '' : 'disabled'}>
+            <b>${esc(c.label)}</b>${c.gamble ? `<span class="dim small">A gamble (${c.gamble.chance}% to go well)</span>` : ''}
+            ${c.cost && run.rupees < c.cost ? '<span class="dim small">Not enough Rupees</span>' : ''}
+          </button>`).join('')}</div>`;
+    this.setScreen(`
+      ${this.topBar()}
+      <div class="page event-page">
+        <h1>${esc(def.title)}</h1>
+        <div class="event-card">
+          ${art ? `<img class="event-art" src="art/${esc(art)}.png" alt="" onerror="this.remove()">` : ''}
+          <p>${esc(def.text)}</p>
+        </div>
+        ${body}
+      </div>`);
+    this.on({
+      ...this.common(() => this.randomEventScreen()),
+      pick: (el) => { if (chooseEvent(run, Number(el.dataset.i))) { this.save(); this.randomEventScreen(); } },
+      done: () => this.finishEvent(),
+    });
+  }
+
+  private dungeonScreen() {
+    const run = this.run!;
+    const ev = run.event as EventOf<'dungeon'>;
+    const last = ev.floor >= ev.of;
+    this.setScreen(`
+      ${this.topBar()}
+      <div class="page">
+        <h1>Dungeon: Floor ${ev.floor} of ${ev.of}</h1>
+        <p class="dim center-text">Little rest down here: only the usual post-battle recovery before the next fight.${last ? ' A powerful guardian waits on the last floor, and the vault lies beyond it.' : ''}</p>
+        <div class="res-army">${run.roster.map((u) => `<div class="res-unit">${token(u, 36)}<div><b>${esc(u.name)}</b><div class="dim small">Lv ${u.level} · HP ${u.hp}/${u.stats.hp}</div></div></div>`).join('')}</div>
+        <div class="center-text">
+          <button class="btn primary big" data-nav="deeper">Go deeper →</button>
+          <button class="btn" data-nav="leave">Leave the dungeon (no vault)</button>
+        </div>
+      </div>`);
+    this.on({
+      ...this.common(() => this.dungeonScreen()),
+      deeper: () => { descendDungeon(run); this.save(); if (run.battle) this.battle(); else this.eventScreen(); },
+      leave: async () => {
+        if (!(await confirmDialog('Leave the dungeon? You keep what you have earned, but lose the vault.'))) return;
+        leaveDungeon(run); this.finishEvent();
+      },
+    });
   }
 
   private finishEvent() {

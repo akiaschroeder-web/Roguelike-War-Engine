@@ -5,7 +5,7 @@ import { RNG } from './rng';
 import { INF, LAVA_DAMAGE_PCT, TERRAIN_BONUS } from './rules';
 import { tickStatuses } from './status';
 import { canRide, hasEffect, isLavaImmune, isMounted, makeEnemy, mountOf, sizeWhen, makeEnemyFromTemplate, prepareForBattle } from './units';
-import type { Battle, BossDef, EnemyArchetype, EnemyForce, NodeType, Objective, Team, Unit, WorldId } from './types';
+import type { Battle, BossDef, EnemyArchetype, EnemyForce, NodeType, Objective, ObjectiveType, Pos, Team, Terrain, Unit, WorldId } from './types';
 
 export interface BattleSetup {
   world: WorldId;
@@ -36,7 +36,12 @@ export function createBattle(setup: BattleSetup): Battle {
 
   let objective: Objective = { type: 'rout' };
   if (isBossFight) objective = { type: 'boss' };
-  else if (setup.depth > 1 && rng.chance(25)) objective = { type: 'survive', turns: 6 };
+  else if (setup.nodeType === 'siege') objective = { type: 'seize' };
+  else if (setup.nodeType === 'ambush') objective = { type: 'rout' };
+  else if (setup.depth >= 1) {
+    objective = { type: rng.weighted<ObjectiveType>([['rout', 40], ['survive', 12], ['seize', 16], ['defend', 10], ['escape', 10], ['capture', 12]]) };
+    if (objective.type === 'survive' || objective.type === 'defend') objective.turns = 6;
+  }
 
   // Enemy count grows slowly with depth so the endless run keeps escalating.
   let enemyCount = Math.min(16, Math.max(3, Math.round(pc * 0.9 + setup.depth / 3)));
@@ -65,7 +70,9 @@ export function createBattle(setup: BattleSetup): Battle {
 
   const width = 13 + (isBossFight ? 2 : 0) + rng.int(0, 2) + Math.max(0, biggest - 2) * 2;
   const height = 9 + (setup.nodeType === 'boss' ? 1 : 0) + rng.int(0, 1) + Math.max(0, biggest - 3);
-  const map = generateMap(rng, width, height, world.map, playerSizes, enemySizes, bossSize);
+  const style = setup.nodeType === 'siege' ? { ...world.map, walls: world.map.walls + 6, forts: world.map.forts + 2, water: 'moat' as const } : world.map;
+  const map = generateMap(rng, width, height, style, playerSizes, enemySizes, bossSize);
+  placeObjective(rng, map, objective, playerSizes, enemySizes);
 
   let uid = 0;
   const units: Unit[] = setup.roster.map((u, i) => ({ ...prepareForBattle(u), x: map.playerSpawns[i].x, y: map.playerSpawns[i].y }));
@@ -78,6 +85,15 @@ export function createBattle(setup: BattleSetup): Battle {
     if (e.ai === 'aggressive' && rng.chance(25)) e.ai = 'guard';
     units.push(e);
   });
+  if (setup.nodeType === 'ambush') ambushPositions(rng, map, units);
+  if (objective.type === 'seize' && objective.tiles?.[0]) {
+    // Someone holds the throne: the toughest one-tile enemy, who won't leave it.
+    const t = objective.tiles[0];
+    const holder = units.find((u) => u.team === 'enemy' && footprint(u.x, u.y, u.size).some((f) => f.x === t.x && f.y === t.y));
+    const keeper = holder ?? units.filter((u) => u.team === 'enemy' && u.size === 1).sort((a, c) => c.level - a.level || c.stats.hp - a.stats.hp)[0];
+    if (keeper && !holder) { keeper.x = t.x; keeper.y = t.y; }
+    if (keeper) keeper.ai = 'stationary';
+  }
 
   if (leader && map.bossSpawn) {
     const boss = makeEnemyFromTemplate(leader.id, level + (setup.nodeType === 'boss' ? 3 : 2), `e${uid++}`, rng, { boss: true });
@@ -92,7 +108,7 @@ export function createBattle(setup: BattleSetup): Battle {
     units.push(boss);
   }
 
-  const base = setup.nodeType === 'boss' ? 500 : setup.nodeType === 'elite' ? 320 : 160;
+  const base = setup.nodeType === 'boss' ? 500 : setup.nodeType === 'elite' ? 320 : setup.nodeType === 'siege' ? 260 : setup.nodeType === 'ambush' ? 220 : 160;
   return {
     width: map.width,
     height: map.height,
@@ -114,7 +130,91 @@ export function createBattle(setup: BattleSetup): Battle {
     forceName: force?.name,
     supports: { ...(setup.supports ?? {}) },
     drops: [],
+    sideQuest: !isBossFight && setup.nodeType !== 'siege' && rng.chance(35)
+      ? rng.chance(50)
+        ? { kind: 'fast', turns: objective.type === 'survive' || objective.type === 'defend' ? undefined : 5 + Math.floor(enemyCount / 4), rupees: 120 + setup.depth * 12 }
+        : { kind: 'noLoss', rupees: 80 + setup.depth * 10, item: rng.pick(['bluePotion', 'fairy', 'greenPotion', 'bombchu', 'staminaPotion']) }
+      : undefined,
   };
+}
+
+type GenMap = ReturnType<typeof generateMap>;
+
+function occupied(map: GenMap, playerSizes: number[], enemySizes: number[]): Set<string> {
+  const taken = new Set<string>();
+  const add = (p: Pos, s: number) => { for (const f of footprint(p.x, p.y, s)) taken.add(`${f.x},${f.y}`); };
+  map.playerSpawns.forEach((p, i) => add(p, playerSizes[i]));
+  map.enemySpawns.forEach((p, i) => add(p, enemySizes[i]));
+  if (map.bossSpawn) add(map.bossSpawn, 3);
+  return taken;
+}
+
+const WALKABLE: Terrain[] = ['plain', 'forest', 'fort'];
+
+/** Choose and mark objective tiles on the generated map. */
+function placeObjective(rng: RNG, map: GenMap, o: Objective, playerSizes: number[], enemySizes: number[]) {
+  const { width: w, height: h } = map;
+  const taken = occupied(map, playerSizes, enemySizes);
+  const free = (x: number, y: number) => !taken.has(`${x},${y}`) && WALKABLE.includes(map.tiles[y * w + x]);
+  const pick = (cands: Pos[], score: (p: Pos) => number) => cands.filter((p) => free(p.x, p.y)).sort((a, b) => score(a) - score(b))[0];
+  const all: Pos[] = [];
+  for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) all.push({ x, y });
+  const mid = h / 2;
+  switch (o.type) {
+    case 'seize': {
+      const t = map.bossSpawn ?? pick(all.filter((p) => p.x >= w - 3), (p) => Math.abs(p.y - mid) - p.x);
+      if (t) { map.tiles[t.y * w + t.x] = 'fort'; o.tiles = [t]; }
+      break;
+    }
+    case 'defend': {
+      const t = pick(all.filter((p) => p.x <= 2), (p) => Math.abs(p.y - mid) + p.x * 0.5);
+      if (t) { map.tiles[t.y * w + t.x] = 'fort'; o.tiles = [t]; }
+      break;
+    }
+    case 'escape':
+      o.tiles = all.filter((p) => p.x === w - 1 && WALKABLE.includes(map.tiles[p.y * w + p.x]));
+      break;
+    case 'capture': {
+      const band = rng.shuffle(all.filter((p) => p.x >= Math.floor(w * 0.3) && p.x <= Math.ceil(w * 0.7)));
+      const pts: Pos[] = [];
+      for (const p of band) {
+        if (pts.length >= 3) break;
+        if (free(p.x, p.y) && pts.every((q) => Math.abs(q.y - p.y) + Math.abs(q.x - p.x) >= 3)) pts.push(p);
+      }
+      for (const p of pts) map.tiles[p.y * w + p.x] = 'fort';
+      o.tiles = pts;
+      o.need = Math.min(2, pts.length);
+      break;
+    }
+  }
+  if ((o.type === 'seize' || o.type === 'defend' || o.type === 'capture' || o.type === 'escape') && !o.tiles?.length) {
+    o.type = 'rout'; // couldn't place it: fall back
+    delete o.tiles;
+  }
+}
+
+/** Ambush: some small enemies start on your flank, and the enemy moves first. */
+function ambushPositions(rng: RNG, map: GenMap, units: Unit[]) {
+  const taken = new Set<string>();
+  for (const u of units) for (const f of footprint(u.x, u.y, u.size)) taken.add(`${f.x},${f.y}`);
+  const spots = rng.shuffle(
+    Array.from({ length: map.width * map.height }, (_, i) => ({ x: i % map.width, y: Math.floor(i / map.width) }))
+      .filter((p) => p.x >= 2 && p.x <= 5 && !taken.has(`${p.x},${p.y}`) && WALKABLE.includes(map.tiles[p.y * map.width + p.x])),
+  );
+  const movers = units.filter((u) => u.team === 'enemy' && u.size === 1 && !u.isBoss);
+  for (const e of movers.slice(0, Math.ceil(movers.length / 2))) {
+    const s = spots.shift();
+    if (!s) break;
+    e.x = s.x;
+    e.y = s.y;
+    taken.add(`${s.x},${s.y}`);
+  }
+}
+
+/** Is any unit of `team` standing on one of these tiles? */
+function onTiles(b: Battle, team: Team, tiles: Pos[] | undefined, only?: (u: Unit) => boolean): number {
+  if (!tiles) return 0;
+  return tiles.filter((t) => b.units.some((u) => u.team === team && (!only || only(u)) && footprint(u.x, u.y, u.size).some((f) => f.x === t.x && f.y === t.y))).length;
 }
 
 export interface TurnStartEvent {
@@ -203,7 +303,15 @@ export function checkResult(b: Battle): Battle['result'] {
   if (!players.length || b.fallen.some((u) => u.isCommander)) return (b.result = 'lost');
   if (!enemies.length) return (b.result = 'won');
   if (b.objective.type === 'boss' && b.fallen.some((u) => u.isBoss)) return (b.result = 'won');
-  if (b.objective.type === 'survive' && b.turn > (b.objective.turns ?? 6)) return (b.result = 'won');
+  const o = b.objective;
+  if (o.type === 'survive' && b.turn > (o.turns ?? 6)) return (b.result = 'won');
+  if (o.type === 'seize' && onTiles(b, 'player', o.tiles)) return (b.result = 'won');
+  if (o.type === 'defend') {
+    if (onTiles(b, 'enemy', o.tiles)) { b.retreat = true; return (b.result = 'lost'); }
+    if (b.turn > (o.turns ?? 6)) return (b.result = 'won');
+  }
+  if (o.type === 'escape' && onTiles(b, 'player', o.tiles, (u) => !!u.isCommander)) return (b.result = 'won');
+  if (o.type === 'capture' && onTiles(b, 'player', o.tiles) >= (o.need ?? 2)) return (b.result = 'won');
   return undefined;
 }
 
@@ -218,7 +326,11 @@ export function objectiveText(o: Objective): string {
   switch (o.type) {
     case 'rout': return 'Rout the enemy';
     case 'boss': return 'Defeat the enemy commander';
-    case 'survive': return `Defend for ${o.turns} turns`;
+    case 'survive': return `Survive for ${o.turns} turns`;
+    case 'seize': return 'Seize the throne (stand on the gold tile)';
+    case 'defend': return `Defend the point for ${o.turns} turns`;
+    case 'escape': return 'Escape: get your Commander to the far edge';
+    case 'capture': return `Hold ${o.need} of the ${o.tiles?.length ?? 3} capture points at once`;
   }
 }
 

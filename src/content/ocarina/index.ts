@@ -3,6 +3,7 @@ import { CLASSES } from './classes';
 import { ABILITIES } from './magic';
 import { FACTIONS, MONSTER_CHANCE } from './factions';
 import { COMMANDERS } from './commanders';
+import { EVENTS } from './events';
 import { BOSSES, ENEMIES, REGION_BOSSES, ROSTERS } from './enemies';
 import { GEAR, ITEMS, PERMANENT_ITEMS, SKILLS } from './items';
 import { RACES } from './races';
@@ -41,6 +42,7 @@ export const OCARINA: ContentPack = {
   artIds: ART_IDS,
   artAliases: ART_ALIASES,
   artVariants: ART_VARIANTS,
+  events: EVENTS,
   bossAsTemplate: { ganondorfBoss: 'ganondorf', phantomGanonMounted: 'phantomGanon' },
   exclusivePairs: [
     ['link', 'youngLink'], ['zelda', 'sheik'], ['ganondorf', 'ganon'], ['nabooru', 'ironKnuckleNabooru'],

@@ -416,14 +416,26 @@ export interface Unit {
   survivedOnce?: boolean;
 }
 
-export type ObjectiveType = 'rout' | 'boss' | 'survive';
+export type ObjectiveType = 'rout' | 'boss' | 'survive' | 'seize' | 'defend' | 'escape' | 'capture';
 
 export interface Objective {
   type: ObjectiveType;
   turns?: number;
+  /** Target tiles: the throne to seize, the point to defend, the exit, or the points to capture. */
+  tiles?: Pos[];
+  /** Capture: how many points must be held at once. */
+  need?: number;
 }
 
-export type NodeType = 'battle' | 'elite' | 'recruit' | 'shop' | 'camp' | 'fountain' | 'treasure' | 'blacksmith' | 'boss';
+/** Optional bonus goal for extra rewards. */
+export interface SideQuest {
+  kind: 'fast' | 'noLoss';
+  turns?: number;
+  rupees: number;
+  item?: string;
+}
+
+export type NodeType = 'battle' | 'elite' | 'ambush' | 'siege' | 'dungeon' | 'event' | 'recruit' | 'shop' | 'camp' | 'fountain' | 'treasure' | 'blacksmith' | 'boss';
 
 export interface Battle {
   width: number;
@@ -436,6 +448,10 @@ export interface Battle {
   objective: Objective;
   rngState: number;
   result?: 'won' | 'lost';
+  /** Ambush: the opening enemy phase has happened. */
+  ambushed?: boolean;
+  /** Lost the objective but the army escapes (no game over). */
+  retreat?: boolean;
   rewardRupees: number;
   nodeType: NodeType;
   log: string[];
@@ -444,6 +460,8 @@ export interface Battle {
   uidCounter: number;
   /** Impa's Royal Protector: used this enemy phase. */
   interceptUsed: boolean;
+  /** Optional bonus goal. */
+  sideQuest?: SideQuest;
   /** Support points for the deployed army (copied from the run). */
   supports?: Record<string, number>;
   /** Name of the army you're fighting (non-monster battles). */
@@ -495,6 +513,10 @@ export interface Run {
   itemState?: Record<string, { wear?: number; forge?: number }>;
   /** Support points between pairs of units (key: 'uidA|uidB', sorted). */
   supports?: Record<string, number>;
+  /** Random events already seen this run. */
+  eventsSeen?: string[];
+  /** Dungeon in progress: current floor out of `of`. */
+  dungeon?: { floor: number; of: number };
   /** uids chosen for the pending battle. */
   deployment?: string[];
   uidCounter: number;
@@ -503,4 +525,45 @@ export interface Run {
 export interface Pos {
   x: number;
   y: number;
+}
+
+// ───────────────────────── Random events ─────────────────────────
+
+export type EventEffect =
+  | { kind: 'rupees'; amount: number }
+  /** Heal (positive) or hurt (negative) the whole army by a fraction of max HP. Damage never kills. */
+  | { kind: 'hp'; pct: number }
+  | { kind: 'xp'; amount: number }
+  /** An item, weapon or gear to the convoy (random from the list). */
+  | { kind: 'loot'; ids: string[] }
+  /** A random template from the list joins the army. */
+  | { kind: 'recruit'; pool: string[] }
+  /** A random unit gains a permanent stat bonus. */
+  | { kind: 'stat'; stat: StatKey; amount: number }
+  /** Every pair in the army gains support points. */
+  | { kind: 'support'; amount: number };
+
+export interface EventOutcome {
+  text: string;
+  effects: EventEffect[];
+}
+
+export interface EventChoice {
+  label: string;
+  /** Rupees paid up front (the choice is greyed out if you can't afford it). */
+  cost?: number;
+  /** Plain outcome, or a gamble. */
+  outcome?: EventOutcome;
+  gamble?: { chance: number; win: EventOutcome; lose: EventOutcome };
+}
+
+export interface EventDef {
+  id: string;
+  title: string;
+  text: string;
+  /** Art id for the event picture. */
+  art?: string;
+  /** Only in these regions (all if omitted). */
+  regions?: WorldId[];
+  choices: EventChoice[];
 }

@@ -56,12 +56,26 @@ export function planAction(b: Battle, unit: Unit): AIPlan {
   const plan = (choice: { dest: number; target: Unit; w: string }, type: 'attack' | 'heal'): AIPlan => ({
     unit: unit.uid, path: moves.path(choice.dest), dest: posOf(b, choice.dest), action: { type, target: choice.target.uid, weaponId: choice.w },
   });
+  // Defend maps: an enemy that can reach the point takes it (that ends the battle).
+  const point = b.objective.type === 'defend' ? b.objective.tiles?.[0] : undefined;
+  if (point && unit.ai !== 'stationary') {
+    for (const [k] of moves.reach) {
+      const p = posOf(b, k);
+      if (point.x >= p.x && point.x < p.x + unit.size && point.y >= p.y && point.y < p.y + unit.size) {
+        return { unit: unit.uid, path: moves.path(k), dest: p, action: null };
+      }
+    }
+  }
   if (bestHeal && (!best || bestHeal.score > best.score)) return plan(bestHeal, 'heal');
   if (best) return plan(best, 'attack');
 
   // Guards hold position, but march once the battle drags on or their side is nearly beaten.
   const restless = b.turn >= 6 || friends.length <= 1;
   if (unit.ai === 'stationary' || (unit.ai === 'guard' && !restless)) return { unit: unit.uid, path: [stay], dest: stay, action: null };
+  // On defend maps, about half the enemy army heads for the point instead of your units.
+  if (point && Number(unit.uid.replace(/\D/g, '')) % 2 === 0) {
+    return approach(b, unit, moves, [{ ...unit, x: point.x, y: point.y, size: 1 }]);
+  }
   return approach(b, unit, moves, foes.length ? foes : friends);
 }
 

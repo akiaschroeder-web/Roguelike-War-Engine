@@ -16,7 +16,8 @@ import { canUse, useItem } from '../src/engine/items';
 import { castAbility } from '../src/engine/abilities';
 import { fountainTeach, improveWeapon, pickForce, repairWeapon, useItemOutside } from '../src/engine/run';
 import { gainSupport, isSPair, rankOf, supportKey } from '../src/engine/supports';
-import { migrateRun } from '../src/engine/run';
+import { chooseEvent, descendDungeon, migrateRun } from '../src/engine/run';
+import { EVENTS } from '../src/data/registry';
 import type { Battle, Team, Unit } from '../src/engine/types';
 
 const rng = () => new RNG(1);
@@ -731,5 +732,120 @@ describe('durability, blacksmith, supports and transformations', () => {
     const u = makeHero('link', 'l', 1, rng());
     u.gear.mount = 'loftwing';
     expect(moveTypeOf(u)).toBe('flying');
+  });
+});
+
+describe('objectives and encounters', () => {
+  it('places every objective type with reachable tiles, across many seeds', async () => {
+    const counts: Record<string, number> = {};
+    for (let s = 0; s < 120; s++) {
+      const run = newRun(s + 900, 'link');
+      const b = createBattle({ world: REGION_IDS[s % REGION_IDS.length], nodeType: 'battle', depth: 3, roster: run.roster, seed: s });
+      counts[b.objective.type] = (counts[b.objective.type] ?? 0) + 1;
+      if (['seize', 'defend', 'escape', 'capture'].includes(b.objective.type)) {
+        expect(b.objective.tiles?.length, `${s}`).toBeGreaterThan(0);
+        for (const t of b.objective.tiles!) expect(['plain', 'forest', 'fort']).toContain(b.tiles[keyOf(b, t.x, t.y)]);
+      }
+    }
+    for (const t of ['rout', 'seize', 'defend', 'escape', 'capture']) expect(counts[t], t).toBeGreaterThan(0);
+  });
+
+  it('seize, escape, capture and defend resolve correctly', () => {
+    const link = () => place(makeHero('link', 'p1', 5, rng()), 0, 0, 'player');
+    const foe = () => place(makeEnemy(ENEMIES.octorok ?? Object.values(ENEMIES)[0], 'hyruleField', 1, 'e2', rng()), 11, 7, 'enemy');
+    let b = emptyBattle(); let u = link(); u.isCommander = true; b.units = [u, foe()];
+    b.objective = { type: 'seize', tiles: [{ x: 5, y: 3 }] };
+    expect(checkResult(b)).toBeUndefined();
+    moveUnit(u, 5, 3); expect(checkResult(b)).toBe('won');
+
+    b = emptyBattle(); u = link(); u.isCommander = true; b.units = [u, foe()];
+    b.objective = { type: 'escape', tiles: [{ x: 11, y: 2 }] };
+    moveUnit(u, 11, 2); expect(checkResult(b)).toBe('won');
+
+    b = emptyBattle(); u = link(); u.isCommander = true; const v = place(makeHero('saria', 'p3', 5, rng()), 0, 1, 'player');
+    b.units = [u, v, foe()];
+    b.objective = { type: 'capture', tiles: [{ x: 4, y: 1 }, { x: 4, y: 5 }, { x: 8, y: 3 }], need: 2 };
+    moveUnit(u, 4, 1); expect(checkResult(b)).toBeUndefined();
+    moveUnit(v, 8, 3); expect(checkResult(b)).toBe('won');
+
+    b = emptyBattle(); u = link(); u.isCommander = true; const e = foe(); b.units = [u, e];
+    b.objective = { type: 'defend', turns: 6, tiles: [{ x: 1, y: 4 }] };
+    moveUnit(e, 1, 4); expect(checkResult(b)).toBe('lost'); expect(b.retreat).toBe(true);
+  });
+
+  it('enemies on defend maps take the point when they can', () => {
+    const b = emptyBattle();
+    const e = place(makeEnemy(ENEMIES.octorok ?? Object.values(ENEMIES)[0], 'hyruleField', 1, 'e2', rng()), 4, 4, 'enemy');
+    b.units = [place(makeHero('link', 'p1', 5, rng()), 11, 0, 'player'), e];
+    b.objective = { type: 'defend', turns: 6, tiles: [{ x: 2, y: 4 }] };
+    expect(planAction(b, e).dest).toEqual({ x: 2, y: 4 });
+  });
+
+  it('a retreat from a defend map does not end the run', () => {
+    const run = newRun(12, 'link') as RunWithEvent;
+    const node = availableNodes(run)[0];
+    enterNode(run, node.id);
+    run.battle!.result = 'lost'; run.battle!.retreat = true;
+    const sum = finishBattle(run);
+    expect(sum.retreated).toBe(true);
+    expect(run.roster.some((u) => u.isCommander)).toBe(true);
+  });
+
+  it('ambush and siege battles set up', () => {
+    const run = newRun(5, 'link');
+    const a = createBattle({ world: 'hyruleField', nodeType: 'ambush', depth: 4, roster: run.roster, seed: 3 });
+    expect(a.units.some((u) => u.team === 'enemy' && u.x <= 5)).toBe(true);
+    const s = createBattle({ world: 'hyruleCastle', nodeType: 'siege', depth: 4, roster: run.roster, seed: 3 });
+    expect(s.objective.type).toBe('seize');
+  });
+
+  it('dungeons chain three battles and end in a vault', () => {
+    const run = newRun(33, 'link') as RunWithEvent;
+    const node = availableNodes(run)[0];
+    node.type = 'dungeon';
+    enterNode(run, node.id);
+    for (let f = 1; f <= 3; f++) {
+      expect(run.battle, `floor ${f}`).toBeDefined();
+      expect(run.battle!.nodeType).toBe(f === 3 ? 'elite' : 'battle');
+      run.battle!.result = 'won';
+      const sum = finishBattle(run);
+      expect(sum.dungeon?.cleared).toBe(f === 3);
+      if (f < 3) { expect(run.event?.type).toBe('dungeon'); descendDungeon(run); }
+    }
+    expect(run.event?.type).toBe('treasure');
+    expect(run.dungeon).toBeUndefined();
+  });
+
+  it('side quests pay out when completed', () => {
+    const run = newRun(40, 'link') as RunWithEvent;
+    enterNode(run, availableNodes(run)[0].id);
+    run.battle!.sideQuest = { kind: 'noLoss', rupees: 100, item: 'redPotion' };
+    run.battle!.result = 'won';
+    const before = run.rupees;
+    const sum = finishBattle(run);
+    expect(sum.sideQuest?.done).toBe(true);
+    expect(run.rupees - before).toBe(sum.rupees);
+    expect(run.convoy).toContain('redPotion');
+  });
+
+  it('every random event references real content and resolves', () => {
+    for (const ev of Object.values(EVENTS)) {
+      for (const c of ev.choices) {
+        const outs = c.gamble ? [c.gamble.win, c.gamble.lose] : [c.outcome!];
+        for (const o of outs) for (const e of o.effects) {
+          if (e.kind === 'loot') for (const id of e.ids) expect(WEAPONS[id] || GEAR[id] || ITEMS[id] || PERMANENT_ITEMS[id], `${ev.id}:${id}`).toBeTruthy();
+          if (e.kind === 'recruit') for (const id of e.pool) expect(TEMPLATES[id], `${ev.id}:${id}`).toBeDefined();
+        }
+      }
+      if (ev.regions) for (const r of ev.regions) expect(WORLDS[r], ev.id).toBeDefined();
+      for (let i = 0; i < ev.choices.length; i++) {
+        const run = newRun(i + 7, 'link') as RunWithEvent;
+        run.rupees = 1000;
+        run.event = { type: 'event', eventId: ev.id };
+        const res = chooseEvent(run, i);
+        expect(res, `${ev.id}#${i}`).not.toBeNull();
+        expect(run.roster.every((u) => u.hp >= 1)).toBe(true);
+      }
+    }
   });
 });

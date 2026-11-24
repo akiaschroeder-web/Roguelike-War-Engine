@@ -5,8 +5,7 @@
 import { OCARINA } from '../content/ocarina';
 import type { ContentPack } from '../content/types';
 import type {
-  AbilityDef, FactionDef, GearDef, ItemDef, BossDef, ClassDef, CommanderDef, EnemyArchetype, PermanentItemDef, RaceDef, SkillDef, UnitTemplate, WeaponDef, WorldDef, WorldId,
-} from '../engine/types';
+  AbilityDef, FactionDef, GearDef, ItemDef, BossDef, ClassDef, CommanderDef, EnemyArchetype, PermanentItemDef, RaceDef, SkillDef, UnitTemplate, WeaponDef, WorldDef, WorldId, EventDef } from '../engine/types';
 
 export const RACES: Record<string, RaceDef> = {};
 export const CLASSES: Record<string, ClassDef> = {};
@@ -34,6 +33,7 @@ export const ART_ALIASES: Record<string, string> = {};
 export const ART_VARIANTS: Record<string, string[]> = {};
 /** Boss id -> the template that boss is a form of. */
 export const BOSS_AS_TEMPLATE: Record<string, string> = {};
+export const EVENTS: Record<string, EventDef> = {};
 
 const index = <T extends { id: string }>(target: Record<string, T>, list: T[]) => {
   for (const x of list) target[x.id] = x;
@@ -48,6 +48,7 @@ export function installPack(p: ContentPack): void {
   index(ITEMS, p.items);
   index(ABILITIES, p.abilities);
   index(FACTIONS, p.factions);
+  index(EVENTS, p.events ?? []);
   Object.assign(MONSTER_CHANCE, p.monsterChance);
   SUPPORT_S_PAIRS.push(...(p.supportPairs ?? []));
   index(PERMANENT_ITEMS, p.permanentItems);

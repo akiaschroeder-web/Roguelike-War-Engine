@@ -1,5 +1,5 @@
 import type {
-  AbilityDef, FactionDef, GearDef, ItemDef, BossDef, ClassDef, CommanderDef, EnemyArchetype, PermanentItemDef, RaceDef, SkillDef, UnitTemplate, WeaponDef, WorldDef,
+  AbilityDef, EventDef, FactionDef, GearDef, ItemDef, BossDef, ClassDef, CommanderDef, EnemyArchetype, PermanentItemDef, RaceDef, SkillDef, UnitTemplate, WeaponDef, WorldDef,
 } from '../engine/types';
 
 /** A content pack: one game's worth of characters, regions and equipment. */
@@ -33,6 +33,8 @@ export interface ContentPack {
   bossAsTemplate?: Record<string, string>;
   /** Template ids that can't serve in the same army (forms of the same person). */
   exclusivePairs?: [string, string][];
+  /** Random events on the march. */
+  events?: EventDef[];
   /** id -> several art ids; each unit picks one. */
   artVariants?: Record<string, string[]>;
 }

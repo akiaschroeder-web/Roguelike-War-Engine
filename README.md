@@ -28,7 +28,13 @@ npm test           # engine tests + AI-vs-AI battle simulations
   - healing staves
 - **Terrain:** lava (Gorons and fliers are immune), deep water (Zora and fliers only) and forts. Kokiri ignore forest penalties.
 - **Attrition:** HP carries over between battles. Camps and Great Fairy Fountains heal, and fountains can revive the fallen. Permadeath otherwise; losing the commander ends the run.
-- **Encounters:** battle, elite, recruitment, merchant, camp, Great Fairy Fountain, treasure and regional boss.
+- **Encounters:** battle, elite, ambush, siege, dungeon, random event, recruitment, merchant, camp, Great Fairy Fountain, treasure, blacksmith and regional boss.
+  - **Ambush:** half the enemy starts on your flank and the enemy moves first.
+  - **Siege:** storm a walled keep; a guard holds the throne.
+  - **Dungeon:** three battles in a row (the last against a guardian), then a vault with better treasure. You can leave between floors.
+  - **Random events:** 15 road events with choices, gambles, loot, recruits, healing, EXP, stat boosts and support bonds.
+- **Objectives:** rout, defeat the commander, survive, seize the throne, defend a point (losing it means a retreat, not a game over), escape with your Commander, and hold 2 of 3 capture points.
+- **Side quests:** some battles add a bonus goal (win within N turns, or lose nobody) for extra Rupees and items.
 - **Gear:** shield, head, body, hands, feet and two accessory slots per unit (shields block, and do nothing with a two-handed weapon; Goron/Zora Tunics grant lava immunity and swimming). Includes masks, tunics, the Spiritual Stones, Medallions and Triforce pieces. Bosses drop their gear, and a convoy holds spare equipment.
 - **6-slot pack:** potions, Lon Lon Milk, Bottled Fairies (auto-revive), Bombs, Bombchus and Deku Nuts (stun), usable in battle with the Item action.
 - **Magic:** units have MP (refilled each battle; Green Potions, Magic Jars and Magic Containers). Great Fairy spells (Din's Fire, Farore's Wind, Nayru's Love), songs played on an ocarina or harp (Zelda's Lullaby, Saria's Song, Sun's Song, Song of Storms), and Fire/Ice/Light Arrows chosen in the forecast. Learned from items, sheet music and Great Fairy Fountains.
@@ -67,7 +73,7 @@ tests/               Vitest suite
 - Support conversations
 - Army stats and resources (supplies, materials, command points, morale)
 - Commander orders
-- More objectives (escort, capture, siege…) and encounters (siege, ambush, side quests, dungeons, random events)
+- Escort objectives
 - Allied and environmental phases
 - Cross-run progression facilities
 

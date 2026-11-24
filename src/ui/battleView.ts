@@ -4,6 +4,7 @@ import { enemyAutoTransform, abilityRadius, abilityTargets, castAbility, castabl
 import { STATUS_INFO } from '../engine/status';
 import { canUse, isTargeted, targetTiles, useItem } from '../engine/items';
 import { planAction } from '../engine/ai';
+import { sideQuestText } from '../engine/run';
 import { checkResult, mountToggleBlocked, moveUnit, toggleMount, objectiveText, spawnReinforcements, startPhase, type TurnStartEvent } from '../engine/battle';
 import {
   attackMods, attackWeapons, findInterceptor, forecast, healAmount, healWeapons, maxAttackRange, resolveCombat, resolveHeal, weaponDef,
@@ -46,6 +47,7 @@ export class BattleView {
     actions: HTMLElement; header: HTMLElement; logEl: HTMLElement; wrap: HTMLElement;
   };
   private onKey = (e: KeyboardEvent) => this.handleKey(e);
+  private dungeon?: { floor: number; of: number };
   private onResize = () => { this.layout(); this.renderUnits(); };
 
   constructor(
@@ -55,6 +57,7 @@ export class BattleView {
     private onDone: (result: 'won' | 'lost') => void,
   ) {
     this.b = run.battle!;
+    this.dungeon = run.dungeon;
   }
 
   async mount() {
@@ -79,7 +82,12 @@ export class BattleView {
     window.addEventListener('keydown', this.onKey);
     window.addEventListener('resize', this.onResize);
 
-    if (this.b.turn === 1 && this.b.phase === 'player' && !this.b.units.some((u) => u.moved || u.acted)) {
+    if (this.b.nodeType === 'ambush' && !this.b.ambushed && this.b.turn === 1) {
+      await this.intro();
+      this.b.ambushed = true;
+      await this.banner('Ambush! The enemy strikes first', 'enemy');
+      await this.enemyPhase(true);
+    } else if (this.b.turn === 1 && this.b.phase === 'player' && !this.b.units.some((u) => u.moved || u.acted)) {
       await this.intro();
       await this.banner('Player Phase', 'player');
     } else if (this.b.phase === 'enemy') {
@@ -127,11 +135,15 @@ export class BattleView {
     const { b } = this;
     const w = worldDef(b.world);
     const enemies = b.units.filter((u) => u.team === 'enemy').length;
-    const progress = b.objective.type === 'survive' ? ` (${Math.min(b.turn, b.objective.turns!)}/${b.objective.turns})` : '';
-    const kind = b.nodeType === 'elite' ? 'Elite battle' : b.nodeType === 'boss' ? 'Regional boss' : 'Battle';
+    const o = b.objective;
+    const progress = o.type === 'survive' || o.type === 'defend' ? ` (${Math.min(b.turn, o.turns!)}/${o.turns})`
+      : o.type === 'capture' ? ` (${o.tiles!.filter((t) => b.units.some((u) => u.team === 'player' && t.x >= u.x && t.x < u.x + u.size && t.y >= u.y && t.y < u.y + u.size)).length}/${o.need})` : '';
+    const base = { elite: 'Elite battle', boss: 'Regional boss', ambush: 'Ambush', siege: 'Siege' }[b.nodeType as string] ?? 'Battle';
+    const kind = this.dungeon ? `Dungeon floor ${this.dungeon.floor}/${this.dungeon.of}${b.nodeType === 'elite' ? ' (guardian)' : ''}` : base;
+    const sq = b.sideQuest ? `<span class="dim small">Side quest: ${esc(sideQuestText(b.sideQuest))} (${esc(sideReward(b.sideQuest))})</span>` : '';
     this.els.header.innerHTML = `
       <div class="bh-world"><b>${esc(w.name)}</b><span class="dim small">${esc(kind)}${b.forceName ? ` · vs ${esc(b.forceName)}` : ''}</span></div>
-      <div class="bh-obj"><span class="dim small">Objective</span><b>${esc(objectiveText(b.objective))}${progress}</b></div>
+      <div class="bh-obj"><span class="dim small">Objective</span><b>${esc(objectiveText(b.objective))}${progress}</b>${sq}</div>
       <div class="bh-turn"><span class="dim small">Turn ${b.turn}</span><b class="phase ${b.phase}">${b.phase === 'player' ? 'Player' : 'Enemy'} Phase</b></div>
       <div class="bh-count"><span class="dim small">Enemies</span><b>${enemies}</b></div>
       ${b.weather ? `<div class="weather"><span class="dim small">Weather</span><b>🌧 Rain (${b.weather.turns})</b></div>` : ''}`;
@@ -208,6 +220,8 @@ export class BattleView {
     const cls: string[][] = b.tiles.map(() => []);
     const add = (k: number, c: string) => cls[k].push(c);
 
+    const objCls = { seize: 'obj-seize', defend: 'obj-defend', escape: 'obj-exit', capture: 'obj-cap' }[b.objective.type as string];
+    if (objCls) for (const t of b.objective.tiles ?? []) add(keyOf(b, t.x, t.y), objCls);
     if (this.showDanger) {
       for (const e of b.units.filter((u) => u.team === 'enemy')) {
         const t = this.threatTiles(e);
@@ -1002,7 +1016,7 @@ export class BattleView {
     await this.enemyPhase();
   }
 
-  private async enemyPhase() {
+  private async enemyPhase(opening = false) {
     const { b } = this;
     this.mode = 'busy';
     const events = startPhase(b, 'enemy');
@@ -1054,7 +1068,7 @@ export class BattleView {
       if (await this.checkEnd()) return;
     }
 
-    b.turn++;
+    if (!opening) b.turn++;
     if (await this.checkEnd()) return;
     const pEvents = startPhase(b, 'player');
     this.mode = 'idle';
@@ -1088,4 +1102,8 @@ function menuAbilities(u: Unit) {
 /** Cavalry classes are always mounted; only show the horse badge for gear mounts. */
 function CLASSES_MOUNTED(u: Unit): boolean {
   return CLASSES[u.classId]?.moveType === 'cavalry';
+}
+
+function sideReward(sq: { rupees: number; item?: string }): string {
+  return [`₹${sq.rupees}`, ...(sq.item && ITEMS[sq.item] ? [ITEMS[sq.item].name] : [])].join(' + ');
 }
