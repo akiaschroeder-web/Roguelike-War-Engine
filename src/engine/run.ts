@@ -1,18 +1,19 @@
-import { CLASSES } from '../data/classes';
-import { BOSSES, bossesFor } from '../data/enemies';
-import { HEROES, HERO_MAP } from '../data/heroes';
-import { RELIC_IDS, RELICS } from '../data/skills';
-import { SHOP_WEAPONS, WEAPONS } from '../data/weapons';
-import { PLAYABLE_WORLDS } from '../data/worlds';
+import {
+  ACCESSORIES, BOSSES, bossPool, COMMANDERS, PERMANENT_ITEMS, REGION_IDS, TEMPLATE_LIST, TEMPLATES, WEAPONS,
+} from '../data/registry';
 import { createBattle } from './battle';
+import { canWield, type LevelUp } from './combat';
 import { RNG } from './rng';
-import { gainXp, makeHeroUnit, rollLevelUp, STAT_KEYS } from './units';
-import type { MapNode, NodeType, RelicId, Run, RunMap, StatKey, Unit, WorldId } from './types';
-import type { LevelUp } from './combat';
+import { ARMY_CAPACITY, DEPLOY_CAPACITY } from './rules';
+import { gainXp, makeHero, rollLevelUp } from './units';
+import type { BossDef, CommanderDef, MapNode, NodeType, Rarity, Run, RunMap, Unit, UnitTemplate, WorldId } from './types';
 
-export const ACTS = 3;
-export const ROWS_PER_ACT = 7; // last row is the act boss
-export const MAX_ROSTER = 8;
+export const ROWS_PER_REGION = 7; // last row is the regional boss
+export { ARMY_CAPACITY, DEPLOY_CAPACITY };
+
+const ownedTemplateUnique = (id: string) => !!TEMPLATES[id] && !TEMPLATES[id].generic;
+/** Ganondorf is a commander-only unit; villains aren't in the template list. */
+const COMMANDER_ONLY = new Set(['ganondorf']);
 
 function withRng<T>(run: Run, fn: (rng: RNG) => T): T {
   const rng = new RNG(run.rngState);
@@ -23,79 +24,50 @@ function withRng<T>(run: Run, fn: (rng: RNG) => T): T {
 
 const nextUid = (run: Run) => `p${run.uidCounter++}`;
 
-export function newRun(seed: number, commanderId: string): Run {
+export function commanderOf(run: Run): CommanderDef {
+  return COMMANDERS.find((c) => c.heroId === run.commanderId) ?? COMMANDERS[0];
+}
+
+export function newRun(seed: number, commanderId: string): RunWithEvent {
   const rng = new RNG(seed);
-  const run: Run = {
-    seed,
-    rngState: 0,
-    act: 1,
-    map: { rows: 0, nodes: [] },
-    currentNodeId: null,
-    roster: [],
-    fallen: [],
-    gold: 200,
-    relics: [],
-    stats: { battles: 0, kills: 0, recruits: 0 },
-    seenHeroes: [commanderId],
-    bossesFought: [],
-    uidCounter: 0,
+  const cmd = COMMANDERS.find((c) => c.heroId === commanderId) ?? COMMANDERS[0];
+  const home = TEMPLATES[cmd.heroId].home;
+  const region = home === 'hyruleCastle' ? 'hyruleField' : home;
+  const run: RunWithEvent = {
+    seed, rngState: 0, act: 1, region, regionsVisited: [region], map: { rows: 0, nodes: [] }, currentNodeId: null,
+    roster: [], fallen: [], rupees: 200, convoy: [...(cmd.startingItems ?? [])], commanderId: cmd.heroId, bonus: cmd.bonus,
+    stats: { battles: 0, kills: 0, recruits: 0 }, seenHeroes: [cmd.heroId], bossesFought: [], uidCounter: 0,
   };
-  const commander = makeHeroUnit(commanderId, nextUid(run), 1, rng);
+  const commander = makeHero(cmd.heroId, nextUid(run), 1, rng);
   commander.isCommander = true;
   run.roster.push(commander);
-
-  // Two companions from other worlds, one of whom is always a damage dealer
-  // and the other random (so the starting party has some variety).
-  // Prefer other worlds, but fall back to anyone (packs may have few heroes).
-  const cmdWorld = HERO_MAP[commanderId].world;
-  const others = HEROES.filter((h) => h.id !== commanderId);
-  const fighters = (list: typeof HEROES) => list.filter((h) => CLASSES[h.classId].weapons[0] !== 'staff');
-  const offWorld = others.filter((h) => h.world !== cmdWorld);
-  const first = rng.shuffle(fighters(offWorld))[0] ?? rng.shuffle(fighters(others))[0] ?? rng.shuffle([...others])[0];
-  const rest = others.filter((h) => h !== first);
-  const second = rng.shuffle(rest.filter((h) => h.world !== cmdWorld && h.world !== first?.world))[0] ?? rng.shuffle([...rest])[0];
-  for (const h of [first, second].filter(Boolean)) {
-    run.roster.push(makeHeroUnit(h, nextUid(run), 1, rng));
-    run.seenHeroes.push(h.id);
+  for (const id of cmd.units) {
+    run.roster.push(makeHero(id, nextUid(run), 1, rng));
+    if (ownedTemplateUnique(id)) run.seenHeroes.push(id);
   }
-  run.map = generateActMap(rng, 1, []);
+  run.map = generateRegionMap(rng, run.act, region);
   run.rngState = rng.state;
   return run;
 }
 
-export function generateActMap(rng: RNG, act: number, bossesFought: string[]): RunMap {
+export function generateRegionMap(rng: RNG, act: number, region: WorldId): RunMap {
   const nodes: MapNode[] = [];
   const rows: MapNode[][] = [];
   let id = 0;
-  for (let r = 0; r < ROWS_PER_ACT; r++) {
-    const isBossRow = r === ROWS_PER_ACT - 1;
+  for (let r = 0; r < ROWS_PER_REGION; r++) {
+    const isBossRow = r === ROWS_PER_REGION - 1;
     const count = isBossRow ? 1 : r === 0 ? rng.int(2, 3) : rng.int(2, 4);
     const row: MapNode[] = [];
     for (let i = 0; i < count; i++) {
-      const type: NodeType = isBossRow ? 'boss' : pickNodeType(rng, r, act);
-      const world: WorldId = act === ACTS && isBossRow ? 'rift' : rng.pick(PLAYABLE_WORLDS);
       row.push({
-        id: `a${act}n${id++}`,
-        row: r,
-        col: count === 1 ? 0.5 : (i + 0.5) / count + (rng.next() - 0.5) * 0.08,
-        type,
-        world,
-        next: [],
-        visited: false,
+        id: `a${act}n${id++}`, row: r, col: count === 1 ? 0.5 : (i + 0.5) / count + (rng.next() - 0.5) * 0.08,
+        type: isBossRow ? 'boss' : pickNodeType(rng, r), world: region, next: [], visited: false,
       });
     }
     rows.push(row);
     nodes.push(...row);
   }
-  // Act boss world: pick a warlord we haven't fought yet.
-  if (act < ACTS) {
-    const remaining = BOSSES.filter((b) => !bossesFought.includes(b.id));
-    const boss = rng.pick(remaining.length ? remaining : BOSSES);
-    rows[ROWS_PER_ACT - 1][0].world = boss.world;
-  }
-  // Connect rows: each node links to the 1-2 nearest nodes in the next row,
-  // and every next-row node gets at least one incoming edge.
-  for (let r = 0; r < ROWS_PER_ACT - 1; r++) {
+  for (let r = 0; r < ROWS_PER_REGION - 1; r++) {
     const cur = rows[r], nxt = rows[r + 1];
     for (const n of cur) {
       const sorted = [...nxt].sort((a, b) => Math.abs(a.col - n.col) - Math.abs(b.col - n.col));
@@ -104,26 +76,19 @@ export function generateActMap(rng: RNG, act: number, bossesFought: string[]): R
     }
     for (const m of nxt) {
       if (!cur.some((n) => n.next.includes(m.id))) {
-        const nearest = [...cur].sort((a, b) => Math.abs(a.col - m.col) - Math.abs(b.col - m.col))[0];
-        nearest.next.push(m.id);
+        [...cur].sort((a, b) => Math.abs(a.col - m.col) - Math.abs(b.col - m.col))[0].next.push(m.id);
       }
     }
   }
-  return { rows: ROWS_PER_ACT, nodes };
+  return { rows: ROWS_PER_REGION, nodes };
 }
 
-function pickNodeType(rng: RNG, row: number, act: number): NodeType {
+function pickNodeType(rng: RNG, row: number): NodeType {
   if (row === 0) return 'battle';
-  if (row === ROWS_PER_ACT - 2) return rng.weighted([['rest', 3], ['shop', 2], ['battle', 2]]);
-  const entries: [NodeType, number][] = [
-    ['battle', 45],
-    ['recruit', row <= 3 || act > 1 ? 16 : 8],
-    ['shop', 11],
-    ['rest', 9],
-    ['treasure', 9],
-    ['elite', row >= 2 ? 12 : 0],
-  ];
-  return rng.weighted(entries);
+  if (row === ROWS_PER_REGION - 2) return rng.weighted([['camp', 3], ['fountain', 2], ['shop', 2], ['battle', 1]]);
+  return rng.weighted([
+    ['battle', 42], ['recruit', 14], ['shop', 10], ['camp', 9], ['fountain', 6], ['treasure', 9], ['elite', row >= 2 ? 12 : 0],
+  ]);
 }
 
 export function nodeById(run: Run, id: string): MapNode | undefined {
@@ -136,21 +101,58 @@ export function availableNodes(run: Run): MapNode[] {
   return cur ? cur.next.map((id) => nodeById(run, id)!).filter(Boolean) : [];
 }
 
-/** Overall depth (fights get harder the further in you are). */
+export function currentNode(run: Run): MapNode | undefined {
+  return run.currentNodeId ? nodeById(run, run.currentNodeId) : undefined;
+}
+
+/** Overall depth; drives enemy scaling forever. */
 export function depthOf(run: Run, node: MapNode): number {
-  return (run.act - 1) * ROWS_PER_ACT + node.row;
+  return (run.act - 1) * ROWS_PER_REGION + node.row;
 }
 
 // ───────────────────────── Events ─────────────────────────
 
+export type Reward =
+  | { kind: 'weapon'; id: string }
+  | { kind: 'accessory'; id: string }
+  | { kind: 'permanent'; id: string };
+
 export type RunEvent =
+  | { type: 'deploy'; nodeId: string }
   | { type: 'recruit'; offers: string[] }
-  | { type: 'shop'; weapons: string[]; relics: RelicId[]; tonics: StatKey[]; sold: string[] }
-  | { type: 'rest' }
-  | { type: 'treasure'; relics: RelicId[]; gold: number };
+  | { type: 'shop'; weapons: string[]; accessories: string[]; permanents: string[]; sold: string[] }
+  | { type: 'camp' }
+  | { type: 'fountain' }
+  | { type: 'treasure'; rewards: Reward[]; rupees: number }
+  | { type: 'region'; options: WorldId[] };
 
 export interface RunWithEvent extends Run {
   event?: RunEvent;
+}
+
+const RARITY_BY_REGION: Rarity[][] = [
+  ['common', 'uncommon'],
+  ['common', 'uncommon', 'rare'],
+  ['uncommon', 'rare', 'epic'],
+  ['rare', 'epic', 'legendary'],
+];
+const raritiesFor = (act: number) => RARITY_BY_REGION[Math.min(act, RARITY_BY_REGION.length) - 1];
+
+/** Unique items already owned (equipped or in the convoy). */
+export function ownedUniques(run: Run): Set<string> {
+  const ids = [...run.convoy, ...run.roster.flatMap((u) => [...u.weapons, u.accessory ?? ''])];
+  return new Set(ids.filter((id) => WEAPONS[id]?.unique || ACCESSORIES[id]?.unique));
+}
+
+function bossFor(run: Run, rng: RNG, node: MapNode): BossDef {
+  const exclude = run.commanderId === 'ganondorf' ? new Set(['ganondorfBoss', 'ganon']) : new Set<string>();
+  let pool = bossPool(node.world).filter((b) => !exclude.has(b.id));
+  if (!pool.length) pool = Object.values(BOSSES).filter((b) => !exclude.has(b.id));
+  if (node.type === 'boss') {
+    const fresh = pool.filter((b) => !run.bossesFought.includes(b.id));
+    return fresh[0] ?? rng.pick(pool);
+  }
+  return rng.pick(pool);
 }
 
 export function enterNode(run: RunWithEvent, nodeId: string): void {
@@ -159,108 +161,161 @@ export function enterNode(run: RunWithEvent, nodeId: string): void {
   run.currentNodeId = nodeId;
   node.visited = true;
   run.event = undefined;
+  if (node.type === 'battle' || node.type === 'elite' || node.type === 'boss') {
+    if (run.roster.length > DEPLOY_CAPACITY) run.event = { type: 'deploy', nodeId };
+    else startBattle(run, run.roster.map((u) => u.uid));
+    return;
+  }
   withRng(run, (rng) => {
     switch (node.type) {
-      case 'battle':
-      case 'elite':
-      case 'boss': {
-        const finalBoss = node.type === 'boss' && run.act === ACTS;
-        let boss;
-        if (node.type === 'boss' && !finalBoss) {
-          boss = BOSSES.find((b) => b.world === node.world && !run.bossesFought.includes(b.id)) ?? BOSSES.find((b) => b.world === node.world);
-        } else if (node.type === 'elite') {
-          boss = rng.pick(bossesFor(node.world));
-        }
-        if (boss) run.bossesFought.push(boss.id);
-        run.battle = createBattle({
-          world: node.world,
-          nodeType: node.type,
-          depth: depthOf(run, node),
-          roster: run.roster,
-          relics: run.relics,
-          seed: rng.int(0, 2 ** 31),
-          boss,
-          finalBoss,
-        });
+      case 'recruit':
+        run.event = { type: 'recruit', offers: recruitOffers(run, rng, node.world) };
         break;
-      }
-      case 'recruit': {
-        const pool = HEROES.filter((h) => !run.seenHeroes.includes(h.id));
-        // Prefer heroes from the node's world, then anyone.
-        const local = rng.shuffle(pool.filter((h) => h.world === node.world));
-        const other = rng.shuffle(pool.filter((h) => h.world !== node.world));
-        const offers = [...local.slice(0, 1), ...other].slice(0, 3).map((h) => h.id);
-        run.event = { type: 'recruit', offers };
-        break;
-      }
       case 'shop': {
-        const maxTier = Math.min(3, run.act + 1);
-        const weapons = rng.shuffle(SHOP_WEAPONS.filter((w) => w.tier <= maxTier)).slice(0, 5).map((w) => w.id);
-        const relics = rng.shuffle(RELIC_IDS.filter((r) => !run.relics.includes(r))).slice(0, 2);
-        const tonics = rng.shuffle([...STAT_KEYS]).slice(0, 2);
-        run.event = { type: 'shop', weapons, relics, tonics, sold: [] };
+        const rar = raritiesFor(run.act);
+        const weapons = rng.shuffle(Object.values(WEAPONS).filter((w) => !w.unique && rar.includes(w.rarity))).slice(0, 5).map((w) => w.id);
+        const accessories = rng.shuffle(Object.values(ACCESSORIES).filter((a) => !a.unique && rar.includes(a.rarity))).slice(0, 2).map((a) => a.id);
+        const permanents = rng.shuffle(Object.keys(PERMANENT_ITEMS)).slice(0, 2);
+        run.event = { type: 'shop', weapons, accessories, permanents, sold: [] };
         break;
       }
-      case 'rest':
-        run.event = { type: 'rest' };
+      case 'camp':
+        run.event = { type: 'camp' };
         break;
-      case 'treasure': {
-        const relics = rng.shuffle(RELIC_IDS.filter((r) => !run.relics.includes(r))).slice(0, 3);
-        run.event = { type: 'treasure', relics, gold: 100 + run.act * 50 };
+      case 'fountain':
+        run.event = { type: 'fountain' };
         break;
-      }
+      case 'treasure':
+        run.event = { type: 'treasure', rewards: treasureRewards(run, rng), rupees: 100 + run.act * 60 };
+        break;
     }
   });
 }
 
-export function currentNode(run: Run): MapNode | undefined {
-  return run.currentNodeId ? nodeById(run, run.currentNodeId) : undefined;
+/** Begin the battle at the current node with the chosen units. */
+export function startBattle(run: RunWithEvent, uids: string[]): void {
+  const node = currentNode(run)!;
+  const chosen = run.roster.filter((u) => uids.includes(u.uid) || u.isCommander).slice(0, DEPLOY_CAPACITY);
+  run.deployment = chosen.map((u) => u.uid);
+  run.event = undefined;
+  withRng(run, (rng) => {
+    const boss = node.type === 'battle' ? undefined : bossFor(run, rng, node);
+    if (boss) run.bossesFought.push(boss.id);
+    run.battle = createBattle({
+      world: node.world, nodeType: node.type, depth: depthOf(run, node), roster: chosen,
+      seed: rng.int(0, 2 ** 31), boss, healMult: run.bonus === 'healing' ? 1.2 : 1,
+    });
+  });
+}
+
+function conflicts(run: Run, t: UnitTemplate): boolean {
+  const have = new Set(run.roster.map((u) => u.templateId));
+  return !!t.exclusiveWith?.some((id) => have.has(id));
+}
+
+export function recruitOffers(run: Run, rng: RNG, world: WorldId): string[] {
+  const have = new Set(run.roster.map((u) => u.templateId));
+  const named = TEMPLATE_LIST.filter((t) => !t.generic && !COMMANDER_ONLY.has(t.id) && !have.has(t.id)
+    && !run.fallen.some((f) => f.templateId === t.id) && !conflicts(run, t));
+  const fresh = named.filter((t) => !run.seenHeroes.includes(t.id));
+  const pool = fresh.length >= 2 ? fresh : named;
+  const local = rng.shuffle(pool.filter((t) => t.home === world));
+  const other = rng.shuffle(pool.filter((t) => t.home !== world));
+  const generics = rng.shuffle(TEMPLATE_LIST.filter((t) => t.generic && (!t.monster || run.bonus === 'monsters')));
+  const offers = [...local.slice(0, 1), ...other].slice(0, 2).map((t) => t.id);
+  while (offers.length < 3 && generics.length) offers.push(generics.shift()!.id);
+  return offers;
+}
+
+function treasureRewards(run: Run, rng: RNG): Reward[] {
+  const rar = raritiesFor(run.act + 1);
+  const owned = ownedUniques(run);
+  const pool: Reward[] = [
+    ...Object.values(ACCESSORIES).filter((a) => rar.includes(a.rarity) && !owned.has(a.id)).map((a) => ({ kind: 'accessory' as const, id: a.id })),
+    ...Object.values(WEAPONS).filter((w) => rar.includes(w.rarity) && w.type !== 'natural' && !owned.has(w.id) && w.id !== 'fairyLight').map((w) => ({ kind: 'weapon' as const, id: w.id })),
+    ...Object.keys(PERMANENT_ITEMS).map((id) => ({ kind: 'permanent' as const, id })),
+  ];
+  return rng.shuffle(pool).slice(0, run.bonus === 'extraTreasure' ? 4 : 3);
 }
 
 export interface BattleSummary {
   won: boolean;
-  gold: number;
+  rupees: number;
   fallen: Unit[];
   kills: number;
+  drops: string[];
 }
 
-/** Fold a finished battle back into the run. */
+/** HP recovered after a battle (fraction of max HP). */
+export const POST_BATTLE_HEAL = 0.2;
+
 export function finishBattle(run: RunWithEvent): BattleSummary {
   const b = run.battle!;
   const won = b.result === 'won';
   const kills = b.fallen.filter((u) => u.team === 'enemy').length;
   const fallen = b.fallen.filter((u) => u.team === 'player');
-  const survivors = b.units.filter((u) => u.team === 'player');
-  // Carry progression back; HP fully restores between fights.
-  run.roster = survivors.map((u) => ({ ...u, hp: u.stats.hp, moved: false, acted: false, kills: 0 }));
+  const survivors = new Map(b.units.filter((u) => u.team === 'player').map((u) => [u.uid, u]));
+  const deployed = new Set(run.deployment ?? []);
+  const heal = POST_BATTLE_HEAL + (run.bonus === 'postBattleHeal' ? 0.1 : 0);
+  run.roster = run.roster
+    .filter((u) => !fallen.some((f) => f.uid === u.uid))
+    .map((u) => {
+      const fought = survivors.get(u.uid);
+      const next = fought ? { ...fought } : { ...u };
+      // Benched units rest a little more than those who fought.
+      const pct = deployed.has(u.uid) ? heal : heal + 0.2;
+      next.hp = Math.min(next.stats.hp, next.hp + Math.ceil(next.stats.hp * pct));
+      return { ...next, moved: false, acted: false, kills: 0, movedDist: 0, survivedOnce: false };
+    });
   run.fallen.push(...fallen.map((u) => ({ ...u, hp: 0 })));
-  let gold = 0;
+
+  let rupees = 0;
+  const drops: string[] = [];
   if (won) {
-    gold = Math.round(b.rewardGold * (run.relics.includes('bountyBadge') ? 1.5 : 1));
-    run.gold += gold;
+    rupees = Math.round(b.rewardRupees * (run.bonus === 'rupees' ? 1.25 : 1));
+    run.rupees += rupees;
+    withRng(run, (rng) => {
+      const owned = ownedUniques(run);
+      for (const boss of b.fallen.filter((u) => u.isBoss && u.bossId)) {
+        const options = (BOSSES[boss.bossId!]?.drops ?? []).filter((id) => !owned.has(id));
+        if (options.length) {
+          const id = rng.pick(options);
+          drops.push(id);
+          run.convoy.push(id);
+          owned.add(id);
+        }
+      }
+    });
   }
   run.stats.battles++;
   run.stats.kills += kills;
   run.battle = undefined;
-  return { won, gold, fallen, kills };
+  run.deployment = undefined;
+  return { won, rupees, fallen, kills, drops };
 }
 
-export function isActComplete(run: Run): boolean {
+export function isRegionComplete(run: Run): boolean {
   const n = currentNode(run);
-  return !!n && n.type === 'boss';
+  return !!n && n.type === 'boss' && !run.battle;
 }
 
-export function isRunWon(run: Run): boolean {
-  return isActComplete(run) && run.act === ACTS;
-}
-
-export function advanceAct(run: Run): void {
-  run.act++;
-  run.currentNodeId = null;
+/** After a regional boss: offer the next region to march on. */
+export function offerRegions(run: RunWithEvent): void {
   withRng(run, (rng) => {
-    run.map = generateActMap(rng, run.act, run.bossesFought);
+    const recent = run.regionsVisited.slice(-2);
+    const options = rng.shuffle(REGION_IDS.filter((r) => !recent.includes(r))).slice(0, 3);
+    run.event = { type: 'region', options };
   });
-  run.gold += 150;
+}
+
+export function advanceRegion(run: RunWithEvent, region: WorldId): void {
+  run.act++;
+  run.region = region;
+  run.regionsVisited.push(region);
+  run.currentNodeId = null;
+  run.event = undefined;
+  withRng(run, (rng) => { run.map = generateRegionMap(rng, run.act, region); });
+  run.rupees += 150;
 }
 
 export function averageLevel(run: Run): number {
@@ -268,112 +323,169 @@ export function averageLevel(run: Run): number {
   return run.roster.reduce((s, u) => s + u.level, 0) / run.roster.length;
 }
 
-export function recruit(run: RunWithEvent, heroId: string): Unit {
-  const level = Math.max(1, Math.round(averageLevel(run)) - 1);
-  const unit = withRng(run, (rng) => makeHeroUnit(heroId, nextUid(run), level, rng));
+export function recruitLevel(run: Run): number {
+  return Math.max(1, Math.round(averageLevel(run)) - 1);
+}
+
+export function recruit(run: RunWithEvent, templateId: string): Unit | null {
+  if (run.roster.length >= ARMY_CAPACITY) return null;
+  const unit = withRng(run, (rng) => makeHero(templateId, nextUid(run), recruitLevel(run), rng));
   run.roster.push(unit);
-  for (const id of run.event?.type === 'recruit' ? run.event.offers : [heroId]) {
-    if (!run.seenHeroes.includes(id)) run.seenHeroes.push(id);
+  if (run.event?.type === 'recruit') {
+    for (const id of run.event.offers) if (ownedTemplateUnique(id) && !run.seenHeroes.includes(id)) run.seenHeroes.push(id);
   }
   run.stats.recruits++;
   run.event = undefined;
   return unit;
 }
 
-// ───────────────────────── Shop ─────────────────────────
+// ───────────────────────── Items ─────────────────────────
 
-export const TONIC_PRICE = 220;
-export const REVIVE_PRICE = 450;
-
-export function canEquip(unit: Unit, weaponId: string): boolean {
-  return CLASSES[unit.classId].weapons.includes(WEAPONS[weaponId].type);
+export function weaponPrice(run: Run, id: string): number {
+  const p = WEAPONS[id].price;
+  return run.bonus === 'forging' ? Math.round(p * 0.75) : p;
 }
 
-export function buyWeapon(run: RunWithEvent, weaponId: string, unitUid: string): boolean {
+/** Give a weapon to a unit (up to 5 carried), or to the convoy. */
+export function giveWeapon(run: Run, id: string, uid: string | null): boolean {
+  const u = uid ? run.roster.find((x) => x.uid === uid) : undefined;
+  if (!u) { run.convoy.push(id); return true; }
+  if (!canWield(u, WEAPONS[id])) return false;
+  if (u.weapons.length >= 5) run.convoy.push(u.weapons.pop()!);
+  u.weapons.push(id);
+  return true;
+}
+
+export function giveAccessory(run: Run, id: string, uid: string | null): boolean {
+  const u = uid ? run.roster.find((x) => x.uid === uid) : undefined;
+  if (!u) { run.convoy.push(id); return true; }
+  if (u.accessory) run.convoy.push(u.accessory);
+  u.accessory = id;
+  return true;
+}
+
+export function usePermanent(run: Run, id: string, uid: string): boolean {
+  const u = run.roster.find((x) => x.uid === uid);
+  const item = PERMANENT_ITEMS[id];
+  if (!u || !item) return false;
+  u.stats[item.stat] += item.amount;
+  if (item.stat === 'hp') u.hp += item.amount;
+  return true;
+}
+
+/** Equip something from the convoy onto a unit. */
+export function equipFromConvoy(run: Run, index: number, uid: string): boolean {
+  const id = run.convoy[index];
+  if (!id) return false;
+  const ok = WEAPONS[id] ? giveWeapon(run, id, uid) : ACCESSORIES[id] ? giveAccessory(run, id, uid) : false;
+  if (ok) run.convoy.splice(run.convoy.indexOf(id), 1);
+  return ok;
+}
+
+export function stashWeapon(run: Run, uid: string, weaponId: string): boolean {
+  const u = run.roster.find((x) => x.uid === uid);
+  if (!u || u.weapons.length <= 1) return false;
+  const i = u.weapons.indexOf(weaponId);
+  if (i < 0) return false;
+  u.weapons.splice(i, 1);
+  run.convoy.push(weaponId);
+  return true;
+}
+
+export function stashAccessory(run: Run, uid: string): boolean {
+  const u = run.roster.find((x) => x.uid === uid);
+  if (!u?.accessory) return false;
+  run.convoy.push(u.accessory);
+  u.accessory = undefined;
+  return true;
+}
+
+export function buy(run: RunWithEvent, kind: 'weapon' | 'accessory' | 'permanent', id: string, uid: string | null): boolean {
   const ev = run.event;
-  const w = WEAPONS[weaponId];
-  const unit = run.roster.find((u) => u.uid === unitUid);
-  if (ev?.type !== 'shop' || !unit || run.gold < w.price || !canEquip(unit, weaponId) || ev.sold.includes(weaponId)) return false;
-  run.gold -= w.price;
-  unit.weaponId = weaponId;
-  ev.sold.push(weaponId);
+  if (ev?.type !== 'shop' || ev.sold.includes(`${kind}:${id}`)) return false;
+  const price = kind === 'weapon' ? weaponPrice(run, id) : kind === 'accessory' ? ACCESSORIES[id].price : PERMANENT_ITEMS[id].price;
+  if (run.rupees < price) return false;
+  const ok = kind === 'weapon' ? giveWeapon(run, id, uid) : kind === 'accessory' ? giveAccessory(run, id, uid) : uid ? usePermanent(run, id, uid) : false;
+  if (!ok) return false;
+  run.rupees -= price;
+  ev.sold.push(`${kind}:${id}`);
   return true;
 }
 
-export function buyRelic(run: RunWithEvent, relic: RelicId): boolean {
-  const ev = run.event;
-  const price = RELICS[relic].price;
-  if (ev?.type !== 'shop' || run.gold < price || run.relics.includes(relic)) return false;
-  run.gold -= price;
-  run.relics.push(relic);
-  ev.sold.push(relic);
-  return true;
+// ───────────────────────── Camp / fountain / treasure ─────────────────────────
+
+export function campRest(run: RunWithEvent): void {
+  for (const u of run.roster) u.hp = Math.min(u.stats.hp, u.hp + Math.ceil(u.stats.hp * 0.5));
+  run.event = undefined;
 }
 
-export function buyTonic(run: RunWithEvent, stat: StatKey, unitUid: string): boolean {
-  const ev = run.event;
-  const unit = run.roster.find((u) => u.uid === unitUid);
-  const tag = `tonic:${stat}`;
-  if (ev?.type !== 'shop' || !unit || run.gold < TONIC_PRICE || ev.sold.includes(tag)) return false;
-  run.gold -= TONIC_PRICE;
-  const amount = stat === 'hp' ? 5 : 2;
-  unit.stats[stat] += amount;
-  if (stat === 'hp') unit.hp += amount;
-  ev.sold.push(tag);
-  return true;
-}
-
-export function revive(run: RunWithEvent, unitUid: string): boolean {
-  const idx = run.fallen.findIndex((u) => u.uid === unitUid);
-  if (run.event?.type !== 'shop' || idx < 0 || run.gold < REVIVE_PRICE || run.roster.length >= MAX_ROSTER) return false;
-  run.gold -= REVIVE_PRICE;
-  const [u] = run.fallen.splice(idx, 1);
-  run.roster.push({ ...u, hp: u.stats.hp });
-  return true;
-}
-
-// ───────────────────────── Rest / treasure ─────────────────────────
-
-/** Rest option A: one unit trains hard and gains a full level. */
-export function restTrain(run: RunWithEvent, unitUid: string): LevelUp | null {
-  const unit = run.roster.find((u) => u.uid === unitUid);
-  if (!unit || run.event?.type !== 'rest') return null;
+export function campTrain(run: RunWithEvent, uid: string): LevelUp | null {
+  const unit = run.roster.find((u) => u.uid === uid);
+  if (!unit || run.event?.type !== 'camp') return null;
   const gains = withRng(run, (rng) => rollLevelUp(unit, rng));
   run.event = undefined;
   return { uid: unit.uid, name: unit.name, level: unit.level, gains };
 }
 
-/** Rest option B: everyone drills together for some XP. */
-export function restDrill(run: RunWithEvent): LevelUp[] {
-  if (run.event?.type !== 'rest') return [];
+export function campDrill(run: RunWithEvent): LevelUp[] {
+  if (run.event?.type !== 'camp') return [];
   const ups: LevelUp[] = [];
   withRng(run, (rng) => {
-    for (const u of run.roster) {
-      for (const gains of gainXp(u, 45, rng)) ups.push({ uid: u.uid, name: u.name, level: u.level, gains });
-    }
+    for (const u of run.roster) for (const gains of gainXp(u, 45, rng)) ups.push({ uid: u.uid, name: u.name, level: u.level, gains });
   });
   run.event = undefined;
   return ups;
 }
 
-export function takeTreasure(run: RunWithEvent, relic: RelicId | null): void {
-  const ev = run.event;
-  if (ev?.type !== 'treasure') return;
-  if (relic && ev.relics.includes(relic)) run.relics.push(relic);
-  else run.gold += ev.gold;
+export function fountainHeal(run: RunWithEvent): void {
+  for (const u of run.roster) u.hp = u.stats.hp;
   run.event = undefined;
+}
+
+export function fountainRevive(run: RunWithEvent, uid: string): boolean {
+  const i = run.fallen.findIndex((u) => u.uid === uid);
+  if (i < 0 || run.roster.length >= ARMY_CAPACITY) return false;
+  const [u] = run.fallen.splice(i, 1);
+  run.roster.push({ ...u, hp: u.stats.hp });
+  run.event = undefined;
+  return true;
+}
+
+/** The Great Fairy grants one unit a random permanent enhancement. */
+export function fountainBless(run: RunWithEvent, uid: string): string | null {
+  const ids = Object.keys(PERMANENT_ITEMS);
+  const id = withRng(run, (rng) => rng.pick(ids));
+  if (!usePermanent(run, id, uid)) return null;
+  run.event = undefined;
+  return id;
+}
+
+export function takeTreasure(run: RunWithEvent, index: number | null, uid: string | null): boolean {
+  const ev = run.event;
+  if (ev?.type !== 'treasure') return false;
+  if (index === null) {
+    run.rupees += ev.rupees;
+  } else {
+    const r = ev.rewards[index];
+    if (!r) return false;
+    const ok = r.kind === 'weapon' ? giveWeapon(run, r.id, uid) : r.kind === 'accessory' ? giveAccessory(run, r.id, uid) : uid ? usePermanent(run, r.id, uid) : false;
+    if (!ok) return false;
+  }
+  run.event = undefined;
+  return true;
 }
 
 // ───────────────────────── Persistence ─────────────────────────
 
-const RUN_KEY = 'rwe.run.v1';
-const META_KEY = 'rwe.meta.v1';
+const RUN_KEY = 'hyrule.run.v1';
+const META_KEY = 'hyrule.meta.v1';
 
 export interface Meta {
   runs: number;
-  wins: number;
   bestDepth: number;
+  bestRegion: number;
   discovered: string[];
+  bossesDefeated: string[];
 }
 
 function storage(): Storage | null {
@@ -385,11 +497,10 @@ function storage(): Storage | null {
 }
 
 export function saveRun(run: RunWithEvent | null): void {
-  const s = storage();
   try {
-    if (!run) s?.removeItem(RUN_KEY);
-    else s?.setItem(RUN_KEY, JSON.stringify(run));
-  } catch { /* storage full or blocked: play on without saving */ }
+    if (!run) storage()?.removeItem(RUN_KEY);
+    else storage()?.setItem(RUN_KEY, JSON.stringify(run));
+  } catch { /* storage full or blocked */ }
 }
 
 export function loadRun(): RunWithEvent | null {
@@ -402,11 +513,12 @@ export function loadRun(): RunWithEvent | null {
 }
 
 export function loadMeta(): Meta {
+  const empty: Meta = { runs: 0, bestDepth: 0, bestRegion: 0, discovered: [], bossesDefeated: [] };
   try {
     const raw = storage()?.getItem(META_KEY);
-    if (raw) return { runs: 0, wins: 0, bestDepth: 0, discovered: [], ...JSON.parse(raw) };
+    if (raw) return { ...empty, ...JSON.parse(raw) };
   } catch { /* ignore */ }
-  return { runs: 0, wins: 0, bestDepth: 0, discovered: [] };
+  return empty;
 }
 
 export function saveMeta(m: Meta): void {

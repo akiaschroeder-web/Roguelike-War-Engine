@@ -1,39 +1,21 @@
-import { CLASSES } from '../data/classes';
-import { HERO_MAP } from '../data/heroes';
-import type { BossDef, EnemyArchetype, Growths, HeroDef, RelicId, Stats, StatKey, Unit, WorldId } from './types';
+import { ACCESSORIES, CLASSES, RACES, TEMPLATES } from '../data/registry';
 import type { RNG } from './rng';
+import { MAX_LEVEL, XP_PER_LEVEL } from './rules';
+import type { BossDef, EnemyArchetype, Growths, MoveType, Stats, StatKey, Unit, UnitTemplate, WorldId } from './types';
 
-export const MAX_LEVEL = 20;
-export const XP_PER_LEVEL = 100;
-export const STAT_KEYS: StatKey[] = ['hp', 'str', 'mag', 'skl', 'spd', 'def', 'res'];
+export { MAX_LEVEL, XP_PER_LEVEL };
+export const STAT_KEYS: StatKey[] = ['hp', 'str', 'mag', 'skl', 'spd', 'def', 'res', 'lck'];
 
-function addStats(base: Stats, mods: Partial<Stats>): Stats {
-  const out = { ...base };
-  for (const k of Object.keys(mods) as (keyof Stats)[]) out[k] += mods[k] ?? 0;
+export function growthsFor(classId: string, race: string, overrides?: Partial<Growths>, scale = 1): Growths {
+  const base = CLASSES[classId]?.growths ?? { hp: 60, str: 40, mag: 20, skl: 40, spd: 40, def: 25, res: 20, lck: 30 };
+  const mods = RACES[race]?.growthMods ?? {};
+  const out = {} as Growths;
+  for (const k of STAT_KEYS) out[k] = Math.max(0, Math.round((overrides?.[k] ?? base[k] + (mods[k] ?? 0)) * scale));
   return out;
 }
 
-function addGrowths(base: Growths, mods: Partial<Growths>): Growths {
-  const out = { ...base };
-  for (const k of Object.keys(mods) as StatKey[]) out[k] += mods[k] ?? 0;
-  return out;
-}
-
-function blankUnit(partial: Partial<Unit> & Pick<Unit, 'uid' | 'name' | 'world' | 'classId' | 'team' | 'stats' | 'growths' | 'weaponId'>): Unit {
-  return {
-    title: '',
-    level: 1,
-    xp: 0,
-    hp: partial.stats.hp,
-    skills: [],
-    glyph: partial.name.slice(0, 2).toUpperCase(),
-    x: 0,
-    y: 0,
-    moved: false,
-    acted: false,
-    kills: 0,
-    ...partial,
-  };
+function blank(p: Omit<Unit, 'level' | 'xp' | 'hp' | 'x' | 'y' | 'moved' | 'acted' | 'kills' | 'movedDist'> & Partial<Unit>): Unit {
+  return { level: 1, xp: 0, hp: p.stats.hp, x: 0, y: 0, moved: false, acted: false, kills: 0, movedDist: 0, ...p };
 }
 
 /** Roll a single level-up. Returns the stat gains. */
@@ -46,7 +28,6 @@ export function rollLevelUp(unit: Unit, rng: RNG): Partial<Record<StatKey, numbe
     if (rng.chance(g)) gain++;
     if (gain) gains[k] = gain;
   }
-  // Pity: a level that rolls nothing still gives +1 to the best growth.
   if (Object.keys(gains).length === 0) {
     const best = STAT_KEYS.reduce((a, b) => (unit.growths[a] >= unit.growths[b] ? a : b));
     gains[best] = 1;
@@ -59,7 +40,6 @@ export function rollLevelUp(unit: Unit, rng: RNG): Partial<Record<StatKey, numbe
   return gains;
 }
 
-/** Give a unit XP; returns any level-ups that happened. */
 export function gainXp(unit: Unit, amount: number, rng: RNG): Partial<Record<StatKey, number>>[] {
   const ups: Partial<Record<StatKey, number>>[] = [];
   if (unit.level >= MAX_LEVEL) return ups;
@@ -72,59 +52,37 @@ export function gainXp(unit: Unit, amount: number, rng: RNG): Partial<Record<Sta
   return ups;
 }
 
-export function makeHeroUnit(hero: HeroDef | string, uid: string, level: number, rng: RNG): Unit {
-  const h = typeof hero === 'string' ? HERO_MAP[hero] : hero;
-  const cls = CLASSES[h.classId];
-  const unit = blankUnit({
-    uid,
-    heroId: h.id,
-    name: h.name,
-    title: h.title,
-    world: h.world,
-    classId: h.classId,
-    team: 'player',
-    stats: addStats(cls.base, h.statMods),
-    growths: addGrowths(cls.growths, h.growthMods),
-    weaponId: h.weaponId,
-    skills: [h.skill],
-    glyph: h.glyph,
-    portrait: h.portrait,
+export function makeHero(template: UnitTemplate | string, uid: string, level: number, rng: RNG): Unit {
+  const t = typeof template === 'string' ? TEMPLATES[template] : template;
+  const stats = { ...t.stats };
+  if (t.generic) {
+    // Generic soldiers get a little variance so no two are identical.
+    for (const k of rng.shuffle([...STAT_KEYS]).slice(0, 3)) stats[k] = Math.max(0, stats[k] + rng.pick([-1, 1, 1]));
+  }
+  const unit = blank({
+    uid, templateId: t.id, name: t.name, title: t.title, race: t.race, home: t.home, classId: t.classId,
+    team: 'player', size: t.size, stats, growths: growthsFor(t.classId, t.race, t.growths),
+    weapons: [...t.weapons], skills: t.skill ? [t.skill] : [], glyph: t.glyph,
   });
   for (let l = 1; l < level; l++) rollLevelUp(unit, rng);
   unit.hp = unit.stats.hp;
   return unit;
 }
 
-export function makeEnemyUnit(
-  arch: EnemyArchetype | BossDef,
-  world: WorldId,
-  level: number,
-  uid: string,
-  rng: RNG,
-  opts: { boss?: boolean } = {},
-): Unit {
+export function makeEnemy(arch: EnemyArchetype | BossDef, world: WorldId, level: number, uid: string, rng: RNG, opts: { boss?: boolean } = {}): Unit {
   const cls = CLASSES[arch.classId];
-  const boss = 'statMods' in arch ? (arch as BossDef) : undefined;
+  const isBossDef = 'quote' in arch;
+  const stats: Stats = isBossDef ? { ...(arch as BossDef).stats } : { ...cls.base, ...(arch.stats ?? {}) };
   const lvl = Math.min(MAX_LEVEL, Math.max(1, level));
-  const unit = blankUnit({
-    uid,
-    name: arch.name,
-    title: boss?.title ?? cls.name,
-    world,
-    classId: arch.classId,
-    team: 'enemy',
-    stats: boss ? addStats(cls.base, boss.statMods) : { ...cls.base },
-    // Enemies grow a little slower than heroes so the player can out-scale them.
-    growths: Object.fromEntries(Object.entries(cls.growths).map(([k, v]) => [k, Math.round(v * 0.85)])) as Growths,
-    weaponId: arch.weaponId,
-    skills: arch.skill ? [arch.skill] : [],
-    glyph: boss?.glyph ?? arch.name.slice(0, 2).toUpperCase(),
-    portrait: arch.portrait,
-    isBoss: opts.boss,
-    ai: opts.boss ? 'guard' : 'aggressive',
+  const unit = blank({
+    uid, name: arch.name, title: isBossDef ? (arch as BossDef).title : cls.name, race: arch.race,
+    home: isBossDef ? (arch as BossDef).home : world, classId: arch.classId, team: 'enemy', size: arch.size ?? 1,
+    stats, growths: growthsFor(arch.classId, arch.race, undefined, 0.85), weapons: [...arch.weapons],
+    skills: arch.skill ? [arch.skill] : [], glyph: arch.glyph ?? arch.name.slice(0, 2).toUpperCase(),
+    isBoss: opts.boss, bossId: isBossDef ? arch.id : undefined, ai: arch.ai ?? (opts.boss ? 'guard' : 'aggressive'),
   });
   for (let l = 1; l < lvl; l++) rollLevelUp(unit, rng);
-  // Overflow levels beyond the cap become flat bonuses (late-act scaling).
+  // Endless scaling: levels beyond the cap become flat bonuses.
   const overflow = Math.max(0, level - MAX_LEVEL);
   if (overflow) {
     unit.stats.hp += overflow * 2;
@@ -134,20 +92,45 @@ export function makeEnemyUnit(
   return unit;
 }
 
-/** Stats with relic modifiers applied (relics only affect the player's army). */
-export function effectiveStats(unit: Unit, relics: RelicId[]): Stats {
+export function moveTypeOf(u: Unit): MoveType {
+  const cls = CLASSES[u.classId];
+  if (cls?.moveType === 'fixed') return 'fixed';
+  if (RACES[u.race]?.flies) return 'flying';
+  return cls?.moveType ?? 'foot';
+}
+
+/** Tags used for weapon effectiveness: race/class tags, move type, and 'large'. */
+export function unitTags(u: Unit): string[] {
+  return [...(RACES[u.race]?.tags ?? []), ...(CLASSES[u.classId]?.tags ?? []), moveTypeOf(u), ...(u.size >= 2 ? ['large'] : [])];
+}
+
+/** Permanent stats plus accessory bonuses. */
+export function effectiveStats(unit: Unit): Stats {
   const s = { ...unit.stats };
-  if (unit.team !== 'player') return s;
-  if (relics.includes('warpShard')) s.mov += 1;
-  if (relics.includes('ironBanner')) s.def += 2;
-  if (relics.includes('riftBattery')) { s.str += 2; s.mag += 2; }
-  if (relics.includes('glassCannon')) { s.str += 4; s.mag += 4; s.def -= 3; s.res -= 3; }
-  s.def = Math.max(0, s.def);
-  s.res = Math.max(0, s.res);
+  const acc = unit.accessory ? ACCESSORIES[unit.accessory] : undefined;
+  if (acc) {
+    for (const [k, v] of Object.entries(acc.stats)) {
+      if (k in s) (s as Record<string, number>)[k] += v as number;
+    }
+  }
+  for (const k of ['def', 'res', 'lck', 'spd'] as const) s[k] = Math.max(0, s[k]);
   return s;
 }
 
-/** Reset per-battle state when a roster unit enters a fight. */
+export function accessoryBonus(unit: Unit): { hit: number; avoid: number; crit: number } {
+  const acc = unit.accessory ? ACCESSORIES[unit.accessory] : undefined;
+  return { hit: acc?.stats.hit ?? 0, avoid: acc?.stats.avoid ?? 0, crit: acc?.stats.crit ?? 0 };
+}
+
+export function hasEffect(unit: Unit, effect: string): boolean {
+  const acc = unit.accessory ? ACCESSORIES[unit.accessory] : undefined;
+  return !!acc?.effects?.includes(effect as never);
+}
+
+/** Reset per-battle state. HP carries over between battles. */
 export function prepareForBattle(unit: Unit): Unit {
-  return { ...unit, stats: { ...unit.stats }, growths: { ...unit.growths }, skills: [...unit.skills], hp: unit.stats.hp, moved: false, acted: false, kills: 0 };
+  return {
+    ...unit, stats: { ...unit.stats }, growths: { ...unit.growths }, skills: [...unit.skills], weapons: [...unit.weapons],
+    hp: Math.max(1, unit.hp), moved: false, acted: false, kills: 0, movedDist: 0, survivedOnce: false,
+  };
 }

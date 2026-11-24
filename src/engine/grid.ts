@@ -1,6 +1,9 @@
-import { CLASSES, INF, MOVE_COSTS } from '../data/classes';
-import { effectiveStats } from './units';
-import type { Battle, MoveType, Pos, Terrain, Unit } from './types';
+import { RACES } from '../data/registry';
+import { INF, MOVE_COSTS } from './rules';
+import { effectiveStats, moveTypeOf } from './units';
+import type { Battle, Pos, Terrain, Unit } from './types';
+
+// Units occupy a size×size footprint anchored at (x, y), its top-left tile.
 
 export const keyOf = (b: { width: number }, x: number, y: number) => y * b.width + x;
 export const posOf = (b: { width: number }, k: number): Pos => ({ x: k % b.width, y: Math.floor(k / b.width) });
@@ -14,16 +17,55 @@ export function terrainAt(b: Battle, x: number, y: number): Terrain {
   return b.tiles[keyOf(b, x, y)];
 }
 
+export function footprint(x: number, y: number, size: number): Pos[] {
+  const out: Pos[] = [];
+  for (let dy = 0; dy < size; dy++) for (let dx = 0; dx < size; dx++) out.push({ x: x + dx, y: y + dy });
+  return out;
+}
+
 export function unitAt(b: Battle, x: number, y: number): Unit | undefined {
-  return b.units.find((u) => u.x === x && u.y === y);
+  return b.units.find((u) => x >= u.x && y >= u.y && x < u.x + u.size && y < u.y + u.size);
 }
 
-export function moveTypeOf(u: Unit): MoveType {
-  return CLASSES[u.classId].moveType;
+/** Gap distance between two footprints (1 = adjacent, 0 = overlapping). */
+export function footDist(ax: number, ay: number, as: number, bx: number, by: number, bs: number): number {
+  const gx = Math.max(0, ax - (bx + bs - 1), bx - (ax + as - 1));
+  const gy = Math.max(0, ay - (by + bs - 1), by - (ay + as - 1));
+  return gx + gy;
 }
 
-export function moveCost(t: Terrain, mt: MoveType): number {
-  return MOVE_COSTS[mt][t];
+/** Distance between two units, optionally with `a` standing at `aPos`. */
+export function unitDist(a: Unit, b: Unit, aPos: Pos = a): number {
+  return footDist(aPos.x, aPos.y, a.size, b.x, b.y, b.size);
+}
+
+/** Movement cost of a single tile for a unit, including racial traits. */
+export function tileCost(b: Battle, unit: Unit, t: Terrain): number {
+  const mt = moveTypeOf(unit);
+  let c = MOVE_COSTS[mt][t];
+  if (mt === 'fixed') return INF;
+  const race = RACES[unit.race];
+  if (t === 'water' && race?.swims) c = 1;
+  if (t === 'forest' && (race?.forestWalker || forestFriend(b, unit))) c = 1;
+  if (t === 'wall' && unit.skills.includes('spectralPassage')) c = 2;
+  return c;
+}
+
+/** Saria's Forest's Friendship applies to her and allies adjacent to her. */
+function forestFriend(b: Battle, unit: Unit): boolean {
+  if (unit.skills.includes('forestsFriendship')) return true;
+  return b.units.some((s) => s !== unit && s.team === unit.team && s.skills.includes('forestsFriendship') && unitDist(unit, s) <= 1);
+}
+
+/** Cost of placing the unit's footprint with its anchor at (x, y). */
+export function anchorCost(b: Battle, unit: Unit, x: number, y: number): number {
+  let worst = 0;
+  for (const p of footprint(x, y, unit.size)) {
+    if (!inBounds(b, p.x, p.y)) return INF;
+    worst = Math.max(worst, tileCost(b, unit, b.tiles[keyOf(b, p.x, p.y)]));
+    if (worst >= INF) return INF;
+  }
+  return worst;
 }
 
 const DIRS = [[1, 0], [-1, 0], [0, 1], [0, -1]];
@@ -34,27 +76,43 @@ export interface ReachInfo {
 }
 
 export interface Moves {
-  /** Tiles the unit may end its move on, keyed by tile index. */
+  /** Anchor tiles the unit may end its move on, keyed by tile index. */
   reach: Map<number, ReachInfo>;
-  /** Path (including the start tile) to a reachable destination. */
+  /** Anchor path (including the start) to a reachable destination. */
   path: (dest: number) => Pos[];
 }
 
 /**
- * Dijkstra over the unit's movement budget. Allies can be passed through but
- * not stood on; enemies block.
+ * Dijkstra over anchor positions. Allies can be passed through but not stood
+ * on; enemies block (unless the unit has Spectral Passage).
  */
 export function computeMoves(b: Battle, unit: Unit, budget?: number): Moves {
-  const mov = budget ?? effectiveStats(unit, b.relics).mov;
-  const mt = moveTypeOf(unit);
-  const occupant = new Map<number, Unit>();
-  for (const u of b.units) occupant.set(keyOf(b, u.x, u.y), u);
+  const mov = budget ?? effectiveStats(unit).mov;
+  const ghost = unit.skills.includes('spectralPassage');
+  const occ = new Map<number, Unit>();
+  for (const u of b.units) for (const p of footprint(u.x, u.y, u.size)) occ.set(keyOf(b, p.x, p.y), u);
+
+  const blockedByFoe = (x: number, y: number) => {
+    if (ghost) return false;
+    for (const p of footprint(x, y, unit.size)) {
+      const o = occ.get(keyOf(b, p.x, p.y));
+      if (o && o.team !== unit.team) return true;
+    }
+    return false;
+  };
+  const freeToStop = (x: number, y: number) => {
+    for (const p of footprint(x, y, unit.size)) {
+      const o = occ.get(keyOf(b, p.x, p.y));
+      if (o && o !== unit) return false;
+    }
+    return true;
+  };
 
   const all = new Map<number, ReachInfo>();
   const start = keyOf(b, unit.x, unit.y);
   all.set(start, { cost: 0, prev: -1 });
   const frontier = [start];
-  while (frontier.length) {
+  while (frontier.length && mov > 0) {
     frontier.sort((a, c) => all.get(a)!.cost - all.get(c)!.cost);
     const cur = frontier.shift()!;
     const { x, y } = posOf(b, cur);
@@ -62,13 +120,11 @@ export function computeMoves(b: Battle, unit: Unit, budget?: number): Moves {
     for (const [dx, dy] of DIRS) {
       const nx = x + dx, ny = y + dy;
       if (!inBounds(b, nx, ny)) continue;
-      const nk = keyOf(b, nx, ny);
-      const occ = occupant.get(nk);
-      if (occ && occ.team !== unit.team) continue;
-      const c = moveCost(b.tiles[nk], mt);
-      if (c >= INF) continue;
+      const c = anchorCost(b, unit, nx, ny);
+      if (c >= INF || blockedByFoe(nx, ny)) continue;
       const nc = cc + c;
       if (nc > mov) continue;
+      const nk = keyOf(b, nx, ny);
       const p = all.get(nk);
       if (!p || nc < p.cost) {
         all.set(nk, { cost: nc, prev: cur });
@@ -76,10 +132,10 @@ export function computeMoves(b: Battle, unit: Unit, budget?: number): Moves {
       }
     }
   }
-  const reach = new Map(all);
-  for (const k of [...reach.keys()]) {
-    const occ = occupant.get(k);
-    if (occ && occ !== unit) reach.delete(k);
+  const reach = new Map<number, ReachInfo>();
+  for (const [k, v] of all) {
+    const { x, y } = posOf(b, k);
+    if (k === start || freeToStop(x, y)) reach.set(k, v);
   }
   const path = (dest: number) => {
     const out: Pos[] = [];
@@ -95,47 +151,46 @@ export function computeMoves(b: Battle, unit: Unit, budget?: number): Moves {
   return { reach, path };
 }
 
-export function reachable(b: Battle, unit: Unit, budget?: number): Map<number, ReachInfo> {
-  return computeMoves(b, unit, budget).reach;
-}
-
-/** Tiles within [min,max] Manhattan range of a position. */
-export function tilesInRange(b: { width: number; height: number }, p: Pos, min: number, max: number): Pos[] {
+/** Tiles at distance [min, max] from a footprint. */
+export function tilesInRange(b: { width: number; height: number }, p: Pos, min: number, max: number, size = 1): Pos[] {
   const out: Pos[] = [];
-  for (let dy = -max; dy <= max; dy++) {
-    for (let dx = -max; dx <= max; dx++) {
-      const d = Math.abs(dx) + Math.abs(dy);
-      if (d < min || d > max) continue;
-      const x = p.x + dx, y = p.y + dy;
-      if (inBounds(b, x, y)) out.push({ x, y });
+  for (let y = p.y - max; y < p.y + size + max; y++) {
+    for (let x = p.x - max; x < p.x + size + max; x++) {
+      if (!inBounds(b, x, y)) continue;
+      const d = footDist(x, y, 1, p.x, p.y, size);
+      if (d >= min && d <= max) out.push({ x, y });
     }
   }
   return out;
 }
 
 /**
- * Multi-source distance field (movement cost) from a set of goal tiles,
- * ignoring units. Used by the AI to walk toward targets beyond its reach.
+ * Distance field over the mover's anchor positions: movement cost to get
+ * adjacent to any goal unit, ignoring other units. Used by the AI.
  */
-export function distanceField(b: Battle, goals: Pos[], mt: MoveType): number[] {
+export function distanceField(b: Battle, mover: Unit, goals: Unit[]): number[] {
   const d = new Array(b.tiles.length).fill(Infinity);
   const frontier: number[] = [];
-  for (const g of goals) {
-    const k = keyOf(b, g.x, g.y);
-    d[k] = 0;
-    frontier.push(k);
+  for (let y = 0; y < b.height; y++) {
+    for (let x = 0; x < b.width; x++) {
+      if (anchorCost(b, mover, x, y) >= INF && !(x === mover.x && y === mover.y)) continue;
+      if (goals.some((g) => footDist(x, y, mover.size, g.x, g.y, g.size) <= 1)) {
+        const k = keyOf(b, x, y);
+        d[k] = 0;
+        frontier.push(k);
+      }
+    }
   }
   while (frontier.length) {
     frontier.sort((a, c) => d[a] - d[c]);
     const cur = frontier.shift()!;
     const { x, y } = posOf(b, cur);
+    const stepIn = Math.min(anchorCost(b, mover, x, y), 4);
     for (const [dx, dy] of DIRS) {
       const nx = x + dx, ny = y + dy;
-      if (!inBounds(b, nx, ny)) continue;
+      if (!inBounds(b, nx, ny) || anchorCost(b, mover, nx, ny) >= INF) continue;
       const nk = keyOf(b, nx, ny);
-      // Walking nk -> cur costs the entry cost of cur; nk itself must be passable.
-      if (moveCost(b.tiles[nk], mt) >= INF) continue;
-      const nd = d[cur] + Math.min(moveCost(b.tiles[cur], mt), 3);
+      const nd = d[cur] + stepIn;
       if (nd < d[nk]) {
         d[nk] = nd;
         frontier.push(nk);
