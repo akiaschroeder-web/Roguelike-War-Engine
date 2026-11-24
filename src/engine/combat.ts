@@ -185,9 +185,9 @@ function sideStats(
   const atkSpd = as.spd + am.spd - Math.max(0, weapon.weight - as.con);
   const defW = foeWeapon ?? weapon;
   const defSpd = ds.spd + dm.spd - Math.max(0, (foeWeapon ? defW.weight : 0) - ds.con);
-  const hit = clamp(weapon.hit + (as.skl + am.skl) * 2 + Math.floor(as.lck / 2) + tri * 15 + am.hit + ab.hit + sa.hit
+  const hit = clamp(weapon.hit + (arrow?.hit ?? 0) + (as.skl + am.skl) * 2 + Math.floor(as.lck / 2) + tri * 15 + am.hit + ab.hit + sa.hit
     - (Math.max(0, defSpd) * 2 + ds.lck + terrain.avoid + dm.avoid + db.avoid));
-  const crit = clamp(weapon.crit + Math.floor((as.skl + am.skl) / 2) + am.crit + ab.crit - ds.lck);
+  const crit = clamp(weapon.crit + (arrow?.crit ?? 0) + Math.floor((as.skl + am.skl) / 2) + am.crit + ab.crit - ds.lck);
 
   let attacks = atkSpd - defSpd >= 4 ? 2 : 1;
   if (weapon.brave && initiating) attacks *= 2;
@@ -205,7 +205,7 @@ export function forecast(b: Battle, attacker: Unit, from: Pos, defender: Unit, w
   const d = unitDist(attacker, defender, from);
   const aw = (weaponId ? weaponDef(weaponId) : undefined) ?? attackWeapons(attacker, d)[0];
   const dw = counterWeapon(defender, d);
-  const arrow = arrowId && aw?.type === 'bow' && arrowOptions(attacker).some((a) => a.id === arrowId) ? ABILITIES[arrowId] : undefined;
+  const arrow = arrowId && attackMods(attacker, aw).some((a) => a.id === arrowId) ? ABILITIES[arrowId] : undefined;
   return {
     attacker: sideStats(b, attacker, from, defender, defPos, true, aw, dw, arrow),
     defender: sideStats(b, defender, defPos, attacker, from, false, dw, aw),
@@ -213,10 +213,27 @@ export function forecast(b: Battle, attacker: Unit, from: Pos, defender: Unit, w
   };
 }
 
-/** Elemental arrows this unit knows and can afford right now. */
-export function arrowOptions(u: Unit): AbilityDef[] {
-  return u.abilities.map((id) => ABILITIES[id]).filter((a) => a?.kind === 'arrow' && a.implemented && u.mp >= a.mp);
+/**
+ * Attack modifiers usable with this weapon right now: elemental arrows (bows,
+ * cost MP) and techniques for the weapon's type (cost stamina).
+ */
+export function attackMods(u: Unit, weapon: WeaponDef | undefined): AbilityDef[] {
+  if (!weapon) return [];
+  const out: AbilityDef[] = [];
+  if (weapon.type === 'bow') {
+    for (const id of u.abilities) {
+      const a = ABILITIES[id];
+      if (a?.kind === 'arrow' && a.implemented && u.mp >= a.mp) out.push(a);
+    }
+  }
+  for (const a of Object.values(ABILITIES)) {
+    if (a.kind === 'technique' && !a.area && a.weaponTypes?.includes(weapon.type) && u.sta >= (a.sta ?? 0)) out.push(a);
+  }
+  return out;
 }
+
+/** @deprecated use attackMods */
+export const arrowOptions = (u: Unit) => attackMods(u, weaponOf(u));
 
 export function expectedDamage(s: SideForecast): number {
   const perHit = s.dmg * (1 + (2 * s.crit) / 100);
@@ -240,7 +257,11 @@ export function resolveCombat(b: Battle, attacker: Unit, defender: Unit, rng: RN
   const fc = forecast(b, attacker, attacker, defender, weaponId, arrowId);
   // Using a weapon equips it; elemental arrows cost MP once per combat.
   if (fc.attacker.weaponId) equip(attacker, fc.attacker.weaponId);
-  if (fc.attacker.arrowId) attacker.mp -= ABILITIES[fc.attacker.arrowId].mp;
+  if (fc.attacker.arrowId) {
+    const mod = ABILITIES[fc.attacker.arrowId];
+    if (mod.sta) attacker.sta -= mod.sta;
+    else attacker.mp -= mod.mp;
+  }
 
   type Swing = [Unit, Unit, SideForecast];
   const A: Swing = [attacker, defender, fc.attacker];

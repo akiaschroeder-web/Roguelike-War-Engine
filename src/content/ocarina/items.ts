@@ -128,6 +128,7 @@ export const PERMANENT_ITEMS: PermanentItemDef[] = [
   { id: 'defenseSeed', name: 'Defense Seed', price: 450, stat: 'def', amount: 2, desc: 'Permanently +2 DEF.' },
   { id: 'resistanceSeed', name: 'Resistance Seed', price: 400, stat: 'res', amount: 2, desc: 'Permanently +2 RES.' },
   { id: 'luckyRing', name: 'Lucky Ring Fragment', price: 300, stat: 'lck', amount: 2, desc: 'Permanently +2 LCK.' },
+  { id: 'staminaVessel', name: 'Stamina Vessel', price: 400, stat: 'sta', amount: 5, desc: 'Permanently +5 max stamina.' },
   { id: 'magicContainer', name: 'Magic Container', price: 500, stat: 'mp', amount: 10, desc: 'Permanently +10 max MP.' },
   { id: 'goddessPlume', name: 'Goddess Plume', price: 900, stat: 'mov', amount: 1, desc: 'Permanently +1 MOV.' },
 ];
@@ -142,6 +143,7 @@ export const ITEMS: ItemDef[] = [
   it('zoraWater', 'Zora Spring Water', 'heal', 'uncommon', 110, 6, 2, 'Restores 6 HP. Two uses.'),
   it('bluePotion', 'Blue Potion', 'fullHeal', 'rare', 450, 0, 1, 'Fully restores HP and MP.'),
   it('greenPotion', 'Green Potion', 'mp', 'common', 140, 15, 1, 'Restores 15 MP.'),
+  it('staminaPotion', 'Stamina Potion', 'sta', 'common', 120, 10, 1, 'Restores 10 stamina.'),
   it('magicJar', 'Large Magic Jar', 'mp', 'uncommon', 120, 8, 2, 'Restores 8 MP. Two uses.'),
   // Learned magic: use from the unit screen to teach the ability permanently.
   it('learnDinsFire', "Din's Fire", 'learn', 'epic', 900, 0, 1, "Teaches Din's Fire (8 MP): fire magic on every enemy within 2 spaces.", { teaches: 'dinsFire' }),
@@ -153,6 +155,12 @@ export const ITEMS: ItemDef[] = [
   it('sheetLullaby', "Sheet Music: Zelda's Lullaby", 'learn', 'uncommon', 300, 0, 1, "Teaches Zelda's Lullaby (cure allies' statuses). Needs an instrument.", { teaches: 'zeldasLullaby' }),
   it('sheetSaria', "Sheet Music: Saria's Song", 'learn', 'uncommon', 350, 0, 1, "Teaches Saria's Song (+2 SPD/LCK to nearby allies). Needs an instrument.", { teaches: 'sariasSong' }),
   it('sheetSun', "Sheet Music: Sun's Song", 'learn', 'rare', 450, 0, 1, "Teaches Sun's Song (stun nearby undead). Needs an instrument.", { teaches: 'sunsSong' }),
+  it('sheetMinuet', 'Sheet Music: Minuet of Forest', 'learn', 'rare', 500, 0, 1, 'Teaches Minuet of Forest (warp to a forest). Needs an instrument.', { teaches: 'minuetOfForest' }),
+  it('sheetBolero', 'Sheet Music: Bolero of Fire', 'learn', 'rare', 500, 0, 1, 'Teaches Bolero of Fire (warp beside lava). Needs an instrument.', { teaches: 'boleroOfFire' }),
+  it('sheetSerenade', 'Sheet Music: Serenade of Water', 'learn', 'rare', 500, 0, 1, 'Teaches Serenade of Water (warp beside water). Needs an instrument.', { teaches: 'serenadeOfWater' }),
+  it('sheetRequiem', 'Sheet Music: Requiem of Spirit', 'learn', 'rare', 500, 0, 1, 'Teaches Requiem of Spirit (warp to a fort). Needs an instrument.', { teaches: 'requiemOfSpirit' }),
+  it('sheetNocturne', 'Sheet Music: Nocturne of Shadow', 'learn', 'rare', 500, 0, 1, 'Teaches Nocturne of Shadow (warp beside a wall). Needs an instrument.', { teaches: 'nocturneOfShadow' }),
+  it('sheetPrelude', 'Sheet Music: Prelude of Light', 'learn', 'epic', 650, 0, 1, 'Teaches Prelude of Light (warp to your deployment zone). Needs an instrument.', { teaches: 'preludeOfLight' }),
   it('sheetStorms', 'Sheet Music: Song of Storms', 'learn', 'rare', 550, 0, 1, 'Teaches Song of Storms (rain for 3 turns). Needs an instrument.', { teaches: 'songOfStorms' }),
   it('fairy', 'Bottled Fairy', 'fairy', 'epic', 650, 50, 1, 'Automatic: when the holder would fall, revives them with 50% HP.'),
   it('bomb', 'Bombs', 'bomb', 'common', 220, 10, 3, 'Thrown 1–3 spaces: 10 damage to every enemy within 1 space of the target.', { minRange: 1, maxRange: 3, radius: 1 }),

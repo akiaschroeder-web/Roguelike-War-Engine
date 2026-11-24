@@ -14,7 +14,7 @@ import {
 import { effectiveStats, gainXp, makeEnemy, makeHero } from '../src/engine/units';
 import { canUse, useItem } from '../src/engine/items';
 import { castAbility } from '../src/engine/abilities';
-import { fountainTeach, useItemOutside } from '../src/engine/run';
+import { fountainTeach, pickForce, useItemOutside } from '../src/engine/run';
 import { migrateRun } from '../src/engine/run';
 import type { Battle, Team, Unit } from '../src/engine/types';
 
@@ -509,5 +509,70 @@ describe('magic and status effects', () => {
     const id = fountainTeach(run, link.uid);
     expect(['dinsFire', 'faroresWind', 'nayrusLove']).toContain(id);
     expect(link.abilities).toContain(id);
+  });
+});
+
+describe('enemy armies, techniques and warp songs', () => {
+  it('battles are not always monsters: regional armies, rival heroes and named leaders appear', () => {
+    let army = 0, monsters = 0, leaders = 0, rivals = 0;
+    for (let s = 0; s < 120; s++) {
+      const run = newRun(s + 500, 'link') as RunWithEvent;
+      const node = { ...run.map.nodes[0], type: (s % 3 === 0 ? 'elite' : 'battle') as 'elite' | 'battle', world: 'gerudoDesert' };
+      const force = pickForce(run, new RNG(s), node);
+      if (!force) { monsters++; continue; }
+      army++;
+      if (force.leader) leaders++;
+      if (force.heroes?.length) rivals++;
+      // Never fight someone already in your army.
+      for (const id of [...force.heroes ?? [], force.leader ?? '']) expect(run.roster.some((u) => u.templateId === id)).toBe(false);
+    }
+    expect(monsters).toBeGreaterThan(0);
+    expect(army).toBeGreaterThan(monsters);
+    expect(leaders).toBeGreaterThan(0);
+    expect(rivals).toBeGreaterThan(0);
+  });
+
+  it('an army battle fields soldiers (with portraits) and an elite leader', () => {
+    const run = newRun(3, 'zelda');
+    const b = createBattle({
+      world: 'gerudoDesert', nodeType: 'elite', depth: 3, roster: run.roster, seed: 11,
+      force: { name: 'Gerudo Raiders', templates: ['gerudoGuard', 'gerudoThief'], monsters: false, leader: 'nabooru' },
+    });
+    const foes = b.units.filter((u) => u.team === 'enemy');
+    expect(b.forceName).toBe('Gerudo Raiders');
+    expect(foes.every((u) => ['gerudoGuard', 'gerudoThief', 'nabooru'].includes(u.templateId!))).toBe(true);
+    expect(foes.find((u) => u.isBoss)?.templateId).toBe('nabooru');
+  });
+
+  it('techniques modify attacks and cost stamina; Spin Attack hits all adjacent enemies', () => {
+    const b = emptyBattle();
+    const link = place(makeHero('link', 'l', 5, rng()), 3, 3);
+    const a = place(makeEnemy(ENEMIES.stalchild, 'hyruleField', 1, 'a', rng()), 4, 3);
+    const c = place(makeEnemy(ENEMIES.stalchild, 'hyruleField', 1, 'c', rng()), 2, 3);
+    const far = place(makeEnemy(ENEMIES.stalchild, 'hyruleField', 1, 'f', rng()), 7, 3);
+    b.units = [link, a, c, far];
+    const base = forecast(b, link, link, a).attacker.dmg;
+    expect(forecast(b, link, link, a, undefined, 'powerStrike').attacker.dmg).toBe(base + 4);
+    const sta = link.sta;
+    const hpA = a.hp, hpC = c.hp, hpFar = far.hp;
+    expect(castAbility(b, link, 'spinAttack', rng())).not.toBeNull();
+    expect(a.hp).toBeLessThan(hpA);
+    expect(c.hp).toBeLessThan(hpC);
+    expect(far.hp).toBe(hpFar);
+    expect(link.sta).toBe(sta - 6);
+  });
+
+  it('warp songs teleport to matching terrain and then recharge', () => {
+    const b = emptyBattle();
+    b.tiles[keyOf(b, 9, 5)] = 'forest';
+    const sheik = place(makeHero('sheik', 's', 5, rng()), 1, 1);
+    b.units = [sheik];
+    expect(castAbility(b, sheik, 'minuetOfForest', rng(), undefined, { x: 5, y: 5 })).toBeNull(); // not forest
+    expect(castAbility(b, sheik, 'minuetOfForest', rng(), undefined, { x: 9, y: 5 })).not.toBeNull();
+    expect({ x: sheik.x, y: sheik.y }).toEqual({ x: 9, y: 5 });
+    b.tiles[keyOf(b, 2, 2)] = 'forest';
+    expect(castAbility(b, sheik, 'minuetOfForest', rng(), undefined, { x: 2, y: 2 })).toBeNull(); // cooldown
+    for (let i = 0; i < 3; i++) startPhase(b, 'player');
+    expect(castAbility(b, sheik, 'minuetOfForest', rng(), undefined, { x: 2, y: 2 })).not.toBeNull();
   });
 });

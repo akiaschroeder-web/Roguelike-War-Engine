@@ -22,6 +22,18 @@ export const ABILITIES: AbilityDef[] = [
   ab({ id: 'fireArrow', name: 'Fire Arrow', kind: 'arrow', mp: 2, might: 3, element: 'fire', desc: '+3 Might; may set the target Burning.' }),
   ab({ id: 'iceArrow', name: 'Ice Arrow', kind: 'arrow', mp: 2, might: 2, element: 'ice', desc: '+2 Might; may Freeze the target.' }),
   ab({ id: 'lightArrow', name: 'Light Arrow', kind: 'arrow', mp: 4, might: 6, element: 'light', effective: ['undead', 'demon'], desc: '+6 Might; double damage against demons and the undead.' }),
+  // ── Warp songs (3-turn cooldown) ──
+  ab({ id: 'minuetOfForest', name: 'Minuet of Forest', kind: 'song', mp: 6, warp: 'forest', cooldown: 3, desc: 'Warp to any open forest space.' }),
+  ab({ id: 'boleroOfFire', name: 'Bolero of Fire', kind: 'song', mp: 6, warp: 'fire', cooldown: 3, desc: 'Warp to any open space beside lava.' }),
+  ab({ id: 'serenadeOfWater', name: 'Serenade of Water', kind: 'song', mp: 6, warp: 'water', cooldown: 3, desc: 'Warp to any open space beside water.' }),
+  ab({ id: 'requiemOfSpirit', name: 'Requiem of Spirit', kind: 'song', mp: 6, warp: 'spirit', cooldown: 3, desc: 'Warp to any open fort or ruin.' }),
+  ab({ id: 'nocturneOfShadow', name: 'Nocturne of Shadow', kind: 'song', mp: 6, warp: 'shadow', cooldown: 3, desc: 'Warp to any open space in the shadow of a wall.' }),
+  ab({ id: 'preludeOfLight', name: 'Prelude of Light', kind: 'song', mp: 8, warp: 'light', cooldown: 3, desc: "Warp back to your army's deployment zone." }),
+  // ── Techniques (stamina; known by anyone carrying the right weapon type) ──
+  ab({ id: 'powerStrike', name: 'Power Strike', kind: 'technique', mp: 0, sta: 4, might: 4, weaponTypes: ['sword', 'axe', 'hammer', 'lance', 'gauntlet'], desc: '+4 Might on this attack.' }),
+  ab({ id: 'piercingThrust', name: 'Piercing Thrust', kind: 'technique', mp: 0, sta: 4, crit: 25, weaponTypes: ['lance', 'dagger'], desc: '+25 Crit on this attack.' }),
+  ab({ id: 'aimedShot', name: 'Aimed Shot', kind: 'technique', mp: 0, sta: 3, hit: 25, weaponTypes: ['bow', 'sling', 'boomerang', 'hookshot'], desc: '+25 Hit on this attack.' }),
+  ab({ id: 'spinAttack', name: 'Spin Attack', kind: 'technique', mp: 0, sta: 6, area: true, weaponTypes: ['sword'], desc: 'Strike every adjacent enemy at once (STR + sword Might vs DEF). No counterattacks.' }),
   // ── Personal abilities ──
   ab({ id: 'greatFairysBlessing', name: "Great Fairy's Blessing", kind: 'personal', mp: 0, oncePerBattle: true, desc: 'Once per battle: fully restore the HP and MP of an ally within 2 spaces (or yourself).' }),
 ];

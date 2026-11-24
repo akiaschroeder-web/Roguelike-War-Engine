@@ -15,9 +15,9 @@ export function growthsFor(classId: string, race: string, overrides?: Partial<Gr
   return out;
 }
 
-function blank(p: Omit<Unit, 'level' | 'xp' | 'hp' | 'x' | 'y' | 'moved' | 'acted' | 'kills' | 'movedDist' | 'gear' | 'pack' | 'mp' | 'statuses' | 'buffs' | 'abilities'> & Partial<Unit>): Unit {
+function blank(p: Omit<Unit, 'level' | 'xp' | 'hp' | 'x' | 'y' | 'moved' | 'acted' | 'kills' | 'movedDist' | 'gear' | 'pack' | 'mp' | 'sta' | 'statuses' | 'buffs' | 'abilities'> & Partial<Unit>): Unit {
   return {
-    level: 1, xp: 0, hp: p.stats.hp, mp: p.stats.mp, x: 0, y: 0, moved: false, acted: false, kills: 0, movedDist: 0,
+    level: 1, xp: 0, hp: p.stats.hp, mp: p.stats.mp, sta: p.stats.sta, x: 0, y: 0, moved: false, acted: false, kills: 0, movedDist: 0,
     gear: {}, pack: [], statuses: [], buffs: [], abilities: [], ...p,
   };
 }
@@ -72,6 +72,15 @@ export function makeHero(template: UnitTemplate | string, uid: string, level: nu
   for (let l = 1; l < level; l++) rollLevelUp(unit, rng);
   unit.hp = unit.stats.hp;
   return unit;
+}
+
+/** A recruitable character or soldier fighting on the enemy side. */
+export function makeEnemyFromTemplate(templateId: string, level: number, uid: string, rng: RNG, opts: { boss?: boolean } = {}): Unit {
+  const u = makeHero(templateId, uid, Math.min(MAX_LEVEL, Math.max(1, level)), rng);
+  u.team = 'enemy';
+  u.ai = opts.boss ? 'guard' : 'aggressive';
+  u.isBoss = opts.boss;
+  return u;
 }
 
 export function makeEnemy(arch: EnemyArchetype | BossDef, world: WorldId, level: number, uid: string, rng: RNG, opts: { boss?: boolean } = {}): Unit {
@@ -200,7 +209,7 @@ export function prepareForBattle(unit: Unit): Unit {
   return {
     ...unit, stats: { ...unit.stats }, growths: { ...unit.growths }, skills: [...unit.skills], weapons: [...unit.weapons],
     gear: { ...unit.gear }, pack: unit.pack.map((p) => ({ ...p })), abilities: [...unit.abilities],
-    mp: unit.stats.mp, statuses: [], buffs: [], usedAbilities: [], faroreMark: undefined,
+    mp: unit.stats.mp, sta: unit.stats.sta, statuses: [], buffs: [], usedAbilities: [], faroreMark: undefined, cooldowns: {},
     hp: Math.max(1, unit.hp), moved: false, acted: false, kills: 0, movedDist: 0, survivedOnce: false,
   };
 }

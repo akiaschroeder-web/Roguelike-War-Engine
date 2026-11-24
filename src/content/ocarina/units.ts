@@ -26,7 +26,7 @@ export const NAMED: UnitTemplate[] = [
     stats: st(18, 3, 10, 8, 3, 5, 5, 13, 12, 10, 8, 24), weapons: ['lightSageStaff', 'healStaff', 'fairyOcarina'], skill: 'spiritOfWisdom', abilities: ['zeldasLullaby'],
     exclusiveWith: ['sheik'], bio: 'A powerful light-magic user with exceptional magical resistance and army support capabilities.' }),
   u({ id: 'sheik', name: 'Sheik', title: 'Survivor of the Sheikah', race: 'hylian', classId: 'shadowWarrior', size: 1, home: 'kakarikoGraveyard', glyph: 'SH',
-    stats: st(21, 6, 13, 14, 4, 6, 6, 5, 7, 8, 18, 10), weapons: ['sheikahNeedles', 'sheikahShortblade', 'sheiksHarp'], skill: 'vanishingAct', abilities: ['zeldasLullaby', 'sunsSong'],
+    stats: st(21, 6, 13, 14, 4, 6, 6, 5, 7, 8, 18, 10), weapons: ['sheikahNeedles', 'sheikahShortblade', 'sheiksHarp'], skill: 'vanishingAct', abilities: ['zeldasLullaby', 'sunsSong', 'minuetOfForest', 'nocturneOfShadow'],
     exclusiveWith: ['zelda'], bio: 'An exceptionally fast skirmisher specializing in evasion, infiltration and precision attacks.' }),
   u({ id: 'ganondorf', name: 'Ganondorf', title: 'King of Thieves', race: 'gerudo', classId: 'darkKing', size: 1, home: 'gerudoDesert',
     stats: st(30, 13, 8, 7, 10, 14, 5, 12, 9, 4, 20, 20), weapons: ['giantsKnife', 'poeLantern'], skill: 'spiritOfPower',

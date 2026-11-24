@@ -24,6 +24,7 @@ export function canUse(u: Unit, index: number): boolean {
   if (def.kind === 'heal') return u.hp < u.stats.hp;
   if (def.kind === 'fullHeal') return u.hp < u.stats.hp || u.mp < u.stats.mp;
   if (def.kind === 'mp') return u.mp < u.stats.mp;
+  if (def.kind === 'sta') return u.sta < u.stats.sta;
   if (def.kind === 'learn') return false; // learned from the unit screen, outside battle
   return true;
 }
@@ -64,6 +65,9 @@ export function useItem(b: Battle, u: Unit, index: number, rng: RNG, at?: Pos): 
     u.hp += amount;
     if (def.kind === 'fullHeal') u.mp = u.stats.mp;
     res.heals.push({ uid: u.uid, amount });
+    xp = 5;
+  } else if (def.kind === 'sta') {
+    u.sta = Math.min(u.stats.sta, u.sta + def.power);
     xp = 5;
   } else if (def.kind === 'mp') {
     const amount = Math.min(def.power, u.stats.mp - u.mp);

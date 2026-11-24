@@ -32,6 +32,9 @@ npm test           # engine tests + AI-vs-AI battle simulations
 - **Gear:** shield, head, body, hands, feet and two accessory slots per unit (shields block, and do nothing with a two-handed weapon; Goron/Zora Tunics grant lava immunity and swimming). Includes masks, tunics, the Spiritual Stones, Medallions and Triforce pieces. Bosses drop their gear, and a convoy holds spare equipment.
 - **6-slot pack:** potions, Lon Lon Milk, Bottled Fairies (auto-revive), Bombs, Bombchus and Deku Nuts (stun), usable in battle with the Item action.
 - **Magic:** units have MP (refilled each battle; Green Potions, Magic Jars and Magic Containers). Great Fairy spells (Din's Fire, Farore's Wind, Nayru's Love), songs played on an ocarina or harp (Zelda's Lullaby, Saria's Song, Sun's Song, Song of Storms), and Fire/Ice/Light Arrows chosen in the forecast. Learned from items, sheet music and Great Fairy Fountains.
+- **Enemy armies:** battles aren't all monsters. Depending on the region you fight the Hyrulean Army, Gerudo Raiders, Goron Brawlers, the Zora Royal Guard, Kokiri Pranksters, Sheikah Shadows or a band of Rival Heroes, sometimes alongside monsters. Elite fights can be led by named characters (Nabooru, Darunia, Impa…).
+- **Stamina and techniques:** Power Strike, Piercing Thrust and Aimed Shot (chosen in the forecast) and Spin Attack, based on the weapon type; Stamina Potions and Stamina Vessels.
+- **Warp songs:** Minuet, Bolero, Serenade, Requiem, Nocturne and Prelude teleport the performer (3-turn cooldown).
 - **Status effects and elements:** fire weapons can Burn, ice can Freeze, lightning can Shock, nature can Poison; Deku Nuts and Sun's Song Stun. Song of Storms brings rain (no burning, stronger water and lightning).
 - **Deployment:** army capacity is 12 and deployment capacity is 8.
 
@@ -54,8 +57,7 @@ tests/               Vitest suite
 ## Not built yet (from the design doc)
 
 - Mounts and the mount slot; tools (Hookshot traversal, Lens of Truth…) and the remaining consumables (Magic Beans, Fire/Ice Fruit…)
-- Stamina and physical techniques
-- Warp songs, Epona's Song and Song of Time; curses, confusion and the remaining statuses
+- Epona's Song and Song of Time; curses, confusion and the remaining statuses
 - Fog of war, destructible terrain, fire spreading
 - Supports, mounts and transformations (Twinrova fusion, Ganon)
 - Weapon durability and the Blacksmith

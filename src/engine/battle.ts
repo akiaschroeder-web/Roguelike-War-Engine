@@ -1,11 +1,11 @@
-import { bossPool, rosterFor, worldDef } from '../data/registry';
+import { bossPool, rosterFor, TEMPLATES, worldDef } from '../data/registry';
 import { footprint, keyOf, unitDist } from './grid';
 import { generateMap } from './mapgen';
 import { RNG } from './rng';
 import { LAVA_DAMAGE_PCT, TERRAIN_BONUS } from './rules';
 import { tickStatuses } from './status';
-import { hasEffect, isLavaImmune, makeEnemy, prepareForBattle } from './units';
-import type { Battle, BossDef, NodeType, Objective, Team, Unit, WorldId } from './types';
+import { hasEffect, isLavaImmune, makeEnemy, makeEnemyFromTemplate, prepareForBattle } from './units';
+import type { Battle, BossDef, EnemyArchetype, EnemyForce, NodeType, Objective, Team, Unit, WorldId } from './types';
 
 export interface BattleSetup {
   world: WorldId;
@@ -16,6 +16,8 @@ export interface BattleSetup {
   seed: number;
   boss?: BossDef;
   healMult?: number;
+  /** Who you're fighting; omitted = the region's monsters. */
+  force?: EnemyForce;
 }
 
 /** Enemy level for a given depth. Keeps climbing in endless mode. */
@@ -41,11 +43,22 @@ export function createBattle(setup: BattleSetup): Battle {
   if (setup.nodeType === 'boss') enemyCount += 2;
   if (objective.type === 'survive') enemyCount = Math.max(3, enemyCount - 2);
 
-  const archs = Array.from({ length: enemyCount }, () => rng.pick(rosterFor(setup.world)));
-  const bossDef = isBossFight ? setup.boss ?? rng.pick(bossPool(setup.world)) : undefined;
+  // Each enemy slot is either a monster archetype or a character/soldier template.
+  const force = setup.force;
+  const heroes = rng.shuffle([...(force?.heroes ?? [])]);
+  type Spec = { arch: EnemyArchetype } | { tmpl: string };
+  const specs: Spec[] = Array.from({ length: enemyCount }, (): Spec => {
+    if (!force || (!force.templates.length && !heroes.length)) return { arch: rng.pick(rosterFor(setup.world)) };
+    if (heroes.length && rng.chance(60)) return { tmpl: heroes.shift()! };
+    if (force.monsters && rng.chance(40)) return { arch: rng.pick(rosterFor(setup.world)) };
+    if (!force.templates.length) return { arch: rng.pick(rosterFor(setup.world)) };
+    return { tmpl: rng.pick(force.templates) };
+  });
+  const leader = isBossFight && force?.leader && TEMPLATES[force.leader] ? TEMPLATES[force.leader] : undefined;
+  const bossDef = isBossFight && !leader ? setup.boss ?? rng.pick(bossPool(setup.world)) : undefined;
   const playerSizes = setup.roster.map((u) => u.size);
-  const enemySizes = archs.map((a) => a.size ?? 1);
-  const bossSize = bossDef?.size ?? 0;
+  const enemySizes = specs.map((sp) => ('arch' in sp ? sp.arch.size ?? 1 : TEMPLATES[sp.tmpl]?.size ?? 1));
+  const bossSize = leader?.size ?? bossDef?.size ?? 0;
   const biggest = Math.max(1, ...playerSizes, ...enemySizes, bossSize);
 
   const width = 13 + (isBossFight ? 2 : 0) + rng.int(0, 2) + Math.max(0, biggest - 2) * 2;
@@ -55,16 +68,21 @@ export function createBattle(setup: BattleSetup): Battle {
   let uid = 0;
   const units: Unit[] = setup.roster.map((u, i) => ({ ...prepareForBattle(u), x: map.playerSpawns[i].x, y: map.playerSpawns[i].y }));
 
-  archs.forEach((arch, i) => {
+  specs.forEach((sp, i) => {
     const lvl = Math.max(1, level + rng.int(-1, 1));
-    const e = makeEnemy(arch, setup.world, lvl, `e${uid++}`, rng);
+    const e = 'arch' in sp ? makeEnemy(sp.arch, setup.world, lvl, `e${uid++}`, rng) : makeEnemyFromTemplate(sp.tmpl, lvl, `e${uid++}`, rng);
     e.x = map.enemySpawns[i].x;
     e.y = map.enemySpawns[i].y;
     if (e.ai === 'aggressive' && rng.chance(25)) e.ai = 'guard';
     units.push(e);
   });
 
-  if (bossDef && map.bossSpawn) {
+  if (leader && map.bossSpawn) {
+    const boss = makeEnemyFromTemplate(leader.id, level + (setup.nodeType === 'boss' ? 3 : 2), `e${uid++}`, rng, { boss: true });
+    boss.x = map.bossSpawn.x;
+    boss.y = map.bossSpawn.y;
+    units.push(boss);
+  } else if (bossDef && map.bossSpawn) {
     const bossLevel = level + (setup.nodeType === 'boss' ? 2 : 1);
     const boss = makeEnemy(bossDef, setup.world, bossLevel, `e${uid++}`, rng, { boss: true });
     boss.x = map.bossSpawn.x;
@@ -91,6 +109,7 @@ export function createBattle(setup: BattleSetup): Battle {
     uidCounter: uid,
     interceptUsed: false,
     healMult: setup.healMult ?? 1,
+    forceName: force?.name,
     drops: [],
   };
 }
@@ -121,6 +140,8 @@ export function startPhase(b: Battle, team: Team): TurnStartEvent[] {
     if (tick.lostTurn) u.moved = u.acted = true;
     if (tick.damage || tick.lostTurn) events.push({ uid: u.uid, heal: 0, damage: tick.damage, source: tick.lostTurn ?? 'status' });
     if (hasEffect(u, 'mpRegen')) u.mp = Math.min(u.stats.mp, u.mp + 2);
+    u.sta = Math.min(u.stats.sta, (u.sta ?? u.stats.sta) + 2);
+    for (const k of Object.keys(u.cooldowns ?? {})) if (--u.cooldowns![k] <= 0) delete u.cooldowns![k];
     const max = u.stats.hp;
     const tiles = footprint(u.x, u.y, u.size).map((p) => b.tiles[keyOf(b, p.x, p.y)]);
     const anchor = tiles[0];

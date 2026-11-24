@@ -26,7 +26,10 @@ export interface Buff {
   barrier?: boolean;
 }
 
-export type AbilityKind = 'spell' | 'song' | 'arrow' | 'personal';
+export type AbilityKind = 'spell' | 'song' | 'arrow' | 'technique' | 'personal';
+
+/** Where a warp song can take the performer. */
+export type WarpKind = 'forest' | 'fire' | 'water' | 'spirit' | 'shadow' | 'light';
 
 /** Spells, songs, elemental arrows and once-per-battle personal abilities. */
 export interface AbilityDef {
@@ -34,9 +37,20 @@ export interface AbilityDef {
   name: string;
   kind: AbilityKind;
   mp: number;
+  /** Techniques cost stamina instead of MP. */
+  sta?: number;
+  /** Techniques: which weapon types can use it (everyone with such a weapon knows it). */
+  weaponTypes?: WeaponType[];
+  /** Area technique used from the Abilities menu (Spin Attack) rather than in the forecast. */
+  area?: boolean;
+  /** Warp songs: destination type; turns before it can be used again. */
+  warp?: WarpKind;
+  cooldown?: number;
   desc: string;
-  /** Arrows: added might, element, and effectiveness. */
+  /** Attack modifiers (arrows, techniques): added might/hit/crit, element, effectiveness. */
   might?: number;
+  hit?: number;
+  crit?: number;
   element?: Element;
   effective?: string[];
   /** Personal abilities: usable once per battle. */
@@ -157,7 +171,7 @@ export type GearEffect =
   | 'critGuard' // Stalfos Shield: crits deal ×2 instead of ×3
   | 'mpRegen'; // +2 MP at the start of each turn
 
-export type ItemKind = 'heal' | 'fullHeal' | 'mp' | 'fairy' | 'bomb' | 'stun' | 'learn';
+export type ItemKind = 'heal' | 'fullHeal' | 'mp' | 'sta' | 'fairy' | 'bomb' | 'stun' | 'learn';
 
 /** Consumables carried in a unit's 6-slot pack. */
 export interface ItemDef {
@@ -269,6 +283,35 @@ export interface BossDef extends EnemyArchetype {
   drops?: string[];
 }
 
+/** A non-monster army that can oppose you. */
+export interface FactionDef {
+  id: string;
+  name: string;
+  desc: string;
+  /** Generic template ids (repeats raise their odds). */
+  units: string[];
+  /** Named template ids that can lead elite fights. */
+  leaders: string[];
+  /** Region id -> weight. */
+  regions: Record<string, number>;
+  /** Draws named heroes from the whole cast instead. */
+  rivals?: boolean;
+}
+
+/** Who you're fighting in a battle. */
+export interface EnemyForce {
+  name: string;
+  desc?: string;
+  /** Template ids to draw soldiers from (empty for pure monster battles). */
+  templates: string[];
+  /** Also include the region's monsters. */
+  monsters: boolean;
+  /** Named rival heroes (each appears at most once). */
+  heroes?: string[];
+  /** Named leader for elite fights (replaces the monster boss). */
+  leader?: string;
+}
+
 export interface CommanderDef {
   heroId: string;
   armyName: string;
@@ -313,6 +356,10 @@ export interface Unit {
   pack: PackItem[];
   /** Current MP (max is stats.mp). Refills at the start of each battle. */
   mp: number;
+  /** Current stamina (max is stats.sta). Refills each battle, +2 per turn. */
+  sta: number;
+  /** Ability id -> turns until usable again. */
+  cooldowns?: Record<string, number>;
   statuses: Status[];
   buffs: Buff[];
   /** Known spells, songs and elemental arrows. */
@@ -367,6 +414,8 @@ export interface Battle {
   uidCounter: number;
   /** Impa's Royal Protector: used this enemy phase. */
   interceptUsed: boolean;
+  /** Name of the army you're fighting (non-monster battles). */
+  forceName?: string;
   /** Rain from Song of Storms. */
   weather?: { kind: 'rain'; turns: number };
   /** Army-wide healing multiplier from the commander bonus. */

@@ -1,12 +1,12 @@
 import {
-  GEAR, ITEMS, BOSS_AS_TEMPLATE, BOSSES, bossPool, COMMANDERS, PERMANENT_ITEMS, REGION_IDS, TEMPLATE_LIST, TEMPLATES, WEAPONS,
+  FACTIONS, GEAR, ITEMS, MONSTER_CHANCE, BOSS_AS_TEMPLATE, BOSSES, bossPool, COMMANDERS, PERMANENT_ITEMS, REGION_IDS, TEMPLATE_LIST, TEMPLATES, WEAPONS,
 } from '../data/registry';
 import { createBattle } from './battle';
 import { canWield, type LevelUp } from './combat';
 import { RNG } from './rng';
 import { ARMY_CAPACITY, DEPLOY_CAPACITY } from './rules';
 import { addToPack, gainXp, makeHero, rollLevelUp, slotFor } from './units';
-import type { BossDef, CommanderDef, GearSlot, MapNode, NodeType, Rarity, Run, RunMap, Unit, UnitTemplate, WorldId } from './types';
+import type { BossDef, CommanderDef, EnemyForce, FactionDef, GearSlot, MapNode, NodeType, Rarity, Run, RunMap, Unit, UnitTemplate, WorldId } from './types';
 
 export const ROWS_PER_REGION = 7; // last row is the regional boss
 export { ARMY_CAPACITY, DEPLOY_CAPACITY };
@@ -212,13 +212,45 @@ export function startBattle(run: RunWithEvent, uids: string[]): void {
   run.deployment = chosen.map((u) => u.uid);
   run.event = undefined;
   withRng(run, (rng) => {
-    const boss = node.type === 'battle' ? undefined : bossFor(run, rng, node);
+    const force = pickForce(run, rng, node);
+    const boss = node.type === 'battle' || force?.leader ? undefined : bossFor(run, rng, node);
     if (boss) run.bossesFought.push(boss.id);
     run.battle = createBattle({
       world: node.world, nodeType: node.type, depth: depthOf(run, node), roster: chosen,
-      seed: rng.int(0, 2 ** 31), boss, healMult: run.bonus === 'healing' ? 1.2 : 1,
+      seed: rng.int(0, 2 ** 31), boss, healMult: run.bonus === 'healing' ? 1.2 : 1, force,
     });
   });
+}
+
+/**
+ * Who you fight: the region's monsters, a regional army (Gerudo, Gorons, Zora…),
+ * an army mixed with monsters, or a band of rival heroes. Regional bosses stay
+ * monsters/villains; elite fights can be led by a named character.
+ */
+export function pickForce(run: Run, rng: RNG, node: MapNode): EnemyForce | undefined {
+  if (node.type === 'boss') return rng.chance(40) ? armyFor(run, rng, node, false) : undefined;
+  if (rng.chance(MONSTER_CHANCE[node.world] ?? 50)) return undefined;
+  return armyFor(run, rng, node, node.type === 'elite' && rng.chance(60));
+}
+
+function armyFor(run: Run, rng: RNG, node: MapNode, withLeader: boolean): EnemyForce | undefined {
+  const have = new Set(run.roster.map((u) => u.templateId));
+  const free = (id: string) => !!TEMPLATES[id] && !have.has(id) && !conflicts(run, TEMPLATES[id]);
+  if (rng.chance(12) && FACTIONS.rivals) {
+    const pool = TEMPLATE_LIST.filter((t) => !t.generic && !t.rare && free(t.id)).map((t) => t.id);
+    const heroes = rng.shuffle(pool).slice(0, 4);
+    const generics = TEMPLATE_LIST.filter((t) => t.generic && !t.monster).map((t) => t.id);
+    return { name: FACTIONS.rivals.name, desc: FACTIONS.rivals.desc, templates: generics, heroes, monsters: false,
+      leader: withLeader ? rng.shuffle(pool.filter((id) => !heroes.includes(id)))[0] : undefined };
+  }
+  const options = Object.values(FACTIONS).filter((f) => !f.rivals && (f.regions[node.world] ?? 0) > 0);
+  if (!options.length) return undefined;
+  const f = rng.weighted(options.map((o) => [o, o.regions[node.world]] as [FactionDef, number]));
+  const leaders = f.leaders.filter(free);
+  return {
+    name: f.name, desc: f.desc, templates: f.units.filter((id) => TEMPLATES[id]), monsters: rng.chance(30),
+    leader: withLeader && leaders.length ? rng.pick(leaders) : undefined,
+  };
 }
 
 function conflicts(run: Run, t: UnitTemplate): boolean {
@@ -293,7 +325,7 @@ export function finishBattle(run: RunWithEvent): BattleSummary {
       // Benched units rest a little more than those who fought.
       const pct = deployed.has(u.uid) ? heal : heal + 0.2;
       next.hp = Math.min(next.stats.hp, next.hp + Math.ceil(next.stats.hp * pct));
-      return { ...next, moved: false, acted: false, kills: 0, movedDist: 0, survivedOnce: false, statuses: [], buffs: [], mp: next.stats.mp, faroreMark: undefined };
+      return { ...next, moved: false, acted: false, kills: 0, movedDist: 0, survivedOnce: false, statuses: [], buffs: [], mp: next.stats.mp, sta: next.stats.sta, faroreMark: undefined, cooldowns: {} };
     });
   run.fallen.push(...fallen.map((u) => ({ ...u, hp: 0 })));
 
@@ -648,6 +680,7 @@ export function migrateRun(run: RunWithEvent): RunWithEvent {
     u.gear ??= {};
     u.pack ??= [];
     u.mp ??= u.stats.mp;
+    u.sta ??= u.stats.sta;
     u.statuses ??= [];
     u.buffs ??= [];
     if (!u.abilities) {

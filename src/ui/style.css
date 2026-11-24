@@ -422,3 +422,5 @@ p { margin: 8px 0; }
 .blast.fire { background: radial-gradient(circle, #fff1b0 0%, #ff8a2a 40%, #ff3a1a88 62%, transparent 72%); }
 .phase-banner.song { color: #8affc8; }
 .tile.area::after { background: #9ad8ff40; box-shadow: inset 0 0 0 1px #d0f0ffaa; }
+.intro-force { margin: 8px 0 0; color: var(--gold); }
+.forecast .fc-title { line-height: 1.7; }
