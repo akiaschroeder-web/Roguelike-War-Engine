@@ -37,6 +37,22 @@ ENTRIES = {
     "mido": ("mido.webp", (0.57, 0.34, 0.62)),
     "ganondorf": ("ganondorf.png", (0.67, 0.19, 0.24)),
     "ganon": ("ganon.png", (0.34, 0.19, 0.30)),
+    # Batch 2
+    "goronWarrior": ("goronWarrior.webp", (0.40, 0.32, 0.55)),
+    "dampe": ("dampe.png", (0.52, 0.30, 0.60)),
+    "maskSalesman": ("maskSalesman.webp", (0.17, 0.165, 0.30)),
+    "carpenterBoss": ("carpenterBoss.png", (0.47, 0.16, 0.62)),
+    "navi": ("navi.png", (0.60, 0.48, 0.90)),
+    "kaepora": ("kaepora.png", (0.27, 0.36, 0.40)),
+    "dekuTree": ("dekuTree.png", (0.37, 0.70, 0.40)),
+    "koume": ("koume.png", (0.40, 0.50, 0.50)),
+    "kotake": ("kotake.png", (0.31, 0.36, 0.42)),
+    "twinrova": ("twinrova.webp", (0.46, 0.30, 0.26)),
+    "darkLink": ("darkLink.webp", (0.36, 0.13, 0.42)),
+    "ironKnuckleNabooru": ("ironKnuckleNabooru.webp", (0.46, 0.37, 0.55)),
+    "hyruleSoldier": ("hyruleSoldier.webp", (0.50, 0.27, 0.50)),
+    "kingZora": ("kingZora.webp", (0.36, 0.15, 0.40)),
+    "phantomGanonMounted": ("phantomGanonMounted.webp", (0.645, 0.10, 0.16)),
 }
 
 

@@ -5,10 +5,9 @@ export { ART_IDS } from './artManifest';
 
 export const ART_ALIASES: Record<string, string> = {
   ganondorfBoss: 'ganondorf',
-  phantomGanonMounted: 'phantomGanon',
+  phantomGanon: 'phantomGanonMounted', // until on-foot art arrives
   clubMoblin: 'moblin',
   fireKeese: 'keese',
-  ironKnuckleNabooru: 'ironKnuckle',
   // Generic soldiers of the same army can share a look:
   hyruleKnight: 'hyruleSoldier',
   hyruleCavalry: 'hyruleSoldier',
