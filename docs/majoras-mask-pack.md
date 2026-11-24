@@ -769,3 +769,125 @@ The following do not receive duplicate entries, different appearances notwithsta
 * Existing songs, conventional weapons, horses and generic units.
 
 Going forward, each Zelda content pack should expand the shared equipment pool rather than recreate it. A different visual design alone isn’t enough to justify a separate item. There needs to be a worthwhile mechanical difference.
+
+---
+
+## Addendum: Lord Jabu-Jabu (OoT) and Igos du Ikana's Royal Servants (MM)
+
+Ocarina of Time — Additional Unit
+
+Lord Jabu-Jabu
+
+Race: Aquatic Deity
+
+Class: Guardian Beast
+
+Size: 5 (5×5)
+
+Rarity: Legendary
+
+Role: Heavy Tank / Aquatic Transport
+
+Personal Skill — Guardian of the Zora: Zora allies within four spaces gain +3 DEF and RES and recover 5% of their maximum HP each turn.
+
+Natural abilities
+
+Ability	Effect
+Inhale	Pulls units of Size 2 or smaller up to three spaces toward his mouth.
+Swallow	Stores up to four willing Size 1 allies inside his body, protecting them from external attacks.
+Expel	Releases stored allies onto adjacent unoccupied spaces.
+Tidal Surge	Releases a powerful wave that damages enemies and pushes them back two spaces.
+Divine Bulk	Passively reduces incoming physical damage by 25%.
+
+Jabu-Jabu can only move through sufficiently large bodies of water. Allies stored inside him recover 10% maximum HP each turn but cannot attack until released.
+
+Recruitment: Complete a special Zora’s Fountain encounter involving the purification of Jabu-Jabu.
+
+Majora’s Mask — Additional Units
+
+Igos du Ikana’s Royal Servants
+
+The two skeletal servants accompanying Igos du Ikana during his boss encounter are individually recruitable. Although unnamed in the original game, they receive distinct combat roles rather than functioning as identical units.
+
+Ikana Royal Servant I
+
+Race: Undead
+
+Class: Royal Swordsman
+
+Size: 1 (1×1)
+
+Rarity: Epic
+
+Role: Offensive Infantry
+
+Ikana Royal Servant II
+
+Race: Undead
+
+Class: Royal Defender
+
+Size: 1 (1×1)
+
+Rarity: Epic
+
+Role: Defensive Infantry
+
+Ikana Royal Servant I
+
+Personal Skill — King’s Blade: Gains +3 STR, +2 SPD and +10 Critical while within three spaces of Igos du Ikana.
+
+Proficiencies: Swords, greatswords and shields.
+
+Ability	Effect
+Royal Assault	Performs two consecutive sword strikes at 75% damage each.
+Leaping Slash	Jumps over an adjacent unit before attacking.
+Skeletal Reassembly	Revives with 25% HP one turn after being defeated, once per battle, unless finished with light damage.
+
+Ikana Royal Servant II
+
+Personal Skill — King’s Shield: Automatically intercepts the first attack targeting Igos du Ikana each round when within two spaces of him.
+
+Proficiencies: Swords, spears, shields and heavy armor.
+
+Ability	Effect
+Shield Bash	Damages an adjacent enemy and knocks them back one space.
+Royal Guard	Grants adjacent allies +4 DEF until the next turn.
+Skeletal Reassembly	Revives with 25% HP one turn after being defeated, once per battle, unless finished with light damage.
+
+Shared Support Skill — Eternal Loyalty
+
+When both Royal Servants and Igos du Ikana are deployed together, all three receive:
+
+* +2 STR
+* +2 DEF
+* +2 RES
+* +10 Hit
+* Immunity to fear
+
+Recruitment: Defeat the two Royal Servants during the Ikana Castle encounter. Both become available for recruitment independently of Igos.
+
+Base Stats
+
+Stat	Jabu-Jabu	Servant I	Servant II
+Size	5	1	1
+HP	95	28	32
+STR	16	12	9
+MAG	10	2	2
+SKL	5	13	9
+SPD	3	12	7
+DEF	22	7	12
+RES	18	5	7
+LCK	10	4	4
+CON	40	9	12
+MOV	4	6	5
+STA	40	20	22
+MP	25	6	6
+
+Updated Pack Totals
+
+Pack	Previous units	Added	New total
+Ocarina of Time	59	1	60
+Majora’s Mask	50	2	52
+
+The Ocarina of Time total includes the six additional unique dungeon bosses that were not already counted among its named and generic units.
