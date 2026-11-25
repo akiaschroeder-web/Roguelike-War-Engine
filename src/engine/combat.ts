@@ -4,6 +4,8 @@ import { coordinatedBonus, moraleBonus } from './army';
 import { isHelpless, onDamaged, rollElement, statusMods, weatherMight } from './status';
 import { keyOf, terrainAt, unitDist } from './grid';
 import { meltSunBlocks, thawMechanisms } from './field';
+import { canParry, critImmune, onParry, rangeBonus, scavengePenalty, wwAfterCombat, wwAfterHit, wwElement, wwMods, wwMultiplier, wwOnKill } from './windwaker';
+import { cannonsDown, isVessel, vesselMods } from './naval';
 import type { RNG } from './rng';
 import { isMagical, TERRAIN_BONUS, TRIANGLE } from './rules';
 import { canSwim, effectiveStats, forgeLevel, gainXp, gearBonus, hasEffect, isMounted, spendUse, unitTags } from './units';
@@ -87,18 +89,22 @@ export function weaponOf(u: Unit): WeaponDef {
 export function canWield(u: Unit, w: WeaponDef): boolean {
   if (w.races && !w.races.includes(u.race)) return false;
   if (w.minSize && (u.baseSize ?? u.size) < w.minSize) return false;
+  if (cannonsDown(u, w.id)) return false;
+  if (u.scavenged?.includes(w.id)) return true; // picked up off the field: usable, just badly
+  // Vessels fire their cannons; nobody else fires a ship's guns without training.
+  if (w.type === 'siege' && isVessel(u)) return true;
   return w.type === 'natural' || w.type === 'instrument' || !!w.anyClass || !!CLASSES[u.classId]?.weapons.includes(w.type);
 }
 
-export function canReach(w: WeaponDef, d: number): boolean {
-  return d >= w.minRange && d <= w.maxRange;
+export function canReach(w: WeaponDef, d: number, u?: Unit): boolean {
+  return d >= w.minRange && d <= w.maxRange + (u ? rangeBonus(u, w) : 0);
 }
 
 /** Offensive weapons the unit can use at distance d (equipped first). */
 export function attackWeapons(u: Unit, d: number): WeaponDef[] {
   const extra = hasEffect(u, 'magicRange');
   return u.weapons.map((id) => WEAPONS[id]).filter((w) => w && w.type !== 'staff' && w.type !== 'instrument' && canWield(u, w)
-    && (canReach(w, d) || (extra && w.type === 'magic' && d === w.maxRange + 1)));
+    && (canReach(w, d, u) || (extra && w.type === 'magic' && d === w.maxRange + 1)));
 }
 
 export function healWeapons(u: Unit, d: number): WeaponDef[] {
@@ -109,7 +115,7 @@ export function healWeapons(u: Unit, d: number): WeaponDef[] {
 export function maxAttackRange(u: Unit): { min: number; max: number } | null {
   const ws = u.weapons.map((id) => WEAPONS[id]).filter((w) => w && w.type !== 'staff' && w.type !== 'instrument' && canWield(u, w));
   if (!ws.length) return null;
-  return { min: Math.min(...ws.map((w) => w.minRange)), max: Math.max(...ws.map((w) => w.maxRange)) };
+  return { min: Math.min(...ws.map((w) => w.minRange)), max: Math.max(...ws.map((w) => w.maxRange + rangeBonus(u, w))) };
 }
 
 function triangleOf(a: WeaponDef, d?: WeaponDef): -1 | 0 | 1 {
@@ -190,6 +196,10 @@ export function situational(b: Battle, u: Unit, pos: Pos, foe: Unit, initiating:
     if (hasEffect(a, 'dekuCrown') && u.race === 'deku' && near(a, 2)) m.res += 1;
   }
   if (b.bonus === 'rolling' && initiating && u.movedDist >= 3 && (u.race === 'goron' || hasEffect(u, 'charge') || has('spikedRoll') || has('runawayMachine'))) m.dmg += 3;
+  const ww = wwMods(b, u, pos, foe, initiating, WEAPONS[u.weapons[0]]);
+  const vm = vesselMods(b, u);
+  m.str += ww.str + vm.str; m.mag += ww.mag; m.skl += ww.skl; m.spd += ww.spd; m.def += ww.def + vm.def; m.res += ww.res + vm.res;
+  m.hit += ww.hit + vm.hit; m.avoid += ww.avoid + vm.avoid; m.crit += ww.crit; m.dmg += ww.dmg + vm.dmg;
   const sup = supportBonus(b, u, pos);
   const cm = hasEffect(u, 'couple') ? 1.25 : 1;
   m.hit += Math.round(sup.hit * cm); m.avoid += Math.round(sup.avoid * cm); m.crit += Math.round(sup.crit * cm); m.def += sup.def; m.res += sup.def;
@@ -203,7 +213,7 @@ function sideStats(
   const d = unitDist({ ...atk, ...atkPos }, { ...def, ...defPos });
   const helpless = !initiating && isHelpless(atk);
   const beaming = !!weapon?.beam && d > 1;
-  if (!weapon || weapon.type === 'staff' || weapon.type === 'instrument' || !canReach(weapon, d) || helpless || (beaming && atk.mp < weapon.beam!)) {
+  if (!weapon || weapon.type === 'staff' || weapon.type === 'instrument' || !canReach(weapon, d, atk) || helpless || (beaming && atk.mp < weapon.beam!)) {
     return { uid: atk.uid, weaponId: weapon?.id ?? null, canAttack: false, dmg: 0, hit: 0, crit: 0, attacks: 0, triangle: 0, effective: false, block: 0, arrowId: null };
   }
   const as = effectiveStats(atk);
@@ -217,7 +227,7 @@ function sideStats(
   const magical = isMagical(weapon.type) || beaming;
   const tags = unitTags(def);
   const effective = !![...(weapon.effective ?? []), ...(arrow?.effective ?? [])].some((t) => tags.includes(t));
-  const element = arrow?.element ?? weapon.element;
+  const element = arrow?.element ?? wwElement(atk, weapon) ?? weapon.element;
   const sa = statusMods(atk);
   const sd = statusMods(def);
 
@@ -236,16 +246,19 @@ function sideStats(
   let dmg = Math.max(0, power - defense);
   if (hasEffect(atk, 'desperation') && atk.hp < atk.stats.hp / 2) dmg = Math.floor(dmg * 1.25);
   dmg = Math.floor(dmg * terminaMultiplier(b, atk, def, defPos, element, magical, weapon));
+  dmg = Math.floor(dmg * wwMultiplier(b, atk, def, defPos, element, magical, weapon, d));
   if (atk.isBoss && atk.team === 'enemy' && (b.bossTier ?? 2) < 2) dmg = Math.floor(dmg * (b.bossTier === 0 ? 0.7 : 0.85)); // early bosses hit softer
   if (def.buffs?.some((x) => x.barrier || x.id === 'bubble')) dmg = 0; // Nayru's Love, Wart's bubbles
 
-  const atkSpd = as.spd + am.spd - Math.max(0, weapon.weight - as.con);
+  const grip = (u: Unit, w: WeaponDef) => (w.twoHanded && hasEffect(u, 'twoHandedGrip') ? 3 : 0);
+  const atkSpd = as.spd + am.spd - Math.max(0, weapon.weight - grip(atk, weapon) - as.con);
   const defW = foeWeapon ?? weapon;
-  const defSpd = ds.spd + dm.spd - Math.max(0, (foeWeapon ? defW.weight : 0) - ds.con);
+  const defSpd = ds.spd + dm.spd - Math.max(0, (foeWeapon ? defW.weight - grip(def, defW) : 0) - ds.con);
   const hit = clamp(weapon.hit + (arrow?.hit ?? 0) + (as.skl + am.skl) * 2 + Math.floor(as.lck / 2) + tri * 15 + am.hit + ab.hit + sa.hit - (b.weather?.kind === 'sandstorm' ? 15 : 0)
+    + scavengePenalty(atk, weapon, CLASSES[atk.classId]?.weapons ?? [])
     - (Math.max(0, defSpd) * 2 + ds.lck + terrain.avoid + dm.avoid + db.avoid + sd.avoid));
   const concealed = atk.statuses?.some((x) => x.kind === 'veiled');
-  const crit = initiating && concealed && atk.skills.includes('masterOfAmbush') ? 100
+  const crit = critImmune(def) ? 0 : initiating && concealed && atk.skills.includes('masterOfAmbush') ? 100
     : clamp(weapon.crit + (arrow?.crit ?? 0) + Math.floor((as.skl + am.skl) / 2) + am.crit + ab.crit - ds.lck);
 
   let attacks = atkSpd - defSpd >= 4 ? 2 : 1;
@@ -393,10 +406,13 @@ export function resolveCombat(b: Battle, attacker: Unit, defender: Unit, rng: RN
   const perRoundA = braveA ? 2 : 1;
   const roundsA = fc.attacker.attacks / perRoundA;
   const seq: Swing[] = [];
+  const dw = weaponDef(fc.defender.weaponId);
+  const counterTwice = !!dw?.counterTwice || (defender.skills.includes('masterDuelist') && !!defender.armorBroken);
   for (let i = 0; i < perRoundA; i++) seq.push(A);
-  if (fc.defender.canAttack) seq.push(D);
+  if (fc.defender.canAttack) { seq.push(D); if (counterTwice) seq.push(D); }
   if (roundsA >= 2) for (let i = 0; i < perRoundA; i++) seq.push(A);
   if (fc.defender.attacks >= 2) seq.push(D);
+  const stopped = new Set<string>();
 
   const strikes: Strike[] = [];
   const deaths: string[] = [];
@@ -405,6 +421,7 @@ export function resolveCombat(b: Battle, attacker: Unit, defender: Unit, rng: RN
   const broken: CombatResult['broken'] = [];
   for (const [by, target, side] of seq) {
     if (by.hp <= 0 || target.hp <= 0) break;
+    if (stopped.has(by.uid)) continue;
     if (side.weaponId && by.weapons.includes(side.weaponId)) {
       const r = spendUse(by, side.weaponId);
       if (r.broke) broken.push({ uid: by.uid, weaponId: side.weaponId, into: r.into });
@@ -412,12 +429,21 @@ export function resolveCombat(b: Battle, attacker: Unit, defender: Unit, rng: RN
     const hit = rng.chance(side.hit);
     const crit = hit && rng.chance(side.crit);
     let dmg = hit ? side.dmg * (crit ? (hasEffect(target, 'critGuard') ? 2 : 3) : 1) : 0;
+    const elixir = by.buffs.findIndex((x) => x.id === 'elixir');
+    if (dmg > 0 && elixir >= 0 && !isMagical(weaponDef(side.weaponId)?.type ?? 'natural')) { dmg *= 2; by.buffs.splice(elixir, 1); }
     if (hit) {
       const bubble = target.buffs.findIndex((x) => x.id === 'bubble');
       if (bubble >= 0) { target.buffs.splice(bubble, 1); dmg = 0; b.log.push(`${target.name}'s bubble pops!`); }
     }
     const blocked = hit && dmg > 0 && side.block > 0 && rng.chance(side.block);
     if (blocked) dmg = Math.floor(dmg / 2);
+    if (blocked && hasEffect(target, 'stopFollowUp')) stopped.add(by.uid);
+    // Magic Armor: MP (or Rupees) pay for the damage instead.
+    if (dmg > 0 && hasEffect(target, 'magicArmor')) {
+      const cost = Math.ceil(dmg / (hasEffect(target, 'nayruPearl') ? 4 : 2));
+      if (target.mp >= cost) { target.mp -= cost; dmg = 0; }
+      else if (target.team === 'player' && b.rewardRupees + (b.bonusRupees ?? 0) >= dmg * 5) { b.bonusRupees = (b.bonusRupees ?? 0) - dmg * 5; dmg = 0; }
+    }
     dmg = Math.min(dmg, target.hp);
     let saved: Strike['saved'];
     if (dmg >= target.hp && hasEffect(target, 'surviveOnce') && !target.survivedOnce) {
@@ -450,19 +476,45 @@ export function resolveCombat(b: Battle, attacker: Unit, defender: Unit, rng: RN
       statuses = rollElement(b, by, target, side.element, rng, side.weaponId ?? undefined);
     }
     strikes.push({ by: by.uid, target: target.uid, hit, crit, dmg, heal, targetHp: target.hp, byHp: by.hp, killed, blocked, saved, statuses, thawed });
+    if (hit) b.log.push(...wwAfterHit(b, by, target, dmg, crit, weaponDef(side.weaponId), side.element, rng));
     if (killed) {
       by.kills++;
       deaths.push(target.uid);
       b.log.push(`${by.name} defeated ${target.name}.`);
+      wwOnKill(b, by, target, rng);
       killUnit(b, target);
       onKillEffects(b, by, weaponDef(side.weaponId));
       break;
+    }
+    // Parries: dodge a blow and strike back through the guard (Hero of Winds), or with both swords (Desert Wind).
+    if (!hit && target.hp > 0) {
+      const mine = target === attacker ? fc.attacker : fc.defender;
+      const kind = canParry(target, weaponDef(side.weaponId), fc.distance, rng);
+      if (kind && mine.canAttack) {
+        const tw = weaponDef(mine.weaponId);
+        const pierceBonus = kind === 'parry' ? Math.floor(Math.max(0, effectiveStats(by).def) * 0.5) : 0;
+        const blows = kind === 'desertWind' ? 2 : 1;
+        onParry(b, target, tw);
+        for (let k = 0; k < blows && by.hp > 0; k++) {
+          const pcrit = rng.chance(Math.min(100, mine.crit + (tw?.parryCrit ?? 0)));
+          let pd = Math.floor((mine.dmg + pierceBonus) * (kind === 'desertWind' ? 0.75 : 1)) * (pcrit ? 3 : 1);
+          pd = Math.min(by.hp, Math.max(0, pd));
+          by.hp -= pd;
+          const pk = by.hp <= 0 && !useFairy(by);
+          if (pd > 0) dealt.add(target.uid);
+          strikes.push({ by: target.uid, target: by.uid, hit: true, crit: pcrit, dmg: pd, heal: 0, targetHp: Math.max(0, by.hp), byHp: target.hp, killed: pk, blocked: false });
+          b.log.push(`${target.name} ${kind === 'parry' ? 'parries' : 'counters with both swords'}!`);
+          if (pk) { target.kills++; deaths.push(by.uid); b.log.push(`${target.name} defeated ${by.name}.`); wwOnKill(b, target, by, rng); killUnit(b, by); }
+        }
+        if (by.hp <= 0) break;
+      }
     }
   }
   // Sweeping, piercing and spinning attacks spill onto nearby enemies.
   const landed = strikes.some((s) => s.by === attacker.uid && s.hit && s.dmg > 0);
   if (landed && attacker.hp > 0) {
-    const splash = splashTargets(b, attacker, defender, aw);
+    const landing = hasEffect(attacker, 'landingStrike') && attacker.movedDist > 0 && CLASSES[attacker.classId]?.moveType === 'flying';
+    const splash = splashTargets(b, attacker, defender, landing && !aw?.splash ? { ...aw!, splash: 'adjacent' } : aw);
     const half = Math.max(1, Math.floor(fc.attacker.dmg / 2));
     for (const e of splash) {
       const dmg = Math.min(e.hp, half);
@@ -489,12 +541,17 @@ export function resolveCombat(b: Battle, attacker: Unit, defender: Unit, rng: RN
       foe.statuses.push({ kind: 'shock', turns: 1 });
     }
   }
+  for (const x of wwAfterCombat(b, attacker, defender)) {
+    strikes.push({ by: x.by, target: x.uid, hit: true, crit: false, dmg: x.dmg, heal: 0, targetHp: x.hp, byHp: 0, killed: x.killed, blocked: false, splash: true });
+    if (x.killed && !deaths.includes(x.uid)) deaths.push(x.uid);
+  }
   for (const me of [attacker, defender]) if (me.hp > 0) gainSupport(b, me);
   const xp: { uid: string; amount: number }[] = [];
   const levelUps: LevelUp[] = [];
   for (const [me, foe] of [[attacker, defender], [defender, attacker]] as const) {
     if (me.team !== 'player' || me.hp <= 0) continue;
-    const amount = xpFor(me, foe, dealt.has(me.uid), deaths.includes(foe.uid));
+    const scholar = b.units.some((a) => a.team === me.team && a.skills.includes('encyclopedicKnowledge'));
+    const amount = Math.round(xpFor(me, foe, dealt.has(me.uid), deaths.includes(foe.uid)) * (weaponDef(me.weapons[0])?.doubleXp ? 2 : 1) * (scholar ? 1.2 : 1));
     xp.push({ uid: me.uid, amount });
     for (const gains of gainXp(me, amount, rng)) levelUps.push({ uid: me.uid, name: me.name, level: me.level, gains });
   }
@@ -540,5 +597,7 @@ export function findInterceptor(b: Battle, attacker: Unit, target: Unit, weaponI
   return b.units.find((p) => p !== target && p.team === target.team && canReach(w, unitDist(attacker, p)) && (
     (p.skills.includes('royalProtector') && unitDist(p, target) <= 1)
     || (p.skills.includes('kingsShield') && target.skills.includes('undyingKingdom') && unitDist(p, target) <= 2)
-    || (p.skills.includes('royalGuardDeku') && royal(target) && unitDist(p, target) <= 1)));
+    || (p.skills.includes('royalGuardDeku') && royal(target) && unitDist(p, target) <= 1)
+    || (p.skills.includes('captainsRightHand') && target.isCommander && unitDist(p, target) <= 1)
+    || (p.skills.includes('skyShield') && CLASSES[target.classId]?.moveType === 'flying' && unitDist(p, target) <= 1)));
 }

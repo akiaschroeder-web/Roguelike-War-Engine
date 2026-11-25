@@ -6,6 +6,7 @@ import { footDist, footprint, inBounds, keyOf, unitAt } from './grid';
 import { RNG } from './rng';
 import { addStatus } from './status';
 import { hasEffect, unitTags } from './units';
+import { decorateWindWaker, wwEnvironment } from './windwaker';
 import type { Battle, Pos, Terrain, Unit, WorldId } from './types';
 
 const DIRS = [[1, 0], [-1, 0], [0, 1], [0, -1]];
@@ -29,6 +30,7 @@ export function decorateField(b: Battle, rng: RNG, nodeType: string) {
   });
   // Termina spaces go down first so treasure and traps land on open ground.
   decorateTermina(b, rng);
+  decorateWindWaker(b, rng);
   // Fog of war
   b.fog = rng.chance(FOGGY[world] ?? 6);
   // Buried treasure
@@ -66,6 +68,9 @@ export function visionOf(u: Unit): number {
   let r = 4;
   if (u.buffs?.some((x) => x.id === 'lens')) r += 3;
   if (u.skills.includes('ancientGuidance')) r += 4;
+  if (hasEffect(u, 'telescope') || hasEffect(u, 'seagullSight') || u.skills.includes('crowsNest')) r += 3;
+  if (u.skills.includes('ritoScouting')) r += 2;
+  if (u.buffs?.some((x) => x.id === 'watchtower')) r += 3;
   return r;
 }
 
@@ -266,6 +271,7 @@ export function environmentPhase(b: Battle): EnvEvent[] {
     return events;
   }
   terminaEnvironment(b, events);
+  wwEnvironment(b, events);
 
   // Fire
   if (rain && b.fires?.length) { b.fires = []; events.push({ text: 'The rain puts out the fires.' }); }

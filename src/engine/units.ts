@@ -1,5 +1,6 @@
 import { ABILITIES, CLASSES, GEAR, ITEMS, RACES, TEMPLATES, WEAPONS } from '../data/registry';
 import { STATUS_STATS } from './status';
+import { vesselMov } from './naval';
 import type { RNG } from './rng';
 import { MAX_LEVEL, XP_PER_LEVEL } from './rules';
 import { GEAR_SLOTS, PACK_SIZE } from './types';
@@ -178,6 +179,11 @@ export function effectiveStats(unit: Unit): Stats {
   for (const st of unit.statuses ?? []) {
     for (const [k, v] of Object.entries(STATUS_STATS[st.kind] ?? {})) (s as Record<string, number>)[k] += v as number;
   }
+  if (moveTypeOf(unit) === 'flying') {
+    if (hasEffect(unit, 'flyMov')) s.mov += 1;
+    if (hasEffect(unit, 'helmarocPlume')) s.mov += 2;
+  }
+  s.mov = vesselMov(unit, s.mov);
   for (const k of ['def', 'res', 'lck', 'spd', 'con'] as const) s[k] = Math.max(0, s[k]);
   s.mov = Math.max(1, s.mov);
   if (unit.stats.mov === 0) s.mov = 0; // stationary units stay stationary

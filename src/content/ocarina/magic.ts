@@ -37,7 +37,7 @@ export const ABILITIES: AbilityDef[] = [
   // ── Personal abilities ──
   ab({ id: 'transformGanon', name: 'Demon King', kind: 'personal', mp: 0, oncePerBattle: true, desc: 'Below half HP: transform into Ganon for the rest of the battle (needs room for a 3×3 beast).' }),
   ab({ id: 'twinrovaFusion', name: 'Double Dynamite', kind: 'personal', mp: 0, oncePerBattle: true, desc: 'With the other sister adjacent: Koume and Kotake fuse into Twinrova for the rest of the battle.' }),
-  ab({ id: 'hookshotPull', name: 'Hookshot', kind: 'personal', mp: 0, freeAction: true, grantedBy: { weapons: ['hookshot', 'longshot'] },
+  ab({ id: 'hookshotPull', name: 'Hookshot', kind: 'personal', mp: 0, freeAction: true, grantedBy: { weapons: ['hookshot', 'longshot', 'grapplingHook'] },
     desc: 'Instead of walking: pull yourself in a straight line (3 spaces, Longshot 5) to a tree, wall, fort, mountain or unit, across water and gaps. You can still act afterwards.' }),
   ab({ id: 'digHere', name: 'Dig', kind: 'personal', mp: 0, grantedBy: { skill: 'graveyardShift' }, desc: 'Dig where you stand for buried treasure (better finds than a shovel).' }),
   ab({ id: 'buildHere', name: 'Build', kind: 'personal', mp: 0, grantedBy: { skill: 'masterBuilder' }, desc: 'Bridge adjacent water, clear an adjacent wall or obstacle, or raise a barricade on open ground.' }),

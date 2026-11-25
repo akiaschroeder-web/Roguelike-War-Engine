@@ -8,7 +8,9 @@ import { addStatus, NEGATIVE_STATUSES } from './status';
 import { blastTerrain, canDig, canFish, dig, fish, ignite, plantBean, revealNearby, thawMechanisms } from './field';
 import { reinforceTile } from './army';
 import { keyOf } from './grid';
-import { effectiveStats, gainXp, makeHero, prepareForBattle } from './units';
+import { effectiveStats, gainXp, makeHero, prepareForBattle, unitTags } from './units';
+import { damageComponent, isVessel, repairComponent } from './naval';
+import { WEAPONS } from '../data/registry';
 import type { Battle, ItemDef, Pos, StatusKind, Unit } from './types';
 
 export interface ItemResult {
@@ -54,6 +56,9 @@ export function canUseHere(b: Battle, u: Unit, index: number): boolean {
     if (def.tool === 'shovel') return canDig(b, u);
   }
   if (def.id === 'twinmoldWingFragment' && u.movedDist > 0) return false;
+  if ((def.id === 'cannonball' || def.id === 'chainShot') && !isVessel(u)) return false;
+  if (def.id === 'cannonball') return u.weapons.some((w) => WEAPONS[w]?.type === 'siege' && (u.wear?.[w] ?? 0) > 0);
+  if (def.id === 'seahatRotor' || def.id === 'helmarocFeather') return u.movedDist === 0;
   if (def.id === 'giantsHorn') return !!giantReserve(b);
   if (isTargeted(def)) return targetTiles(b, u, def).length > 0;
   return true;
@@ -73,7 +78,14 @@ export function targetTiles(b: Battle, u: Unit, def: ItemDef): Pos[] {
   if (!isTargeted(def)) return [];
   const tiles = tilesInRange(b, u, def.minRange ?? 1, def.maxRange ?? 1, u.size);
   if (def.tool === 'pictograph') return tiles.filter((p) => b.units.some((e) => e.team !== u.team && footDist(p.x, p.y, 1, e.x, e.y, e.size) === 0));
-  if (def.id === 'dekuFlowerSeed' || def.id === 'bioDekuBabaSeed' || def.id === 'deathArmosCore') {
+  if (def.id === 'chainShot') return tiles.filter((p) => b.units.some((e) => e.team !== u.team && isVessel(e) && footDist(p.x, p.y, 1, e.x, e.y, e.size) === 0));
+  if (def.id === 'repairPlanks') {
+    const ok = (e: Unit) => e.team === u.team && (isVessel(e) || unitTags(e).includes('wood') || unitTags(e).includes('stone')) && (e.hp < e.stats.hp || !!e.damaged && Object.keys(e.damaged).length > 0);
+    return [...tiles, { x: u.x, y: u.y }].filter((p) => b.units.some((e) => ok(e) && footDist(p.x, p.y, 1, e.x, e.y, e.size) === 0));
+  }
+  if (def.id === 'puppetStringBundle') return tiles.filter((p) => b.units.some((e) => e.team !== u.team && footDist(p.x, p.y, 1, e.x, e.y, e.size) === 0));
+  if (def.id === 'magtailShell' || def.id === 'molgeraSandSac') return tiles.filter((p) => b.tiles[keyOf(b, p.x, p.y)] === 'plain' && !b.units.some((x) => footDist(p.x, p.y, 1, x.x, x.y, x.size) === 0));
+  if (def.id === 'dekuFlowerSeed' || def.id === 'bioDekuBabaSeed' || def.id === 'deathArmosCore' || def.id === 'bokoBabaSeed' || def.id === 'bokoBabaPod') {
     return tiles.filter((p) => ['plain', 'forest'].includes(b.tiles[keyOf(b, p.x, p.y)]) && !b.units.some((x) => footDist(p.x, p.y, 1, x.x, x.y, x.size) === 0));
   }
   if (def.kind === 'bean') {
@@ -214,10 +226,127 @@ export function useItem(b: Battle, u: Unit, index: number, rng: RNG, at?: Pos): 
   return res;
 }
 
-/** Majora's Mask items. */
+/** Majora's Mask and Wind Waker items. */
 function useSpecial(b: Battle, u: Unit, def: ItemDef, rng: RNG, res: ItemResult, at?: Pos) {
   const allies = b.units.filter((a) => a.team === u.team);
+  const at0 = at ?? { x: u.x, y: u.y };
+  const unitOn = (p: Pos) => b.units.find((e) => footDist(p.x, p.y, 1, e.x, e.y, e.size) === 0);
+  const plant = (lvl: number) => {
+    if (!TEMPLATES.bokoBaba) return;
+    const sprout = prepareForBattle(makeHero('bokoBaba', `baba${b.uidCounter++}`, Math.max(1, lvl), rng));
+    Object.assign(sprout, { x: at0.x, y: at0.y, team: u.team, npc: u.team === 'player', summoned: true, ai: 'stationary', moved: true, acted: true });
+    b.units.push(sprout);
+    res.lines.push('A Boko Baba sprouts and snaps at anything nearby.');
+  };
   switch (def.id) {
+    // ── Wind Waker ──
+    case 'bokoBabaSeed': plant(u.level - 1); return;
+    case 'bokoBabaPod': plant(u.level); return;
+    case 'allPurposeBait':
+      for (const e of b.units) {
+        if (e.team === u.team || e.isBoss || footDist(at0.x, at0.y, 1, e.x, e.y, e.size) > 2 || !unitTags(e).includes('beast')) continue;
+        addStatus(e, 'confuse', 1);
+        res.statuses.push({ uid: e.uid, kind: 'confuse' });
+      }
+      res.lines.push('The bait lures the beasts in.');
+      return;
+    case 'hyoiPear':
+      b.fog = false;
+      for (const e of b.units) e.hidden = false;
+      for (const t of b.traps ?? []) t.hidden = false;
+      res.lines.push('A seagull soars over the battlefield: nothing stays hidden.');
+      res.free = true;
+      return;
+    case 'elixirSoup': {
+      const amt = u.stats.hp - u.hp;
+      u.hp = u.stats.hp;
+      u.mp = u.stats.mp;
+      res.heals.push({ uid: u.uid, amount: amt });
+      u.buffs = u.buffs.filter((x) => x.id !== 'elixir');
+      u.buffs.push({ id: 'elixir', name: 'Elixir Soup (next hit ×2)', turns: 5 });
+      res.lines.push(`${u.name} drinks Grandma's Elixir Soup!`);
+      return;
+    }
+    case 'forestWater':
+      for (const a of allies) {
+        if (footDist(a.x, a.y, a.size, u.x, u.y, u.size) > 3 || !unitTags(a).includes('plant')) continue;
+        res.heals.push({ uid: a.uid, amount: a.stats.hp - a.hp });
+        a.hp = a.stats.hp;
+      }
+      for (const p of tilesInRange(b, u, 1, 1, u.size)) if (b.tiles[keyOf(b, p.x, p.y)] === 'plain' && !unitOn(p)) b.tiles[keyOf(b, p.x, p.y)] = 'forest';
+      res.lines.push('Forest Water revives the green.');
+      return;
+    case 'morthCluster':
+      for (const e of b.units) {
+        if (e.team === u.team || footDist(at0.x, at0.y, 1, e.x, e.y, e.size) > (def.radius ?? 1)) continue;
+        addStatus(e, 'weaken', 2);
+        e.buffs.push({ id: 'clung', name: 'Morths', turns: 2, stats: { mov: -2 } });
+        res.statuses.push({ uid: e.uid, kind: 'weaken' });
+      }
+      return;
+    case 'magtailShell':
+      b.tiles[keyOf(b, at0.x, at0.y)] = 'wall';
+      res.lines.push('The Magtail shell curls into a heavy block.');
+      return;
+    case 'kalleDemosVine':
+      for (const e of b.units) {
+        if (e.team === u.team || footDist(e.x, e.y, e.size, u.x, u.y, u.size) > 2) continue;
+        addStatus(e, 'root', 2);
+        res.statuses.push({ uid: e.uid, kind: 'root' });
+      }
+      return;
+    case 'seahatRotor':
+      u.buffs.push({ id: 'wing', name: 'Seahat Rotor', turns: 1, stats: { mov: 2 } });
+      res.free = true;
+      return;
+    case 'helmarocFeather':
+      u.buffs.push({ id: 'wing', name: 'Helmaroc Feather', turns: 1, stats: { mov: 4 } });
+      res.free = true;
+      return;
+    case 'molgeraSandSac':
+      for (const p of [at0, ...tilesInRange(b, at0 as Unit, 1, 1, 1)]) if (b.tiles[keyOf(b, p.x, p.y)] === 'plain') b.tiles[keyOf(b, p.x, p.y)] = 'sandVortex';
+      res.lines.push('The ground turns to sinking sand.');
+      return;
+    case 'jalhallaSpiritFlame':
+      for (const e of b.units) {
+        if (e.team === u.team) continue;
+        const d = footDist(e.x, e.y, e.size, u.x, u.y, u.size);
+        if (d <= 5) e.hidden = false;
+        if (d <= 3 && unitTags(e).includes('undead')) { addStatus(e, 'weaken', 2); addStatus(e, 'exposed', 2); res.statuses.push({ uid: e.uid, kind: 'exposed' }); }
+      }
+      return;
+    case 'puppetStringBundle': {
+      const e = unitOn(at0);
+      if (e) { addStatus(e, 'root', 2); res.statuses.push({ uid: e.uid, kind: 'root' }); }
+      return;
+    }
+    case 'cannonball':
+      for (const w of u.weapons) if (WEAPONS[w]?.type === 'siege' && u.wear?.[w]) u.wear[w] = Math.max(0, u.wear[w] - 10);
+      res.lines.push(`${u.name}'s cannons are reloaded.`);
+      return;
+    case 'chainShot': {
+      const e = unitOn(at0);
+      if (e && damageComponent(e, rng, 'sail')) res.lines.push(`Chain shot shreds the ${e.name}'s sail!`);
+      else if (e) res.lines.push(`The ${e.name}'s sail holds.`);
+      return;
+    }
+    case 'repairPlanks': {
+      const e = unitOn(at0);
+      if (!e) return;
+      const amt = Math.min(20, e.stats.hp - e.hp);
+      e.hp += amt;
+      res.heals.push({ uid: e.uid, amount: amt });
+      const c = repairComponent(e);
+      res.lines.push(`The ${e.name} is patched up${c ? ` (${c} repaired)` : ''}.`);
+      return;
+    }
+    case 'tingleBottle': {
+      const roll = rng.int(0, 2);
+      if (roll === 0) { b.bonusRupees = (b.bonusRupees ?? 0) + 150; res.lines.push('"Kooloo-limpah!" A bag of ₹150 floats back.'); }
+      else if (roll === 1) { (b.loot ??= []).push(rng.pick(['redPotion', 'bluePotion', 'repairPlanks', 'cannonball'])); res.lines.push('A crate of supplies washes up.'); }
+      else { for (const e of b.units) e.hidden = false; b.fog = false; res.lines.push('Tingle sends a map of the battlefield!'); }
+      return;
+    }
     case 'chateauRomani':
       u.buffs.push({ id: 'chateau', name: 'Chateau Romani', turns: 3 });
       res.lines.push(`${u.name} drinks Chateau Romani: magic costs nothing for 3 turns!`);

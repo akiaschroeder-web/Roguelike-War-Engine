@@ -500,3 +500,30 @@ p { margin: 8px 0; }
 .tb-clock b { font-variant-numeric: tabular-nums; }
 .tb-clock.warn b { color: var(--warn); }
 .tb-clock.bad b { color: var(--bad); animation: blink 1s infinite; }
+
+/* ── The Great Sea chart ── */
+.sea-chart { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 4px; max-width: 640px; margin: 8px 0;
+  background: linear-gradient(160deg, #1d5f9a, #123d66); padding: 6px; border-radius: 10px; }
+.sector { position: relative; aspect-ratio: 1; border: 1px solid rgba(255,255,255,.12); border-radius: 6px; background: rgba(40,110,170,.55);
+  color: #e8f4ff; cursor: pointer; padding: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; font: inherit; overflow: hidden; }
+.sector .sec-name { position: absolute; top: 2px; left: 4px; font-size: 9px; opacity: .55; }
+.sector .sec-icon { font-size: clamp(14px, 3.4vw, 22px); line-height: 1; }
+.sector .sec-label { font-size: 8px; line-height: 1.05; text-align: center; padding: 0 2px; opacity: .85; max-height: 2.2em; overflow: hidden; }
+.sector .sec-lock { position: absolute; top: 2px; right: 3px; font-size: 10px; }
+.sector .sec-boat { position: absolute; bottom: 1px; right: 3px; font-size: 13px; }
+.sector.unknown { background: rgba(10,30,60,.75); color: #6a8aaa; }
+.sector.island { background: rgba(90,150,80,.75); }
+.sector.hostile { background: rgba(150,60,60,.6); }
+.sector.vessel { background: rgba(170,140,70,.6); }
+.sector.water { background: rgba(40,110,170,.45); }
+.sector.visited { filter: saturate(.55); }
+.sector.locked { filter: grayscale(.6) brightness(.8); }
+.sector.avail { outline: 2px solid #ffe680; box-shadow: 0 0 10px #ffe68088; filter: none; }
+.sector.current { outline: 2px solid #fff; }
+.sail-log { background: rgba(30,90,140,.25); border-left: 3px solid #4aa0e0; padding: 4px 8px; margin: 6px 0; border-radius: 4px; }
+.wind-badge { position: absolute; top: 6px; right: 8px; z-index: 5; background: rgba(20,50,80,.8); color: #dff; padding: 2px 8px; border-radius: 10px; font-size: 12px; pointer-events: none; }
+.cargo-list { margin-top: 4px; }
+.dropped-weapon { position: absolute; font-size: 14px; pointer-events: none; z-index: 2; filter: drop-shadow(0 0 2px #000); }
+.tile.dropped::after { content: '🗡'; position: absolute; right: 2px; bottom: 1px; font-size: 12px; filter: drop-shadow(0 0 2px #000); }
+.tile.t-whirlpool .tg, .tile.t-sandVortex .tg { animation: spin 3s linear infinite; display: inline-block; }
+@keyframes spin { to { transform: rotate(360deg); } }

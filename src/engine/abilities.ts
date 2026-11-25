@@ -2,6 +2,7 @@
 
 import { ABILITIES, ITEMS, TEMPLATES, WEAPONS } from '../data/registry';
 import { castTermina, ENEMY_TRANSFORMS, terminaNeedsTarget, terminaTargets, terminaUnusable } from './terminaAbilities';
+import { castWindWaker, wwCostMult, wwNeedsTarget, wwNeedsTile, wwTargets, wwTiles, wwUnusable } from './windwaker';
 import { buildAt, buildTargets, canDig, dig, hasTimeBlocks, ignite, meltSunBlocks, toggleTimeBlocks } from './field';
 import { roomFor, transformInto } from './transform';
 import { useFairy, type LevelUp } from './combat';
@@ -21,8 +22,10 @@ export function instrumentDiscount(u: Unit): number | null {
 }
 
 /** MP (or stamina, for techniques) an ability costs this unit. */
-export function abilityCost(u: Unit, def: AbilityDef): number {
-  if (def.sta) return def.sta;
+export function abilityCost(u: Unit, def: AbilityDef, b?: Battle): number {
+  const m = wwCostMult(b, u, def);
+  if (def.sta) return hasEffect(u, 'farorePearl') ? Math.ceil(def.sta * 0.75) : def.sta;
+  if (m !== 1) return Math.max(def.kind === 'song' ? 1 : 0, Math.floor(abilityCost(u, def) * m));
   if (def.mp && u.buffs?.some((x) => x.id === 'chateau')) return 0; // Chateau Romani
   if (def.kind !== 'song') return def.mp;
   let cost = Math.max(1, def.mp - (instrumentDiscount(u) ?? 0));
@@ -44,7 +47,8 @@ export function knownAbilities(u: Unit): AbilityDef[] {
   const innate = Object.values(ABILITIES).filter((a) => (a.kind === 'technique' && a.area && a.weaponTypes?.some((t) => types.has(t)))
     || (a.grantedBy?.weapons?.some((w) => u.weapons.includes(w))) || (a.grantedBy?.skill && u.skills.includes(a.grantedBy.skill))
     || (a.grantedBy?.gear?.some((g) => Object.values(u.gear ?? {}).includes(g) || u.maskForm === g))
-    || (a.grantedBy?.race && u.race === a.grantedBy.race) || (a.grantedBy?.templates?.includes(u.templateId ?? u.bossId ?? '')));
+    || (a.grantedBy?.race && u.race === a.grantedBy.race) || (a.grantedBy?.templates?.includes(u.templateId ?? u.bossId ?? ''))
+    || a.grantedBy?.everyone || a.grantedBy?.skills?.some((s) => u.skills.includes(s)) || a.grantedBy?.races?.includes(u.race));
   return [...learned, ...innate.filter((a) => !learned.includes(a))];
 }
 
@@ -82,9 +86,11 @@ export function unusableReason(b: Battle, u: Unit, def: AbilityDef): string | nu
   if ((def.kind === 'spell' || def.kind === 'song') && hasStatus(u, 'silence')) return 'Silenced';
   if (def.oncePerBattle && u.usedAbilities?.includes(def.id)) return 'Already used this battle';
   if (u.cooldowns?.[def.id]) return `Recharging (${u.cooldowns[def.id]} turn${u.cooldowns[def.id] > 1 ? 's' : ''})`;
-  if (def.sta ? u.sta < def.sta : u.mp < abilityCost(u, def)) return def.sta ? 'Not enough stamina' : 'Not enough MP';
+  if (def.sta ? u.sta < abilityCost(u, def, b) : u.mp < abilityCost(u, def, b)) return def.sta ? 'Not enough stamina' : 'Not enough MP';
   const tr = terminaUnusable(b, u, def);
   if (tr !== undefined) return tr;
+  const wr = wwUnusable(b, u, def);
+  if (wr !== undefined) return wr;
   if (def.id === 'spinAttack' && !b.units.some((e) => e.team !== u.team && unitDist(u, e) === 1)) return 'No adjacent enemies';
   if (def.warp && !warpTiles(b, u, def).length) return 'No suitable destination on this map';
   if (def.id === 'hookshotPull') {
@@ -120,7 +126,7 @@ export function castableAbilities(b: Battle, u: Unit): AbilityDef[] {
 }
 
 export function needsTile(def: AbilityDef): boolean {
-  return !!def.warp || def.id === 'hookshotPull' || def.id === 'buildHere' || def.id === 'transportAlly';
+  return !!def.warp || wwNeedsTile(def) || def.id === 'hookshotPull' || def.id === 'buildHere' || def.id === 'transportAlly';
 }
 
 /** Destination tiles for tile-targeted abilities (warps, Hookshot, Build, Transport). */
@@ -128,6 +134,7 @@ export function abilityTiles(b: Battle, u: Unit, def: AbilityDef): Pos[] {
   if (def.warp) return warpTiles(b, u, def);
   if (def.id === 'hookshotPull') return hookTiles(b, u).map((h) => h.land);
   if (def.id === 'buildHere') return buildTargets(b, u);
+  if (wwNeedsTile(def)) return wwTiles(b, u, def);
   if (def.id === 'transportAlly') {
     const t = transportee(b, u);
     if (!t) return [];
@@ -141,11 +148,12 @@ export function abilityTiles(b: Battle, u: Unit, def: AbilityDef): Pos[] {
   return [];
 }
 
-const HOOK_ANCHORS = new Set(['forest', 'wall', 'fort', 'mountain', 'cracked', 'timeBlock']);
+const HOOK_ANCHORS = new Set(['forest', 'wall', 'fort', 'mountain', 'cracked', 'timeBlock', 'grapplePost', 'grownTree', 'ropeSwing', 'watchtower', 'searchlight', 'commandStatue', 'hangingVine']);
 
 /** Hookshot: for each straight line, latch onto the first anchor or unit within range and land just before it. */
 export function hookTiles(b: Battle, u: Unit): { land: Pos; anchor: Pos }[] {
-  const range = u.weapons.includes('longshot') ? 5 : u.weapons.includes('hookshot') ? 3 : 0;
+  const grapple = u.weapons.includes('grapplingHook') ? 3 + (hasEffect(u, 'ropeGloves') ? 2 : 0) + (u.skills.includes('grappler') ? 2 : 0) : 0;
+  const range = Math.max(u.weapons.includes('longshot') ? 5 : u.weapons.includes('hookshot') ? 3 : 0, grapple);
   const out: { land: Pos; anchor: Pos }[] = [];
   for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
     for (let i = 1; i <= range; i++) {
@@ -172,6 +180,7 @@ function transportee(b: Battle, u: Unit): Unit | undefined {
 /** Units an ability can be aimed at (only abilities that need a target). */
 export function abilityTargets(b: Battle, u: Unit, def: AbilityDef): Unit[] {
   if (terminaNeedsTarget(def)) return terminaTargets(b, u, def);
+  if (wwNeedsTarget(def)) return wwTargets(b, u, def);
   if (def.id === 'masterCraftsman') {
     return b.units.filter((a) => a.team === u.team && unitDist(u, a) <= 1 && a.weapons.some((w) => (a.wear?.[w] ?? 0) > 0));
   }
@@ -182,7 +191,7 @@ export function abilityTargets(b: Battle, u: Unit, def: AbilityDef): Unit[] {
 }
 
 export function needsTarget(def: AbilityDef): boolean {
-  if (terminaNeedsTarget(def)) return true;
+  if (terminaNeedsTarget(def) || wwNeedsTarget(def)) return true;
   return def.id === 'greatFairysBlessing' || def.id === 'masterCraftsman';
 }
 
@@ -410,7 +419,7 @@ export function castAbility(b: Battle, u: Unit, id: string, rng: RNG, targetUid?
     }
     default:
       if (!def.warp) {
-        const tm = castTermina(b, u, def, rng, target, at);
+        const tm = castWindWaker(b, u, def, rng, target, at) ?? castTermina(b, u, def, rng, target, at);
         if (!tm) return null;
         res.hits.push(...tm.hits);
         res.heals.push(...tm.heals);
@@ -432,8 +441,8 @@ export function castAbility(b: Battle, u: Unit, id: string, rng: RNG, targetUid?
       }
       return null;
   }
-  if (def.sta) u.sta -= def.sta;
-  else u.mp -= abilityCost(u, def);
+  if (def.sta) u.sta -= abilityCost(u, def, b);
+  else u.mp -= abilityCost(u, def, b);
   if (def.cooldown) (u.cooldowns ??= {})[def.id] = def.cooldown;
   if (u.team === 'player') {
     for (const gains of gainXp(u, Math.min(60, xp), rng)) res.levelUps.push({ uid: u.uid, name: u.name, level: u.level, gains });

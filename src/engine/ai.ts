@@ -29,7 +29,10 @@ export function planAction(b: Battle, unit: Unit): AIPlan {
     // Stone Mask: unnoticed beyond 2 spaces until the wearer attacks.
     && !(hasEffect(u, 'stoneMask') && !u.attacked && unitDist(unit, u) > 2)
     // Gibdo Mask: Gibdos and ReDeads leave the wearer alone unless provoked.
-    && !(hasEffect(u, 'gibdo') && ['gibdo', 'redead'].includes(unit.artId ?? '') && unit.lastHitBy !== u.uid));
+    && !(hasEffect(u, 'gibdo') && ['gibdo', 'redead'].includes(unit.artId ?? '') && unit.lastHitBy !== u.uid)
+    // Ghost ships slip by at night; Poes won't touch Jalhalla's Mask.
+    && !(b.night && (hasEffect(u, 'ghostFlag') || u.skills.includes('phantomVoyage')) && !u.attacked && unitDist(unit, u) > 1)
+    && !(hasEffect(u, 'poeCommand') && unit.artId === 'poe'));
   const friends = b.units.filter((u) => u.team === unit.team && u !== unit);
   const lavaPenalty = (k: number) => (b.tiles[k] === 'lava' && !isLavaImmune(unit) ? LAVA_DAMAGE_PCT / 4 : 0);
 

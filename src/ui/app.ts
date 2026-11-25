@@ -5,7 +5,7 @@ import {
   advanceRegion, buySupplies, supplyPrice, give, clockLabel, songOfTimeReset, TERMINA_SCHEDULE, deposit, withdraw, returnStrayFairy, strayFairyCount, campFeast, commanderOf, FEAST_COST, improveMaterials, reviveWithDust, SUPPLY_PACK, availableNodes, buy, campDrill, campRest, campTrain, currentNode, depthOf, enterNode,
   equipFromConvoy, finishBattle, fountainBless, fountainHeal, fountainRevive, isRegionComplete, loadMeta, loadRun, newRun, offerRegions,
   recruit, recruitLevel, saveMeta, saveRun, canTake, canUseOutside, forgePrice, forgeWeapon, improveCost, improveWeapon, MAX_FORGE, repairCost, repairWeapon, FREE_FOR_ALL_REGION, isFreeForAll, fountainTeach, unlearnedFairySpells, priceOf, stashGear, stashItem, stashWeapon, useItemOutside, type ItemKindTag, startBattle, takeTreasure,
-  canChoose, chooseEvent, descendDungeon, eventDef, leaveDungeon,
+  canChoose, chooseEvent, descendDungeon, eventDef, leaveDungeon, fleetCrew, isNavalNode, ownedGear, vesselHasSlot,
   type Meta, type Reward, type RunEvent, type RunWithEvent,
 } from '../engine/run';
 import { equip } from '../engine/combat';
@@ -13,6 +13,8 @@ import { GEAR_SLOTS, PACK_SIZE, type GearSlot, type MapNode, type NodeType, type
 import { forgeLevel, slotFor } from '../engine/units';
 import { isSPair, rankOf } from '../engine/supports';
 import { BattleView } from './battleView';
+import { CHART_SIZE, fleetCap, lockReason, navalDeployCap, sectorName, seaOf } from '../engine/sea';
+import { capacityOf, isVessel } from '../engine/naval';
 import { audioSettings, music, setAudio, sfx } from './audio';
 import {
   applyMetaToRun, awardMedals, BOUNTIES, bump, buyUpgrade, claimBounties, FORMATIONS, HERO_COST, heroCandidates, KITS, medalsForRun, setMax, TRIALS,
@@ -40,9 +42,11 @@ const NODE_INFO: Record<NodeType, { icon: string; label: string; desc: string }>
   treasure: { icon: '◈', label: 'Treasure', desc: 'Claim equipment or a permanent upgrade.' },
   blacksmith: { icon: '⚒', label: 'Blacksmith', desc: 'Repair worn weapons, improve them (+1 Might), or forge new ones.' },
   boss: { icon: '♛', label: 'Regional Boss', desc: 'Defeat the region’s commander to march onward.' },
+  sea: { icon: '≈', label: 'Open Sea', desc: 'Empty water. Sailing on costs a day’s supplies.' },
 };
 
 type EventOf<T extends RunEvent['type']> = Extract<RunEvent, { type: T }>;
+const VESSEL_SLOT_SET = new Set<string>(['hull', 'sail', 'utility', 'flag']);
 
 export class App {
   private run: RunWithEvent | null = loadRun();
@@ -272,7 +276,7 @@ export class App {
         <div class="page">
           <div class="page-head"><button class="btn" data-nav="back">← Back</button><h1>Choose your Commander</h1><span></span></div>
           <p class="dim center-text">Each commander brings their own army and a special bonus. If the commander falls, the campaign is over.</p>
-          ${(['hyrule', 'termina'] as const).map((pack) => `<h2 class="pack-head">${pack === 'hyrule' ? 'Ocarina of Time · Hyrule' : "Majora's Mask · Termina"}</h2>
+          ${(['hyrule', 'termina', 'greatSea'] as const).map((pack) => `<h2 class="pack-head">${pack === 'hyrule' ? 'Ocarina of Time · Hyrule' : pack === 'termina' ? "Majora's Mask · Termina" : 'The Wind Waker · The Great Sea'}</h2>
           <div class="card-grid">${COMMANDERS.filter((c) => (c.campaign ?? 'hyrule') === pack).map((c) => {
             const t = TEMPLATES[c.heroId];
             const army = c.units.map((id) => TEMPLATES[id]);
@@ -289,9 +293,10 @@ export class App {
           <div class="run-options">
             <h3>Campaign options</h3>
             <div class="opt-row"><span class="dim small">Campaign</span><select data-opt="campaign">
-              <option value="">Commander's home${chosen ? ` (${(COMMANDERS.find((c) => c.heroId === chosen)?.campaign ?? 'hyrule') === 'termina' ? 'Termina' : 'Hyrule'})` : ''}</option>
+              <option value="">Commander's home${chosen ? ` (${({ hyrule: 'Hyrule', termina: 'Termina', greatSea: 'the Great Sea' } as const)[COMMANDERS.find((c) => c.heroId === chosen)?.campaign ?? 'hyrule']})` : ''}</option>
               <option value="hyrule" ${choices.campaign === 'hyrule' ? 'selected' : ''}>Hyrule: the endless war</option>
-              <option value="termina" ${choices.campaign === 'termina' ? 'selected' : ''}>Termina: three days until the Moon falls</option></select></div>
+              <option value="termina" ${choices.campaign === 'termina' ? 'selected' : ''}>Termina: three days until the Moon falls</option>
+              <option value="greatSea" ${choices.campaign === 'greatSea' ? 'selected' : ''}>The Great Sea: sail a 7×7 chart of islands and fleets</option></select></div>
             ${p.heroes.length ? `<div class="opt-row"><span class="dim small">Companion (Hall of Heroes)</span><select data-opt="hero"><option value="">None</option>${p.heroes.map((id) => `<option value="${id}" ${choices.hero === id ? 'selected' : ''}>${esc(TEMPLATES[id]?.name ?? id)}</option>`).join('')}</select></div>` : ''}
             ${p.kits.length ? `<div class="opt-row"><span class="dim small">Starting kit (Royal Treasury)</span><select data-opt="kit"><option value="">None</option>${KITS.filter((k) => p.kits.includes(k.id)).map((k) => `<option value="${k.id}" ${choices.kit === k.id ? 'selected' : ''}>${esc(k.name)}</option>`).join('')}</select></div>` : ''}
             ${p.formations.length ? `<div class="opt-row"><span class="dim small">Formation (Military Academy)</span><select data-opt="formation"><option value="">Standard</option>${FORMATIONS.filter((f) => p.formations.includes(f.id)).map((f) => `<option value="${f.id}" ${choices.formation === f.id ? 'selected' : ''}>${esc(f.name)}</option>`).join('')}</select></div>` : ''}
@@ -357,6 +362,8 @@ export class App {
         <div><span class="dim small">Army</span> <b>${run.roster.length}/${armyCap(run)}</b></div>
         <div class="tb-res"><span class="dim small">Supplies</span> <b class="${armyOf(run).supplies < 5 ? 'bad' : ''}">${armyOf(run).supplies}</b></div>
         <div class="tb-res"><span class="dim small">Morale</span> <b>${armyOf(run).morale}</b></div>
+        ${run.sea ? (() => { const sea = seaOf(run); const ships = run.roster.filter(isVessel); return `<div class="tb-res" title="Fleet: vessels owned / Fleet Capacity. Deploy: vessels per sea battle. Crew: passengers they carry."><span class="dim small">Fleet</span> <b>${ships.length}/${fleetCap(run)}</b> <span class="dim small">deploy ${navalDeployCap(run)} · crew ${fleetCrew(run)}</span></div>
+          <div class="tb-res" title="Navigation reveals the chart; Salvage improves sunken treasure; Naval Reputation brings pirates and merchants."><span class="dim small">Nav</span> <b>${sea.navigation}</b> <span class="dim small">Salv</span> <b>${sea.salvage}</b> <span class="dim small">Rep</span> <b>${sea.reputation}</b></div>`; })() : ''}
         ${run.clock ? (() => { const c = clockLabel(run); return `<div class="tb-clock ${c.hoursLeft <= 12 ? 'bad' : c.day === 3 ? 'warn' : ''}" title="The Moon falls when the third day ends."><span class="dim small">Day ${c.day} ${c.night ? '☾' : '☀'}</span> <b>${c.time}</b> <span class="dim small">${c.hoursLeft}h left</span></div>
           <button class="btn small" data-nav="songoftime" title="Return to the dawn of the first day">🎵 Song of Time</button>`; })() : ''}
         <div class="spacer"></div>
@@ -466,7 +473,8 @@ export class App {
         <span>${i > 0 ? `<button class="btn small" data-k="equip" data-id="${id}">Equip</button>` : ''}${u.weapons.length > 1 ? `<button class="btn small" data-k="stash" data-id="${id}">To convoy</button>` : ''}</span></div>`).join('')}
       </div>
       <h3>Gear</h3>
-      <div class="equip-list">${GEAR_SLOTS.map((slot) => {
+      ${isVessel(u) ? `<p class="dim small">Carries ${capacityOf(u)} passengers. Ships only sail into sea battles.</p>` : ''}
+      <div class="equip-list">${GEAR_SLOTS.filter((slot) => (isVessel(u) ? vesselHasSlot(u, slot) : !VESSEL_SLOT_SET.has(slot) && (slot !== 'mount' || true))).map((slot) => {
         const id = u.gear[slot];
         return `<div class="equip-row"><span><span class="dim">${SLOT_ICONS[slot]} ${SLOT_LABELS[slot]}</span> ${id ? esc(itemName(id)) : '<span class="dim">—</span>'}${
           id && slot === 'shield' && WEAPONS[u.weapons[0]]?.twoHanded ? ' <span class="badge">inactive: two-handed weapon</span>' : ''}</span>
@@ -551,7 +559,74 @@ export class App {
     });
   }
 
+  /** The Great Sea chart: 7×7 sectors, sail one sector at a time. */
+  private seaChart() {
+    music('map');
+    const run = this.run!;
+    const sea = seaOf(run);
+    const owned = ownedGear(run);
+    const avail = new Set(availableNodes(run).map((n) => n.id));
+    const cur = currentNode(run);
+    const icon = (n: MapNode): string => {
+      if (!sea.revealed.includes(n.id) && !n.visited) return '?';
+      if (n.island) return sea.cleared.includes(n.island) ? '✔' : n.type === 'shop' ? '₹' : '●';
+      if (n.visited && !['shop', 'camp', 'fountain', 'blacksmith'].includes(n.type)) return '·';
+      if (['battle', 'elite', 'ambush', 'boss'].includes(n.type)) return n.label === 'The Ghost Ship' ? '☠' : n.type === 'boss' ? '🐙' : '!';
+      if (n.type === 'sea') return '≈';
+      return NODE_INFO[n.type].icon;
+    };
+    const kindClass = (n: MapNode) => (!sea.revealed.includes(n.id) && !n.visited ? 'unknown' : n.island ? 'island' : ['battle', 'elite', 'ambush', 'boss'].includes(n.type) ? 'hostile' : n.type === 'sea' ? 'water' : 'vessel');
+    const cells: string[] = [];
+    for (let y = 0; y < CHART_SIZE; y++) for (let x = 0; x < CHART_SIZE; x++) {
+      const n = run.map.nodes.find((m) => m.col === x && m.row === y)!;
+      const lock = n.locked ? lockReason(run, n, owned) : null;
+      const cls = ['sector', kindClass(n), avail.has(n.id) ? 'avail' : '', n.visited ? 'visited' : '', n.id === cur?.id ? 'current' : '', lock ? 'locked' : ''].join(' ');
+      cells.push(`<button class="${cls}" data-nav="${avail.has(n.id) ? 'node' : 'peek'}" data-id="${n.id}" title="${esc(sectorName(x, y))}${n.label && (sea.revealed.includes(n.id) || n.visited) ? ` · ${esc(n.label)}` : ''}">
+        <span class="sec-name">${sectorName(x, y)}</span><span class="sec-icon">${icon(n)}</span>${n.island && n.label ? `<span class="sec-label">${esc(n.label.replace(/ \(.*\)/, ''))}</span>` : ''}${lock ? '<span class="sec-lock">🔒</span>' : ''}${n.id === cur?.id ? '<span class="sec-boat">⛵</span>' : ''}</button>`);
+    }
+    const sail = run.lastSail ?? [];
+    this.setScreen(`
+      ${this.topBar()}
+      <div class="map-layout">
+        <div class="map-main">
+          <h2 style="color:#2a7ac0">The Great Sea <span class="dim small">· Chart ${sea.charts + 1}</span></h2>
+          <p class="dim small">Sail one sector at a time: each crossing eats a day of supplies. Clear the islands, gather the Goddess Pearls to raise the Tower of the Gods, then take the fight to Ganon's Tower.
+            <span class="badge">Islands cleared ${sea.cleared.length}/10</span> <span class="badge">Pearls ${['dinsPearl', 'faroresPearl', 'nayrusPearl'].filter((p) => owned.has(p)).length}/3</span>
+            <span class="badge">Triforce Shards ${(run.questItems ?? []).filter((q) => q.startsWith('triforceShard')).length}/8</span></p>
+          ${sail.length ? `<div class="sail-log small">${sail.map((l) => `<div>🌊 ${esc(l)}</div>`).join('')}</div>` : ''}
+          <div class="sea-chart">${cells.join('')}</div>
+          <div class="legend"><span><b>●</b> Island</span><span><b>₹</b> Merchant / port</span><span><b>!</b> Hostile fleet</span><span><b>🐙</b> Sea boss</span><span><b>?</b> Unknown</span><span><b>≈</b> Open sea</span><span><b>✔</b> Cleared</span><span><b>🔒</b> Locked</span></div>
+          <div class="node-info dim small">Tap a glowing sector next to your ship to sail there.</div>
+        </div>
+        ${this.partyHtml()}
+      </div>`);
+    const show = (id: string, go: boolean) => {
+      const n = run.map.nodes.find((x) => x.id === id)!;
+      const known = sea.revealed.includes(n.id) || n.visited;
+      const info = NODE_INFO[n.type];
+      const lock = n.locked ? lockReason(run, n, owned) : null;
+      const el = this.root.querySelector('.node-info') as HTMLElement;
+      const what = !known ? 'Uncharted water. Anything could be out there.'
+        : `${n.label ? `<b>${esc(n.label)}</b>: ` : ''}${n.visited && !['shop', 'camp', 'fountain', 'blacksmith'].includes(n.type) && n.type !== 'sea' ? 'Already explored.' : `${info.icon} ${esc(info.label)} — ${esc(info.desc)}`}${['battle', 'elite', 'ambush', 'boss'].includes(n.type) ? ` <span class="badge">${isNavalNode(run, n) ? 'Sea battle' : 'Land battle'}</span>` : ''}`;
+      el.innerHTML = `<b>${sectorName(n.col, n.row)}</b> · ${what}${lock ? ` <span class="badge">🔒 ${esc(lock)}</span>` : ''}${go ? ` <button class="btn primary small" data-nav="go" data-id="${n.id}">Sail →</button>` : ''}`;
+      el.classList.remove('dim');
+    };
+    this.on({
+      ...this.common(() => this.mapScreen()),
+      peek: (el) => show(el.dataset.id!, false),
+      node: (el) => show(el.dataset.id!, true),
+      go: (el) => {
+        enterNode(run, el.dataset.id!);
+        this.save();
+        if (run.battle) this.battle();
+        else if (run.event) this.eventScreen();
+        else this.mapScreen();
+      },
+    });
+  }
+
   mapScreen() {
+    if (this.run?.campaign === 'greatSea') return this.seaChart();
     music(this.run?.campaign === 'termina' ? (this.run.region === 'moon' ? 'moon' : 'termina') : 'map');
     const run = this.run!;
     const avail = new Set(availableNodes(run).map((n) => n.id));
@@ -809,16 +884,22 @@ export class App {
   private deployScreen() {
     const run = this.run!;
     const chosen = new Set(run.roster.filter((u) => u.isCommander).map((u) => u.uid));
-    // Default: commander plus the healthiest units.
-    for (const u of [...run.roster].sort((a, b) => b.hp / b.stats.hp - a.hp / a.stats.hp)) if (chosen.size < deployCap(run)) chosen.add(u.uid);
+    const node = currentNode(run);
+    const naval = !!node && isNavalNode(run, node);
+    const landCount = () => run.roster.filter((u) => chosen.has(u.uid) && !isVessel(u)).length;
+    const shipCount = () => run.roster.filter((u) => chosen.has(u.uid) && isVessel(u)).length;
+    const room = (u: Unit) => (isVessel(u) ? naval && shipCount() < navalDeployCap(run) : landCount() < deployCap(run));
+    // Default: commander plus the healthiest units (and the sturdiest ships at sea).
+    for (const u of [...run.roster].sort((a, b) => b.hp / b.stats.hp - a.hp / a.stats.hp)) if (room(u)) chosen.add(u.uid);
     const render = () => {
       this.setScreen(`
         ${this.topBar()}
         <div class="page">
           <h1>Deployment</h1>
-          <p class="dim center-text">Choose up to <b>${deployCap(run)}</b> units. Benched units recover extra HP. (${chosen.size}/${deployCap(run)})</p>
+          <p class="dim center-text">Choose up to <b>${deployCap(run)}</b> units. Benched units recover extra HP. (${landCount()}/${deployCap(run)})
+            ${naval ? `<br>⛵ <b>Sea battle</b>: also choose up to <b>${navalDeployCap(run)}</b> ships (${shipCount()}/${navalDeployCap(run)}). Your units start aboard them.` : run.roster.some(isVessel) ? '<br><span class="dim">This fight is on land: your ships wait in the harbour.</span>' : ''}</p>
           <div class="deploy-grid">${run.roster.map((u) => `
-            <button class="deploy ${chosen.has(u.uid) ? 'on' : ''}" data-nav="toggle" data-uid="${u.uid}" ${u.isCommander ? 'disabled' : ''}>
+            <button class="deploy ${chosen.has(u.uid) ? 'on' : ''}" data-nav="toggle" data-uid="${u.uid}" ${u.isCommander || (isVessel(u) && !naval) ? 'disabled' : ''}>
               ${token(u, 40)}<div><b>${esc(u.name)}</b><div class="dim small">Lv ${u.level} ${esc(CLASSES[u.classId]?.name ?? '')}${u.size > 1 ? ` · Size ${u.size}` : ''}</div>${hpBar(u.hp, u.stats.hp)}<div class="dim small">HP ${u.hp}/${u.stats.hp}</div></div>
             </button>`).join('')}</div>
           <div class="center-text"><button class="btn primary big" data-nav="go">To Battle →</button></div>
@@ -827,8 +908,9 @@ export class App {
         ...this.common(render),
         toggle: (el) => {
           const uid = el.dataset.uid!;
+          const u = run.roster.find((x) => x.uid === uid)!;
           if (chosen.has(uid)) chosen.delete(uid);
-          else if (chosen.size < deployCap(run)) chosen.add(uid);
+          else if (room(u)) chosen.add(uid);
           render();
         },
         go: () => { startBattle(run, [...chosen]); this.save(); this.battle(); },

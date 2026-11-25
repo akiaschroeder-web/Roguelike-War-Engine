@@ -5,6 +5,8 @@ import { STATUS_INFO } from '../engine/status';
 import { canUse, canUseHere, isTargeted, targetTiles, useItem } from '../engine/items';
 import { adjacentMailboxes, environmentPhase, isSeen, openMailbox, pressInversion, revealNearby, triggerTraps, visibleTiles } from '../engine/field';
 import { planAction } from '../engine/ai';
+import { syncPosition } from '../engine/windwaker';
+import { enemyUnload, windLabel } from '../engine/naval';
 import { sideQuestText } from '../engine/run';
 import { adjacentCaptives, checkResult, freeCaptive, mountToggleBlocked, moveUnit, toggleMount, objectiveText, spawnReinforcements, startPhase, type TurnStartEvent } from '../engine/battle';
 import {
@@ -29,6 +31,9 @@ const TERRAIN_GLYPH: Record<string, string> = {
   cracked: '▤', timeBlock: '⧗', timeGap: '·', bridge: '═',
   dekuFlower: '✿', goldFlower: '❀', owlStatue: '🦉', poisonWater: '≈', frozenMech: '❄', rollingRamp: '◢',
   current: '➶', waterwheel: '⚙', sunBlock: '☀', weightedSwitch: '⊙', inversionSwitch: '⇅', mailbox: '📬',
+  whirlpool: '🌀', updraft: '⇡', ropeSwing: '〰', grapplePost: '⚲', hangingVine: '⌇', plantingSoil: '⁘', grownTree: '🌳',
+  shipDeck: '▭', boardingPoint: '⚓', cannonEmplacement: '💣', submergedTreasure: '✦', sandVortex: '◎', spikedBarrel: '✸',
+  watchtower: '♜', searchlight: '🔦', commandStatue: '🗿',
 };
 
 export class BattleView {
@@ -165,7 +170,9 @@ export class BattleView {
       <div class="bh-turn"><span class="dim small">Turn ${b.turn}</span><b class="phase ${this.phaseCls}">${this.phaseLabel} Phase</b></div>
       <div class="bh-count"><span class="dim small">Enemies</span><b>${b.fog || b.units.some((u) => u.hidden) ? `${b.units.filter((u) => u.team === 'enemy' && isSeen(b, u)).length} seen` : enemies}</b></div>
       ${b.weather ? `<div class="weather"><span class="dim small">Weather</span><b>${b.weather.kind === 'rain' ? '🌧 Rain' : '🌪 Sandstorm'} (${b.weather.turns})</b></div>` : ''}
-      ${b.fog ? '<div class="weather"><span class="dim small">Visibility</span><b>🌫 Fog</b></div>' : ''}`;
+      ${b.fog ? '<div class="weather"><span class="dim small">Visibility</span><b>🌫 Fog</b></div>' : ''}
+      ${b.wind ? `<div class="weather" title="Ships sail faster with the wind (+2 MOV) and slower against it (−2)."><span class="dim small">Wind</span><b>${esc(windLabel(b.wind))}</b></div>` : ''}
+      ${b.night && b.naval ? '<div class="weather"><span class="dim small">Time</span><b>☾ Night</b></div>' : ''}`;
   }
 
   private posStyle(el: HTMLElement, x: number, y: number) {
@@ -195,7 +202,7 @@ export class BattleView {
       el.classList.toggle('captive', !!u.captive);
       el.classList.toggle('unseen', !isSeen(this.b, u));
       el.classList.toggle('big', u.size > 1);
-      el.innerHTML = `<div class="u-body">${token(u, Math.round(this.tile * u.size * (u.size > 1 ? 0.86 : 0.78)))}</div>${hpBar(u.hp, u.stats.hp)}${u.statuses.length ? `<i class="stun-mark">${u.statuses.map((st) => STATUS_INFO[st.kind].icon).join('')}</i>` : ''}${isMounted(u) && !CLASSES_MOUNTED(u) ? '<i class="mount-mark">🐎</i>' : ''}${u.vip ? '<i class="vip-mark">VIP</i>' : u.captive ? '<i class="vip-mark">⛓</i>' : ''}`;
+      el.innerHTML = `<div class="u-body">${token(u, Math.round(this.tile * u.size * (u.size > 1 ? 0.86 : 0.78)))}</div>${hpBar(u.hp, u.stats.hp)}${u.statuses.length ? `<i class="stun-mark">${u.statuses.map((st) => STATUS_INFO[st.kind].icon).join('')}</i>` : ''}${isMounted(u) && !CLASSES_MOUNTED(u) ? '<i class="mount-mark">🐎</i>' : ''}${u.vip ? '<i class="vip-mark">VIP</i>' : u.captive ? '<i class="vip-mark">⛓</i>' : ''}${u.cargo?.length ? `<i class="vip-mark" title="${esc(u.cargo.map((p) => p.name).join(', '))}">⛵${u.cargo.length}</i>` : ''}${u.damaged && Object.keys(u.damaged).length ? '<i class="mount-mark" title="Damaged">🔧</i>' : ''}`;
       el.classList.toggle('barrier', u.buffs.some((x) => x.barrier));
     }
   }
@@ -247,6 +254,7 @@ export class BattleView {
     const seen = visibleTiles(b);
     if (seen) b.tiles.forEach((_, k) => { if (!seen.has(k)) add(k, 'fog'); });
     for (const f of b.fires ?? []) add(keyOf(b, f.x, f.y), 'fire');
+    for (const d of b.dropped ?? []) add(keyOf(b, d.x, d.y), 'dropped');
     for (const sp of b.sprouts ?? []) add(keyOf(b, sp.x, sp.y), 'sprout');
     for (const t of b.traps ?? []) if (!t.hidden) add(keyOf(b, t.x, t.y), 'trap');
     if (b.units.some((u) => u.team === 'player' && u.skills.includes('graveyardShift'))) for (const d of b.digSpots ?? []) add(keyOf(b, d.x, d.y), 'digspot');
@@ -463,8 +471,9 @@ export class BattleView {
       html = `
         ${this.attackTargets(this.sel).length ? '<button class="btn primary" data-act="attack">Attack</button>' : ''}
         ${this.healTargets(this.sel).length ? '<button class="btn primary" data-act="heal">Heal</button>' : ''}
-        ${menuAbilities(this.sel).some((d) => d.implemented) ? `<button class="btn" data-act="magic" ${castableAbilities(this.b, this.sel).length ? '' : 'disabled'}>Abilities</button>` : ''}
+        ${menuAbilities(this.sel).some((d) => d.implemented) ? `<button class="btn" data-act="magic" ${castableAbilities(this.b, this.sel).filter((d) => !d.contextual).length ? '' : 'disabled'}>Abilities</button>` : ''}
         ${adjacentCaptives(this.b, this.sel).length ? '<button class="btn primary" data-act="free">Free Prisoner</button>' : ''}
+        ${knownAbilities(this.sel).filter((d) => d.contextual && !unusableReason(this.b, this.sel!, d)).map((d) => `<button class="btn" data-act="cast" data-id="${d.id}" title="${esc(d.desc)}">${d.icon ?? ''} ${esc(d.id === 'disembark' && this.sel!.cargo?.[0] ? `Disembark ${this.sel!.cargo[0].name}` : d.name)}</button>`).join('')}
         ${adjacentMailboxes(this.b, this.sel).length ? '<button class="btn" data-act="mail">📬 Check Mailbox</button>' : ''}
         ${this.sel.pack.some((_, i) => canUseHere(this.b, this.sel!, i)) ? '<button class="btn" data-act="items">Item</button>' : ''}
         <button class="btn" data-act="wait">Wait</button>
@@ -880,6 +889,7 @@ export class BattleView {
 
   /** After a player unit moves: traps spring, hidden things are revealed. */
   private afterMove(u: Unit) {
+    syncPosition(this.b, u);
     if (pressInversion(this.b, u)) { sfx('secret'); this.addLog('🔄 The Inversion Switch flips the walls and floors!'); }
     const dmg = triggerTraps(this.b, u);
     if (dmg) { sfx('hit'); this.float(u, `TRAP −${dmg}`, 'dmg'); this.addLog(`⚠ <b class="player">${esc(u.name)}</b> stepped on a spike trap (−${dmg} HP, rooted)!`); }
@@ -1049,8 +1059,10 @@ export class BattleView {
     this.b.rngState = rng.state;
     if (!res) { this.mode = 'action'; this.renderAll(); return; }
     if (res.transformed) sfx('transform'); else if (res.def.kind !== 'song') sfx('spell');
-    this.addLog(`<b class="${u.team}">${esc(u.name)}</b> ${res.def.kind === 'song' ? 'plays' : res.def.kind === 'technique' ? 'uses' : 'casts'} ${esc(res.def.name)}.`);
-    await this.banner(res.def.name, res.def.kind === 'song' ? 'song' : 'player');
+    if (!res.def.contextual) {
+      this.addLog(`<b class="${u.team}">${esc(u.name)}</b> ${res.def.kind === 'song' ? 'plays' : res.def.kind === 'technique' ? 'uses' : 'casts'} ${esc(res.def.name)}.`);
+      await this.banner(res.def.name, res.def.kind === 'song' ? 'song' : 'player');
+    }
     if (res.def.id === 'dinsFire') {
       const blast = document.createElement('div');
       blast.className = 'blast fire';
@@ -1079,10 +1091,17 @@ export class BattleView {
     if (res.mounted) { this.float(u, 'MOUNTED', 'heal'); this.addLog(`${esc(u.name)}'s mount answers the call!`); }
     if (res.repaired) { const t = this.unitById(res.repaired.uid); if (t) this.float(t, 'REPAIRED', 'heal'); this.addLog(`${esc(u.name)} repairs ${esc(weaponDef(res.repaired.weaponId)?.name ?? '')}.`); }
     if (res.transformed) { this.unitEls.get(u.uid)?.remove(); this.unitEls.delete(u.uid); this.renderUnits(); this.float(u, 'TRANSFORM!', 'crit'); this.addLog(`⚡ ${esc(res.transformed)} becomes <b>${esc(u.name)}</b>!`); }
-    await sleep(700);
+    await sleep(res.def.contextual ? 250 : 700);
     this.abilityId = null;
     this.renderAll();
     await this.levelUps(res.levelUps);
+    // Disembarking from a ship that hasn't sailed yet: hand control back so the passenger can act.
+    if (res.def.id === 'disembark' && !u.moved && this.b.units.includes(u)) {
+      this.sel = null; this.moves = null; this.origin = null; this.mode = 'idle';
+      this.renderAll();
+      return;
+    }
+    if (res.def.id === 'boardVessel' && res.free) { this.sel = null; this.moves = null; this.origin = null; this.mode = 'idle'; this.renderAll(); return; }
     if ((res.def.freeAction || res.free) && this.b.units.includes(u)) {
       this.afterMove(u);
       this.origin = null;
@@ -1218,6 +1237,7 @@ export class BattleView {
       const plan = planAction(b, a);
       if (plan.path.length > 1) await this.walk(a, plan.path);
       else moveUnit(a, plan.dest.x, plan.dest.y);
+      syncPosition(b, a);
       const target = plan.action ? b.units.find((u) => u.uid === plan.action!.target) : undefined;
       if (target && plan.action!.type === 'attack') {
         const weapon = attackWeapons(a, unitDist(a, target)).find((w) => w.id === plan.action!.weaponId)?.id ?? attackWeapons(a, unitDist(a, target))[0]?.id;
@@ -1278,9 +1298,13 @@ export class BattleView {
         await this.banner(`${tr.transformed} → ${e.name}!`, 'enemy');
         this.addLog(`⚡ ${esc(tr.transformed)} becomes <b>${esc(e.name)}</b>!`);
       }
+      // Enemy ships put their crews ashore near your army.
+      const landed = enemyUnload(b, e);
+      if (landed.length) { this.renderUnits(); this.addLog(`⚓ ${landed.map((x) => esc(x.name)).join(', ')} land${landed.length === 1 ? 's' : ''} from the ${esc(e.name)}!`); await sleep(250); }
       const plan = planAction(b, e);
       const moved = plan.path.length > 1;
       if (moved) await this.walk(e, plan.path);
+      syncPosition(b, e);
       if (moved) {
         const trap = triggerTraps(b, e);
         if (trap) { sfx('bomb'); this.float(e, `TRAP −${trap}`, 'dmg'); this.addLog(`💥 ${esc(e.name)} sets off your Death Armos Core (−${trap})!`); }
@@ -1339,7 +1363,7 @@ export class BattleView {
 
 /** Abilities shown in the Abilities menu (forecast-only modifiers are excluded). */
 function menuAbilities(u: Unit) {
-  return knownAbilities(u).filter((d) => d.kind !== 'arrow' && !(d.kind === 'technique' && !d.area));
+  return knownAbilities(u).filter((d) => d.kind !== 'arrow' && !(d.kind === 'technique' && !d.area) && !d.contextual);
 }
 
 /** Cavalry classes are always mounted; only show the horse badge for gear mounts. */

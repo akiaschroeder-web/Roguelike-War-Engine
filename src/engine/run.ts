@@ -10,7 +10,11 @@ import { ARMY_CAPACITY, DEPLOY_CAPACITY } from './rules';
 import { adjustMorale, adjustReputation, applyArmyBuffs, armyCap, armyOf, deployCap, gainArmyXp, newArmy, repDiscount, supplyCap } from './army';
 import { prepareForBattle } from './units';
 import { emptyProgress, type MetaProgress } from './meta';
+import { chartComplete, fleetCap, generateSeaChart, navalDeployCap, newSea, revealAround, sail, seaDepth, seaMoves, seaOf } from './sea';
+import { capacityOf, isVessel } from './naval';
 import { addToPack, canRide, forgeLevel, gainXp, makeHero, maxUses, rollLevelUp, slotFor } from './units';
+import { VESSEL_SLOTS } from './types';
+import { VESSEL_SLOTS_BY_SIZE } from '../content/windwaker';
 import type { Battle, BossDef, CommanderDef, EventDef, EventEffect, EventOutcome, EventRequires, EnemyForce, FactionDef, GearSlot, MapNode, NodeType, Rarity, Run, RunMap, Unit, UnitTemplate, WorldId } from './types';
 
 export const ROWS_PER_REGION = 7; // last row is the regional boss
@@ -31,13 +35,13 @@ export function commanderOf(run: Run): CommanderDef {
   return COMMANDERS.find((c) => c.heroId === run.commanderId) ?? COMMANDERS[0];
 }
 
-export function newRun(seed: number, commanderId: string, campaign?: 'hyrule' | 'termina'): RunWithEvent {
+export function newRun(seed: number, commanderId: string, campaign?: 'hyrule' | 'termina' | 'greatSea'): RunWithEvent {
   const rng = new RNG(seed);
   const cmd = COMMANDERS.find((c) => c.heroId === commanderId) ?? COMMANDERS[0];
   const camp = campaign ?? cmd.campaign ?? 'hyrule';
   const home = TEMPLATES[cmd.heroId].home;
   // Hyrule campaigns start in the commander's home region; Termina always starts in Clock Town.
-  const region = camp === 'termina' ? 'clockTown' : WORLDS[home]?.campaign === 'termina' ? 'hyruleField' : home === 'hyruleCastle' ? 'hyruleField' : home;
+  const region = camp === 'termina' ? 'clockTown' : camp === 'greatSea' ? 'outsetIsland' : WORLDS[home]?.campaign ? 'hyruleField' : home === 'hyruleCastle' ? 'hyruleField' : home;
   const run: RunWithEvent = {
     seed, rngState: 0, act: 1, region, regionsVisited: [region], map: { rows: 0, nodes: [] }, currentNodeId: null,
     roster: [], fallen: [], rupees: 200, convoy: [], commanderId: cmd.heroId, bonus: cmd.bonus,
@@ -60,6 +64,16 @@ export function newRun(seed: number, commanderId: string, campaign?: 'hyrule' | 
   run.rngState = rng.state;
   run.campaign = camp;
   if (camp === 'termina') { run.clock = { hours: 0, resets: 0 }; run.bank = 0; run.questItems = []; }
+  if (camp === 'greatSea') {
+    run.sea = newSea();
+    run.questItems = [];
+    // Every crew needs a ship.
+    if (!run.roster.some(isVessel)) run.roster.push(makeHero('sailingBoat', nextUid(run), 1, rng));
+    run.map = generateSeaChart(rng, 0);
+    const start = run.map.nodes.find((n) => n.island === 'outset')!;
+    revealAround(run, start.col, start.row);
+    run.rngState = rng.state;
+  }
   return run;
 }
 
@@ -110,6 +124,7 @@ export function nodeById(run: Run, id: string): MapNode | undefined {
 }
 
 export function availableNodes(run: Run): MapNode[] {
+  if (run.campaign === 'greatSea') return seaMoves(run, ownedGear(run));
   if (!run.currentNodeId) return run.map.nodes.filter((n) => n.row === 0);
   const cur = nodeById(run, run.currentNodeId);
   return cur ? cur.next.map((id) => nodeById(run, id)!).filter(Boolean) : [];
@@ -121,6 +136,7 @@ export function currentNode(run: Run): MapNode | undefined {
 
 /** Overall depth; drives enemy scaling forever. */
 export function depthOf(run: Run, node: MapNode): number {
+  if (run.campaign === 'greatSea') return seaDepth(run, node);
   return (run.act - 1) * ROWS_PER_REGION + node.row;
 }
 
@@ -152,6 +168,8 @@ export const DUNGEON_FLOORS = 3;
 
 export interface RunWithEvent extends Run {
   event?: RunEvent;
+  /** Great Sea: what happened on the last crossing. */
+  lastSail?: string[];
 }
 
 const RARITY_BY_REGION: Rarity[][] = [
@@ -193,9 +211,22 @@ function bossFor(run: Run, rng: RNG, node: MapNode): BossDef {
 export function enterNode(run: RunWithEvent, nodeId: string): void {
   const node = nodeById(run, nodeId);
   if (!node || !availableNodes(run).includes(node)) throw new Error('Node not available');
+  const revisit = node.visited;
   run.currentNodeId = nodeId;
   node.visited = true;
   run.event = undefined;
+  if (run.campaign === 'greatSea') {
+    const a = armyOf(run);
+    const rep = withRng(run, (rng) => sail(run, rng, (n) => { if (a.supplies < n) return false; a.supplies -= n; return true; }));
+    (run as RunWithEvent).lastSail = rep.lines;
+    revealAround(run, node.col, node.row);
+    // Sailing back through explored water: only ports and havens open again.
+    const services: NodeType[] = ['shop', 'camp', 'fountain', 'blacksmith'];
+    if (node.type === 'sea' || (revisit && !services.includes(node.type))) {
+      if (node.type === 'sea' && !revisit && withRng(run, (rng) => rng.chance(18))) node.type = 'event';
+      else return;
+    }
+  }
   if (advanceClock(run, hoursFor(node.type))) { run.event = { type: 'moonfall' }; return; }
   if (BATTLE_NODES.includes(node.type)) {
     if (node.type === 'dungeon') run.dungeon = { floor: 1, of: DUNGEON_FLOORS };
@@ -209,6 +240,8 @@ export function enterNode(run: RunWithEvent, nodeId: string): void {
         run.event = { type: 'recruit', offers: recruitOffers(run, rng, node.world) };
         break;
       case 'shop': {
+        const q = run.questItems ?? [];
+        if (q.includes('fillUpCoupon')) { armyOf(run).supplies = supplyCap(run); run.questItems = q.filter((x) => x !== 'fillUpCoupon'); }
         const rar = raritiesFor(run.act);
         const weapons = rng.shuffle(Object.values(WEAPONS).filter((w) => !w.unique && rar.includes(w.rarity))).slice(0, 5).map((w) => w.id);
         const gear = rng.shuffle(Object.values(GEAR).filter((a) => !a.unique && rar.includes(a.rarity))).slice(0, 4).map((a) => a.id);
@@ -229,9 +262,19 @@ export function enterNode(run: RunWithEvent, nodeId: string): void {
       case 'fountain':
         run.event = { type: 'fountain' };
         break;
-      case 'treasure':
-        run.event = { type: 'treasure', rewards: treasureRewards(run, rng), rupees: 100 + run.act * 60 };
+      case 'treasure': {
+        const salvage = run.campaign === 'greatSea' ? 1 + (seaOf(run).salvage - 1) * 0.25 : 1;
+        run.event = { type: 'treasure', rewards: treasureRewards(run, rng), rupees: Math.round((100 + run.act * 60) * salvage) };
+        const q = (run.questItems ??= []);
+        const shards = q.filter((x) => x.startsWith('triforceShard')).length;
+        if (shards < 8 && (q.includes('incredibleChart') || q.includes('triforceChart'))) {
+          if (q.includes('triforceChart')) q.splice(q.indexOf('triforceChart'), 1);
+          addQuestItem(run, `triforceShard${shards + 1}`);
+          (run as RunWithEvent).lastSail = [...((run as RunWithEvent).lastSail ?? []), `You haul up Triforce Shard ${shards + 1}!`];
+        }
+        if (q.includes('treasureChart')) { q.splice(q.indexOf('treasureChart'), 1); run.event.rupees += 300; }
         break;
+      }
       case 'event': {
         const pool = Object.values(EVENTS).filter((e) => (!e.regions || e.regions.includes(node.world)) && meetsRequires(run, e.requires));
         const fresh = pool.filter((e) => !(run.eventsSeen ?? []).includes(e.id));
@@ -247,7 +290,10 @@ export function enterNode(run: RunWithEvent, nodeId: string): void {
 /** Go to deployment (if the army is bigger than the field) or straight into battle. */
 export function marchToBattle(run: RunWithEvent): void {
   const node = currentNode(run)!;
-  if (run.roster.length > deployCap(run)) run.event = { type: 'deploy', nodeId: node.id };
+  const land = run.roster.filter((u) => !isVessel(u)).length;
+  const ships = run.roster.filter(isVessel).length;
+  const naval = isNavalNode(run, node);
+  if (land > deployCap(run) || (naval && ships > navalDeployCap(run))) run.event = { type: 'deploy', nodeId: node.id };
   else startBattle(run, run.roster.map((u) => u.uid));
 }
 
@@ -257,12 +303,22 @@ export function battleKind(run: Run, node: MapNode): NodeType {
   return run.dungeon && run.dungeon.floor >= run.dungeon.of ? 'elite' : 'battle';
 }
 
+/** Is the battle at this node fought at sea? */
+export function isNavalNode(run: Run, node: MapNode): boolean {
+  if (run.campaign === 'greatSea') return node.naval ?? !!WORLDS[node.world]?.naval;
+  return !!WORLDS[node.world]?.naval;
+}
+
 /** Begin the battle at the current node with the chosen units. */
 export function startBattle(run: RunWithEvent, uids: string[]): void {
   const node = currentNode(run)!;
   const kind = battleKind(run, node);
   const floorBonus = node.type === 'dungeon' ? (run.dungeon?.floor ?? 1) - 1 : 0;
-  const chosen = run.roster.filter((u) => uids.includes(u.uid) || u.isCommander).slice(0, deployCap(run));
+  const naval = isNavalNode(run, node);
+  // Ships only sail into sea battles; on land they stay in the harbour.
+  const land = run.roster.filter((u) => !isVessel(u) && (uids.includes(u.uid) || u.isCommander)).slice(0, deployCap(run));
+  const ships = naval ? run.roster.filter((u) => isVessel(u) && (uids.includes(u.uid) || u.isCommander)).slice(0, navalDeployCap(run)) : [];
+  const chosen = [...land, ...ships];
   run.deployment = chosen.map((u) => u.uid);
   run.event = undefined;
   withRng(run, (rng) => {
@@ -273,13 +329,15 @@ export function startBattle(run: RunWithEvent, uids: string[]): void {
       world: node.world, nodeType: node.type === 'dungeon' ? kind : node.type, depth: depthOf(run, node) + floorBonus, roster: chosen,
       seed: rng.int(0, 2 ** 31), boss, healMult: run.bonus === 'healing' ? 1.2 : 1, force, supports: run.supports, trials: run.trials,
       levelBonus: (run.clock?.resets ?? 0) * 2 + (run.clock && clockLabel(run).day === 3 ? 1 : 0),
-      gearOwned: [...ownedGear(run)],
+      gearOwned: [...ownedGear(run), ...(run.questItems ?? [])],
+      naval, night: node.night, fleet: node.fleet,
     });
     run.battle.bonus = run.bonus;
-    run.battle.night = run.clock ? clockLabel(run).night : true;
+    run.battle.night = run.clock ? clockLabel(run).night : run.campaign === 'greatSea' ? !!node.night : true;
     run.battle.statusBonus = run.bonus === 'lingeringStatus' ? 1 : 0;
     run.battle.reserves = run.roster.filter((u) => !chosen.includes(u)).map((u) => ({ ...prepareForBattle(u), x: -1, y: -1 }));
     applyArmyBuffs(run, run.battle);
+    if (run.questItems?.includes('piratesCharm') && run.battle.cp !== undefined) { run.battle.cp++; run.battle.cpMax = (run.battle.cpMax ?? 0) + 1; }
   });
 }
 
@@ -345,7 +403,10 @@ export function recruitOffers(run: Run, rng: RNG, world: WorldId): string[] {
   // Every unit is in the pool. Named characters (heroes, villains, bosses) join once;
   // generic soldiers and creatures can join many times.
   const day = run.clock ? clockLabel(run).day : 0;
-  const available = TEMPLATE_LIST.filter((t) => !t.generic && !have.has(t.id)
+  const sea = run.campaign === 'greatSea';
+  const fleetRoom = sea && run.roster.filter(isVessel).length < fleetCap(run);
+  const shipOk = (t: UnitTemplate) => !RACES[t.race]?.tags?.includes('vessel') || fleetRoom;
+  const available = TEMPLATE_LIST.filter((t) => !t.generic && !have.has(t.id) && shipOk(t)
     && !run.fallen.some((f) => f.templateId === t.id) && !conflicts(run, t)
     && (!day || !TERMINA_SCHEDULE[t.id] || TERMINA_SCHEDULE[t.id].includes(day)));
   const fresh = available.filter((t) => !run.seenHeroes.includes(t.id));
@@ -360,8 +421,10 @@ export function recruitOffers(run: Run, rng: RNG, world: WorldId): string[] {
     if (offers.length >= 2) offers[1] = rares[0].id;
     else offers.push(rares[0].id);
   }
-  const generics = TEMPLATE_LIST.filter((t) => t.generic);
-  const monsterWeight = run.bonus === 'monsters' ? 3 : 1;
+  const generics = TEMPLATE_LIST.filter((t) => t.generic && shipOk(t));
+  const monsterWeight = run.bonus === 'monsters' || run.bonus === 'forsaken' ? 3 : 1;
+  const holding = (id: string) => run.convoy.filter((x) => x === id).length + run.roster.reduce((n, u) => n + u.pack.filter((p) => p.id === id).reduce((m, p) => m + p.uses, 0), 0);
+  if (holding('joyPendant') >= 3 && generics.length) offers.push(rng.pick(generics).id);
   const owned = ownedGear(run);
   const undeadBoost = run.bonus === 'undeadArmy' || owned.has('captainsHat');
   const beastBoost = owned.has('bremenMask') || owned.has('maskOfTruth');
@@ -370,9 +433,13 @@ export function recruitOffers(run: Run, rng: RNG, world: WorldId): string[] {
     if (run.bonus === 'dekuArmy' && t.race === 'deku') wgt *= 3;
     if (undeadBoost && t.race === 'undead') wgt *= 3;
     if (beastBoost && RACES[t.race]?.tags?.includes('beast')) wgt *= 2;
+    if (t.monster && holding('skullNecklace')) wgt *= 2;
+    if (t.race === 'rito' && holding('goldenFeather')) wgt *= 2;
+    if (sea && t.home === 'greatSea' && (seaOf(run).reputation >= 50)) wgt *= 2;
+    if (RACES[t.race]?.tags?.includes('vessel')) wgt *= 0.6;
     return wgt;
   };
-  while (offers.length < 3 && generics.length) {
+  while (offers.length < 3 + (holding('joyPendant') >= 3 ? 1 : 0) && generics.length) {
     const pick = rng.weighted(generics.map((t) => [t, weightOf(t)] as [UnitTemplate, number]));
     if (!offers.includes(pick.id)) offers.push(pick.id);
   }
@@ -430,7 +497,8 @@ export function finishBattle(run: RunWithEvent): BattleSummary {
     return [me, { ...partner, hp: me.hp > 0 ? Math.max(1, Math.ceil(partner.stats.hp * ratio)) : 0 }];
   };
   const fallen = b.fallen.filter((u) => u.team === 'player' && !u.npc).flatMap(split);
-  const survivors = new Map([...b.units, ...(b.withdrawn ?? [])].filter((u) => u.team === 'player' && !u.npc).flatMap(split).map((u) => [u.uid, u]));
+  const aboard = b.units.flatMap((u) => (u.team === 'player' ? u.cargo ?? [] : []));
+  const survivors = new Map([...b.units, ...aboard, ...(b.withdrawn ?? [])].filter((u) => u.team === 'player' && !u.npc).flatMap(split).map((u) => [u.uid, u]));
   const deployed = new Set(run.deployment ?? []);
   const heal = run.trials?.includes('wounds') ? 0 : (armyOf(run).supplies > 0 ? POST_BATTLE_HEAL : 0.05) + (run.bonus === 'postBattleHeal' ? 0.1 : 0);
   run.roster = run.roster
@@ -445,7 +513,14 @@ export function finishBattle(run: RunWithEvent): BattleSummary {
       // Benched units rest a little more than those who fought.
       const pct = deployed.has(u.uid) ? heal : heal + 0.2;
       next.hp = Math.min(next.stats.hp, next.hp + Math.ceil(next.stats.hp * pct));
-      return { ...next, moved: false, acted: false, kills: 0, movedDist: 0, survivedOnce: false, statuses: [], buffs: [], mp: next.stats.mp, sta: next.stats.sta, faroreMark: undefined, cooldowns: {}, maskForm: undefined, maskTurn: undefined, usedAbilities: [] };
+      // Wind Waker battle state: cannons and scavenged weapons, ship damage, cargo.
+      next.weapons = next.weapons.filter((w) => w !== 'emplacedCannon');
+      if (next.scavenged?.length) {
+        for (const w of next.scavenged) if (next.weapons.includes(w) && !canWield({ ...next, scavenged: [] }, WEAPONS[w])) { next.weapons = next.weapons.filter((x) => x !== w); run.convoy.push(w); }
+        if (!next.weapons.length) next.weapons = [...u.weapons];
+      }
+      return { ...next, moved: false, acted: false, kills: 0, movedDist: 0, survivedOnce: false, statuses: [], buffs: [], mp: next.stats.mp, sta: next.stats.sta, faroreMark: undefined, cooldowns: {}, maskForm: undefined, maskTurn: undefined, usedAbilities: [],
+        cargo: undefined, damaged: undefined, scavenged: undefined, armorBroken: undefined, commanded: undefined, turnUses: undefined, captured: undefined };
     });
   run.fallen.push(...fallen.map((u) => ({ ...u, hp: 0 })));
   // Victory experience for everyone who fought and lived (bigger for tougher fights).
@@ -462,10 +537,34 @@ export function finishBattle(run: RunWithEvent): BattleSummary {
   const joined: string[] = [];
   if (won) {
     const badge = ownedGear(run).has('bombersBadge') ? 1.1 : 1;
-    rupees = Math.round(b.rewardRupees * (run.bonus === 'rupees' ? 1.25 : 1) * badge) + (b.bonusRupees ?? 0);
+    rupees = Math.max(0, Math.round(b.rewardRupees * (run.bonus === 'rupees' || run.bonus === 'piratesSpoils' ? 1.25 : 1) * badge) + (b.bonusRupees ?? 0));
     run.rupees += rupees;
-    // Things found on the field (digging, fishing)
-    for (const id of b.loot ?? []) { giveItem(run, id, null); found.push(id); }
+    // Things found on the field (digging, fishing, spoils, salvage)
+    for (const id of b.loot ?? []) { give(run, id, null); found.push(id); }
+    // Weapons left lying on the battlefield
+    for (const d of b.dropped ?? []) { run.convoy.push(d.id); found.push(d.id); }
+    // Grandma's Elixir Soup
+    for (const u of run.roster) if (u.skills.includes('grandmothersLove') && giveItem(run, 'elixirSoup', u.uid, 1)) found.push('elixirSoup');
+    // Captured ships join the fleet
+    if (run.campaign === 'greatSea' || b.units.some((u) => u.captured)) {
+      withRng(run, (rng) => {
+        for (const v of b.units.filter((x) => x.captured && x.templateId)) {
+          if (run.roster.filter(isVessel).length >= fleetCap(run) || run.roster.length >= armyCap(run)) { rupees += 150; run.rupees += 150; joined.push(`${v.name} (sold for ₹150: fleet full)`); continue; }
+          const nv = makeHero(v.templateId!, nextUid(run), Math.max(1, recruitLevel(run)), rng);
+          nv.hp = Math.max(1, Math.ceil(nv.stats.hp * (v.hp / v.stats.hp)));
+          run.roster.push(nv);
+          joined.push(`${nv.name} (captured)`);
+          if (run.bonus === 'piratesSpoils') { run.rupees += 100; rupees += 100; }
+        }
+      });
+    }
+    // An island cleared on the Great Sea
+    const here = currentNode(run);
+    if (run.campaign === 'greatSea' && here?.island && b.nodeType === 'boss') {
+      const sea = seaOf(run);
+      if (!sea.cleared.includes(here.island)) sea.cleared.push(here.island);
+      sea.reputation = Math.min(100, sea.reputation + 5);
+    }
     // Talon's Ranch Supplies
     for (const u of run.roster) {
       if (!u.skills.includes('ranchSupplies')) continue;
@@ -632,6 +731,7 @@ export function meetsRequires(run: Run, r: EventRequires | undefined): boolean {
   const owned = ownedGear(run);
   if (r.gear && !r.gear.every((id) => owned.has(id))) return false;
   if (r.noGear && r.noGear.some((id) => owned.has(id))) return false;
+  if (r.unit && !run.roster.some((u) => r.unit!.includes(u.templateId ?? ''))) return false;
   if (r.maskCount && [...owned].filter((id) => GEAR[id]?.slot === 'head' && /mask|hat|hood/i.test(GEAR[id].name)).length < r.maskCount) return false;
   return true;
 }
@@ -640,6 +740,11 @@ export function meetsRequires(run: Run, r: EventRequires | undefined): boolean {
 export function addQuestItem(run: Run, id: string) {
   const q = (run.questItems ??= []);
   q.push(id);
+  // Eight Triforce Shards make the Triforce of Courage.
+  if (q.filter((x) => x.startsWith('triforceShard')).length >= 8) {
+    run.questItems = q.filter((x) => !x.startsWith('triforceShard'));
+    if (!ownedGear(run).has('triforceCourage')) run.convoy.push('triforceCourage');
+  }
   if (q.includes('sunsMask') && q.includes('moonsMask')) {
     run.questItems = q.filter((x) => x !== 'sunsMask' && x !== 'moonsMask');
     if (!ownedGear(run).has('couplesMask')) run.convoy.push('couplesMask');
@@ -698,6 +803,27 @@ function applyEffect(run: Run, e: EventEffect, rng: RNG): string | null {
       run.stats.recruits++;
       return `${u.name} joined your army`;
     }
+    case 'sea': {
+      const sea = seaOf(run);
+      sea[e.stat] = e.stat === 'reputation' ? Math.max(0, Math.min(100, sea.reputation + e.amount)) : sea[e.stat] + e.amount;
+      const cur = currentNode(run);
+      if (e.stat === 'navigation' && cur) revealAround(run, cur.col, cur.row);
+      return `${{ navigation: 'Navigation', salvage: 'Salvage', reputation: 'Naval Reputation', fleetCap: 'Fleet Capacity' }[e.stat]} ${e.amount >= 0 ? '+' : ''}${e.amount}`;
+    }
+    case 'fleet': {
+      const ships = run.roster.filter(isVessel);
+      if (!ships.length) return null;
+      for (const v of ships) {
+        const d = Math.ceil(v.stats.hp * Math.abs(e.pct) / 100);
+        v.hp = e.pct >= 0 ? Math.min(v.stats.hp, v.hp + d) : Math.max(1, v.hp - d);
+      }
+      return e.pct >= 0 ? `Fleet repaired (+${e.pct}% hull)` : `Fleet damaged (−${-e.pct}% hull)`;
+    }
+    case 'supplies': {
+      const a = armyOf(run);
+      a.supplies = Math.max(0, Math.min(supplyCap(run), a.supplies + e.amount));
+      return `Supplies ${e.amount >= 0 ? '+' : ''}${e.amount}`;
+    }
     case 'stat': {
       const u = rng.pick(run.roster);
       u.stats[e.stat] += e.amount;
@@ -726,6 +852,7 @@ function applyEffect(run: Run, e: EventEffect, rng: RNG): string | null {
 }
 
 export function isRegionComplete(run: Run): boolean {
+  if (run.campaign === 'greatSea') return chartComplete(run) && !run.battle;
   const n = currentNode(run);
   return !!n && n.type === 'boss' && !run.battle;
 }
@@ -733,13 +860,14 @@ export function isRegionComplete(run: Run): boolean {
 /** After a regional boss: offer the next region to march on. */
 export function offerRegions(run: RunWithEvent): void {
   withRng(run, (rng) => {
+    if (run.campaign === 'greatSea') { run.event = { type: 'region', options: ['greatSea'] }; return; }
     if (run.campaign === 'termina') {
       const t = terminaNextRegions(run);
       if (t.length) { run.event = { type: 'region', options: t }; return; }
     }
     const recent = run.regionsVisited.slice(-2);
     // Hyrule's war stays in Hyrule until the Free-for-All, when Termina's regions join in.
-    const pool = REGION_IDS.filter((r) => !recent.includes(r) && (run.act + 1 >= FREE_FOR_ALL_REGION || WORLDS[r]?.campaign !== 'termina') && r !== 'moon');
+    const pool = REGION_IDS.filter((r) => !recent.includes(r) && (run.act + 1 >= FREE_FOR_ALL_REGION || !WORLDS[r]?.campaign) && r !== 'moon');
     const options = rng.shuffle(pool).slice(0, 3);
     run.event = { type: 'region', options };
   });
@@ -847,6 +975,21 @@ export const TERMINA_SCHEDULE: Record<string, number[]> = {
 export function advanceRegion(run: RunWithEvent, region: WorldId): void {
   // After the Moon, the three-day cycle is over: Termina's war goes on without a clock.
   if (run.region === 'moon') delete run.clock;
+  if (run.campaign === 'greatSea') {
+    // A new chart: the seas grow more dangerous.
+    const sea = seaOf(run);
+    run.act++;
+    sea.charts++;
+    sea.cleared = [];
+    sea.revealed = [];
+    run.currentNodeId = null;
+    run.event = undefined;
+    withRng(run, (rng) => { run.map = generateSeaChart(rng, sea.charts); });
+    const start = run.map.nodes.find((n) => n.island === 'outset')!;
+    revealAround(run, start.col, start.row);
+    run.rupees += 300;
+    return;
+  }
   run.act++;
   run.region = region;
   run.regionsVisited.push(region);
@@ -945,6 +1088,13 @@ export function give(run: Run, id: string, uid: string | null): boolean {
 
 /** Can this unit take this thing right now? */
 export function canTake(u: Unit, id: string): boolean {
+  const shipGear = !!GEAR[id] && VESSEL_SLOTS.includes(GEAR[id].slot as never);
+  if (isVessel(u)) {
+    if (WEAPONS[id]) return WEAPONS[id].type === 'siege' && canWield(u, WEAPONS[id]);
+    if (GEAR[id]) return shipGear && vesselHasSlot(u, GEAR[id].slot);
+    return !!ITEMS[id] && ['cannonball', 'chainShot', 'repairPlanks'].includes(id);
+  }
+  if (shipGear) return false;
   if (WEAPONS[id]) return canWield(u, WEAPONS[id]);
   if (GEAR[id]?.slot === 'mount') return canRide(u);
   return !!kindOf(id);
@@ -1060,7 +1210,15 @@ export function fountainTeach(run: RunWithEvent, uid: string): string | null {
 
 export function priceOf(run: Run, kind: ItemKindTag, id: string): number {
   const base = kind === 'weapon' ? weaponPrice(run, id) : kind === 'gear' ? GEAR[id].price : kind === 'item' ? ITEMS[id].price : PERMANENT_ITEMS[id].price;
-  return Math.round(base * (1 - repDiscount(run) / 100));
+  return Math.round(base * (1 - (repDiscount(run) + merchantDiscount(run)) / 100));
+}
+
+/** Beedle's Customer Rewards and the Complimentary ID. */
+export function merchantDiscount(run: Run): number {
+  let d = 0;
+  if (run.roster.some((u) => u.skills.includes('customerRewards'))) d += Math.min(25, Math.floor(run.stats.battles / 2));
+  if (run.questItems?.includes('complimentaryId')) d += 15;
+  return Math.min(40, d);
 }
 
 export const SUPPLY_PACK = { amount: 10, price: 90 };
@@ -1083,8 +1241,9 @@ export function buySupplies(run: RunWithEvent): boolean {
 export const FEAST_COST = 8;
 export function campFeast(run: RunWithEvent): boolean {
   const a = armyOf(run);
-  if (run.event?.type !== 'camp' || a.supplies < FEAST_COST) return false;
-  a.supplies -= FEAST_COST;
+  const oasis = !!run.questItems?.includes('cabanaDeed');
+  if (run.event?.type !== 'camp' || (!oasis && a.supplies < FEAST_COST)) return false;
+  if (!oasis) a.supplies -= FEAST_COST;
   adjustMorale(run, 15);
   a.feast = true;
   run.event = undefined;
@@ -1122,7 +1281,8 @@ export function campRest(run: RunWithEvent): void {
   const fed = a.supplies >= 4;
   if (fed) a.supplies -= 4;
   const anju = run.roster.some((u) => u.skills.includes('hospitality')); // Anju's Hospitality
-  for (const u of run.roster) u.hp = Math.min(u.stats.hp, u.hp + Math.ceil(u.stats.hp * (fed ? 1 : anju ? 0.75 : 0.5)));
+  const oasis = run.questItems?.includes('cabanaDeed') ? 0.2 : 0;
+  for (const u of run.roster) u.hp = Math.min(u.stats.hp, u.hp + Math.ceil(u.stats.hp * Math.min(1, (fed ? 1 : anju ? 0.75 : 0.5) + oasis)));
   adjustMorale(run, (fed ? 5 : 0) + (anju ? 5 : 0));
   run.event = undefined;
 }
@@ -1332,4 +1492,14 @@ export function forgeWeapon(run: RunWithEvent, weaponId: string, uid: string): b
   run.rupees -= price;
   ev.sold.push(weaponId);
   return true;
+}
+
+/** Smaller vessels have fewer equipment slots. */
+export function vesselHasSlot(u: Unit, slot: string): boolean {
+  return (VESSEL_SLOTS_BY_SIZE[Math.min(5, Math.max(2, u.baseSize ?? u.size))] ?? []).includes(slot as never);
+}
+
+/** Crew capacity of the deployable fleet. */
+export function fleetCrew(run: Run): number {
+  return run.roster.filter(isVessel).slice(0, navalDeployCap(run)).reduce((n, v) => n + capacityOf(v), 0);
 }

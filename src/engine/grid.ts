@@ -1,6 +1,7 @@
 import { RACES } from '../data/registry';
 import { INF, MOVE_COSTS } from './rules';
-import { canSwim, effectiveStats, hasEffect, isMounted, moveTypeOf } from './units';
+import { canSwim, effectiveStats, hasEffect, isMounted, moveTypeOf, unitTags } from './units';
+import { windFactor } from './naval';
 import type { Battle, Pos, Terrain, Unit } from './types';
 
 // Units occupy a size×size footprint anchored at (x, y), its top-left tile.
@@ -45,8 +46,9 @@ export function tileCost(b: Battle, unit: Unit, t: Terrain): number {
   let c = MOVE_COSTS[mt][t];
   if (mt === 'fixed') return INF;
   const race = RACES[unit.race];
-  const watery = t === 'water' || t === 'poisonWater' || t === 'current';
+  const watery = t === 'water' || t === 'poisonWater' || t === 'current' || t === 'whirlpool' || t === 'submergedTreasure';
   if (watery && canSwim(unit)) c = 1;
+  else if (watery && unit.skills.includes('leafGlide')) c = 2; // Koroks glide over on leaves
   else if (watery && unit.skills.includes('dekuMobility')) c = 2; // Deku Link bounces across water
   else if (watery && unit.race === 'deku') c = 3; // other Deku hop a little
   if (race?.waterOnly && !watery) return INF; // Lord Jabu-Jabu stays in the water
@@ -57,6 +59,12 @@ export function tileCost(b: Battle, unit: Unit, t: Terrain): number {
     if (t === 'mountain' && hasEffect(unit, 'mountainWalker')) c = 2;
   }
   if (t === 'wall' && unit.skills.includes('spectralPassage')) c = 2;
+  // Wind Waker spaces
+  if (t === 'ropeSwing' && (unit.skills.includes('ropeRunner') || unit.skills.includes('boardingParty') || unit.skills.includes('grappler')
+    || hasEffect(unit, 'deckBoots') || unit.weapons.includes('grapplingHook') || unitTags(unit).includes('pirate'))) c = 1;
+  if (t === 'shipDeck' && (unit.skills.includes('ropeRunner') || hasEffect(unit, 'deckBoots'))) c = 1;
+  if (t === 'sandVortex' && hasEffect(unit, 'sandWalker')) c = 1;
+  if (hasEffect(unit, 'spectralHull') && (t === 'wall' || t === 'mountain' || t === 'plain' || t === 'forest')) c = Math.min(c, 2);
   return c;
 }
 
@@ -97,7 +105,8 @@ export interface Moves {
  */
 export function computeMoves(b: Battle, unit: Unit, budget?: number): Moves {
   const mov = unit.statuses?.some((s) => s.kind === 'root') ? 0 : budget ?? effectiveStats(unit).mov;
-  const ghost = unit.skills.includes('spectralPassage') || hasEffect(unit, 'phantomRide') || hasEffect(unit, 'phaseThrough');
+  const ghost = unit.skills.includes('spectralPassage') || hasEffect(unit, 'phantomRide') || hasEffect(unit, 'phaseThrough')
+    || hasEffect(unit, 'spectralHull') || unit.skills.includes('phantomVoyage') || unit.skills.includes('suspendedHorror') || unit.skills.includes('burrowingAmbush');
   const occ = new Map<number, Unit>();
   for (const u of b.units) for (const p of footprint(u.x, u.y, u.size)) occ.set(keyOf(b, p.x, p.y), u);
 
@@ -131,7 +140,7 @@ export function computeMoves(b: Battle, unit: Unit, budget?: number): Moves {
       if (!inBounds(b, nx, ny)) continue;
       const c = anchorCost(b, unit, nx, ny);
       if (c >= INF || blockedByFoe(nx, ny)) continue;
-      const nc = cc + c;
+      const nc = cc + c * windFactor(b, unit, dx, dy);
       if (nc > mov) continue;
       const nk = keyOf(b, nx, ny);
       const p = all.get(nk);

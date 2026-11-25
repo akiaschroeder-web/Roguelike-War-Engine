@@ -21,9 +21,11 @@ export const WEAPON_ICONS: Record<string, string> = {
 
 export const SLOT_LABELS: Record<string, string> = {
   shield: 'Shield', head: 'Head', body: 'Body', hands: 'Hands', feet: 'Feet', accessory: 'Accessory', acc1: 'Accessory', acc2: 'Accessory', mount: 'Mount',
+  hull: 'Hull', sail: 'Sail', utility: 'Utility', flag: 'Flag',
 };
 export const SLOT_ICONS: Record<string, string> = {
   shield: '🛡', head: '⛑', body: '👕', hands: '🧤', feet: '👢', accessory: '◇', acc1: '◇', acc2: '◇', mount: '🐎',
+  hull: '🪵', sail: '⛵', utility: '⚙', flag: '🚩',
 };
 export const ITEM_ICONS: Record<string, string> = {
   heal: '🧪', fullHeal: '🧪', mp: '🧪', sta: '🧪', fairy: '🧚', bomb: '💣', stun: '🌰', learn: '📜',
@@ -157,10 +159,13 @@ export function unitDetails(u: Unit): string {
       <div class="ud-weapons">${u.weapons.map((id, i) => (WEAPONS[id] ? `<div>${weaponLine(WEAPONS[id], { equipped: i === 0, owner: u })}</div>` : '')).join('')}</div>
       ${gearLine(u)}
       ${packLine(u)}
+      ${u.cargo?.length ? `<div class="small cargo-list">⛵ <b>Aboard:</b> ${u.cargo.map((p) => `${esc(p.name)} <span class="dim">(${p.hp}/${p.stats.hp})</span>`).join(', ')}</div>` : ''}
+      ${u.damaged && Object.keys(u.damaged).length ? `<div class="small"><span class="badge red">🔧 Damaged</span> <span class="dim">${Object.keys(u.damaged).map((k) => ({ sail: 'sail torn (−50% MOV)', mast: 'mast broken (no wind bonus)', rudder: 'rudder jammed (−1 MOV)', cannon: 'cannons out' } as Record<string, string>)[k]).join(', ')}</span></div>` : ''}
+      ${u.armorBroken ? '<div class="small"><span class="badge">Armor broken</span></div>' : ''}
       ${u.stats.mp > 0 || u.stats.sta > 0 ? `<div class="ud-row small">${u.stats.mp > 0 ? `<span>MP <b>${u.mp}</b>/${u.stats.mp}</span>` : '<span></span>'}<span>STA <b>${u.sta ?? u.stats.sta}</b>/${u.stats.sta}</span></div>` : ''}
       ${u.stats.mp > 0 ? `<div class="mpbar"><div class="fill" style="width:${Math.max(0, Math.min(100, (u.mp / u.stats.mp) * 100))}%"></div></div>` : ''}
       ${u.statuses.map((st) => `<div class="small"><span class="badge red">${STATUS_INFO[st.kind].icon} ${STATUS_INFO[st.kind].name}</span> <span class="dim">${STATUS_INFO[st.kind].desc} (${st.turns} turn${st.turns > 1 ? 's' : ''})</span></div>`).join('')}
-      ${u.buffs.map((bf) => `<div class="small"><span class="badge eq">✦ ${esc(bf.name)}</span> <span class="dim">${bf.barrier ? 'Negates all damage' : Object.entries(bf.stats ?? {}).map(([k, v]) => `+${v} ${STAT_LABELS[k]}`).join(', ')} (${bf.turns} turn${bf.turns > 1 ? 's' : ''})</span></div>`).join('')}
+      ${u.buffs.map((bf) => `<div class="small"><span class="badge eq">✦ ${esc(bf.name)}</span> <span class="dim">${bf.barrier ? 'Negates all damage' : Object.entries(bf.stats ?? {}).map(([k, v]) => `${v >= 0 ? '+' : ''}${v} ${STAT_LABELS[k]}`).join(', ')} (${bf.turns} turn${bf.turns > 1 ? 's' : ''})</span></div>`).join('')}
       ${abilitiesLine(u)}
       ${u.skills.map(skillLine).join('')}
     </div>`;

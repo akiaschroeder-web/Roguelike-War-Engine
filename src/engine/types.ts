@@ -6,7 +6,9 @@ export type WorldId = string;
 export type WeaponType =
   | 'sword' | 'lance' | 'axe' | 'hammer' | 'dagger' | 'gauntlet'
   | 'bow' | 'sling' | 'boomerang' | 'hookshot'
-  | 'magic' | 'staff' | 'natural' | 'instrument';
+  | 'magic' | 'staff' | 'natural' | 'instrument'
+  /** Cannons, harpoons and other ship-mounted or crewed weapons. */
+  | 'siege';
 
 export type Element = 'fire' | 'ice' | 'lightning' | 'water' | 'light' | 'dark' | 'nature';
 
@@ -60,7 +62,11 @@ export interface AbilityDef {
   /** Personal abilities: usable once per battle. */
   oncePerBattle?: boolean;
   /** Known automatically by anyone carrying one of these weapons or having this skill. */
-  grantedBy?: { weapons?: string[]; skill?: string; gear?: string[]; race?: string; templates?: string[] };
+  grantedBy?: { weapons?: string[]; skill?: string; gear?: string[]; race?: string; templates?: string[]; everyone?: boolean; skills?: string[]; races?: string[] };
+  /** Situational actions (Board, Disembark, Pick Up…): shown as their own button when usable, not in the Abilities menu. */
+  contextual?: boolean;
+  /** Icon for contextual action buttons. */
+  icon?: string;
   /** Songs: affects every ally/enemy within this many spaces (default 3). */
   radius?: number;
   /** Used once per turn at most (doesn't use the turn's action). */
@@ -81,7 +87,11 @@ export type BaseTerrain = 'plain' | 'forest' | 'mountain' | 'water' | 'wall' | '
 export type Terrain = BaseTerrain | 'cracked' | 'timeBlock' | 'timeGap' | 'bridge'
   // Termina battlefield spaces
   | 'dekuFlower' | 'goldFlower' | 'owlStatue' | 'poisonWater' | 'frozenMech' | 'rollingRamp'
-  | 'current' | 'waterwheel' | 'sunBlock' | 'weightedSwitch' | 'inversionSwitch' | 'mailbox';
+  | 'current' | 'waterwheel' | 'sunBlock' | 'weightedSwitch' | 'inversionSwitch' | 'mailbox'
+  // Great Sea battlefield spaces
+  | 'whirlpool' | 'updraft' | 'ropeSwing' | 'grapplePost' | 'hangingVine' | 'plantingSoil' | 'grownTree'
+  | 'shipDeck' | 'boardingPoint' | 'cannonEmplacement' | 'submergedTreasure' | 'sandVortex' | 'spikedBarrel'
+  | 'watchtower' | 'searchlight' | 'commandStatue';
 
 export type Team = 'player' | 'enemy';
 
@@ -184,14 +194,38 @@ export interface WeaponDef {
   curseEater?: boolean;
   /** Can be wielded without matching the class's weapon types (signature gear). */
   anyClass?: boolean;
+  // ── Wind Waker ──
+  /** Counters twice (Ganondorf's Twin Swords). */
+  counterTwice?: boolean;
+  /** Extra Critical on parries. */
+  parryCrit?: number;
+  /** Damage multiplier against units carrying a shield. */
+  vsShield?: number;
+  /** Damage multiplier against armored units and constructs; breaks Darknut armor. */
+  armorBreaker?: number;
+  /** Extra damage against enemies on sand or sinking terrain. */
+  sandBonus?: number;
+  /** Reflects magic: the wielder takes half damage from spells. */
+  reflectMagic?: boolean;
+  /** Can be set alight: fire damage for 3 attacks, then it burns away. */
+  ignitable?: boolean;
+  /** Double combat experience while equipped. */
+  doubleXp?: boolean;
+  /** A hit anchors a vessel or large creature in place (Root). */
+  anchors?: boolean;
+  /** Cannon: needs a vessel, a cannoneer class or a Cannon Emplacement. */
+  crewed?: boolean;
 }
 
 export type Rarity = 'common' | 'uncommon' | 'rare' | 'epic' | 'legendary' | 'mythic';
 
-export type GearSlotKind = 'shield' | 'head' | 'body' | 'hands' | 'feet' | 'accessory' | 'mount';
+export type GearSlotKind = 'shield' | 'head' | 'body' | 'hands' | 'feet' | 'accessory' | 'mount' | VesselSlot;
+/** Ship equipment slots (vessels only). */
+export type VesselSlot = 'hull' | 'sail' | 'utility' | 'flag';
 /** Equipment slots on a unit. Accessories have two slots. */
-export type GearSlot = 'shield' | 'head' | 'body' | 'hands' | 'feet' | 'acc1' | 'acc2' | 'mount';
-export const GEAR_SLOTS: GearSlot[] = ['shield', 'head', 'body', 'hands', 'feet', 'acc1', 'acc2', 'mount'];
+export type GearSlot = 'shield' | 'head' | 'body' | 'hands' | 'feet' | 'acc1' | 'acc2' | 'mount' | VesselSlot;
+export const GEAR_SLOTS: GearSlot[] = ['shield', 'head', 'body', 'hands', 'feet', 'acc1', 'acc2', 'mount', 'hull', 'sail', 'utility', 'flag'];
+export const VESSEL_SLOTS: VesselSlot[] = ['hull', 'sail', 'utility', 'flag'];
 
 export interface GearDef {
   id: string;
@@ -261,7 +295,54 @@ export type GearEffect =
   | 'rollBoost' // rolling/charging +2 range and cheaper
   | 'balloon' // flight; takes double damage from bows and slings
   | 'jumpUnits' // can pass through units
-  | 'composer'; // your sleep and curse effects last 1 turn longer
+  | 'composer' // your sleep and curse effects last 1 turn longer
+  // ── Wind Waker ──
+  | 'revealStats' // Hero's Charm: shows enemy weaknesses and equipment wear
+  | 'parryStamina' // Hero's Clothes: parries restore 2 stamina
+  | 'parryStamina5' // Orca's Champion Belt: parries restore 5 stamina
+  | 'magicArmor' // damage is paid with MP (or Rupees) instead of HP
+  | 'telescope' // +3 vision; reveals hidden enemies within 5
+  | 'swiftSail' // vessels: always a favourable wind, +3 MOV
+  | 'sail' // vessels: wind-powered movement
+  | 'noCrit' // can't be critically hit
+  | 'armorBreakGuard' // negates the first armor-breaking blow
+  | 'poeCommand' // Poes won't attack the wearer; allied Poes nearby +2 STR
+  | 'flightHit' // +15 Hit while airborne
+  | 'quickBoard' // boarding doesn't end the turn
+  | 'frontalGuard' // melee damage taken −25%
+  | 'flyMov' // +1 MOV while flying
+  | 'forestConceal' // hidden (Veiled) while standing in a forest
+  | 'darkWard' // non-light magic damage taken −30%
+  | 'stopFollowUp' // a successful block stops the attacker's follow-up
+  | 'unmovable' // immune to forced movement
+  | 'ropeGloves' // grappling range +2
+  | 'twoHandedGrip' // two-handed weapons weigh 3 less
+  | 'freePlanting' // planting doesn't use the action (once per turn)
+  | 'deckBoots' // rope swings and ship decks cost 1 movement
+  | 'landingStrike' // flyers who moved hit everything next to the target
+  | 'pirateAura' // nearby pirates +2 STR and SKL
+  | 'fireImmune' // no fire damage; fire magic restores 3 MP
+  | 'jabunBlessing' // swim; regenerate 10% HP per turn in water
+  | 'windCharm' // movement never reduced by the wind
+  | 'cyclonePull' // wind attacks pull the target in
+  | 'seagullSight' // +3 vision range
+  | 'ritoCrestAura' // flying allies within 2 gain +10 Avoid
+  | 'forestSeed' // grows a forest underfoot at the start of battle
+  | 'constructCore' // +5 MP when you defeat a construct
+  | 'helmarocPlume' // flyers +2 MOV and +15 Avoid
+  | 'sandWalker' // ignores sinking sand and sand vortexes
+  | 'dinPearl' // fire attacks restore 2 stamina
+  | 'farorePearl' // techniques and movement abilities cost 25% less stamina
+  | 'nayruPearl' // barriers absorb 50% more (Magic Armor halves MP cost)
+  // ── Vessel equipment ──
+  | 'spectralHull' // pass through obstacles
+  | 'reinforcedSail' // immune to sail damage; half damage from wind attacks
+  | 'boardingRamp' // infantry board without ending their turn
+  | 'repairStation' // +5 HP per turn while stationary
+  | 'grappleCrane' // salvage submerged treasure from 2 spaces
+  | 'pirateFlag' // pirates aboard: the vessel gains +2 STR each
+  | 'royalFlag' // passengers aboard: the vessel gains +2 DEF and RES
+  | 'ghostFlag'; // hidden from enemies at night
 
 export type ItemKind =
   | 'heal' | 'fullHeal' | 'mp' | 'sta' | 'fairy' | 'bomb' | 'stun' | 'learn'
@@ -272,7 +353,7 @@ export type ItemKind =
   /** Reusable tools (never used up). */
   | 'tool';
 
-export type ToolKind = 'hookshot' | 'longshot' | 'lens' | 'fishing' | 'shovel' | 'pictograph';
+export type ToolKind = 'hookshot' | 'longshot' | 'lens' | 'fishing' | 'shovel' | 'pictograph' | 'telescope';
 
 /** Consumables carried in a unit's 6-slot pack. */
 export interface ItemDef {
@@ -335,7 +416,9 @@ export interface WorldDef {
   terrainNames: Record<BaseTerrain, string>;
   terrainColors: Record<BaseTerrain, string>;
   /** Regions of the Termina campaign (with the three-day cycle). */
-  campaign?: 'termina';
+  campaign?: 'termina' | 'greatSea';
+  /** Battles here are fought at sea (vessels, wind, islands). */
+  naval?: boolean;
   map: MapStyle;
 }
 
@@ -446,13 +529,14 @@ export interface CommanderDef {
   bonus: CommanderBonus;
   bonusText: string;
   /** Campaign this commander starts in by default. */
-  campaign?: 'termina';
+  campaign?: 'termina' | 'greatSea';
   /** Weapons, gear and items handed out to the army at the start (commander first). */
   startingItems?: string[];
 }
 
 export type CommanderBonus = 'extraTreasure' | 'healing' | 'forging' | 'postBattleHeal' | 'rupees' | 'monsters'
-  | 'transformThrift' | 'rolling' | 'aquatic' | 'dekuArmy' | 'undeadArmy' | 'lingeringStatus';
+  | 'transformThrift' | 'rolling' | 'aquatic' | 'dekuArmy' | 'undeadArmy' | 'lingeringStatus'
+  | 'courageOfTheSea' | 'piratesSpoils' | 'dragonRoost' | 'forestRenewal' | 'hyrulesLegacy' | 'forsaken' | 'unrulyWinds';
 
 export type SkillId = string;
 
@@ -534,6 +618,20 @@ export interface Unit {
   attacked?: boolean;
   /** Elegy of Emptiness statue / Bio Deku Baba sprout: removed after battle. */
   summoned?: boolean;
+  /** Vessels: units carried aboard (off the map while aboard). */
+  cargo?: Unit[];
+  /** Vessels: components knocked out this battle. */
+  damaged?: { sail?: boolean; mast?: boolean; rudder?: boolean; cannon?: boolean };
+  /** Enemy vessel taken by your crew (joins the fleet after a victory). */
+  captured?: boolean;
+  /** Weapons picked up off the battlefield (usable even without training). */
+  scavenged?: string[];
+  /** Darknuts and armored foes: their armor has been smashed. */
+  armorBroken?: boolean;
+  /** Turns left under the Command Melody (reverts to its own side after). */
+  commanded?: number;
+  /** Turn a once-per-turn effect was last used (keyed by effect). */
+  turnUses?: Record<string, number>;
   // Battle state
   x: number; // top-left of footprint
   y: number;
@@ -563,7 +661,9 @@ export interface SideQuest {
   item?: string;
 }
 
-export type NodeType = 'battle' | 'elite' | 'ambush' | 'siege' | 'dungeon' | 'event' | 'recruit' | 'shop' | 'camp' | 'fountain' | 'treasure' | 'blacksmith' | 'boss';
+export type NodeType = 'battle' | 'elite' | 'ambush' | 'siege' | 'dungeon' | 'event' | 'recruit' | 'shop' | 'camp' | 'fountain' | 'treasure' | 'blacksmith' | 'boss'
+  /** Great Sea: open water with nothing in it. */
+  | 'sea';
 
 export interface Battle {
   width: number;
@@ -646,6 +746,16 @@ export interface Battle {
   purified?: Unit[];
   /** Commander bonus active in this battle. */
   bonus?: CommanderBonus;
+  /** Equipment and quest items the army owns (Spoils Bag, Deluxe Pictograph Box…). */
+  owned?: string[];
+  /** Naval battles: the prevailing wind (direction it blows toward). */
+  wind?: [number, number];
+  /** Weapons lying on the battlefield (disarmed or dropped by the fallen). */
+  dropped?: { x: number; y: number; id: string }[];
+  /** A fight at sea. */
+  naval?: boolean;
+  /** Searchlights have spotted you (Forsaken Fortress guards are alerted). */
+  alarm?: boolean;
 }
 
 export interface Army {
@@ -675,6 +785,15 @@ export interface MapNode {
   world: WorldId;
   next: string[];
   visited: boolean;
+  /** Great Sea sectors: name shown on the chart, the island's region, and what must be done first. */
+  label?: string;
+  island?: string;
+  locked?: 'pearls' | 'tower' | 'hyrule' | 'temples';
+  /** Sea battles at this sector (vs. a fight on an island). */
+  naval?: boolean;
+  /** Special fleet (the Ghost Ship). */
+  fleet?: string[];
+  night?: boolean;
 }
 
 export interface RunMap {
@@ -712,8 +831,10 @@ export interface Run {
   dungeon?: { floor: number; of: number };
   /** Army-wide stats and resources. */
   army?: Army;
-  /** Which campaign: the endless Hyrule war, or Termina with its three-day cycle. */
-  campaign?: 'hyrule' | 'termina';
+  /** Which campaign: the endless Hyrule war, Termina with its three-day cycle, or the Great Sea. */
+  campaign?: 'hyrule' | 'termina' | 'greatSea';
+  /** Great Sea: the naval campaign's state. */
+  sea?: SeaState;
   /** Termina: hours passed in the current three-day cycle (0-71) and resets so far. */
   clock?: { hours: number; resets: number };
   /** Termina: Rupees safe in the Clock Town bank (kept through the Song of Time). */
@@ -736,6 +857,26 @@ export interface Pos {
   y: number;
 }
 
+/** The Great Sea campaign: fleet stats and the chart. */
+export interface SeaState {
+  /** Maximum vessels owned. */
+  fleetCap: number;
+  /** Maximum vessels deployed in a naval battle. */
+  navalDeploy: number;
+  /** Hidden routes and encounters: how far the chart is revealed around you. */
+  navigation: number;
+  /** Submerged treasure rewards. */
+  salvage: number;
+  /** 0-100: pirate, merchant and maritime recruits. */
+  reputation: number;
+  /** Sector ids revealed on the chart. */
+  revealed: string[];
+  /** Islands cleared. */
+  cleared: string[];
+  /** Charts completed (each new chart is harder). */
+  charts: number;
+}
+
 // ───────────────────────── Random events ─────────────────────────
 
 export type EventEffect =
@@ -751,8 +892,14 @@ export type EventEffect =
   | { kind: 'stat'; stat: StatKey; amount: number }
   /** Every pair in the army gains support points. */
   | { kind: 'support'; amount: number }
-  /** Quest items (Termina). */
+  /** Quest items. */
   | { kind: 'quest'; id: string }
+  /** Great Sea: navigation, salvage or naval reputation. */
+  | { kind: 'sea'; stat: 'navigation' | 'salvage' | 'reputation' | 'fleetCap'; amount: number }
+  /** Damage (negative) or repair (positive) the fleet's vessels by a fraction of max HP. */
+  | { kind: 'fleet'; pct: number }
+  /** Army supplies. */
+  | { kind: 'supplies'; amount: number }
   | { kind: 'takeQuest'; id: string };
 
 /** Conditions for an event or a single choice. */
@@ -761,6 +908,8 @@ export interface EventRequires {
   noQuest?: string[];
   /** Equipment owned by anyone in the army (or the convoy). */
   gear?: string[];
+  /** A unit from one of these templates is in the army. */
+  unit?: string[];
   noGear?: string[];
   /** Number of masks owned. */
   maskCount?: number;

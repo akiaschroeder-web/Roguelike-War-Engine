@@ -5,9 +5,12 @@ import { RNG } from './rng';
 import { INF, LAVA_DAMAGE_PCT, TERRAIN_BONUS } from './rules';
 import { addStatus, tickStatuses } from './status';
 import { decorateField } from './field';
+import { canRide, enemyFleet, isVessel, layoutNaval, roomAboard } from './naval';
+import { windWakerUpkeepAtStart, wwStartPhase } from './windwaker';
+import { resolveSinking } from './naval';
 import { revertMask } from './terminaAbilities';
 import { roomFor } from './transform';
-import { canRide, unitTags, hasEffect, isLavaImmune, isMounted, makeEnemy, mountOf, sizeWhen, makeEnemyFromTemplate, prepareForBattle } from './units';
+import { canRide as canRideMount, unitTags, hasEffect, isLavaImmune, isMounted, makeEnemy, mountOf, sizeWhen, makeEnemyFromTemplate, prepareForBattle } from './units';
 import type { Battle, BossDef, EnemyArchetype, EnemyForce, NodeType, Objective, ObjectiveType, Pos, Team, Terrain, Unit, WorldId } from './types';
 
 export interface BattleSetup {
@@ -28,6 +31,12 @@ export interface BattleSetup {
   levelBonus?: number;
   /** Equipment the army owns (some masks change encounters). */
   gearOwned?: string[];
+  /** Fight at sea: vessels, wind and islands (default: the region decides). */
+  naval?: boolean;
+  /** Night battle (Ghost Ship, undead). */
+  night?: boolean;
+  /** Extra enemy vessels (the Ghost Ship). */
+  fleet?: string[];
 }
 
 /** Enemy level for a given depth. Keeps climbing in endless mode. */
@@ -44,6 +53,7 @@ function bossBonus(depth: number, nodeType: NodeType): number {
 }
 
 export function createBattle(setup: BattleSetup): Battle {
+  if (setup.naval ?? !!worldDef(setup.world).naval) return createNavalBattle(setup);
   const rng = new RNG(setup.seed);
   const pc = setup.roster.length;
   const isBossFight = setup.nodeType === 'boss' || setup.nodeType === 'elite';
@@ -158,6 +168,7 @@ export function createBattle(setup: BattleSetup): Battle {
     forceName: force?.name,
     supports: { ...(setup.supports ?? {}) },
     drops: [],
+    owned: setup.gearOwned,
     sideQuest: !isBossFight && setup.nodeType !== 'siege' && rng.chance(35)
       ? rng.chance(50)
         ? { kind: 'fast', turns: objective.type === 'survive' || objective.type === 'defend' ? undefined : 5 + Math.floor(enemyCount / 4), rupees: 120 + setup.depth * 12 }
@@ -168,7 +179,110 @@ export function createBattle(setup: BattleSetup): Battle {
   // First-region bosses and leaders hold their ground instead of hunting your Commander.
   if (battle.bossTier === 0) for (const u of units) if (u.isBoss) u.ai = 'stationary';
   decorateField(battle, rng, setup.nodeType);
+  windWakerUpkeepAtStart(battle, rng);
   if (setup.trials?.includes('mist')) battle.fog = true;
+  battle.rngState = rng.state;
+  return battle;
+}
+
+/** A battle at sea: a beach, open water and islands. Passengers start aboard their ships. */
+function createNavalBattle(setup: BattleSetup): Battle {
+  const rng = new RNG(setup.seed);
+  const pc = setup.roster.length;
+  const isBossFight = setup.nodeType === 'boss' || setup.nodeType === 'elite';
+  const level = enemyLevelFor(setup.depth, setup.nodeType) + (setup.trials?.includes('hardened') ? 2 : 0) + (setup.levelBonus ?? 0);
+  let objective: Objective = { type: isBossFight ? 'boss' : rng.chance(15) && setup.depth >= 2 ? 'survive' : 'rout' };
+  if (objective.type === 'survive') objective.turns = 6;
+  let enemyCount = Math.min(14, Math.max(3, Math.round(pc * (setup.depth < 3 ? 0.7 : 0.85) + setup.depth / 3)));
+  if (setup.nodeType === 'elite') enemyCount += 1;
+  if (setup.trials?.includes('swarm')) enemyCount += 2;
+
+  let uid = 0;
+  const force = setup.force;
+  const heroes = rng.shuffle([...(force?.heroes ?? [])]);
+  const enemies: Unit[] = [];
+  for (let i = 0; i < enemyCount; i++) {
+    const lvl = Math.max(1, level + rng.int(-1, 1));
+    let e: Unit;
+    if (force && (force.templates.length || heroes.length) && !(force.monsters && rng.chance(40))) {
+      const id = heroes.length && rng.chance(60) ? heroes.shift()! : rng.pick(force.templates.length ? force.templates : heroes);
+      e = makeEnemyFromTemplate(id, lvl, `e${uid++}`, rng);
+    } else e = makeEnemy(rng.pick(rosterFor(setup.world)), setup.world, lvl, `e${uid++}`, rng);
+    if (e.ai === 'aggressive' && rng.chance(25)) e.ai = 'guard';
+    enemies.push(e);
+  }
+  const pirates = !!force?.templates.some((t) => TEMPLATES[t]?.home === 'greatSea');
+  const fleet = [...(setup.fleet ?? []), ...enemyFleet(setup.depth, rng, pirates)].map((id) => {
+    const v = makeEnemyFromTemplate(id, Math.max(1, level), `e${uid++}`, rng);
+    v.ai = 'aggressive';
+    return v;
+  });
+  const leader = isBossFight && force?.leader && TEMPLATES[force.leader] ? TEMPLATES[force.leader] : undefined;
+  const bossDef = isBossFight && !leader ? setup.boss ?? rng.pick(bossPool(setup.world)) : undefined;
+  let boss: Unit | undefined;
+  if (leader) boss = makeEnemyFromTemplate(leader.id, level + 1 + bossBonus(setup.depth, setup.nodeType), `e${uid++}`, rng, { boss: true });
+  else if (bossDef) {
+    boss = makeEnemy(bossDef, setup.world, level + bossBonus(setup.depth, setup.nodeType), `e${uid++}`, rng, { boss: true });
+    if (setup.depth < 7) {
+      for (const k of ['str', 'mag', 'skl', 'spd', 'def', 'res'] as const) boss.stats[k] = Math.round(boss.stats[k] * 0.8);
+      boss.stats.hp = boss.hp = Math.round(boss.stats.hp * 0.85);
+    }
+  }
+  const players: Unit[] = setup.roster.map((u) => ({ ...prepareForBattle(u), cargo: [] }));
+  // No ship of your own? The locals lend you a raft.
+  if (!players.some(isVessel) && TEMPLATES.smallRaft) {
+    const raft = prepareForBattle(makeEnemyFromTemplate('smallRaft', Math.max(1, level - 1), `loan${uid++}`, rng));
+    Object.assign(raft, { team: 'player', isBoss: false, summoned: true, name: 'Borrowed Raft', ai: undefined, cargo: [] });
+    players.push(raft);
+  }
+  const layout = layoutNaval(rng, players, [...fleet, ...enemies], boss, setup.depth);
+  // Whoever didn't fit on the beach (or in the water) starts aboard a ship.
+  const vessels = players.filter((u) => isVessel(u) && u.x >= 0);
+  const stranded = players.filter((u) => u.x < 0 && !isVessel(u));
+  for (const p of stranded) {
+    const v = vessels.find((s) => roomAboard(s, p));
+    if (v) { v.cargo!.push(p); p.x = v.x; p.y = v.y; }
+  }
+  // Fill the ships with passengers from the beach too, so they can sail straight off.
+  for (const v of vessels) {
+    for (const p of players.filter((x) => !isVessel(x) && x.x >= 0 && x.x <= 2 && !x.isCommander && canRide(x) && !vessels.some((o) => o.cargo!.includes(x)))) {
+      if (!roomAboard(v, p) || (v.cargo!.length >= 2 && rng.chance(50))) continue;
+      v.cargo!.push(p);
+      p.x = v.x; p.y = v.y;
+    }
+  }
+  const units: Unit[] = players.filter((u) => u.x >= 0 && !vessels.some((v) => v.cargo!.includes(u)));
+  // Enemy crews go aboard their ships; the rest stand on islands.
+  const efleet = fleet.filter((v) => v.x >= 0);
+  for (const e of enemies) {
+    const onIsland = e.x >= 0;
+    const v = efleet.find((s) => roomAboard(s, e) && (!onIsland || rng.chance(35)));
+    if (v && canRide(e)) { (v.cargo ??= []).push(e); e.x = v.x; e.y = v.y; continue; }
+    if (onIsland) units.push(e);
+  }
+  for (const v of efleet) {
+    units.push(v);
+    if (v.skills.includes('bokoblinCrew') && ENEMIES.bokoblin && roomAboard(v, { ...v, race: 'monster', size: 1 } as Unit)) {
+      const bk = makeEnemy(ENEMIES.bokoblin, setup.world, level, `e${uid++}`, rng);
+      (v.cargo ??= []).push(bk);
+    }
+  }
+  if (boss && layout.bossSpawn) units.push(boss);
+  else if (boss) { objective = { type: 'rout' }; }
+  if (!units.some((u) => u.team === 'enemy')) objective = { type: 'rout' };
+
+  const base = setup.nodeType === 'boss' ? 500 : setup.nodeType === 'elite' ? 320 : 180;
+  const battle: Battle = {
+    width: layout.width, height: layout.height, tiles: layout.tiles, world: setup.world, units, turn: 1, phase: 'player', objective,
+    rngState: rng.state, rewardRupees: base + setup.depth * 16, nodeType: setup.nodeType, log: [], fallen: [], enemyLevel: level,
+    uidCounter: uid, interceptUsed: false, healMult: setup.healMult ?? 1, forceName: force?.name, supports: { ...(setup.supports ?? {}) }, drops: [],
+    naval: true, wind: rng.pick([[1, 0], [-1, 0], [0, 1], [0, -1]] as [number, number][]), owned: setup.gearOwned,
+  };
+  battle.bossTier = setup.depth < 7 ? 0 : setup.depth < 14 ? 1 : 2;
+  if (battle.bossTier === 0) for (const u of units) if (u.isBoss) u.ai = 'stationary';
+  battle.night = setup.night;
+  if (battle.tiles.includes('current')) battle.currentDir = battle.wind;
+  windWakerUpkeepAtStart(battle, rng);
   battle.rngState = rng.state;
   return battle;
 }
@@ -280,6 +394,7 @@ export function startPhase(b: Battle, team: Team): TurnStartEvent[] {
     u.sta = Math.min(u.stats.sta, (u.sta ?? u.stats.sta) + 2 + (hasEffect(u, 'staRegen') ? 2 : 0));
     for (const k of Object.keys(u.cooldowns ?? {})) if (--u.cooldowns![k] <= 0) delete u.cooldowns![k];
     terminaUpkeep(b, u, events);
+    wwStartPhase(b, u, events);
     const max = u.stats.hp;
     const tiles = footprint(u.x, u.y, u.size).map((p) => b.tiles[keyOf(b, p.x, p.y)]);
     const anchor = tiles[0];
@@ -336,8 +451,9 @@ export function spawnReinforcements(b: Battle): Unit[] {
 
 export function checkResult(b: Battle): Battle['result'] {
   if (b.result) return b.result;
-  const players = b.units.filter((u) => u.team === 'player' && !u.npc);
-  const enemies = b.units.filter((u) => u.team === 'enemy');
+  resolveSinking(b);
+  const players = b.units.flatMap((u) => [u, ...(u.cargo ?? [])]).filter((u) => u.team === 'player' && !u.npc);
+  const enemies = b.units.flatMap((u) => [u, ...(u.cargo ?? [])]).filter((u) => u.team === 'enemy');
   if (!players.length || b.fallen.some((u) => u.isCommander)) return (b.result = 'lost');
   if (b.objective.type === 'escort' && b.fallen.some((u) => u.vip)) { b.retreat = true; return (b.result = 'lost'); }
   if (!enemies.length) return (b.result = 'won');
@@ -379,7 +495,7 @@ export function objectiveText(o: Objective): string {
 
 /** Why the unit can't mount/dismount right now, or null if it can. */
 export function mountToggleBlocked(b: Battle, u: Unit): string | null {
-  if (!mountOf(u) || !canRide(u)) return 'No mount';
+  if (!mountOf(u) || !canRideMount(u)) return 'No mount';
   if (u.mounted !== false) return null; // dismounting always works
   const was = { mounted: u.mounted, size: u.size };
   u.mounted = true;
