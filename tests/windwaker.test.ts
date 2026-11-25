@@ -94,7 +94,9 @@ describe('naval combat', () => {
     b.fallen.push(ship);
     resolveSinking(b);
     expect(b.units.includes(medli)).toBe(true);
-    expect(b.fallen.includes(link)).toBe(true); // far from land and can't swim
+    // Far from land and unable to swim, Link clings to the floating wreckage.
+    expect(b.units.includes(link)).toBe(true);
+    expect(b.tiles[keyOf(b, link.x, link.y)]).toBe('shipDeck');
   });
 
   it('crewless enemy ships can be commandeered', () => {

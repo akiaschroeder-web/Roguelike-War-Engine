@@ -1053,7 +1053,10 @@ describe('army management', () => {
     const sum = finishBattle(run);
     expect(sum.army.xp).toBeGreaterThan(0);
     expect(a.morale).toBeGreaterThan(m0);
-    expect(a.supplies).not.toBe(s0);
+    // Supplies are eaten (1 + a third of the army), then some are foraged back (2-5).
+    expect(sum.army.supplies).toBe(a.supplies - s0);
+    expect(sum.army.supplies).toBeGreaterThanOrEqual(-3);
+    expect(sum.army.supplies).toBeLessThanOrEqual(3);
     expect(a.materials).toBeGreaterThan(10);
   });
 
