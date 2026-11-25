@@ -29,7 +29,7 @@ COPY = {
     "chuchuRedMM": "chuchuMM_red.webp", "chuchuGreenMM": "chuchuMM_green.webp", "arrowChuchu": "chuchuMM_arrow.webp",
     "gohmaWW": "gohmaWW.png", "kalleDemos": "kalleDemos.webp", "helmarocKing": "helmarocKing.webp", "jalhalla": "jalhalla.webp",
     "puppetGanonBeast": "puppetGanon.webp", "phantomGanonWW": "phantomGanonWW_alt.png",
-    "raft": "raft.png", "beedlesShopShip": "shopShip.webp", "gunboat": "gunboat.png", "pirateShip": "pirateShip.webp", "ghostShip": "ghostShip.webp",
+    "dekuTreeWW": "dekuTreeWW.webp", "raft": "raft.png", "beedlesShopShip": "shopShip.webp", "gunboat": "gunboat.png", "pirateShip": "pirateShip.webp", "ghostShip": "ghostShip.webp",
 }
 
 

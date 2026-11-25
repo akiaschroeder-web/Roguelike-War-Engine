@@ -12,5 +12,6 @@ export const ART_VARIANTS: Record<string, string[]> = {
   chuchuGreen: ['chuchuGreen', 'chuchuGreenMM'],
   bombchuMonster: ['bombchuMonster', 'bombchuMonsterMM'],
   phantomGanon: ['phantomGanon', 'phantomGanonWW'],
+  dekuTree: ['dekuTree', 'dekuTreeWW'],
   pirateGrappler: ['senza', 'nudge', 'zuko', 'mako'],
 };

@@ -234,6 +234,7 @@ ENTRIES = {
     "puppetGanonSpider": ("puppetGanonSpider.png", (0.50, 0.50, 1.00)),
     "puppetGanonSnake": ("puppetGanonSnake.png", (0.50, 0.50, 1.00)),
     "phantomGanonWW": ("phantomGanonWW.png", (0.50, 0.50, 1.00)),
+    "dekuTreeWW": ("dekuTreeWW.png", (0.48, 0.48, 0.55)),
     "raft": ("raft.png", (0.50, 0.50, 1.05)),
     "beedlesShopShip": ("beedlesShopShip.png", (0.50, 0.50, 1.00)),
     "gunboat": ("gunboat.png", (0.50, 0.50, 1.05)),
