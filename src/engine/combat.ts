@@ -4,7 +4,7 @@ import { coordinatedBonus, moraleBonus } from './army';
 import { isHelpless, onDamaged, rollElement, statusMods, weatherMight } from './status';
 import { keyOf, terrainAt, unitDist } from './grid';
 import { meltSunBlocks, thawMechanisms } from './field';
-import { canParry, critImmune, onParry, rangeBonus, scavengePenalty, wwAfterCombat, wwAfterHit, wwElement, wwMods, wwMultiplier, wwOnKill } from './windwaker';
+import { canParry, critImmune, masterSwordState, onParry, rangeBonus, scavengePenalty, wwAfterCombat, wwAfterHit, wwElement, wwMods, wwMultiplier, wwOnKill } from './windwaker';
 import { cannonsDown, isVessel, vesselMods } from './naval';
 import type { RNG } from './rng';
 import { isMagical, TERRAIN_BONUS, TRIANGLE } from './rules';
@@ -226,7 +226,9 @@ function sideStats(
   const tri = triangleOf(weapon, foeWeapon);
   const magical = isMagical(weapon.type) || beaming;
   const tags = unitTags(def);
-  const effective = !![...(weapon.effective ?? []), ...(arrow?.effective ?? [])].some((t) => tags.includes(t));
+  const ms = weapon.id === 'masterSword' ? masterSwordState(b, atk) : null;
+  const wEff = ms === 'dormant' ? [] : ms ? ['demon', 'undead'] : weapon.effective ?? [];
+  const effective = !![...wEff, ...(arrow?.effective ?? [])].some((t) => tags.includes(t));
   const element = arrow?.element ?? wwElement(atk, weapon) ?? weapon.element;
   const sa = statusMods(atk);
   const sd = statusMods(def);
@@ -239,6 +241,7 @@ function sideStats(
     if (hasEffect(atk, 'remainsMomentum')) might += Math.min(5, moved);
   }
   if (weapon.curseEater && def.statuses?.some((x) => x.kind === 'curse')) might += 4;
+  if (ms === 'full' && tags.includes('demon')) might += 4;
   if (atk.skills.includes('heavyForging') && weapon.twoHanded) might += 2;
   const power = (magical ? as.mag + am.mag : as.str + am.str) + might + tri + am.dmg + sa.dmg;
   let defense = magical ? ds.res + dm.res : Math.max(0, ds.def + dm.def + sd.def) + terrain.def;

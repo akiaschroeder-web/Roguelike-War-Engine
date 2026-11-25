@@ -8,7 +8,7 @@ import { board, capacityOf, commandeer, commandeerTargets, disembark, disembarkT
 import { RNG } from '../src/engine/rng';
 import { availableNodes, canTake, enterNode, finishBattle, newRun, startBattle, type RunWithEvent } from '../src/engine/run';
 import { CHART_SIZE, lockReason, seaOf } from '../src/engine/sea';
-import { disarm, droppedNear, takeDropped, wwStartPhase } from '../src/engine/windwaker';
+import { disarm, droppedNear, masterSwordState, takeDropped, wwStartPhase } from '../src/engine/windwaker';
 import { makeEnemy, makeHero, prepareForBattle } from '../src/engine/units';
 import type { Battle, Terrain, Unit } from '../src/engine/types';
 
@@ -219,6 +219,21 @@ describe('Wind Waker abilities and spaces', () => {
     ship.cargo = [orca];
     startPhase(b, 'player');
     expect(orca.acted).toBe(false);
+  });
+});
+
+describe('the Master Sword beneath the sea', () => {
+  it('is dormant until the sages are in the army', () => {
+    const b = sea(10, 6, 10);
+    b.world = 'towerOfTheGods';
+    const link = place(b, makeHero('heroOfWinds', 'l', 5, rng()), 2, 2);
+    expect(masterSwordState(b, link)).toBe('dormant');
+    place(b, makeHero('medli', 'm', 1, rng()), 2, 3);
+    expect(masterSwordState(b, link)).toBe('earth');
+    place(b, makeHero('makar', 'k', 1, rng()), 2, 4);
+    expect(masterSwordState(b, link)).toBe('full');
+    b.world = 'hyruleField';
+    expect(masterSwordState(b, link)).toBeNull();
   });
 });
 

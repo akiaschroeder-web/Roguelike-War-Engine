@@ -2,7 +2,8 @@
 // armor breaking, boss mechanics, the Great Sea battlefield spaces, and the
 // pack's abilities (melodies, grappling, planting, boarding…).
 
-import { ENEMIES, ITEMS, RACES, TEMPLATES, WEAPONS } from '../data/registry';
+import { ENEMIES, ITEMS, RACES, TEMPLATES, WEAPONS, worldDef } from '../data/registry';
+const WORLD_CAMPAIGN = (id: string) => worldDef(id).campaign;
 import { SPOILS } from '../content/windwaker';
 import { anchorCost, footDist, footprint, inBounds, keyOf, tilesInRange, unitAt, unitDist } from './grid';
 import { RNG } from './rng';
@@ -320,6 +321,20 @@ export function wwMultiplier(b: Battle, atk: Unit, def: Unit, defPos: Pos, eleme
   if (atk.skills.includes('sacredPartnership') && element === 'light' && def.turnUses?.hitTurn === b.turn && def.lastHitBy !== atk.uid) mult *= 1.25;
   if (atk.weapons.includes('larutosHarp') && magical && (unitTags(def).includes('undead') || def.race === 'phantom')) mult *= 1.5;
   return mult;
+}
+
+/**
+ * The Master Sword beneath the Great Sea: dormant until the sages pray again.
+ * Medli or Laruto in the army restores its sacred power (effective against demons
+ * and the undead); Makar or Fado as well fully restores it (+4 Might against demons).
+ * Returns null outside the Great Sea, where the sword is unchanged.
+ */
+export function masterSwordState(b: Battle, u: Unit): 'dormant' | 'earth' | 'full' | null {
+  if (WORLD_CAMPAIGN(b.world) !== 'greatSea') return null;
+  const army = [...b.units, ...b.units.flatMap((x) => x.cargo ?? []), ...(b.reserves ?? [])].filter((x) => x.team === u.team).map((x) => x.templateId);
+  const earth = army.some((t) => t === 'medli' || t === 'laruto');
+  const wind = army.some((t) => t === 'makar' || t === 'fado');
+  return earth && wind ? 'full' : earth ? 'earth' : 'dormant';
 }
 
 /** Can't be critically hit. */

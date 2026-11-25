@@ -1063,6 +1063,8 @@ export function giveGear(run: Run, id: string, uid: string | null): boolean {
 export function giveItem(run: Run, id: string, uid: string | null, uses?: number): boolean {
   const u = uid ? run.roster.find((x) => x.uid === uid) : undefined;
   if (!ITEMS[id]) return false;
+  // Bait Bag: bait comes with an extra serving.
+  if ((id === 'allPurposeBait' || id === 'hyoiPear') && run.questItems?.includes('baitBag')) uses = (uses ?? ITEMS[id].uses) + 1;
   if (!u || !addToPack(u, id, uses)) run.convoy.push(id);
   return true;
 }
