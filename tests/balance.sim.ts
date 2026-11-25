@@ -36,13 +36,14 @@ const PREF = ['camp', 'fountain', 'recruit', 'treasure', 'event', 'battle', 'sho
 
 it('region 1 balance', () => {
   const N = Number((globalThis as { process?: { env: Record<string, string> } }).process?.env.SIMN ?? 25);
-  for (const c of COMMANDERS) {
+  const only = (globalThis as unknown as { process: { env: Record<string, string> } }).process.env.ONLY;
+  for (const c of COMMANDERS.filter((x) => !only || only.split(',').includes(x.heroId))) {
     let bossWins = 0, reachBoss = 0, deathsBefore = 0, boss2 = 0, reach2 = 0;
     const lv2: number[] = [], blv2: number[] = [];
     const lv: number[] = [];
     const bossLv: number[] = [];
     for (let s = 0; s < N; s++) {
-      const run = newRun(s * 977 + 3, c.heroId) as RunWithEvent;
+      const run = newRun(s * 977 + 3, c.heroId, (globalThis as unknown as { process: { env: Record<string, string> } }).process.env.CAMP as never) as RunWithEvent;
       let alive = true;
       let lastType = '', lastObj = '', lastLv = 0;
       for (let step = 0; step < 80 && alive; step++) {

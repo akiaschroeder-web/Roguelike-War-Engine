@@ -144,7 +144,8 @@ export function commandeer(b: Battle, u: Unit, v: Unit): boolean {
 export function enemyUnload(b: Battle, v: Unit): Unit[] {
   if (!isVessel(v) || !v.cargo?.length) return [];
   const foes = b.units.filter((e) => e.team !== v.team);
-  if (!foes.some((e) => unitDist(v, e) <= 6)) return [];
+  const stuck = b.turn >= 3 && v.movedDist === 0 && b.turn % 2 === 1;
+  if (!foes.some((e) => unitDist(v, e) <= 6) && !stuck) return [];
   const out: Unit[] = [];
   for (let i = 0; i < 4 && v.cargo?.length; i++) {
     const tiles = disembarkTiles(b, v);
@@ -176,6 +177,8 @@ export function resolveSinking(b: Battle): string[] {
     if (!isVessel(v) || !v.cargo?.length) continue;
     const passengers = v.cargo;
     v.cargo = [];
+    // The wreck leaves floating debris to cling to.
+    for (const f of footprint(v.x, v.y, v.size)) if (inBounds(b, f.x, f.y) && isWatery(b.tiles[keyOf(b, f.x, f.y)])) b.tiles[keyOf(b, f.x, f.y)] = 'shipDeck';
     for (const p of passengers) {
       // Jump to a friendly ship nearby?
       const rescue = b.units.find((s) => s.team === p.team && roomAboard(s, p) && footDist(s.x, s.y, s.size, v.x, v.y, v.size) <= 2);
@@ -311,26 +314,20 @@ export function layoutNaval(rng: RNG, players: Unit[], enemies: Unit[], boss: Un
     const x = rng.int(5, width - 3), y = rng.int(0, height - 1);
     if (tiles[idx(x, y)] === 'water') tiles[idx(x, y)] = 'wall';
   }
-  // A sandbar from the beach to the nearest island (so nobody is ever stranded).
-  const near = [...islands].sort((a, c) => a.x - c.x)[0];
-  if (near) {
-    let x = 3, y = Math.floor(height / 2);
-    while (x < near.x || y !== near.y) {
-      if (tiles[idx(x, y)] === 'water' || tiles[idx(x, y)] === 'wall') tiles[idx(x, y)] = rng.chance(25) ? 'shipDeck' : 'plain';
-      if (x < near.x && (y === near.y || rng.chance(60))) x++;
-      else y += Math.sign(near.y - y);
+  // Sandbars: the beach links to the nearest island and each island to the next,
+  // so nobody is ever stranded (ships are still the fast way across).
+  const sandbar = (fx: number, fy: number, tx: number, ty: number) => {
+    let x = fx, y = fy;
+    while (x !== tx || y !== ty) {
+      const t = tiles[idx(x, y)];
+      if (t === 'water' || t === 'wall') tiles[idx(x, y)] = rng.chance(25) ? 'shipDeck' : 'plain';
+      if (x !== tx && (y === ty || rng.chance(55))) x += Math.sign(tx - x);
+      else y += Math.sign(ty - y);
     }
-  }
-  // A second sandbar between islands, sometimes.
-  if (islands.length >= 2 && rng.chance(60)) {
-    const [a, c] = rng.shuffle([...islands]).slice(0, 2);
-    let x = a.x, y = a.y;
-    while (x !== c.x || y !== c.y) {
-      if (tiles[idx(x, y)] === 'water') tiles[idx(x, y)] = 'plain';
-      if (x !== c.x && (y === c.y || rng.chance(50))) x += Math.sign(c.x - x);
-      else y += Math.sign(c.y - y);
-    }
-  }
+  };
+  const chain = [...islands].sort((a, c) => a.x - c.x);
+  if (chain[0]) sandbar(3, Math.floor(height / 2), chain[0].x, chain[0].y);
+  for (let i = 1; i < chain.length; i++) sandbar(chain[i - 1].x, chain[i - 1].y, chain[i].x, chain[i].y);
   // Sea features
   const water = () => tiles.map((t, k) => (t === 'water' && k % width > 4 ? k : -1)).filter((k) => k >= 0);
   if (rng.chance(45)) tiles[rng.pick(water())] = 'whirlpool';

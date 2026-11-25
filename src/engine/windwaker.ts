@@ -301,6 +301,8 @@ export function wwMods(b: Battle, u: Unit, pos: Pos, foe: Unit, initiating: bool
 export function wwMultiplier(b: Battle, atk: Unit, def: Unit, defPos: Pos, element: Element | undefined, magical: boolean, w: WeaponDef, dist: number): number {
   let mult = 1;
   const physical = !magical;
+  // Cannons are built to sink ships: against anything else they deal half damage.
+  if (w.type === 'siege' && !isVessel(def)) mult *= 0.5;
   if (def.skills.includes('heavyArmor') && physical && !def.armorBroken) mult *= 0.7;
   if (def.skills.includes('moltenCarapace') && physical && dist <= 1 && !def.armorBroken && w.type !== 'hammer' && !w.armorBreaker) mult *= 0.25;
   if (def.skills.includes('jellyBody') && physical) mult *= 0.8;

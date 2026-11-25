@@ -349,9 +349,9 @@ export class BattleView {
       const t = terrainAt(b, this.hover.x, this.hover.y);
       const tb = TERRAIN_BONUS[t];
       const note = t === 'wall' ? 'Impassable'
-        : t === 'water' ? 'Only fliers and swimmers (Zora) can enter'
+        : t === 'water' ? `Only ${b.naval ? 'ships, ' : ''}fliers and swimmers can enter`
         : t === 'lava' ? 'Burns 20% max HP per turn (Gorons and fliers are immune)'
-        : `Avoid +${tb.avoid} · Def +${tb.def}${tb.heal ? ` · Heals ${tb.heal}%` : ''}`;
+        : WW_TERRAIN_NOTES[t] ?? `Avoid +${tb.avoid} · Def +${tb.def}${tb.heal ? ` · Heals ${tb.heal}%` : ''}`;
       html += `<div class="terrain-info"><b>${esc(terrainLook(b.world, t).name)}</b> <span class="dim small">${note}</span></div>`;
     }
     this.els.panel.innerHTML = html;
@@ -1360,6 +1360,25 @@ export class BattleView {
     return true;
   }
 }
+
+const WW_TERRAIN_NOTES: Record<string, string> = {
+  whirlpool: 'Drags ships and swimmers in; hurts anyone caught in it',
+  updraft: 'Fliers and gliders starting here gain +2 MOV',
+  ropeSwing: 'A gap: only pirates, rope-runners and Grappling Hook users can swing across',
+  grapplePost: 'Impassable. A Hookshot and Grappling Hook anchor',
+  hangingVine: 'Impassable. Cut it to drop what it holds on everyone next to it',
+  plantingSoil: 'Koroks and planters can grow a tree here',
+  grownTree: 'Cover: Avoid +30, Def +2, heals 10%. A Hookshot anchor',
+  shipDeck: 'Walkable planks over the water',
+  boardingPoint: 'Board a ship from here without ending your turn',
+  cannonEmplacement: 'Stand here to fire the emplaced cannon (range 3–7)',
+  submergedTreasure: 'Sunken treasure: Salvage it from an adjacent space',
+  sandVortex: 'Sinking sand: −2 MOV, pulls you in',
+  spikedBarrel: 'Explodes when detonated, hurting everyone next to it',
+  watchtower: 'Climb up: +3 vision and +1 range for ranged weapons',
+  searchlight: 'Spots hidden units within 3 and raises the alarm',
+  commandStatue: 'The Command Melody brings it to life',
+};
 
 /** Abilities shown in the Abilities menu (forecast-only modifiers are excluded). */
 function menuAbilities(u: Unit) {

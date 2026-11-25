@@ -355,10 +355,11 @@ export function isFreeForAll(run: Run): boolean {
 
 /** A force drawn from the entire cast: any monster, soldier, hero, villain or boss. */
 function freeForAll(rng: RNG, kind: NodeType): EnemyForce {
-  const named = TEMPLATE_LIST.filter((t) => !t.generic).map((t) => t.id);
+  const ships = (t: UnitTemplate) => !!RACES[t.race]?.tags?.includes('vessel');
+  const named = TEMPLATE_LIST.filter((t) => !t.generic && !ships(t)).map((t) => t.id);
   return {
     name: 'Free-for-All', desc: 'The war has scattered everyone across Hyrule. Anyone could be on the other side.',
-    templates: TEMPLATE_LIST.map((t) => t.id), monsters: true, anyMonsters: true,
+    templates: TEMPLATE_LIST.filter((t) => !ships(t)).map((t) => t.id), monsters: true, anyMonsters: true,
     heroes: rng.shuffle([...named]).slice(0, rng.int(0, 3)),
     leader: (kind === 'elite' || kind === 'siege') && rng.chance(60) ? rng.pick(named) : undefined,
   };
@@ -376,7 +377,7 @@ function armyFor(_run: Run, rng: RNG, node: MapNode, withLeader: boolean): Enemy
   // Duplicates are fine: rivals and leaders can be characters you already have.
   const free = (id: string) => !!TEMPLATES[id];
   if (rng.chance(12) && FACTIONS.rivals) {
-    const pool = TEMPLATE_LIST.filter((t) => !t.generic && !t.rare && free(t.id)).map((t) => t.id);
+    const pool = TEMPLATE_LIST.filter((t) => !t.generic && !t.rare && free(t.id) && !RACES[t.race]?.tags?.includes('vessel')).map((t) => t.id);
     const heroes = rng.shuffle(pool).slice(0, 4);
     const generics = TEMPLATE_LIST.filter((t) => t.generic && !t.monster).map((t) => t.id);
     return { name: FACTIONS.rivals.name, desc: FACTIONS.rivals.desc, templates: generics, heroes, monsters: false,

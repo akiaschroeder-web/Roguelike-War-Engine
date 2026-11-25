@@ -1,6 +1,6 @@
 import { attackWeapons, expectedDamage, forecast, healAmount, healWeapons } from './combat';
 import { computeMoves, distanceField, footDist, keyOf, posOf, unitDist, type Moves } from './grid';
-import { LAVA_DAMAGE_PCT, TERRAIN_BONUS } from './rules';
+import { LAVA_DAMAGE_PCT, TERRAIN_BONUS, WATERY } from './rules';
 import { hasEffect, isLavaImmune } from './units';
 import type { Battle, Pos, Unit } from './types';
 
@@ -93,13 +93,37 @@ export function planAction(b: Battle, unit: Unit): AIPlan {
   if (point && Number(unit.uid.replace(/\D/g, '')) % 2 === 0) {
     return approach(b, unit, moves, [{ ...unit, x: point.x, y: point.y, size: 1 }]);
   }
+  // Ships with a crew aboard head for the shore nearest the enemy.
+  if (unit.cargo?.length && foes.length) {
+    const coast = coastNear(b, foes);
+    if (coast.length) return approach(b, unit, moves, coast);
+  }
   return approach(b, unit, moves, foes.length ? foes : friends);
+}
+
+/** Land spaces next to water close to the given units (as 1×1 goals). */
+function coastNear(b: Battle, foes: Unit[]): Unit[] {
+  const out: Unit[] = [];
+  const watery = (t: string) => WATERY.includes(t as never);
+  for (let y = 0; y < b.height; y++) for (let x = 0; x < b.width; x++) {
+    const t = b.tiles[keyOf(b, x, y)];
+    if (watery(t) || t === 'wall' || t === 'mountain') continue;
+    const wet = [[1, 0], [-1, 0], [0, 1], [0, -1]].some(([dx, dy]) => { const nx = x + dx, ny = y + dy; return nx >= 0 && ny >= 0 && nx < b.width && ny < b.height && watery(b.tiles[keyOf(b, nx, ny)]); });
+    if (!wet) continue;
+    if (foes.some((f) => footDist(x, y, 1, f.x, f.y, f.size) <= 4)) out.push({ ...foes[0], x, y, size: 1 } as Unit);
+  }
+  return out;
 }
 
 function approach(b: Battle, unit: Unit, moves: Moves, goals: Unit[]): AIPlan {
   const stay = { x: unit.x, y: unit.y };
   if (!goals.length) return { unit: unit.uid, path: [stay], dest: stay, action: null };
-  const field = distanceField(b, unit, goals);
+  let field = distanceField(b, unit, goals);
+  // Can't get next to anyone (ships and sea monsters vs. troops ashore): make for the nearest coast.
+  if (b.naval && field[keyOf(b, unit.x, unit.y)] === Infinity && ![...moves.reach.keys()].some((k) => field[k] < Infinity)) {
+    const coast = coastNear(b, goals);
+    if (coast.length) field = distanceField(b, unit, coast);
+  }
   let bestK = keyOf(b, unit.x, unit.y);
   let bestScore = Infinity;
   for (const [k, info] of moves.reach) {

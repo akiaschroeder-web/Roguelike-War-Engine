@@ -69,10 +69,10 @@ export const WEAPONS: WeaponDef[] = [
 
   // ── Siege ──
   w('pirateCannon', 'Pirate Cannon', 'siege', 'rare', 20, 70, 0, 12, 3, 7, { uses: 30, crewed: true, splash: 'adjacent', effective: ['vessel'],
-    desc: 'Crewed: vessels, cannoneers or a Cannon Emplacement. Bursts onto neighbours; effective against vessels.' }),
-  w('navalHarpoon', 'Naval Harpoon', 'siege', 'rare', 12, 80, 0, 8, 2, 6, { uses: 30, crewed: true, anchors: true, desc: 'Crewed. Anchors the target (Root), stopping a ship in its tracks.' }),
-  w('heavyCannon', 'Heavy Cannon', 'siege', 'epic', 28, 65, 0, 18, 3, 8, { uses: 25, crewed: true, effective: ['vessel'], desc: 'Crewed. Effective against vessels.' }),
-  w('shipCannon', 'Ship Cannon', 'siege', 'uncommon', 14, 75, 0, 10, 2, 5, { uses: 40, crewed: true, effective: ['vessel'], desc: 'Crewed. Effective against vessels.' }),
+    desc: 'Bursts onto neighbours. Effective against vessels; half damage against anything else.' }),
+  w('navalHarpoon', 'Naval Harpoon', 'siege', 'rare', 12, 80, 0, 8, 2, 6, { uses: 30, crewed: true, anchors: true, desc: 'Anchors the target (Root), stopping a ship in its tracks. Half damage against anything but vessels.' }),
+  w('heavyCannon', 'Heavy Cannon', 'siege', 'epic', 28, 65, 0, 18, 3, 8, { uses: 25, crewed: true, effective: ['vessel'], desc: 'Effective against vessels; half damage against anything else.' }),
+  w('shipCannon', 'Ship Cannon', 'siege', 'uncommon', 14, 75, 0, 10, 2, 5, { uses: 40, crewed: true, effective: ['vessel'], desc: 'Effective against vessels; half damage against anything else.' }),
   w('emplacedCannon', 'Emplaced Cannon', 'siege', 'common', 16, 75, 0, 0, 3, 7, { uses: 0, unique: true, anyClass: true, splash: 'adjacent', desc: 'The fortress cannon you\'re standing at.' }),
   w('torpedo', 'Barrel Torpedo', 'siege', 'rare', 18, 80, 0, 0, 1, 4, { uses: 0, unique: true, effective: ['vessel'], desc: 'Fired from beneath the waves. Effective against vessels.' }),
   w('ghostCannon', 'Spectral Cannon', 'magic', 'epic', 15, 80, 5, 0, 2, 5, { uses: 0, unique: true, element: 'dark', inflict: { status: 'fear', chance: 25, turns: 2 }, desc: 'Ghostly shells. May inflict Fear.' }),

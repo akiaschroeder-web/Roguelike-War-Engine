@@ -78,15 +78,16 @@ export function createBattle(setup: BattleSetup): Battle {
 
   // Each enemy slot is either a monster archetype or a character/soldier template.
   const force = setup.force;
-  const heroes = rng.shuffle([...(force?.heroes ?? [])]);
+  const heroes = rng.shuffle([...(force?.heroes ?? [])].filter((id) => TEMPLATES[id]?.race !== 'vessel' && TEMPLATES[id]?.race !== 'enchantedVessel'));
   type Spec = { arch: EnemyArchetype } | { tmpl: string };
   const specs: Spec[] = Array.from({ length: enemyCount }, (): Spec => {
-    const monster = () => ({ arch: rng.pick(force?.anyMonsters ? Object.values(ENEMIES) : rosterFor(setup.world)) });
+    const monster = () => ({ arch: rng.pick(force?.anyMonsters ? Object.values(ENEMIES) : earlyRoster(setup.world, setup.depth)) });
     if (!force || (!force.templates.length && !heroes.length)) return monster();
     if (heroes.length && rng.chance(60)) return { tmpl: heroes.shift()! };
     if (force.monsters && rng.chance(40)) return monster();
-    if (!force.templates.length) return monster();
-    return { tmpl: rng.pick(force.templates) };
+    const tmpls = earlyTemplates(setup.world, setup.depth, force.templates).filter((id) => TEMPLATES[id]?.race !== 'vessel');
+    if (!tmpls.length) return monster();
+    return { tmpl: rng.pick(tmpls) };
   });
   const leader = isBossFight && force?.leader && TEMPLATES[force.leader] ? TEMPLATES[force.leader] : undefined;
   const bossDef = isBossFight && !leader ? setup.boss ?? rng.pick(bossPool(setup.world)) : undefined;
@@ -190,10 +191,11 @@ function createNavalBattle(setup: BattleSetup): Battle {
   const rng = new RNG(setup.seed);
   const pc = setup.roster.length;
   const isBossFight = setup.nodeType === 'boss' || setup.nodeType === 'elite';
-  const level = enemyLevelFor(setup.depth, setup.nodeType) + (setup.trials?.includes('hardened') ? 2 : 0) + (setup.levelBonus ?? 0);
+  // Fights at sea are harder to manage: early ones field slightly greener crews.
+  const level = Math.max(1, enemyLevelFor(setup.depth, setup.nodeType) + (setup.trials?.includes('hardened') ? 2 : 0) + (setup.levelBonus ?? 0) - (setup.depth < 10 ? 1 : 0));
   let objective: Objective = { type: isBossFight ? 'boss' : rng.chance(15) && setup.depth >= 2 ? 'survive' : 'rout' };
   if (objective.type === 'survive') objective.turns = 6;
-  let enemyCount = Math.min(14, Math.max(3, Math.round(pc * (setup.depth < 3 ? 0.7 : 0.85) + setup.depth / 3)));
+  let enemyCount = Math.min(14, Math.max(3, Math.round(pc * (setup.depth < 3 ? 0.65 : setup.depth < 8 ? 0.75 : 0.85) + setup.depth / 3)));
   if (setup.nodeType === 'elite') enemyCount += 1;
   if (setup.trials?.includes('swarm')) enemyCount += 2;
 
@@ -201,18 +203,22 @@ function createNavalBattle(setup: BattleSetup): Battle {
   const force = setup.force;
   const heroes = rng.shuffle([...(force?.heroes ?? [])]);
   const enemies: Unit[] = [];
+  const pirates = !!force?.templates.some((t) => TEMPLATES[t]?.home === 'greatSea');
+  const fleetIds = [...(setup.fleet ?? []), ...enemyFleet(setup.depth, rng, pirates)];
+  enemyCount = Math.max(2, enemyCount - fleetIds.length);
+  const pool = earlyRoster(setup.world, setup.depth);
   for (let i = 0; i < enemyCount; i++) {
     const lvl = Math.max(1, level + rng.int(-1, 1));
     let e: Unit;
-    if (force && (force.templates.length || heroes.length) && !(force.monsters && rng.chance(40))) {
-      const id = heroes.length && rng.chance(60) ? heroes.shift()! : rng.pick(force.templates.length ? force.templates : heroes);
+    const templates = earlyTemplates(setup.world, setup.depth, force?.templates ?? []);
+    if (force && (templates.length || heroes.length) && !(force.monsters && rng.chance(40))) {
+      const id = heroes.length && rng.chance(60) ? heroes.shift()! : rng.pick(templates.length ? templates : heroes);
       e = makeEnemyFromTemplate(id, lvl, `e${uid++}`, rng);
-    } else e = makeEnemy(rng.pick(rosterFor(setup.world)), setup.world, lvl, `e${uid++}`, rng);
+    } else e = makeEnemy(rng.pick(pool), setup.world, lvl, `e${uid++}`, rng);
     if (e.ai === 'aggressive' && rng.chance(25)) e.ai = 'guard';
     enemies.push(e);
   }
-  const pirates = !!force?.templates.some((t) => TEMPLATES[t]?.home === 'greatSea');
-  const fleet = [...(setup.fleet ?? []), ...enemyFleet(setup.depth, rng, pirates)].map((id) => {
+  const fleet = fleetIds.map((id) => {
     const v = makeEnemyFromTemplate(id, Math.max(1, level), `e${uid++}`, rng);
     v.ai = 'aggressive';
     return v;
@@ -285,6 +291,22 @@ function createNavalBattle(setup: BattleSetup): Battle {
   windWakerUpkeepAtStart(battle, rng);
   battle.rngState = rng.state;
   return battle;
+}
+
+/** …and their heaviest soldiers. */
+function earlyTemplates(world: WorldId, depth: number, ids: string[]): string[] {
+  if (worldDef(world).campaign !== 'greatSea' || depth >= 6) return ids;
+  const light = ids.filter((id) => (TEMPLATES[id]?.stats.hp ?? 20) < 30 && !RACES_VESSEL(id));
+  return light.length ? light : ids;
+}
+const RACES_VESSEL = (id: string) => TEMPLATES[id]?.race === 'vessel';
+
+/** Great Sea regions keep their heaviest monsters back for the first few fights. */
+function earlyRoster(world: WorldId, depth: number): EnemyArchetype[] {
+  const all = rosterFor(world);
+  if (worldDef(world).campaign !== 'greatSea' || depth >= 6) return all;
+  const light = all.filter((a) => (a.stats?.hp ?? 20) < 30 && (a.size ?? 1) <= 2);
+  return light.length ? light : all;
 }
 
 type GenMap = ReturnType<typeof generateMap>;
