@@ -17,7 +17,7 @@ import { castAbility } from '../src/engine/abilities';
 import { fountainTeach, improveWeapon, pickForce, repairWeapon, useItemOutside } from '../src/engine/run';
 import { gainSupport, isSPair, rankOf, supportKey } from '../src/engine/supports';
 import { canChoose, chooseEvent, descendDungeon, migrateRun } from '../src/engine/run';
-import { addStatus, onDamaged, tickStatuses } from '../src/engine/status';
+import { addStatus, onDamaged, rollElement, tickStatuses } from '../src/engine/status';
 import { dig, environmentPhase, ignite, isSeen, plantBean, revealNearby, triggerTraps } from '../src/engine/field';
 import { hookTiles } from '../src/engine/abilities';
 import { freeCaptive } from '../src/engine/battle';
@@ -271,7 +271,7 @@ describe('run flow', () => {
     for (let i = 0; i < 12; i++) {
       offerRegions(run);
       expect(run.event?.type).toBe('region');
-      advanceRegion(run, (run.event as { options: string[] }).options[0]);
+      advanceRegion(run, (run.event as unknown as { options: string[] }).options[0]);
     }
     expect(run.act).toBe(13);
     expect(availableNodes(run).length).toBeGreaterThan(0);
@@ -1251,14 +1251,14 @@ describe("Majora's Mask pack", () => {
     // After Clock Town: Termina Field, then the four regions, then the Moon once all Remains are held.
     run.region = 'clockTown';
     offerRegions(run);
-    expect((run.event as { options: string[] }).options).toEqual(['terminaField']);
+    expect((run.event as unknown as { options: string[] }).options).toEqual(['terminaField']);
     run.regionsVisited.push('terminaField');
     run.region = 'terminaField';
     offerRegions(run);
-    expect((run.event as { options: string[] }).options.sort()).toEqual(['greatBay', 'ikana', 'snowhead', 'woodfall']);
+    expect((run.event as unknown as { options: string[] }).options.sort()).toEqual(['greatBay', 'ikana', 'snowhead', 'woodfall']);
     run.convoy.push('odolwaRemains', 'gohtRemains', 'gyorgRemains', 'twinmoldRemains');
     offerRegions(run);
-    expect((run.event as { options: string[] }).options).toEqual(['moon']);
+    expect((run.event as unknown as { options: string[] }).options).toEqual(['moon']);
   });
 
   it('the Moon falls when the third day ends', () => {
@@ -1312,5 +1312,36 @@ describe("Majora's Mask pack", () => {
     b.tiles[keyOf(b, 4, 4)] = 'wall';
     expect(useItem(b, gor, 0, rng(), { x: 4, y: 4 })).not.toBeNull();
     expect(b.tiles[keyOf(b, 4, 4)]).toBe('plain');
+  });
+});
+
+describe("Composer's Sheet Music", () => {
+  it('makes sleep and curses last a turn longer', () => {
+    const b = emptyBattle();
+    const sharp = place(makeHero('sharp', 'p1', 10, rng()), 2, 2, 'player');
+    const foe = place(makeEnemy(ENEMIES.octorok ?? Object.values(ENEMIES)[0], 'hyruleField', 1, 'e1', rng()), 3, 2, 'enemy');
+    b.units = [sharp, foe];
+    const sleepFor = (withSheet: boolean) => {
+      sharp.gear.acc1 = withSheet ? 'composersSheet' : undefined;
+      for (let seed = 1; seed < 60; seed++) {
+        foe.statuses = [];
+        foe.stats.res = 0;
+        sharp.mp = 30;
+        castAbility(b, sharp, 'goronLullaby', new RNG(seed));
+        const st = foe.statuses.find((s) => s.kind === 'sleep');
+        if (st) return st.turns;
+      }
+      return 0;
+    };
+    expect(sleepFor(true)).toBe(sleepFor(false) + 1);
+    // Curses from dark attacks linger too.
+    sharp.gear.acc1 = 'composersSheet';
+    let cursed = 0;
+    for (let seed = 1; seed < 200 && !cursed; seed++) {
+      foe.statuses = [];
+      rollElement(b, sharp, foe, 'dark', new RNG(seed));
+      cursed = foe.statuses.find((s) => s.kind === 'curse')?.turns ?? 0;
+    }
+    expect(cursed).toBe(4);
   });
 });

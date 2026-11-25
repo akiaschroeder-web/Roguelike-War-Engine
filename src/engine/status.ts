@@ -60,6 +60,11 @@ export function immuneTo(u: Unit, kind: StatusKind): boolean {
   return false;
 }
 
+/** Wearing the Composer's Sheet Music? */
+export function hasComposer(u: Unit): boolean {
+  return Object.values(u.gear ?? {}).some((id) => GEAR[id!]?.effects?.includes('composer'));
+}
+
 export function addStatus(u: Unit, kind: StatusKind, turns: number) {
   if (immuneTo(u, kind)) return;
   const cur = u.statuses.find((s) => s.kind === kind);
@@ -123,6 +128,10 @@ export function rollElement(b: Battle, by: Unit, target: Unit, el: Element | und
   if (weaponId && /dagger|knife|kunai/i.test(weaponId) && rng.chance(15) && !out.includes('bleed')) { addStatus(target, 'bleed', 2); out.push('bleed'); }
   if (weaponId === 'boomerang' && rng.chance(30)) { addStatus(target, 'stun', 1); out.push('stun'); }
   if (el === 'dark' && rng.chance(30)) { addStatus(target, 'curse', 3); out.push('curse'); }
+  // Composer's Sheet Music: sleep and curses linger.
+  if (out.some((k) => k === 'sleep' || k === 'curse') && hasComposer(by)) {
+    for (const st of target.statuses) if ((st.kind === 'sleep' || st.kind === 'curse') && out.includes(st.kind)) st.turns++;
+  }
   const els: Element[] = el ? [el] : [];
   if (by.skills.includes('combinedSorcery') && (el === 'fire' || el === 'ice')) els.splice(0, 1, 'fire', 'ice');
   const rain = b.weather?.kind === 'rain';

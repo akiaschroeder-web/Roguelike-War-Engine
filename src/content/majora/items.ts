@@ -63,7 +63,7 @@ export const GEAR: GearDef[] = [
   acc('dekuFlowerPetal', 'Deku Flower Petal', 'rare', { avoid: 5 }, 'Glide on the petal: you move as a flier (over water and gaps).', { effects: ['flight'] }),
   acc('goronRacingMedal', 'Goron Racing Medal', 'rare', { spd: 1 }, 'Rolling attacks deal +3 damage after moving 3+ spaces.', { effects: ['charge'] }),
   acc('indigoGosEmblem', "Indigo-Go's Emblem", 'epic', { mag: 1 }, 'Songs cost 25% less MP.', { effects: ['songThrift'] }),
-  acc('composersSheet', "Composer's Sheet Music", 'rare', { mag: 2 }, '+2 MAG. Your sleep and curse effects last longer.'),
+  acc('composersSheet', "Composer's Sheet Music", 'rare', { mag: 2 }, '+2 MAG. Sleep and curses you inflict last 1 turn longer.', { effects: ['composer'] }),
   acc('garoSpiritEmblem', 'Garo Spirit Emblem', 'epic', { spd: 1 }, 'Move through enemy units.', { effects: ['phaseThrough'] }),
   acc('wartsBubble', "Wart's Bubble", 'epic', { res: 1 }, 'Negates the first damaging hit you take each battle.', { effects: ['bubble'] }),
   acc('eyegoreCrystal', "Eyegore's Crystal", 'epic', { mag: 2 }, '+2 MAG. Magic reaches 1 space further.', { effects: ['magicRange'] }),

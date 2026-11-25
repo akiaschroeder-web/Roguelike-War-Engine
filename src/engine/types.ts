@@ -260,7 +260,8 @@ export type GearEffect =
   | 'phaseThrough' // move through enemy units
   | 'rollBoost' // rolling/charging +2 range and cheaper
   | 'balloon' // flight; takes double damage from bows and slings
-  | 'jumpUnits'; // can pass through units
+  | 'jumpUnits' // can pass through units
+  | 'composer'; // your sleep and curse effects last 1 turn longer
 
 export type ItemKind =
   | 'heal' | 'fullHeal' | 'mp' | 'sta' | 'fairy' | 'bomb' | 'stun' | 'learn'

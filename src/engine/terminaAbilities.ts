@@ -5,7 +5,7 @@ import { GEAR, TEMPLATES } from '../data/registry';
 import { anchorCost, footDist, footprint, inBounds, keyOf, unitAt, unitDist } from './grid';
 import type { RNG } from './rng';
 import { INF } from './rules';
-import { addStatus } from './status';
+import { addStatus, hasComposer } from './status';
 import { restoreForm, roomFor, transformInto } from './transform';
 import { canSwim, effectiveStats, hasEffect, unitTags } from './units';
 import type { AbilityDef, Battle, Pos, StatusKind, Unit } from './types';
@@ -287,7 +287,7 @@ export function castTermina(b: Battle, u: Unit, def: AbilityDef, rng: RNG, targe
       break;
     case 'goronLullaby':
       for (const e of foes(r)) {
-        if (rng.chance(Math.max(15, 75 - effectiveStats(e).res * 3))) { addStatus(e, 'sleep', 2 + (b.statusBonus ?? 0)); out.statuses.push({ uid: e.uid, kind: 'sleep' }); }
+        if (rng.chance(Math.max(15, 75 - effectiveStats(e).res * 3))) { addStatus(e, 'sleep', 2 + (b.statusBonus ?? 0) + (hasComposer(u) ? 1 : 0)); out.statuses.push({ uid: e.uid, kind: 'sleep' }); }
         if (u.weapons.includes('goronDrums') && rng.chance(30)) { addStatus(e, 'stun', 1); out.statuses.push({ uid: e.uid, kind: 'stun' }); }
       }
       break;
