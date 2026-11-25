@@ -164,13 +164,40 @@ def main() -> None:
     # Combined images
     pair = Image.open(SRC / "mothulaPair.webp").convert("RGBA")
     gohdan = Image.open(SRC / "gohdan.webp").convert("RGBA")
-    gohdan.save(OUT / "gohdan.png")
+    # Gohdan's head and its right hand overlap: the thumb (x > 0.598, y > 0.255) belongs to the hand.
+    gw, gh = gohdan.size
+    head = gohdan.copy()
+    head.paste((0, 0, 0, 0), (int(0.645 * gw), 0, gw, gh))
+    head.paste((0, 0, 0, 0), (int(0.598 * gw), int(0.255 * gh), gw, gh))
+    # The face is symmetrical: rebuild the side hidden behind the thumb from the other half.
+    axis = int(0.4545 * gw)
+    left = head.crop((int(0.25 * gw), 0, axis, gh))
+    head.paste((0, 0, 0, 0), (axis, 0, gw, gh))
+    head.alpha_composite(left.transpose(Image.FLIP_LEFT_RIGHT), (axis, 0))
+    blobs(crop_frac(head, 0.25, 0.0, 0.70, 1.0), 2)[0].save(OUT / "gohdan.png")
+    hand = gohdan.copy()
+    hand.paste((0, 0, 0, 0), (0, 0, int(0.598 * gw), gh))
+    hand.paste((0, 0, 0, 0), (0, 0, int(0.645 * gw), int(0.255 * gh)))
     molgera = Image.open(SRC / "molgera.webp").convert("RGBA")
     parts = blobs(molgera)
     parts[0].save(OUT / "molgera.png")
     parts[1].save(OUT / "molgeraLarva.png")
-    blobs(crop_frac(pair, 0.50, 0.66, 1.0, 1.0), 1)[0].save(OUT / "mothula.png")  # the ground Mothula, lower right
-    blobs(crop_frac(gohdan, 0.60, 0.0, 1.0, 1.0), 2)[0].save(OUT / "gohdansHand.png")  # its right hand
+    # The ground Mothula, lower right. The flying one's lower wings hang down onto it, so cut along
+    # its back: keep only what's below y = 0.70, except the tall shell on the right.
+    ground = pair.copy()
+    pw, ph = ground.size
+    ground.paste((0, 0, 0, 0), (0, 0, pw, int(0.70 * ph)))
+    ground.paste(pair.crop((int(0.80 * pw), int(0.60 * ph), pw, int(0.70 * ph))), (int(0.80 * pw), int(0.60 * ph)))
+    gp = ground.load()
+    for y in range(int(0.70 * ph), int(0.80 * ph)):
+        for x in range(int(0.80 * pw)):
+            r, g, b, a = gp[x, y]
+            hh, ss, vv = colorsys.rgb_to_hsv(r / 255, g / 255, b / 255)
+            if a and 0.25 <= hh <= 0.58 and ss > 0.25 and vv > 0.25:
+                gp[x, y] = (0, 0, 0, 0)
+    ground = crop_frac(ground, 0.40, 0.58, 1.0, 1.0)
+    blobs(ground, 1)[0].save(OUT / "mothula.png")
+    blobs(crop_frac(hand, 0.59, 0.0, 1.0, 1.0), 2)[0].save(OUT / "gohdansHand.png")
     # Backgrounds to cut out
     flood_white(Image.open(SRC / "ritoGeneric.jpg")).save(OUT / "ritoGeneric.png")
     navy_gold = lambda h, s, v, r, g, b: (0.55 <= h <= 0.75 and s > 0.35 and v < 0.75) or (0.10 <= h <= 0.18 and s > 0.55 and v > 0.45) or (0.45 <= h <= 0.55 and s > 0.4)
