@@ -999,6 +999,9 @@ export interface RunMap {
   nodes: MapNode[];
 }
 
+/** A campaign the World Tour can visit. */
+export type TourCampaign = 'hyrule' | 'termina' | 'greatSea' | 'twilight' | 'skyward' | 'wild' | 'original';
+
 export interface Run {
   seed: number;
   rngState: number;
@@ -1030,7 +1033,7 @@ export interface Run {
   /** Army-wide stats and resources. */
   army?: Army;
   /** Which campaign: the endless Hyrule war, Termina with its three-day cycle, or the Great Sea. */
-  campaign?: 'hyrule' | 'termina' | 'greatSea' | 'twilight' | 'skyward' | 'wild' | 'original' | 'random';
+  campaign?: 'hyrule' | 'termina' | 'greatSea' | 'twilight' | 'skyward' | 'wild' | 'original' | 'random' | 'worldTour';
   /** Great Sea: the naval campaign's state. */
   sea?: SeaState;
   /** Termina: hours passed in the current three-day cycle (0-71) and resets so far. */
@@ -1039,6 +1042,8 @@ export interface Run {
   bank?: number;
   /** Quest items (don't use pack slots). */
   questItems?: string[];
+  /** World Tour: the order of campaigns, the current leg, the act it began on and regions per campaign. */
+  tour?: { legs: TourCampaign[]; leg: number; legStartAct: number; per: number; next?: TourCampaign };
   /** Chamber of Trials modifiers for this campaign. */
   trials?: string[];
   /** Permanent bonuses bought between runs. */

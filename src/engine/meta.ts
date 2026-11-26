@@ -198,11 +198,13 @@ export function awardMedals(p: MetaProgress, n: number) {
 // ───────────────────────── Applying to a new campaign ─────────────────────────
 
 export interface RunChoices {
-  campaign?: 'hyrule' | 'termina' | 'greatSea' | 'twilight' | 'skyward' | 'wild' | 'original' | 'random';
+  campaign?: 'hyrule' | 'termina' | 'greatSea' | 'twilight' | 'skyward' | 'wild' | 'original' | 'random' | 'worldTour';
   hero?: string;
   kit?: string;
   formation?: string;
   trials?: string[];
+  /** World Tour: regions to fight through in each campaign before moving on (default 2). */
+  tourActs?: string;
 }
 
 /** Starting bonuses from facilities and the player's choices. Call right after newRun. */

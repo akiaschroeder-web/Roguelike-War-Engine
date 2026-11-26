@@ -14,9 +14,10 @@ import {
   recruit, recruitLevel, saveMeta, saveRun, canTake, canUseOutside, forgePrice, forgeWeapon, improveCost, improveWeapon, MAX_FORGE, repairCost, repairWeapon, FREE_FOR_ALL_REGION, isFreeForAll, fountainTeach, unlearnedFairySpells, priceOf, stashGear, stashItem, stashWeapon, useItemOutside, type ItemKindTag, startBattle, takeTreasure,
   canChoose, chooseEvent, descendDungeon, eventDef, leaveDungeon, fleetCrew, isNavalNode, ownedGear, vesselHasSlot,
   type Meta, type Reward, type RunEvent, type RunWithEvent,
+  TOUR_NAMES,
 } from '../engine/run';
 import { equip } from '../engine/combat';
-import { GEAR_SLOTS, type GearSlot, type MapNode, type NodeType, type Unit } from '../engine/types';
+import { GEAR_SLOTS, type GearSlot, type MapNode, type NodeType, type TourCampaign, type Unit } from '../engine/types';
 import { forgeLevel, slotFor } from '../engine/units';
 import { maxRank, pointCap, rankOf } from '../engine/supports';
 import { GROUP_SUPPORTS, PAIR_BONUSES, canonOf, formPairs, pairDef, pairKey } from '../content/supports';
@@ -311,7 +312,9 @@ export class App {
               <option value="skyward" ${choices.campaign === 'skyward' ? 'selected' : ''}>The Sky: from Skyloft to the Demon's Realm</option>
               <option value="wild" ${choices.campaign === 'wild' ? 'selected' : ''}>Hyrule Reborn: surface, sky and Depths, under the Blood Moon</option>
               <option value="original" ${choices.campaign === 'original' ? 'selected' : ''}>Original Hyrule: the nine Levels and the Triforce of Wisdom</option>
-              <option value="random" ${choices.campaign === 'random' ? 'selected' : ''}>Random: any region, any enemy, any event</option></select></div>
+              <option value="random" ${choices.campaign === 'random' ? 'selected' : ''}>Random: any region, any enemy, any event</option>
+              <option value="worldTour" ${choices.campaign === 'worldTour' ? 'selected' : ''}>World Tour: every campaign in turn, a few regions in each</option></select></div>
+            ${choices.campaign === 'worldTour' ? `<div class="opt-row"><span class="dim small">World Tour: regions per campaign</span><select data-opt="tourActs">${[1, 2, 3, 4, 5].map((n) => `<option value="${n}" ${(choices.tourActs ?? '2') === String(n) ? 'selected' : ''}>${n}</option>`).join('')}</select></div>` : ''}
             ${p.heroes.length ? `<div class="opt-row"><span class="dim small">Companion (Hall of Heroes)</span><select data-opt="hero"><option value="">None</option>${p.heroes.map((id) => `<option value="${id}" ${choices.hero === id ? 'selected' : ''}>${esc(TEMPLATES[id]?.name ?? id)}</option>`).join('')}</select></div>` : ''}
             ${p.kits.length ? `<div class="opt-row"><span class="dim small">Starting kit (Royal Treasury)</span><select data-opt="kit"><option value="">None</option>${KITS.filter((k) => p.kits.includes(k.id)).map((k) => `<option value="${k.id}" ${choices.kit === k.id ? 'selected' : ''}>${esc(k.name)}</option>`).join('')}</select></div>` : ''}
             ${p.formations.length ? `<div class="opt-row"><span class="dim small">Formation (Military Academy)</span><select data-opt="formation"><option value="">Standard</option>${FORMATIONS.filter((f) => p.formations.includes(f.id)).map((f) => `<option value="${f.id}" ${choices.formation === f.id ? 'selected' : ''}>${esc(f.name)}</option>`).join('')}</select></div>` : ''}
@@ -327,7 +330,7 @@ export class App {
         pick: (el) => { chosen = el.dataset.id!; const y = window.scrollY; render(); window.scrollTo(0, y); },
         start: () => {
           if (!chosen) return;
-          this.run = newRun(randomSeed(), chosen, choices.campaign);
+          this.run = newRun(randomSeed(), chosen, choices.campaign, Number(choices.tourActs ?? 2));
           const run = this.run;
           applyMetaToRun(run, p, choices,
             (id) => { recruit(run, id); run.event = undefined; },
@@ -342,6 +345,7 @@ export class App {
       });
       this.root.querySelectorAll<HTMLSelectElement>('[data-opt]').forEach((sel) => sel.addEventListener('change', () => {
         (choices as Record<string, unknown>)[sel.dataset.opt!] = sel.value || undefined;
+        if (sel.dataset.opt === 'campaign') { const y = window.scrollY; render(); window.scrollTo(0, y); }
       }));
       this.root.querySelectorAll<HTMLInputElement>('[data-trial]').forEach((cb) => cb.addEventListener('change', () => {
         const id = cb.dataset.trial!;
@@ -384,6 +388,8 @@ export class App {
           return `<div class="tb-res" title="Gratitude Crystals (trade with Batreaux) · crafting Treasures and insects in the bag · Song of the Hero parts${run.skyward?.trialPending ? ' · a Silent Realm trial is next' : ''}"><span class="dim small">Gratitude</span> <b>💎${questCount(run, 'gratitudeCrystal')}</b> <span class="dim small">Treasures</span> <b>${mats}</b> <span class="dim small">Song</span> <b>${qi.includes('songOfTheHeroComplete') ? '🎵' : `${parts}/4`}</b>${run.skyward?.trialPending ? ' <b title="Silent Realm trial next">⛩</b>' : ''}</div>`; })() : ''}
         ${run.campaign === 'wild' ? (() => { const s = wildStatus(run); const icon = s.layer === 'sky' ? '☁ Sky' : s.layer === 'depths' ? '◉ Depths' : '⛰ Surface';
           return `<div class="tb-res" title="Layer · Energy Cell capacity · Zonaite · Korok Seeds · Spirit Orbs and Lights of Blessing · Poes · max HP lost to Gloom · the Blood Moon"><span class="dim small">${icon}</span> <b>⚡${s.energy}</b> <span class="dim small">Zonaite</span> <b>${s.zonaite}</b> <span class="dim small">Seeds</span> <b>🌰${s.seeds}</b> <span class="dim small">Orbs</span> <b>${s.orbs}</b> <span class="dim small">Poes</span> <b>${s.poes}</b>${s.gloom ? ` <span class="dim small">Gloom</span> <b class="bad">−${s.gloom}</b>` : ''} <b>${esc(s.moon)}</b></div>`; })() : ''}
+        ${run.tour ? (() => { const t = run.tour; const left = Math.max(0, t.per - (run.act - t.legStartAct + 1)); const nxt = t.legs[(t.leg + 1) % t.legs.length];
+          return `<div class="tb-res" title="World Tour: ${t.per} region${t.per > 1 ? 's' : ''} in each campaign, then on to the next. Order: ${t.legs.map((c) => TOUR_NAMES[c]).join(' → ')}"><span class="dim small">World Tour</span> <b>${t.leg + 1}</b> <span class="dim small">· ${esc(TOUR_NAMES[run.campaign as TourCampaign] ?? '')} · ${left ? `${left} more region${left > 1 ? 's' : ''}, then` : 'next:'} ${esc(TOUR_NAMES[nxt])}</span></div>`; })() : ''}
         ${run.campaign === 'original' ? (() => { const qi = run.questItems ?? []; const n = qi.includes('fullTriforce') ? 8 : Math.min(8, questCount(run, 'wisdomFragment'));
           return `<div class="tb-res" title="Fragments of the Triforce of Wisdom (one from each Level's boss). All eight open Death Mountain.${run.trials?.includes('secondQuest') ? ' · Second Quest' : ''}"><span class="dim small">Triforce</span> <b>${n >= 8 ? '🔺 whole' : `🔺${n}/8`}</b>${run.trials?.includes('secondQuest') ? ' <span class="dim small">2nd Quest</span>' : ''}</div>`; })() : ''}
         ${run.clock ? (() => { const c = clockLabel(run); return `<div class="tb-clock ${c.hoursLeft <= 12 ? 'bad' : c.day === 3 ? 'warn' : ''}" title="The Moon falls when the third day ends."><span class="dim small">Day ${c.day} ${c.night ? '☾' : '☀'}</span> <b>${c.time}</b> <span class="dim small">${c.hoursLeft}h left</span></div>

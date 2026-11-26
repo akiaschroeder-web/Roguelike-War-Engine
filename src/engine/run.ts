@@ -21,7 +21,7 @@ import { capacityOf, isVessel } from './naval';
 import { addToPack, canRide, forgeLevel, gainXp, makeHero, maxUses, rollLevelUp, slotFor } from './units';
 import { VESSEL_SLOTS } from './types';
 import { VESSEL_SLOTS_BY_SIZE } from '../content/windwaker';
-import type { Battle, BossDef, CommanderDef, EventDef, EventEffect, EventOutcome, EventRequires, EnemyForce, FactionDef, GearSlot, MapNode, NodeType, Rarity, Run, RunMap, Unit, UnitTemplate, WorldId } from './types';
+import type { TourCampaign, Battle, BossDef, CommanderDef, EventDef, EventEffect, EventOutcome, EventRequires, EnemyForce, FactionDef, GearSlot, MapNode, NodeType, Rarity, Run, RunMap, Unit, UnitTemplate, WorldId } from './types';
 
 export const ROWS_PER_REGION = 7; // last row is the regional boss
 export { ARMY_CAPACITY, DEPLOY_CAPACITY };
@@ -41,13 +41,23 @@ export function commanderOf(run: Run): CommanderDef {
   return COMMANDERS.find((c) => c.heroId === run.commanderId) ?? COMMANDERS[0];
 }
 
-export function newRun(seed: number, commanderId: string, campaign?: 'hyrule' | 'termina' | 'greatSea' | 'twilight' | 'skyward' | 'wild' | 'original' | 'random'): RunWithEvent {
+/** Where each campaign begins (Hyrule: the commander's home region). */
+function startRegionFor(camp: string, home: WorldId): WorldId {
+  return camp === 'termina' ? 'clockTown' : camp === 'greatSea' ? 'outsetIsland' : camp === 'twilight' ? 'ordonProvince' : camp === 'skyward' ? 'skyloft' : camp === 'wild' ? 'greatPlateau' : camp === 'original' ? 'level1Eagle' : WORLDS[home]?.campaign || home === 'hyruleCastle' || !WORLDS[home] ? 'hyruleField' : home;
+}
+
+/** World Tour order: the commander's home campaign first, then the others in release order. */
+export const TOUR_ORDER: TourCampaign[] = ['hyrule', 'termina', 'greatSea', 'twilight', 'skyward', 'wild', 'original'];
+
+export function newRun(seed: number, commanderId: string, campaign?: 'hyrule' | 'termina' | 'greatSea' | 'twilight' | 'skyward' | 'wild' | 'original' | 'random' | 'worldTour', tourActs = 2): RunWithEvent {
   const rng = new RNG(seed);
   const cmd = COMMANDERS.find((c) => c.heroId === commanderId) ?? COMMANDERS[0];
-  const camp = campaign ?? cmd.campaign ?? 'hyrule';
+  const first: TourCampaign = (cmd.campaign as TourCampaign | undefined) ?? 'hyrule';
+  const tour = campaign === 'worldTour' ? { legs: [first, ...TOUR_ORDER.filter((c) => c !== first)], leg: 0, legStartAct: 1, per: Math.max(1, Math.min(5, tourActs)) } : undefined;
+  const camp = tour ? first : campaign ?? cmd.campaign ?? 'hyrule';
   const home = TEMPLATES[cmd.heroId].home;
   // Hyrule campaigns start in the commander's home region; Termina always starts in Clock Town.
-  const region = camp === 'random' ? rng.pick(REGION_IDS.filter((r) => r !== 'moon')) : camp === 'termina' ? 'clockTown' : camp === 'greatSea' ? 'outsetIsland' : camp === 'twilight' ? 'ordonProvince' : camp === 'skyward' ? 'skyloft' : camp === 'wild' ? 'greatPlateau' : camp === 'original' ? 'level1Eagle' : WORLDS[home]?.campaign ? 'hyruleField' : home === 'hyruleCastle' ? 'hyruleField' : home;
+  const region = camp === 'random' ? rng.pick(REGION_IDS.filter((r) => r !== 'moon')) : startRegionFor(camp, home);
   const run: RunWithEvent = {
     seed, rngState: 0, act: 1, region, regionsVisited: [region], map: { rows: 0, nodes: [] }, currentNodeId: null,
     roster: [], fallen: [], rupees: 200, convoy: [], commanderId: cmd.heroId, bonus: cmd.bonus,
@@ -67,6 +77,7 @@ export function newRun(seed: number, commanderId: string, campaign?: 'hyrule' | 
     if (!taker || !give(run, id, taker.uid)) run.convoy.push(id);
   }
   run.campaign = camp;
+  if (tour) run.tour = tour;
   run.map = generateRegionMap(rng, run.act, region);
   randomizeWorlds(run, rng);
   run.rngState = rng.state;
@@ -395,7 +406,8 @@ export function startBattle(run: RunWithEvent, uids: string[]): void {
 export const FREE_FOR_ALL_REGION = 4;
 
 export function isFreeForAll(run: Run): boolean {
-  return run.act >= FREE_FOR_ALL_REGION && !inOriginalLevels(run);
+  // The World Tour keeps each campaign's own enemies.
+  return !run.tour && run.act >= FREE_FOR_ALL_REGION && !inOriginalLevels(run);
 }
 
 /** A force drawn from the entire cast: any monster, soldier, hero, villain or boss. */
@@ -954,14 +966,38 @@ export function isRegionComplete(run: Run): boolean {
 }
 
 /** After a regional boss: offer the next region to march on. */
+/** World Tour: regions fought in the current campaign (or the run's act outside the tour). */
+function legAct(run: Run): number {
+  return run.tour ? run.act - run.tour.legStartAct + 1 : run.act;
+}
+
+/** World Tour: the campaign after this one, once its regions are done. */
+export function tourNext(run: Run): TourCampaign | undefined {
+  const t = run.tour;
+  if (!t || legAct(run) < t.per) return undefined;
+  return t.legs[(t.leg + 1) % t.legs.length];
+}
+
+export const TOUR_NAMES: Record<TourCampaign, string> = {
+  hyrule: 'Hyrule (Ocarina of Time)', termina: "Termina (Majora's Mask)", greatSea: 'The Great Sea (The Wind Waker)', twilight: 'Twilight Hyrule (Twilight Princess)',
+  skyward: 'The Sky (Skyward Sword)', wild: 'Hyrule Reborn (Era of the Wild)', original: 'Original Hyrule (The Legend of Zelda)',
+};
+
 export function offerRegions(run: RunWithEvent): void {
   withRng(run, (rng) => {
+    // World Tour: after this campaign's regions, travel on to the next campaign's starting region.
+    const next = tourNext(run);
+    if (next && run.tour) {
+      run.tour.next = next;
+      run.event = { type: 'region', options: [next === 'greatSea' ? 'greatSea' : startRegionFor(next, TEMPLATES[run.commanderId]?.home ?? 'hyruleField')] };
+      return;
+    }
     if (run.campaign === 'greatSea') { run.event = { type: 'region', options: ['greatSea'] }; return; }
-    if (run.campaign === 'twilight' && run.act + 1 < FREE_FOR_ALL_REGION + 2) {
+    if (run.campaign === 'twilight' && legAct(run) + 1 < FREE_FOR_ALL_REGION + 2) {
       const t = twilightRegionOptions(run, rng);
       if (t.length) { run.event = { type: 'region', options: t }; return; }
     }
-    if (run.campaign === 'skyward' && run.act + 1 < FREE_FOR_ALL_REGION + 4) {
+    if (run.campaign === 'skyward' && legAct(run) + 1 < FREE_FOR_ALL_REGION + 4) {
       const t = skywardRegionOptions(run, rng);
       if (t.length) { run.event = { type: 'region', options: t }; return; }
     }
@@ -969,7 +1005,7 @@ export function offerRegions(run: RunWithEvent): void {
       const t = originalRegionOptions(run);
       if (t.length) { run.event = { type: 'region', options: t }; return; }
     }
-    if (run.campaign === 'wild' && run.act + 1 < FREE_FOR_ALL_REGION + 5) {
+    if (run.campaign === 'wild' && legAct(run) + 1 < FREE_FOR_ALL_REGION + 5) {
       const t = wildRegionOptions(run, rng);
       if (t.length) { run.event = { type: 'region', options: t }; return; }
     }
@@ -979,7 +1015,9 @@ export function offerRegions(run: RunWithEvent): void {
     }
     const recent = run.regionsVisited.slice(-2);
     // Hyrule's war stays in Hyrule until the Free-for-All, when Termina's regions join in.
-    const pool = REGION_IDS.filter((r) => !recent.includes(r) && (run.campaign === 'random' || run.act + 1 >= FREE_FOR_ALL_REGION || !WORLDS[r]?.campaign) && r !== 'moon');
+    // On the World Tour each campaign stays in its own regions.
+    const pool = REGION_IDS.filter((r) => !recent.includes(r) && r !== 'moon' && (run.tour ? (WORLDS[r]?.campaign ?? 'hyrule') === run.campaign
+      : run.campaign === 'random' || run.act + 1 >= FREE_FOR_ALL_REGION || !WORLDS[r]?.campaign));
     const options = rng.shuffle(pool).slice(0, 3);
     run.event = { type: 'region', options };
   });
@@ -1084,9 +1122,48 @@ export const TERMINA_SCHEDULE: Record<string, number[]> = {
   sharp: [2, 3], flat: [1, 2], garoMaster: [2, 3], captainKeeta: [3], dekuPrincess: [1], dekuKing: [2, 3],
 };
 
+/** World Tour: move the army into the next campaign — its start, maps, enemies and rules. */
+function enterTourCampaign(run: RunWithEvent, camp: TourCampaign): void {
+  const t = run.tour!;
+  delete t.next;
+  t.leg++;
+  run.act++;
+  t.legStartAct = run.act;
+  run.currentNodeId = null;
+  run.event = undefined;
+  run.rupees += 200;
+  // Termina's three-day cycle only runs while you are in Termina.
+  if (camp === 'termina') { run.clock = { hours: 0, resets: run.clock?.resets ?? 0 }; run.bank ??= 0; run.questItems ??= []; } else delete run.clock;
+  run.campaign = camp;
+  withRng(run, (rng) => {
+    if (camp === 'twilight') twilightStart(run, rng);
+    if (camp === 'skyward') skywardStart(run);
+    if (camp === 'wild') wildStart(run);
+    if (camp === 'original') originalStart(run);
+    if (camp === 'greatSea') {
+      const sea = (run.sea ??= newSea());
+      run.questItems ??= [];
+      sea.cleared = []; sea.revealed = [];
+      if (!run.roster.some(isVessel)) run.roster.push(makeHero('sailingBoat', nextUid(run), Math.max(1, run.act), rng));
+      run.region = 'greatSea';
+      run.regionsVisited.push('greatSea');
+      run.map = generateSeaChart(rng, sea.charts);
+      const start = run.map.nodes.find((n) => n.island === 'outset')!;
+      revealAround(run, start.col, start.row);
+      return;
+    }
+    const region = startRegionFor(camp, TEMPLATES[run.commanderId]?.home ?? 'hyruleField');
+    run.region = region;
+    run.regionsVisited.push(region);
+    run.map = generateRegionMap(rng, run.act, region);
+    wildDecorateMap(run, run.map, rng);
+  });
+}
+
 export function advanceRegion(run: RunWithEvent, region: WorldId): void {
   // After the Moon, the three-day cycle is over: Termina's war goes on without a clock.
   if (run.region === 'moon') delete run.clock;
+  if (run.tour?.next) { enterTourCampaign(run, run.tour.next); return; }
   if (run.campaign === 'greatSea') {
     // A new chart: the seas grow more dangerous.
     const sea = seaOf(run);
