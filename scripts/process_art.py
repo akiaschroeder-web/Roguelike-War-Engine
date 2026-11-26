@@ -358,6 +358,68 @@ ENTRIES = {
     "blueBubbleWW": ("blueBubbleWW.png", (0.500, 0.500, 0.85)),
     "bubbleMM": ("bubbleMM.png", (0.500, 0.650, 0.70)),
     "hyruleSoldierTP": ("hyruleSoldierTP.png", (0.700, 0.360, 0.35)),
+    # Skyward Sword (scripts/prep_ss_art.py)
+    "heroOfTheSky": ("heroOfTheSky.png", (0.600, 0.420, 0.30)),
+    "zeldaSS": ("zeldaSS.png", (0.480, 0.100, 0.45)),
+    "fi": ("fi.png", (0.500, 0.090, 0.20)),
+    "groose": ("groose.png", (0.380, 0.120, 0.40)),
+    "impaSS": ("impaSS.png", (0.270, 0.060, 0.35)),
+    "ghirahim": ("ghirahim.png", (0.640, 0.160, 0.26)),
+    "ghirahimTrue": ("ghirahimTrue.png", (0.400, 0.070, 0.50)),
+    "demise": ("demise.png", (0.500, 0.120, 0.26)),
+    "gaepora": ("gaepora.png", (0.550, 0.090, 0.35)),
+    "fledge": ("fledge.png", (0.450, 0.100, 0.50)),
+    "pipit": ("pipit.png", (0.480, 0.080, 0.55)),
+    "karane": ("karane.png", (0.550, 0.090, 0.45)),
+    "batreaux": ("batreaux.png", (0.500, 0.320, 0.30)),
+    "gondo": ("gondo.png", (0.500, 0.090, 0.45)),
+    "scrapper": ("scrapper.png", (0.500, 0.550, 0.55)),
+    "skipper": ("skipper.png", (0.500, 0.450, 0.45)),
+    "bucha": ("bucha.png", (0.480, 0.320, 0.55)),
+    "gorko": ("gorko.png", (0.480, 0.250, 0.45)),
+    "moldini": ("moldini.png", (0.250, 0.300, 0.45)),
+    "levias": ("levias.png", (0.420, 0.450, 0.40)),
+    "faronDragon": ("faronDragon.png", (0.390, 0.120, 0.32)),
+    "eldinDragon": ("eldinDragon.png", (0.360, 0.120, 0.40)),
+    "lanayruDragon": ("lanayruDragon.png", (0.400, 0.040, 0.40)),
+    "technoblin": ("technoblin.png", (0.450, 0.330, 0.35)),
+    "cursedBokoblin": ("cursedBokoblin.png", (0.480, 0.280, 0.60)),
+    "ironShieldMoblin": ("ironShieldMoblin.png", (0.420, 0.180, 0.40)),
+    "moblinSS": ("moblinSS.png", (0.450, 0.170, 0.25)),
+    "quadroBaba": ("quadroBaba.png", (0.550, 0.300, 0.65)),
+    "furnix": ("furnix.png", (0.620, 0.100, 0.45)),
+    "pyrup": ("pyrup.png", (0.350, 0.400, 0.40)),
+    "froak": ("froak.png", (0.550, 0.250, 0.45)),
+    "ampilus": ("ampilus.png", (0.570, 0.360, 0.40)),
+    "ampilusEgg": ("ampilusEgg.png", (0.500, 0.500, 1.00)),
+    "aracha": ("aracha.png", (0.550, 0.620, 0.50)),
+    "magmanos": ("magmanos.png", (0.450, 0.350, 0.80)),
+    "sentrobe": ("sentrobe.png", (0.400, 0.650, 0.55)),
+    "beamosSS": ("beamosSS.png", (0.420, 0.100, 0.90)),
+    "watcher": ("watcher.png", (0.500, 0.150, 0.80)),
+    "earthGuardian": ("earthGuardian.png", (0.400, 0.100, 0.25)),
+    "skyGuardian": ("skyGuardian.png", (0.550, 0.120, 0.28)),
+    "remlit": ("remlit.png", (0.620, 0.550, 0.50)),
+    "scaldera": ("scaldera.png", (0.450, 0.400, 0.55)),
+    "moldarach": ("moldarach.png", (0.500, 0.700, 0.40)),
+    "koloktos": ("koloktos.png", (0.430, 0.300, 0.30)),
+    "tentalus": ("tentalus.png", (0.500, 0.350, 0.45)),
+    "bilocyte": ("bilocyte.png", (0.480, 0.320, 0.40)),
+    "imprisoned": ("imprisoned.png", (0.750, 0.400, 0.55)),
+    "imprisonedArmed": ("imprisonedArmed.png", (0.700, 0.200, 0.60)),
+    "imprisonedFlying": ("imprisonedFlying.png", (0.550, 0.300, 0.80)),
+    "stalmaster": ("stalmaster.png", (0.450, 0.300, 0.30)),
+    "scervo": ("scervo.png", (0.520, 0.220, 0.25)),
+    "dreadfuse": ("dreadfuse.png", (0.470, 0.200, 0.38)),
+    "darkLizalfos": ("darkLizalfos.png", (0.600, 0.170, 0.35)),
+    "loftwingBlue": ("loftwingBlue.png", (0.200, 0.450, 0.40)),
+    "lizalfosSS": ("lizalfosSS.png", (0.750, 0.200, 0.35)),
+    "stalfosSS": ("stalfosSS.png", (0.550, 0.280, 0.38)),
+    "chuchuGreenSS": ("chuchuGreenSS.png", (0.500, 0.500, 1.00)),
+    "chuchuBlueSS": ("chuchuBlueSS.png", (0.500, 0.500, 1.00)),
+    "chuchuRedSS": ("chuchuRedSS.png", (0.500, 0.500, 1.00)),
+    "chuchuYellowSS": ("chuchuYellowSS.png", (0.500, 0.500, 1.00)),
+    "hylia": ("hylia.png", (0.530, 0.180, 0.30)),
 }
 
 
@@ -371,7 +433,11 @@ def main() -> None:
     ART.mkdir(parents=True, exist_ok=True)
     PORTRAITS.mkdir(parents=True, exist_ok=True)
     done = []
+    import os
+    only = set(filter(None, os.environ.get("ONLY", "").split(",")))
     for cid, (name, (fx, fy, fw)) in ENTRIES.items():
+        if only and cid not in only:
+            continue
         path = SRC / name
         if not path.exists():
             print(f"skip {cid}: {name} missing")
