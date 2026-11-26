@@ -1,6 +1,6 @@
 import { TEARS_NEEDED, twilightOf } from '../engine/twilightRun';
 import { TWILIT_PROVINCES } from '../content/twilight';
-import { ABILITIES, artFor, BOSSES, ENEMIES, GEAR, QUEST_ITEMS, ITEMS, CLASSES, COMMANDERS, PERMANENT_ITEMS, REGION_IDS, TEMPLATE_LIST, TEMPLATES, WEAPONS, worldDef } from '../data/registry';
+import { ABILITIES, artFor, BOSSES, ENEMIES, GEAR, QUEST_ITEMS, ITEMS, CLASSES, COMMANDERS, PERMANENT_ITEMS, REGION_IDS, TEMPLATE_LIST, TEMPLATES, WEAPONS, worldDef, WORLDS } from '../data/registry';
 import { canWield, type LevelUp } from '../engine/combat';
 import { randomSeed } from '../engine/rng';
 import {
@@ -280,7 +280,7 @@ export class App {
         <div class="page">
           <div class="page-head"><button class="btn" data-nav="back">← Back</button><h1>Choose your Commander</h1><span></span></div>
           <p class="dim center-text">Each commander brings their own army and a special bonus. If the commander falls, the campaign is over.</p>
-          ${(['hyrule', 'termina', 'greatSea'] as const).map((pack) => `<h2 class="pack-head">${pack === 'hyrule' ? 'Ocarina of Time · Hyrule' : pack === 'termina' ? "Majora's Mask · Termina" : 'The Wind Waker · The Great Sea'}</h2>
+          ${(['hyrule', 'termina', 'greatSea', 'twilight'] as const).map((pack) => `<h2 class="pack-head">${pack === 'hyrule' ? 'Ocarina of Time · Hyrule' : pack === 'termina' ? "Majora's Mask · Termina" : pack === 'greatSea' ? 'The Wind Waker · The Great Sea' : 'Twilight Princess · Twilight Hyrule'}</h2>
           <div class="card-grid">${COMMANDERS.filter((c) => (c.campaign ?? 'hyrule') === pack).map((c) => {
             const t = TEMPLATES[c.heroId];
             const army = c.units.map((id) => TEMPLATES[id]);

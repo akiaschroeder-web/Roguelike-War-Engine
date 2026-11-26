@@ -34,6 +34,9 @@ const TERRAIN_GLYPH: Record<string, string> = {
   whirlpool: '🌀', updraft: '⇡', ropeSwing: '〰', grapplePost: '⚲', hangingVine: '⌇', plantingSoil: '⁘', grownTree: '🌳',
   shipDeck: '▭', boardingPoint: '⚓', cannonEmplacement: '💣', submergedTreasure: '✦', sandVortex: '◎', spikedBarrel: '✸',
   watchtower: '♜', searchlight: '🔦', commandStatue: '🗿',
+  twilightFog: '▒', twilightBarrier: '⬛', sacredLight: '✺', spinnerRail: '═', spinnerGear: '⚙', clawshotGrate: '#', hangingPeahat: '✣',
+  magneticSurface: '⧉', magneticCrane: '⚓', dominionStatue: '🗿', sinkingSand: '◎', iceWall: '▦', iceBlock: '◼', buriedPassage: '⛏',
+  howlingStone: '🎵', windVent: '⇡', cannonTransport: '💥', flames: '🔥',
 };
 
 export class BattleView {
@@ -130,7 +133,7 @@ export class BattleView {
     this.els.tiles.style.gridTemplateColumns = `repeat(${b.width}, var(--t))`;
     this.els.tiles.innerHTML = b.tiles.map((t, i) => {
       const { x, y } = posOf(b, i);
-      return `<div class="tile t-${t} ${(x + y) % 2 ? 'odd' : ''}" data-x="${x}" data-y="${y}" style="--tc:${terrainLook(b.world, t).color}"><span class="tg">${TERRAIN_GLYPH[t]}</span></div>`;
+      return `<div class="tile t-${t} ${(x + y) % 2 ? 'odd' : ''}" data-x="${x}" data-y="${y}" style="--tc:${terrainLook(b.world, t).color}"><span class="tg">${TERRAIN_GLYPH[t] ?? ''}</span></div>`;
     }).join('');
     this.tileEls = [...this.els.tiles.children] as HTMLElement[];
   }
