@@ -10,7 +10,7 @@ function firstBattle(run: RunWithEvent) {
 }
 
 describe('World Tour', () => {
-  it('visits every campaign in turn, home campaign first, then loops', () => {
+  it('visits every campaign in turn, home campaign first, then wanders at random', () => {
     const run = newRun(7, 'heroOfTwilight', 'worldTour', 1);
     expect(run.tour?.legs[0]).toBe('twilight');
     expect(new Set(run.tour?.legs)).toEqual(new Set(TOUR_ORDER));
@@ -28,7 +28,8 @@ describe('World Tour', () => {
       run.battle = undefined; run.event = undefined;
     }
     expect(seen.slice(0, 7)).toEqual(run.tour!.legs);
-    expect(seen[7]).toBe(seen[0]);
+    expect(seen[7]).not.toBe(seen[6]);
+    expect(run.tour!.legs).toContain(seen[7]);
   });
 
   it('stays in the current campaign until its regions are done', () => {

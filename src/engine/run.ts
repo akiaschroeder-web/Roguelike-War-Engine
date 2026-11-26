@@ -971,11 +971,15 @@ function legAct(run: Run): number {
   return run.tour ? run.act - run.tour.legStartAct + 1 : run.act;
 }
 
-/** World Tour: the campaign after this one, once its regions are done. */
-export function tourNext(run: Run): TourCampaign | undefined {
+/** World Tour: the campaign after this one, once its regions are done. The first pass visits
+ *  every campaign in order; after that the tour wanders to a random other campaign each time. */
+export function tourNext(run: Run, rng?: RNG): TourCampaign | undefined {
   const t = run.tour;
   if (!t || legAct(run) < t.per) return undefined;
-  return t.legs[(t.leg + 1) % t.legs.length];
+  if (t.next) return t.next;
+  if (t.leg + 1 < t.legs.length) return t.legs[t.leg + 1];
+  const others = t.legs.filter((c) => c !== run.campaign);
+  return rng ? rng.pick(others) : undefined;
 }
 
 export const TOUR_NAMES: Record<TourCampaign, string> = {
@@ -986,7 +990,7 @@ export const TOUR_NAMES: Record<TourCampaign, string> = {
 export function offerRegions(run: RunWithEvent): void {
   withRng(run, (rng) => {
     // World Tour: after this campaign's regions, travel on to the next campaign's starting region.
-    const next = tourNext(run);
+    const next = tourNext(run, rng);
     if (next && run.tour) {
       run.tour.next = next;
       run.event = { type: 'region', options: [next === 'greatSea' ? 'greatSea' : startRegionFor(next, TEMPLATES[run.commanderId]?.home ?? 'hyruleField')] };
