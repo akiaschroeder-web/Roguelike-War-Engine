@@ -72,3 +72,10 @@ Sleeping Princess Zelda: Sleeping Princess Zelda, Hero of Hyrule, Old Man, Hyrul
 Saved in `art_sources/adventure_of_link/`.
 Batch 1 (15): heroOfHyruleZ2 (alt art for heroOfHyrule), sleepingZelda_sheet (JPEG concept sheet on white — crop the standing figure, top right), darkLinkZ2 (black silhouette — alt art for Dark Link / Link's Shadow), barba (alt art for Volvagia), bit (red slime), bot (blue slime), moby (eagle), geru (lizard with mace and shield), myu (spiked dome), moa (flaming eye), geldarm (centipede), guma (horned bull-man with ball and chain), doomknocker (blue armored knight with spiked mace), bagoBago (skeletal fish), fokka (blue armored bird knight).
 Still needed: Deeler, Daira, Fokkeru, Wosu, Mago, Horsehead, Helmethead, Rebonack, Carock, Gooma, Thunderbird.
+
+Batch 2 (8, user: "rest of the images"): fokkeru (large brown eagle), wosu (wolf swordsman in a yellow cape), mago (orange-robed skull mage), horsehead, helmethead, thunderbird_painting (square painting on a yellow background with cloud line-art — must be cut out), carock (dark blue robe with skull pendant), rebonack (mounted lancer).
+No separate art for Deeler, Daira or Gooma: Deeler borrows Skulltula's art, Daira borrows Geru's, Gooma borrows Guma's (both ball-and-chain fighters) — until the user sends more.
+
+## Implementation IDs (fixed)
+Pack: extends src/content/original/ (campaign 'original'); new Zelda II content may live in src/content/original/z2*.ts. Templates: sleepingZelda (art from sleepingZelda_sheet, cropped), bit, bot, moby, deeler (art alias skulltula), daira (alias geru), geru, geldarm, moa, myu, bagoBago, doomknocker, guma, fokka, fokkeru, wosu, mago, horsehead, helmethead, rebonack, carock, gooma (alias guma), thunderbird (art cut from thunderbird_painting).
+Alt art (appended): heroOfHyrule += heroOfHyruleZ2; darkLink += darkLinkZ2; volvagia += barba.
