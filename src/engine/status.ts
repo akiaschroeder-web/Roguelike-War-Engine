@@ -3,6 +3,7 @@
 
 import { GEAR, WEAPONS } from '../data/registry';
 import type { RNG } from './rng';
+import { ogImmune } from './original';
 import type { Battle, Element, StatusKind, Unit } from './types';
 
 export const STATUS_INFO: Record<StatusKind, { name: string; icon: string; desc: string; good?: boolean }> = {
@@ -62,6 +63,7 @@ export function immuneTo(u: Unit, kind: StatusKind): boolean {
   if (kind === 'fear' && (gear('fearImmune') || gear('gibdo') || u.skills.includes('mountainHero'))) return true;
   if (kind === 'curse' && gear('curseImmune')) return true;
   if (kind === 'shock' && gear('shockImmune')) return true;
+  if (ogImmune(u, kind)) return true;
   return false;
 }
 

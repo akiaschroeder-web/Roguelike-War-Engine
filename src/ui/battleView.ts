@@ -7,6 +7,7 @@ import { adjacentMailboxes, environmentPhase, isSeen, openMailbox, pressInversio
 import { planAction } from '../engine/ai';
 import { syncPosition } from '../engine/windwaker';
 import { ssAfterMove } from '../engine/skyward';
+import { ogAfterMove } from '../engine/original';
 import { enemyUnload, windLabel } from '../engine/naval';
 import { sideQuestText } from '../engine/run';
 import { adjacentCaptives, checkResult, freeCaptive, mountToggleBlocked, moveUnit, toggleMount, objectiveText, spawnReinforcements, startPhase, type TurnStartEvent } from '../engine/battle';
@@ -948,6 +949,8 @@ export class BattleView {
     syncPosition(this.b, u);
     const ss = ssAfterMove(this.b, u); // Skyward Sword spaces: Sacred Tears, Waking Water, Light Fruit, Timeshift Orbs
     if (ss) { sfx('secret'); this.addLog(`✨ ${esc(ss)}`); }
+    const og = ogAfterMove(this.b, u); // Original Hyrule spaces: hidden staircases, secret caves, blade traps
+    if (og) { sfx('secret'); this.addLog(`🗝 ${esc(og)}`); }
     if (pressInversion(this.b, u)) { sfx('secret'); this.addLog('🔄 The Inversion Switch flips the walls and floors!'); }
     const dmg = triggerTraps(this.b, u);
     if (dmg) { sfx('hit'); this.float(u, `TRAP −${dmg}`, 'dmg'); this.addLog(`⚠ <b class="player">${esc(u.name)}</b> stepped on a spike trap (−${dmg} HP, rooted)!`); }
@@ -1365,6 +1368,7 @@ export class BattleView {
       syncPosition(b, e);
       if (moved) {
         ssAfterMove(b, e);
+        ogAfterMove(b, e);
         const trap = triggerTraps(b, e);
         if (trap) { sfx('bomb'); this.float(e, `TRAP −${trap}`, 'dmg'); this.addLog(`💥 ${esc(e.name)} sets off your Death Armos Core (−${trap})!`); }
       }

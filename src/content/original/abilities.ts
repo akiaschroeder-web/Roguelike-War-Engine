@@ -23,7 +23,7 @@ export const ABILITIES: AbilityDef[] = [
   // ── Supporting characters and monsters ──
   pers('disarmingThrow', 'Disarming Throw', 3, 'Throw the boomerang at an enemy within 3: STR + Might − DEF, and a 40% chance to knock its weapon away.', ['goriya'], { cooldown: 2,
     grantedBy: { templates: ['goriya'], weapons: ['goriyaBoomerang', 'magicalBoomerang'] } }),
-  pers('slimeMerge', 'Slime Merge', 0, 'Two Gels flow together: merge with an adjacent Gel into a Zol (summoned; it fights for your side this battle).', ['gel'], { oncePerBattle: true }),
+  pers('slimeMerge', 'Slime Merge', 0, 'Absorb an adjacent temporary Gel (one split from a Zol): recover its HP + 8, and +3 DEF and +2 STR for the battle.', ['gel'], { oncePerBattle: true }),
   pers('graveSummoning', 'Grave Summoning', 4, 'Call a temporary Ghini from an adjacent Gravestone.', ['ghini'], { cooldown: 3 }),
   pers('eyeSwarm', 'Eye Swarm', 6, 'Send the orbiting eyes out: every enemy within 2 takes MAG/3 + 1 per surviving eye (vs RES).', ['patra'], { cooldown: 2 }),
   pers('tripleFireball', 'Triple Fireball', 6, 'Three spreading fireballs at an enemy within 5: the target and up to two enemies next to it take MAG + 6 vs RES (fire).', ['aquamentus']),

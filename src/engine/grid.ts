@@ -1,6 +1,7 @@
 import { RACES } from '../data/registry';
 import { tpTileCost } from './twilight';
 import { ssTileCost } from './skyward';
+import { ogTileCost } from './original';
 import { INF, MOVE_COSTS } from './rules';
 import { canSwim, effectiveStats, hasEffect, isMounted, moveTypeOf, unitTags } from './units';
 import { windFactor } from './naval';
@@ -71,6 +72,8 @@ export function tileCost(b: Battle, unit: Unit, t: Terrain): number {
   c = tpTileCost(b, unit, t, c);
   // Skyward Sword spaces
   c = ssTileCost(b, unit, t, c);
+  // Original Hyrule spaces
+  c = ogTileCost(b, unit, t, c);
   if (unit.buffs?.some((x) => x.id === 'spectralStep') && c >= INF && t !== 'water') c = 2;
   return c;
 }
