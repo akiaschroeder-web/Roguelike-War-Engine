@@ -33,7 +33,7 @@ SKIP = {'Epona', 'Four Giants'}
 # Fi's form-specific Master Sword conversations: one pair per Master Sword-carrying hero.
 MASTER_SWORD_HEROES = ['link', 'heroOfWinds', 'heroOfTwilight']
 FORMS = {'kingOfRedLions': 'kingDaphnes'}  # old forms: the pair is form-specific
-CANON = {'ghirahimTrue': 'ghirahim', 'imprisonedArmed': 'imprisoned', 'imprisonedFlying': 'imprisoned', 'ganon': 'ganondorf'}
+CANON = {'sheik': 'zelda', 'ghirahimTrue': 'ghirahim', 'imprisonedArmed': 'imprisoned', 'imprisonedFlying': 'imprisoned', 'ganon': 'ganondorf'}
 
 
 def resolve(name, unresolved):

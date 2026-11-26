@@ -62,7 +62,7 @@ export const SUPPORT_REGISTRY_SS: SupportPairDef[] = [
   { key: 'hylia|tetra', a: 'hylia', b: 'tetra', max: 'A', game: 'ss', theme: 'ancestry doesn\'t decide her life' },
   { key: 'hylia|zeldaTP', a: 'hylia', b: 'zeldaTP', max: 'A', game: 'ss', theme: 'protecting both realms' },
   { key: 'impa|impaSS', a: 'impaSS', b: 'impa', max: 'S', game: 'ss', theme: 'generations of Sheikah devotion' },
-  { key: 'impaSS|sheik', a: 'impaSS', b: 'sheik', max: 'A', game: 'ss', theme: 'passing on traditions' },
+  { key: 'impaSS|zelda', a: 'impaSS', b: 'zelda', max: 'A', game: 'ss', theme: 'passing on traditions' },
   { key: 'fi|navi', a: 'fi', b: 'navi', max: 'A', game: 'ss', theme: '' },
   { key: 'fi|tatl', a: 'fi', b: 'tatl', max: 'A', game: 'ss', theme: 'challenging Fi\'s emotionless approach' },
   { key: 'fi|tael', a: 'fi', b: 'tael', max: 'A', game: 'ss', theme: 'reassurance over analysis' },
