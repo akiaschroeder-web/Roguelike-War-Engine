@@ -536,22 +536,45 @@ export class BattleView {
       const el = (e.target as HTMLElement).closest('.tile') as HTMLElement | null;
       return el ? { x: Number(el.dataset.x), y: Number(el.dataset.y) } : null;
     };
+    // The tile under a screen point (robust to layout shifting between press and release).
+    const tileAtPoint = (x: number, y: number): Pos | null => {
+      for (const el of document.elementsFromPoint(x, y)) {
+        const t = (el as HTMLElement).closest?.('.tile') as HTMLElement | null;
+        if (t && this.els.tiles.contains(t)) return { x: Number(t.dataset.x), y: Number(t.dataset.y) };
+      }
+      return null;
+    };
     this.els.tiles.addEventListener('pointermove', (e) => {
+      // Touch: no hover previews while the finger is down (they re-layout the panel mid-tap).
+      if (e.pointerType !== 'mouse') return;
       const p = tileFrom(e);
       if (!p || (this.hover && p.x === this.hover.x && p.y === this.hover.y)) return;
       this.hover = p;
       this.renderOverlay();
       this.renderPanel();
     });
-    this.els.tiles.addEventListener('pointerleave', () => {
+    this.els.tiles.addEventListener('pointerleave', (e) => {
+      if (e.pointerType !== 'mouse') return;
       this.hover = null;
       this.renderOverlay();
       this.renderPanel();
     });
-    this.els.tiles.addEventListener('click', (e) => {
-      if (this.suppressClick) return;
-      const p = tileFrom(e);
-      if (p) void this.clickTile(p);
+    // Taps are handled on release, using where the press started: a tap counts even if the
+    // finger wobbles a little or the page re-lays out between press and release.
+    let press: { id: number; x: number; y: number; tile: Pos | null } | null = null;
+    this.els.tiles.addEventListener('pointerdown', (e) => {
+      if (e.pointerType === 'mouse' && e.button !== 0) return;
+      press = { id: e.pointerId, x: e.clientX, y: e.clientY, tile: tileFrom(e) ?? tileAtPoint(e.clientX, e.clientY) };
+    });
+    this.els.tiles.addEventListener('pointercancel', () => { press = null; });
+    window.addEventListener('pointerup', (e) => {
+      const pr = press;
+      press = null;
+      if (!pr || pr.id !== e.pointerId || this.suppressClick) return;
+      if (Math.abs(e.clientX - pr.x) + Math.abs(e.clientY - pr.y) > 24) return; // that was a drag
+      const p = pr.tile ?? tileAtPoint(e.clientX, e.clientY);
+      if (!p) return;
+      void this.clickTile(p);
     });
     this.els.tiles.addEventListener('contextmenu', (e) => { e.preventDefault(); this.cancel(); });
     this.root.addEventListener('click', (e) => {
