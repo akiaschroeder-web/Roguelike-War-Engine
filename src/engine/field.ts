@@ -7,6 +7,7 @@ import { RNG } from './rng';
 import { addStatus } from './status';
 import { hasEffect, unitTags } from './units';
 import { decorateWindWaker, wwEnvironment } from './windwaker';
+import { decorateTwilight, twilightBattleStart } from './twilight';
 import type { Battle, Pos, Terrain, Unit, WorldId } from './types';
 
 const DIRS = [[1, 0], [-1, 0], [0, 1], [0, -1]];
@@ -31,6 +32,8 @@ export function decorateField(b: Battle, rng: RNG, nodeType: string) {
   // Termina spaces go down first so treasure and traps land on open ground.
   decorateTermina(b, rng);
   decorateWindWaker(b, rng);
+  decorateTwilight(b, rng);
+  twilightBattleStart(b, rng);
   // Fog of war
   b.fog = rng.chance(FOGGY[world] ?? 6);
   // Buried treasure

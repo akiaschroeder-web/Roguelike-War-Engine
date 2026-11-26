@@ -13,6 +13,10 @@ const SPECIAL = (open: number, water = INF, rough = 2, gap = INF) => ({
   whirlpool: water, updraft: open, ropeSwing: gap, grapplePost: INF, hangingVine: INF, plantingSoil: open, grownTree: rough,
   shipDeck: open, boardingPoint: open, cannonEmplacement: open, submergedTreasure: water, sandVortex: rough, spikedBarrel: INF,
   watchtower: rough, searchlight: INF, commandStatue: INF,
+  // Twilight Princess (per-unit exceptions live in grid.ts tileCost)
+  twilightFog: open, twilightBarrier: INF, sacredLight: open, spinnerRail: rough, spinnerGear: INF, clawshotGrate: INF, hangingPeahat: gap,
+  magneticSurface: INF, magneticCrane: INF, dominionStatue: INF, sinkingSand: rough, iceWall: INF, iceBlock: INF, buriedPassage: open,
+  howlingStone: INF, windVent: open, cannonTransport: open, flames: rough,
 });
 export const MOVE_COSTS: Record<MoveType, Record<Terrain, number>> = {
   foot:    { plain: 1, forest: 2, mountain: 3, water: INF, wall: INF, fort: 1, lava: 2, ...SPECIAL(1) },
@@ -62,6 +66,24 @@ export const TERRAIN_BONUS: Record<Terrain, { avoid: number; def: number; heal: 
   watchtower: { avoid: 20, def: 2, heal: 0 },
   searchlight: { avoid: 0, def: 0, heal: 0 },
   commandStatue: { avoid: 0, def: 0, heal: 0 },
+  twilightFog: { avoid: 10, def: 0, heal: 0 },
+  twilightBarrier: { avoid: 0, def: 0, heal: 0 },
+  sacredLight: { avoid: 0, def: 0, heal: 10 },
+  spinnerRail: { avoid: 0, def: 0, heal: 0 },
+  spinnerGear: { avoid: 0, def: 0, heal: 0 },
+  clawshotGrate: { avoid: 0, def: 0, heal: 0 },
+  hangingPeahat: { avoid: 20, def: 0, heal: 0 },
+  magneticSurface: { avoid: 0, def: 1, heal: 0 },
+  magneticCrane: { avoid: 0, def: 0, heal: 0 },
+  dominionStatue: { avoid: 0, def: 0, heal: 0 },
+  sinkingSand: { avoid: -15, def: 0, heal: 0 },
+  iceWall: { avoid: 0, def: 0, heal: 0 },
+  iceBlock: { avoid: 0, def: 0, heal: 0 },
+  buriedPassage: { avoid: 0, def: 0, heal: 0 },
+  howlingStone: { avoid: 0, def: 0, heal: 0 },
+  windVent: { avoid: 10, def: 0, heal: 0 },
+  cannonTransport: { avoid: 0, def: 0, heal: 0 },
+  flames: { avoid: 0, def: 0, heal: 0 },
 };
 
 /** Water-like spaces: swimmers move through them, others can't. */
@@ -101,6 +123,24 @@ export const SPECIAL_TERRAIN: Record<Exclude<Terrain, BaseTerrain>, { name: stri
   watchtower: { name: 'Watchtower', color: '#8a7a5a' },
   searchlight: { name: 'Searchlight', color: '#e8e0a0' },
   commandStatue: { name: 'Command Statue', color: '#8a8a7a' },
+  twilightFog: { name: 'Twilight Fog', color: '#3a2a4a' },
+  twilightBarrier: { name: 'Twilight Barrier', color: '#1a0a2a' },
+  sacredLight: { name: 'Sacred Light', color: '#f0e0a0' },
+  spinnerRail: { name: 'Spinner Rail', color: '#9a8a60' },
+  spinnerGear: { name: 'Spinner Gear', color: '#7a6a40' },
+  clawshotGrate: { name: 'Clawshot Grate', color: '#6a6a7a' },
+  hangingPeahat: { name: 'Hanging Peahat', color: '#9ab08a' },
+  magneticSurface: { name: 'Magnetic Surface', color: '#5a6a8a' },
+  magneticCrane: { name: 'Magnetic Crane', color: '#4a4a6a' },
+  dominionStatue: { name: 'Dominion Statue', color: '#a09080' },
+  sinkingSand: { name: 'Sinking Sand', color: '#c8a868' },
+  iceWall: { name: 'Breakable Ice Wall', color: '#a8d8f0' },
+  iceBlock: { name: 'Ice Block', color: '#c0e8ff' },
+  buriedPassage: { name: 'Buried Passage', color: '#7a6040' },
+  howlingStone: { name: 'Howling Stone', color: '#8a8a9a' },
+  windVent: { name: 'Wind Vent', color: '#d8f0f8' },
+  cannonTransport: { name: 'Cannon Transport', color: '#6a5040' },
+  flames: { name: 'Burning Ground', color: '#d06030' },
 };
 
 /** Lava damage at the start of a unit's turn (as % of max HP). */

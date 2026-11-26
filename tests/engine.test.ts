@@ -73,7 +73,7 @@ describe('content integrity', () => {
     }
     for (const b of Object.values(BOSSES)) for (const d of b.drops ?? []) expect(WEAPONS[d] ?? GEAR[d], d).toBeDefined();
     for (const c of COMMANDERS) for (const id of c.startingItems ?? []) expect(WEAPONS[id] ?? GEAR[id] ?? ITEMS[id], id).toBeDefined();
-    expect(COMMANDERS.length).toBe(19);
+    expect(COMMANDERS.length).toBe(26);
     for (const c of COMMANDERS) {
       expect(TEMPLATES[c.heroId]).toBeDefined();
       for (const id of c.units) expect(TEMPLATES[id], id).toBeDefined();
@@ -300,7 +300,7 @@ describe('run flow', () => {
     const run = newRun(3, 'zelda');
     run.act = 6;
     const seen = new Set<string>();
-    for (let s = 0; s < 400; s++) recruitOffers(run, new RNG(s), 'hyruleCastle').forEach((id) => seen.add(id));
+    for (let s = 0; s < 1500; s++) recruitOffers(run, new RNG(s), 'hyruleCastle').forEach((id) => seen.add(id));
     expect(seen.has('ganondorf')).toBe(true);
     expect([...seen].some((id) => TEMPLATES[id].rare)).toBe(true);
     expect([...seen].some((id) => TEMPLATES[id].monster)).toBe(true);

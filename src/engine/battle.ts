@@ -7,6 +7,7 @@ import { addStatus, tickStatuses } from './status';
 import { decorateField } from './field';
 import { canRide, enemyFleet, isVessel, layoutNaval, roomAboard } from './naval';
 import { windWakerUpkeepAtStart, wwStartPhase } from './windwaker';
+import { tpStartPhase } from './twilight';
 import { resolveSinking } from './naval';
 import { revertMask } from './terminaAbilities';
 import { roomFor } from './transform';
@@ -37,6 +38,8 @@ export interface BattleSetup {
   night?: boolean;
   /** Extra enemy vessels (the Ghost Ship). */
   fleet?: string[];
+  /** Fought under the Twilight (Twilight Princess provinces). */
+  twilit?: boolean;
 }
 
 /** Enemy level for a given depth. Keeps climbing in endless mode. */
@@ -179,6 +182,7 @@ export function createBattle(setup: BattleSetup): Battle {
   battle.bossTier = setup.depth < 7 ? 0 : setup.depth < 14 ? 1 : 2;
   // First-region bosses and leaders hold their ground instead of hunting your Commander.
   if (battle.bossTier === 0) for (const u of units) if (u.isBoss) u.ai = 'stationary';
+  battle.twilit = setup.twilit;
   decorateField(battle, rng, setup.nodeType);
   windWakerUpkeepAtStart(battle, rng);
   if (setup.trials?.includes('mist')) battle.fog = true;
@@ -417,6 +421,7 @@ export function startPhase(b: Battle, team: Team): TurnStartEvent[] {
     for (const k of Object.keys(u.cooldowns ?? {})) if (--u.cooldowns![k] <= 0) delete u.cooldowns![k];
     terminaUpkeep(b, u, events);
     wwStartPhase(b, u, events);
+    tpStartPhase(b, u, events);
     const max = u.stats.hp;
     const tiles = footprint(u.x, u.y, u.size).map((p) => b.tiles[keyOf(b, p.x, p.y)]);
     const anchor = tiles[0];

@@ -5,6 +5,7 @@
 import { OCARINA } from '../content/ocarina';
 import { MAJORA, QUEST_ITEMS as MM_QUEST } from '../content/majora';
 import { WIND_WAKER, QUEST_ITEMS as WW_QUEST } from '../content/windwaker';
+import { TWILIGHT_PRINCESS, QUEST_ITEMS as TP_QUEST } from '../content/twilight';
 import { SPECIAL_TERRAIN } from '../engine/rules';
 import type { ContentPack } from '../content/types';
 import type {
@@ -106,11 +107,12 @@ function addTemplate(t: UnitTemplate) {
 installPack(OCARINA);
 installPack(MAJORA);
 installPack(WIND_WAKER);
+installPack(TWILIGHT_PRINCESS);
 // Phantom Ganon keeps his entry; his Wind Waker sword joins his drops.
 if (BOSSES.phantomGanon) BOSSES.phantomGanon.drops = [...(BOSSES.phantomGanon.drops ?? []), 'phantomGanonsSword'];
 
 /** Quest items (shared quest inventory). */
-export const QUEST_ITEMS: Record<string, { id: string; name: string; desc: string }> = Object.fromEntries([...MM_QUEST, ...WW_QUEST].map((q) => [q.id, q]));
+export const QUEST_ITEMS: Record<string, { id: string; name: string; desc: string }> = Object.fromEntries([...MM_QUEST, ...WW_QUEST, ...TP_QUEST].map((q) => [q.id, q]));
 
 // ───────── Safe lookups ─────────
 

@@ -1,3 +1,4 @@
+import { delayLight, isTwilit, restoreLight, teachHiddenSkill, twilightAfterBattle, twilightQuestCheck, twilightRegionOptions, twilightStart } from './twilightRun';
 import {
   EVENTS, FACTIONS, GEAR, QUEST_ITEMS, RACES, WORLDS, ITEMS, MONSTER_CHANCE, BOSSES, bossPool, COMMANDERS, PERMANENT_ITEMS, REGION_IDS, TEMPLATE_LIST, TEMPLATES, WEAPONS,
 } from '../data/registry';
@@ -35,13 +36,13 @@ export function commanderOf(run: Run): CommanderDef {
   return COMMANDERS.find((c) => c.heroId === run.commanderId) ?? COMMANDERS[0];
 }
 
-export function newRun(seed: number, commanderId: string, campaign?: 'hyrule' | 'termina' | 'greatSea'): RunWithEvent {
+export function newRun(seed: number, commanderId: string, campaign?: 'hyrule' | 'termina' | 'greatSea' | 'twilight'): RunWithEvent {
   const rng = new RNG(seed);
   const cmd = COMMANDERS.find((c) => c.heroId === commanderId) ?? COMMANDERS[0];
   const camp = campaign ?? cmd.campaign ?? 'hyrule';
   const home = TEMPLATES[cmd.heroId].home;
   // Hyrule campaigns start in the commander's home region; Termina always starts in Clock Town.
-  const region = camp === 'termina' ? 'clockTown' : camp === 'greatSea' ? 'outsetIsland' : WORLDS[home]?.campaign ? 'hyruleField' : home === 'hyruleCastle' ? 'hyruleField' : home;
+  const region = camp === 'termina' ? 'clockTown' : camp === 'greatSea' ? 'outsetIsland' : camp === 'twilight' ? 'ordonProvince' : WORLDS[home]?.campaign ? 'hyruleField' : home === 'hyruleCastle' ? 'hyruleField' : home;
   const run: RunWithEvent = {
     seed, rngState: 0, act: 1, region, regionsVisited: [region], map: { rows: 0, nodes: [] }, currentNodeId: null,
     roster: [], fallen: [], rupees: 200, convoy: [], commanderId: cmd.heroId, bonus: cmd.bonus,
@@ -64,6 +65,7 @@ export function newRun(seed: number, commanderId: string, campaign?: 'hyrule' | 
   run.rngState = rng.state;
   run.campaign = camp;
   if (camp === 'termina') { run.clock = { hours: 0, resets: 0 }; run.bank = 0; run.questItems = []; }
+  if (camp === 'twilight') twilightStart(run, rng);
   if (camp === 'greatSea') {
     run.sea = newSea();
     run.questItems = [];
@@ -276,6 +278,8 @@ export function enterNode(run: RunWithEvent, nodeId: string): void {
         break;
       }
       case 'event': {
+        // A full Vessel of Light: the Light Spirit's spring comes first.
+        if (run.twilight?.pending && EVENTS.lightSpiritSpring) { run.event = { type: 'event', eventId: 'lightSpiritSpring' }; break; }
         const pool = Object.values(EVENTS).filter((e) => (!e.regions || e.regions.includes(node.world)) && meetsRequires(run, e.requires));
         const fresh = pool.filter((e) => !(run.eventsSeen ?? []).includes(e.id));
         const ev = rng.pick(fresh.length ? fresh : pool);
@@ -330,7 +334,7 @@ export function startBattle(run: RunWithEvent, uids: string[]): void {
       seed: rng.int(0, 2 ** 31), boss, healMult: run.bonus === 'healing' ? 1.2 : 1, force, supports: run.supports, trials: run.trials,
       levelBonus: (run.clock?.resets ?? 0) * 2 + (run.clock && clockLabel(run).day === 3 ? 1 : 0),
       gearOwned: [...ownedGear(run), ...(run.questItems ?? [])],
-      naval, night: node.night, fleet: node.fleet,
+      naval, night: node.night, fleet: node.fleet, twilit: isTwilit(run, node.world),
     });
     run.battle.bonus = run.bonus;
     run.battle.night = run.clock ? clockLabel(run).night : run.campaign === 'greatSea' ? !!node.night : true;
@@ -477,6 +481,8 @@ export interface BattleSummary {
   retreated?: boolean;
   /** Dungeon: next floor (or cleared). */
   dungeon?: { floor: number; of: number; cleared: boolean };
+  /** Twilight Princess: Tears of Light, Hidden Skills, artifacts. */
+  twilight?: string[];
   /** Support ranks reached this battle. */
   supportUps: { a: string; b: string; aUid: string; bUid: string; rank: SupportRank }[];
 }
@@ -645,7 +651,8 @@ export function finishBattle(run: RunWithEvent): BattleSummary {
     }
   }
   const army = armyAfterBattle(run, b, won, fallen.length, deployed.size || survivors.size);
-  return { won, rupees, fallen, kills, drops, supportUps, sideQuest, retreated: !won && !!b.retreat, dungeon, found, joined, army };
+  const twilightLines = withRng(run, (rng) => twilightAfterBattle(run, b, won, rng));
+  return { won, rupees, fallen, kills, drops, supportUps, sideQuest, retreated: !won && !!b.retreat, dungeon, found, joined, army, twilight: twilightLines };
 }
 
 export interface ArmyReport {
@@ -831,15 +838,23 @@ function applyEffect(run: Run, e: EventEffect, rng: RNG): string | null {
       if (e.stat === 'hp') u.hp += e.amount;
       return `${u.name}: +${e.amount} ${STAT_NAMES[e.stat]}`;
     }
-    case 'quest':
+    case 'quest': {
       addQuestItem(run, e.id);
-      return `Quest item: ${QUEST_ITEMS[e.id]?.name ?? e.id}${!(run.questItems ?? []).includes(e.id) && e.id.endsWith('sMask') ? ' (combined into the Couple\'s Mask!)' : ''}`;
+      const extra = twilightQuestCheck(run);
+      return `Quest item: ${QUEST_ITEMS[e.id]?.name ?? e.id}${!(run.questItems ?? []).includes(e.id) && e.id.endsWith('sMask') ? ' (combined into the Couple\'s Mask!)' : ''}${extra.length ? ' ' + extra.join(' ') : ''}`;
+    }
     case 'takeQuest': {
       const q = run.questItems ?? [];
       const i = q.indexOf(e.id);
       if (i >= 0) q.splice(i, 1);
       return null;
     }
+    case 'hiddenSkill':
+      return teachHiddenSkill(run, rng);
+    case 'restoreLight':
+      return restoreLight(run, rng);
+    case 'delayLight':
+      return delayLight(run);
     case 'support': {
       const s = (run.supports ??= {});
       for (let i = 0; i < run.roster.length; i++)
@@ -862,6 +877,10 @@ export function isRegionComplete(run: Run): boolean {
 export function offerRegions(run: RunWithEvent): void {
   withRng(run, (rng) => {
     if (run.campaign === 'greatSea') { run.event = { type: 'region', options: ['greatSea'] }; return; }
+    if (run.campaign === 'twilight' && run.act + 1 < FREE_FOR_ALL_REGION + 2) {
+      const t = twilightRegionOptions(run, rng);
+      if (t.length) { run.event = { type: 'region', options: t }; return; }
+    }
     if (run.campaign === 'termina') {
       const t = terminaNextRegions(run);
       if (t.length) { run.event = { type: 'region', options: t }; return; }

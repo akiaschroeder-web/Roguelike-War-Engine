@@ -1,0 +1,113 @@
+import type { Stats, UnitTemplate } from '../../engine/types';
+
+/** Stat order matches the design doc tables: HP STR MAG SKL SPD DEF RES LCK CON MOV STA MP. */
+export const st = (
+  hp: number, str: number, mag: number, skl: number, spd: number, def: number, res: number, lck: number, con: number, mov: number, sta: number, mp: number,
+): Stats => ({ hp, str, mag, skl, spd, def, res, lck, con, mov, sta, mp });
+
+type T = Omit<UnitTemplate, 'glyph'> & { glyph?: string };
+const glyphOf = (name: string) => {
+  const w = name.replace(/[^A-Za-z ]/g, '').split(/\s+/).filter(Boolean);
+  return (w.length > 1 ? w[0][0] + w[1][0] : name.slice(0, 2)).toUpperCase();
+};
+const u = (t: T): UnitTemplate => ({ glyph: glyphOf(t.name), ...t });
+
+export const NAMED: UnitTemplate[] = [
+  // ── Main characters ──
+  u({ id: 'heroOfTwilight', name: 'Link (Hero of Twilight)', title: 'Twilight Swordsman', race: 'hylian', classId: 'twilightSwordsman', size: 1, home: 'ordonProvince', glyph: 'LT',
+    stats: st(28, 10, 3, 13, 11, 8, 5, 9, 10, 5, 24, 6), weapons: ['ordonSword', 'iliasSling'], skill: 'hiddenPotential', abilities: ['wolfForm'],
+    bio: 'A ranch hand from Ordon who became a wolf in the Twilight and a hero in the light. He learns forgotten sword techniques from a mysterious spirit.' }),
+  u({ id: 'wolfLink', name: 'Wolf Link', title: 'Sacred Beast', race: 'sacredBeast', classId: 'sacredBeastClass', size: 1, home: 'faronWoods', glyph: 'WL',
+    stats: st(25, 9, 4, 12, 15, 5, 6, 9, 7, 8, 24, 8), weapons: ['wolfFangs'], skill: 'heightenedSenses', abilities: ['wolfDig', 'wolfSense', 'wolfHowl', 'energyField', 'humanForm'],
+    bio: 'Link in the shape the Twilight gave him. A wolf can dig, follow scents and see spirits no Hylian can.' }),
+  u({ id: 'zeldaTP', name: 'Princess Zelda (Twilight Princess)', title: 'Royal Light Mage', race: 'hylian', classId: 'royalLightMage', size: 1, home: 'hyruleCastleTP', glyph: 'ZT',
+    stats: st(22, 5, 16, 12, 10, 5, 15, 12, 6, 5, 12, 32), weapons: ['zeldasRapier', 'lightBolt', 'healStaff'], skill: 'lightOfHyrule', abilities: ['lightArrow'],
+    bio: 'The ruler of Hyrule, who surrendered her kingdom to spare her people and gave her own life to save Midna\'s.' }),
+  u({ id: 'ganondorfTP', name: 'Ganondorf (Twilight Princess)', title: 'Dark Lord', race: 'gerudo', classId: 'executionerKing', size: 1, home: 'hyruleCastleTP', glyph: 'GT',
+    stats: st(38, 18, 12, 14, 9, 13, 11, 5, 17, 5, 32, 24), weapons: ['swordOfTheSages'], skill: 'divineDefiance', rare: true,
+    bio: 'The Gerudo king the Sages could not execute. The sword they meant to end him with is still lodged in his chest — and now it is his.' }),
+  u({ id: 'darkBeastGanon', name: 'Dark Beast Ganon', title: 'Colossal Charger', race: 'demon', classId: 'colossalCharger', size: 4, home: 'hyruleCastleTP', glyph: 'DB',
+    stats: st(78, 25, 8, 9, 13, 17, 10, 4, 38, 8, 40, 20), weapons: ['beastGore', 'beastSlam'], skill: 'beastOfDarkness', abilities: ['beastCharge'], rare: true,
+    bio: 'Ganondorf\'s four-legged demon form, a boar of darkness that bursts out of shadow portals.' }),
+  // ── Supporting characters ──
+  u({ id: 'midnaImp', name: 'Midna', title: 'Shadow Sorceress', race: 'twili', classId: 'shadowSorceress', size: 1, home: 'twilightRealm', glyph: 'MI',
+    stats: st(18, 3, 15, 12, 13, 3, 12, 9, 3, 6, 12, 30), weapons: ['midnasShadowHand'], skill: 'twilightCompanion', abilities: ['shadowGrab', 'midnaRide', 'fusedShadowForm'],
+    exclusiveWith: ['midnaTrue', 'fusedShadowMidna'], bio: 'A sharp-tongued imp who rides on a wolf\'s back. She is far more than she lets on.' }),
+  u({ id: 'midnaTrue', name: 'Midna (True Form)', title: 'Twilight Princess', race: 'twili', classId: 'twilightPrincessClass', size: 1, home: 'twilightRealm', glyph: 'MT',
+    stats: st(26, 5, 20, 14, 12, 6, 17, 10, 7, 6, 16, 40), weapons: ['midnasShadowHand', 'twilightMagic'], skill: 'twilightSovereign', abilities: ['shadowGrab', 'fusedShadowForm'],
+    exclusiveWith: ['midnaImp', 'fusedShadowMidna'], bio: 'Midna freed from Zant\'s curse: the rightful ruler of the Twilight Realm.' }),
+  u({ id: 'zant', name: 'Zant', title: 'Usurper King', race: 'twili', classId: 'usurperKing', size: 1, home: 'twilightRealm', glyph: 'ZA',
+    stats: st(30, 9, 19, 13, 16, 7, 14, 4, 9, 7, 24, 38), weapons: ['zantsTwinBlades', 'zantsShadowOrb'], skill: 'unstableSorcery', abilities: ['zantsWarp', 'zantsFrenzy'], rare: true,
+    bio: 'The Twili who sold his people to Ganondorf for a crown. Calm and regal until he isn\'t.' }),
+  u({ id: 'herosShade', name: "Hero's Shade", title: 'Ancient Swordmaster', race: 'heroSpirit', classId: 'ancientSwordmaster', size: 1, home: 'hyruleFieldTP', glyph: 'HS',
+    stats: st(36, 16, 7, 20, 12, 13, 12, 7, 15, 5, 35, 16), weapons: ['herosShadesSword'], skill: 'forgottenHero', gear: { shield: 'herosShadesShield' },
+    abilities: ['endingBlow', 'shieldAttack', 'backSlice', 'helmSplitter', 'mortalDraw', 'jumpStrike', 'greatSpin'],
+    bio: 'A skeletal warrior in rusted armor who appears beside the Howling Stones. He has regrets, and seven techniques to pass on.' }),
+  u({ id: 'ilia', name: 'Ilia', title: 'Animal Caretaker', race: 'hylian', classId: 'animalCaretaker', size: 1, home: 'ordonProvince',
+    stats: st(20, 3, 5, 7, 9, 3, 7, 12, 5, 5, 12, 10), weapons: ['healStaff', 'iliasSling'], skill: 'gentleTouch', bio: 'The mayor\'s daughter, who cares for Epona as if the horse were her own.' }),
+  u({ id: 'colin', name: 'Colin', title: 'Young Squire', race: 'hylian', classId: 'youngSquire', size: 1, home: 'ordonProvince',
+    stats: st(17, 4, 1, 6, 8, 3, 3, 11, 4, 5, 10, 2), weapons: ['woodenSwordColin'], skill: 'growingCourage', bio: 'Rusl\'s timid son, who wants more than anything to be brave like Link.' }),
+  u({ id: 'malo', name: 'Malo', title: 'Merchant', race: 'hylian', classId: 'tpMerchant', size: 1, home: 'eldinProvince',
+    stats: st(15, 1, 2, 8, 4, 2, 5, 15, 2, 4, 8, 4), weapons: ['iliasSling'], skill: 'maloMart', bio: 'A toddler with a ruthless head for business. Malo Mart has branches in Kakariko and Castle Town.' }),
+  u({ id: 'rusl', name: 'Rusl', title: 'Resistance Swordsman', race: 'hylian', classId: 'resistanceSwordsman', size: 1, home: 'ordonProvince',
+    stats: st(28, 11, 2, 13, 11, 7, 5, 8, 10, 6, 24, 4), weapons: ['ruslsSword'], skill: 'resistanceFighter', bio: 'Ordon\'s finest swordsman, Link\'s mentor, and a quiet member of the Resistance.' }),
+  u({ id: 'mayorBo', name: 'Mayor Bo', title: 'Sumo Wrestler', race: 'hylian', classId: 'sumoWrestler', size: 2, home: 'ordonProvince',
+    stats: st(40, 15, 0, 8, 5, 12, 4, 8, 22, 4, 30, 0), weapons: ['sumoPalms'], skill: 'sumoChampion', abilities: ['sumoThrow'], bio: 'Ordon\'s mayor and a sumo wrestler who once trained with the Gorons.' }),
+  u({ id: 'renado', name: 'Renado', title: 'Shaman', race: 'hylian', classId: 'shaman', size: 1, home: 'eldinProvince',
+    stats: st(25, 4, 13, 9, 6, 5, 14, 10, 8, 5, 12, 28), weapons: ['healStaff', 'renadosFire'], skill: 'villageHealer', bio: 'Kakariko\'s shaman, who sheltered the Ordon children and nursed Prince Ralis.' }),
+  u({ id: 'barnes', name: 'Barnes', title: 'Demolitionist', race: 'hylian', classId: 'demolitionist', size: 1, home: 'eldinProvince',
+    stats: st(24, 6, 1, 12, 7, 5, 4, 8, 9, 5, 18, 2), weapons: ['barnesBombs'], skill: 'bombExpert', bio: 'Kakariko\'s bomb maker, deafened by his own product and proud of it.' }),
+  u({ id: 'telma', name: 'Telma', title: 'Resistance Coordinator', race: 'hylian', classId: 'resistanceCoordinator', size: 1, home: 'hyruleFieldTP',
+    stats: st(28, 6, 4, 10, 7, 6, 8, 13, 9, 5, 16, 10), weapons: ['telmasDagger', 'healStaff'], skill: 'resistanceNetwork', bio: 'Owner of Telma\'s Bar in Castle Town and the beating heart of the Resistance.' }),
+  u({ id: 'ashei', name: 'Ashei', title: 'Mountain Knight', race: 'hylian', classId: 'mountainKnight', size: 1, home: 'snowpeak',
+    stats: st(27, 11, 2, 13, 11, 9, 6, 7, 10, 6, 24, 4), weapons: ['asheisBlade'], skill: 'mountainTraining', bio: 'A soldier\'s daughter raised to fight. Blunt, capable and unimpressed.' }),
+  u({ id: 'auru', name: 'Auru', title: 'Veteran Artillerist', race: 'hylian', classId: 'veteranArtillerist', size: 1, home: 'lanayruProvince',
+    stats: st(26, 7, 2, 15, 5, 6, 6, 8, 9, 4, 16, 4), weapons: ['auruCannon'], skill: 'veteransAim', bio: 'Zelda\'s old tutor, who knows exactly what the Gerudo Desert hides.' }),
+  u({ id: 'shad', name: 'Shad', title: 'Ancient Scholar', race: 'hylian', classId: 'ancientScholar', size: 1, home: 'eldinProvince',
+    stats: st(20, 2, 8, 13, 7, 3, 10, 10, 5, 5, 10, 18), weapons: ['shadsTome'], skill: 'ancientResearch', bio: 'A bookish young man determined to prove the Oocca were real.' }),
+  u({ id: 'ralis', name: 'Prince Ralis', title: 'Aquatic Prince', race: 'zora', classId: 'aquaticPrince', size: 1, home: 'lanayruProvince', glyph: 'RA',
+    stats: st(21, 5, 8, 9, 12, 4, 9, 10, 5, 6, 16, 18), weapons: ['ralisTrident'], skill: 'royalHeritage', bio: 'The young heir of the Zora, recovering from a near-fatal illness and the loss of his mother.' }),
+  u({ id: 'rutela', name: 'Queen Rutela', title: 'Royal Spirit', race: 'zoraSpirit', classId: 'royalSpirit', size: 1, home: 'lanayruProvince', glyph: 'QR',
+    stats: st(24, 2, 16, 11, 8, 5, 16, 12, 5, 6, 10, 32), weapons: ['rutelasTide', 'healStaff'], skill: 'mothersBlessing', bio: 'The ghost of the Zora queen, slain by Zant\'s soldiers, still watching over her son.' }),
+  u({ id: 'gorCoron', name: 'Gor Coron', title: 'Sumo Elder', race: 'goron', classId: 'sumoElder', size: 2, home: 'eldinProvince', glyph: 'GC',
+    stats: st(42, 16, 2, 11, 5, 17, 7, 8, 23, 4, 34, 4), weapons: ['goronSumoFists'], skill: 'unmovableElder', abilities: ['sumoThrow'], bio: 'The eldest of the Goron elders, who decides whether outsiders may climb Death Mountain.' }),
+  u({ id: 'darbus', name: 'Darbus', title: 'Mountain Patriarch', race: 'goron', classId: 'mountainPatriarch', size: 2, home: 'eldinProvince',
+    stats: st(44, 18, 4, 9, 6, 16, 6, 7, 24, 4, 35, 8), weapons: ['goronSumoFists'], skill: 'mountainStrength', exclusiveWith: ['fyrus'],
+    bio: 'The Goron Patriarch. He touched a Fused Shadow and became the monster Fyrus.' }),
+  u({ id: 'yeto', name: 'Yeto', title: 'Mountain Brawler', race: 'yeti', classId: 'mountainBrawler', size: 3, home: 'snowpeak',
+    stats: st(55, 19, 1, 7, 5, 15, 9, 9, 28, 4, 38, 2), weapons: ['yetoLadle'], skill: 'heartyConstitution', bio: 'A huge, kindly yeti who snowboards down the mountain and makes soup for his sick wife.' }),
+  u({ id: 'yeta', name: 'Yeta', title: 'Mountain Caretaker', race: 'yeti', classId: 'mountainCaretaker', size: 2, home: 'snowpeak',
+    stats: st(32, 7, 9, 7, 6, 8, 12, 12, 14, 4, 20, 20), weapons: ['healStaff', 'frostBreath'], skill: 'mountainHospitality', exclusiveWith: ['blizzeta'],
+    bio: 'Yeto\'s wife. A Mirror Shard made her ill — and made her Blizzeta.' }),
+  u({ id: 'agitha', name: 'Agitha', title: 'Insect Collector', race: 'hylian', classId: 'insectCollector', size: 1, home: 'hyruleFieldTP',
+    stats: st(18, 2, 6, 8, 9, 3, 8, 15, 4, 5, 10, 14), weapons: ['bugNet', 'goldenBugs'], skill: 'princessOfBugs', bio: 'The self-proclaimed princess of the insect kingdom, who throws balls for her bugs.' }),
+  u({ id: 'jovani', name: 'Jovani', title: 'Cursed Treasure Hunter', race: 'hylian', classId: 'cursedTreasureHunter', size: 1, home: 'hyruleFieldTP',
+    stats: st(24, 4, 5, 8, 6, 10, 8, 12, 7, 4, 14, 12), weapons: ['jovanisPick'], skill: 'goldenCurse', bio: 'A man who traded his soul for wealth and was turned to gold. Collect enough Poe Souls and he might be free.' }),
+  u({ id: 'ooccoo', name: 'Ooccoo', title: 'Ancient Guide', race: 'oocca', classId: 'ancientGuide', size: 1, home: 'cityInTheSky',
+    stats: st(12, 1, 10, 9, 10, 2, 10, 11, 2, 6, 8, 24), weapons: ['ooccooLight'], skill: 'ancientEscape', abilities: ['ancientEscapeAbility'],
+    bio: 'An Oocca with a human face and a bird\'s body, searching the dungeons of Hyrule for her son.' }),
+  u({ id: 'kingBulblin', name: 'King Bulblin', title: 'Raider King', race: 'monster', classId: 'raiderKing', size: 2, home: 'hyruleFieldTP', glyph: 'KB',
+    stats: st(40, 17, 0, 11, 8, 13, 5, 6, 21, 5, 32, 0), weapons: ['kingBulblinsAxe'], skill: 'strengthAboveAll', rare: true,
+    bio: 'The Bulblin warlord on his armored boar. He serves whoever is strongest, and he lets you know it.' }),
+  u({ id: 'postman', name: 'Postman', title: 'Courier', race: 'hylian', classId: 'courier', size: 1, home: 'hyruleFieldTP',
+    stats: st(22, 4, 0, 9, 17, 4, 4, 10, 6, 9, 28, 0), weapons: ['postmansSatchel'], skill: 'postmansDelivery', bio: 'He delivers. Twilight, monsters, it makes no difference. The mail must go through.' }),
+  // ── Light Spirits ──
+  u({ id: 'ordona', name: 'Ordona', title: 'Light Spirit', race: 'lightSpirit', classId: 'lightSpiritClass', size: 3, home: 'ordonProvince', glyph: 'OR',
+    stats: st(60, 10, 19, 10, 8, 12, 19, 14, 22, 5, 24, 40), weapons: ['ordonasLight', 'healStaff'], skill: 'lightOfOrdon', rare: true, bio: 'The goat-shaped Light Spirit of Ordon, holding the sun in its horns.' }),
+  u({ id: 'faron', name: 'Faron', title: 'Light Spirit', race: 'lightSpirit', classId: 'lightSpiritClass', size: 3, home: 'faronWoods', glyph: 'FA',
+    stats: st(65, 12, 20, 12, 9, 13, 20, 12, 24, 6, 26, 42), weapons: ['faronsLight', 'healStaff'], skill: 'lightOfTheForest', rare: true, bio: 'The monkey-shaped Light Spirit of the southern forests.' }),
+  u({ id: 'eldin', name: 'Eldin', title: 'Light Spirit', race: 'lightSpirit', classId: 'lightSpiritAerial', size: 4, home: 'eldinProvince', glyph: 'EL',
+    stats: st(75, 17, 22, 11, 8, 16, 20, 10, 30, 6, 32, 45), weapons: ['eldinsSacredFlame'], skill: 'lightOfTheMountain', rare: true, bio: 'The great eagle of Death Mountain, carrying a sphere of light in its talons.' }),
+  u({ id: 'lanayru', name: 'Lanayru', title: 'Light Spirit', race: 'lightSpirit', classId: 'lightSpiritClass', size: 5, home: 'lanayruProvince', glyph: 'LA',
+    stats: st(85, 14, 24, 12, 7, 18, 24, 13, 35, 6, 35, 50), weapons: ['lanayrusTorrent', 'healStaff'], skill: 'lightOfTheLake', abilities: ['lakesMercy'], rare: true,
+    bio: 'The serpent spirit of Lake Hylia, who remembers the war over the Triforce.' }),
+  // ── Special forms ──
+  u({ id: 'fusedShadowMidna', name: 'Fused Shadow Midna', title: 'Shadow Colossus', race: 'twili', classId: 'shadowColossus', size: 5, home: 'twilightRealm', glyph: 'FM',
+    stats: st(85, 24, 28, 14, 8, 20, 24, 8, 40, 5, 40, 55), weapons: ['fusedShadowStrike'], skill: 'forbiddenPower', rare: true, exclusiveWith: ['midnaImp', 'midnaTrue'],
+    bio: 'Midna wearing all four Fused Shadows: a towering, many-armed shadow that tears through barriers.' }),
+  u({ id: 'lordBullbo', name: 'Lord Bullbo', title: 'War Beast', race: 'bullbo', classId: 'warBeast', size: 3, home: 'hyruleFieldTP', glyph: 'LB',
+    stats: st(52, 18, 0, 9, 11, 14, 5, 6, 26, 8, 36, 0), weapons: ['lordBullboCharge'], skill: 'unstoppableCharge', abilities: ['beastCharge'], monster: true,
+    bio: 'King Bulblin\'s armored boar. It charges through lines of soldiers as if they weren\'t there.' }),
+];
+
+export const TEMPLATES: UnitTemplate[] = [...NAMED];

@@ -27,6 +27,8 @@ export const STATUS_INFO: Record<StatusKind, { name: string; icon: string; desc:
   protected: { name: 'Protected', icon: '🛡', desc: '+3 DEF and RES.', good: true },
   haste: { name: 'Hasted', icon: '💨', desc: '+2 MOV and +2 SPD.', good: true },
   veiled: { name: 'Veiled', icon: '☁', desc: '+30 Avoid (hidden in a cloud).', good: true },
+  weaponCurse: { name: 'Weapon Curse', icon: '⛓', desc: 'Can\'t make weapon attacks (spells, items and natural abilities still work).' },
+  petrified: { name: 'Petrified', icon: '🗿', desc: 'Turned to stone: can\'t move or act; hammers deal double damage.' },
 };
 
 /** Stat changes from statuses (applied in effectiveStats). */

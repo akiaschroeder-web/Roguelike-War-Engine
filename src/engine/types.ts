@@ -16,7 +16,9 @@ export type StatusKind =
   | 'dazed'
   | 'burn' | 'freeze' | 'shock' | 'poison' | 'stun'
   | 'silence' | 'root' | 'blind' | 'curse' | 'confuse' | 'sleep' | 'bleed' | 'fear' | 'weaken' | 'exposed'
-  | 'regen' | 'inspired' | 'protected' | 'haste' | 'veiled';
+  | 'regen' | 'inspired' | 'protected' | 'haste' | 'veiled'
+  /** Twilight Princess: no conventional weapon attacks (Bubbles). Dark ChuChu turned to stone. */
+  | 'weaponCurse' | 'petrified';
 
 export interface Status {
   kind: StatusKind;
@@ -65,6 +67,10 @@ export interface AbilityDef {
   grantedBy?: { weapons?: string[]; skill?: string; gear?: string[]; race?: string; templates?: string[]; everyone?: boolean; skills?: string[]; races?: string[] };
   /** Situational actions (Board, Disembark, Pick Up…): shown as their own button when usable, not in the Abilities menu. */
   contextual?: boolean;
+  /** Hidden Skills: only units who have learned it (it's in their abilities) can use it. */
+  hidden?: boolean;
+  /** Mounted techniques: only while riding. */
+  mounted?: boolean;
   /** Icon for contextual action buttons. */
   icon?: string;
   /** Songs: affects every ally/enemy within this many spaces (default 3). */
@@ -91,7 +97,11 @@ export type Terrain = BaseTerrain | 'cracked' | 'timeBlock' | 'timeGap' | 'bridg
   // Great Sea battlefield spaces
   | 'whirlpool' | 'updraft' | 'ropeSwing' | 'grapplePost' | 'hangingVine' | 'plantingSoil' | 'grownTree'
   | 'shipDeck' | 'boardingPoint' | 'cannonEmplacement' | 'submergedTreasure' | 'sandVortex' | 'spikedBarrel'
-  | 'watchtower' | 'searchlight' | 'commandStatue';
+  | 'watchtower' | 'searchlight' | 'commandStatue'
+  // Twilight Princess battlefield spaces
+  | 'twilightFog' | 'twilightBarrier' | 'sacredLight' | 'spinnerRail' | 'spinnerGear' | 'clawshotGrate' | 'hangingPeahat'
+  | 'magneticSurface' | 'magneticCrane' | 'dominionStatue' | 'sinkingSand' | 'iceWall' | 'iceBlock' | 'buriedPassage'
+  | 'howlingStone' | 'windVent' | 'cannonTransport' | 'flames';
 
 export type Team = 'player' | 'enemy';
 
@@ -215,6 +225,55 @@ export interface WeaponDef {
   anchors?: boolean;
   /** Cannon: needs a vessel, a cannoneer class or a Cannon Emplacement. */
   crewed?: boolean;
+  // ── Twilight Princess ──
+  /** Hidden Skills cost this much less stamina. */
+  hiddenThrift?: number;
+  noCrit?: boolean;
+  /** Smashes ice walls and blocks. */
+  breaksIce?: boolean;
+  /** Gale Boomerang: pulls dropped items, puts out flames, pushes smaller targets 1 space. */
+  gale?: boolean;
+  /** Light Sword: purifies Twilight around the wielder. */
+  dispelsTwilight?: boolean;
+  /** Uses the higher of STR or MAG. */
+  strOrMag?: boolean;
+  /** Removes one beneficial buff from the target. */
+  stripsBuff?: boolean;
+  /** Fraction of demons' RES ignored. */
+  sacredVsDemon?: number;
+  spinRepeat?: boolean;
+  /** Thrown explosives (never hurt the thrower). */
+  bombs?: boolean;
+  /** Mounted hits push smaller targets this many spaces. */
+  mountedKnockback?: number;
+  /** Purifies Twilight on the tile it strikes. */
+  purifies?: boolean;
+  pierceBarrier?: boolean;
+  breaksBarriers?: boolean;
+  /** Regrows for this much MP after being lost. */
+  regrows?: number;
+  /** Hits hidden and concealed targets without revealing them. */
+  hitsConcealed?: boolean;
+  /** Leaves burning ground along the attack. */
+  burnsPath?: boolean;
+  /** Ice pillars become obstacles. */
+  iceObstacle?: boolean;
+  /** Drains this much MP on hit. */
+  drainsMp?: number;
+  mpToWielder?: boolean;
+  /** Fireballs a shield can bat back. */
+  reflectable?: boolean;
+  /** A ghostly rat clings on: −2 MOV for 2 turns. */
+  burden?: boolean;
+  /** Poe lanterns. */
+  lantern?: boolean;
+  /** Chilled: −2 MOV and SPD for a turn. */
+  chill?: boolean;
+  duplicateOnKill?: boolean;
+  /** Randomly physical or magical. */
+  unstable?: boolean;
+  /** Natural contact attack that deals magic damage. */
+  magicContact?: boolean;
 }
 
 export type Rarity = 'common' | 'uncommon' | 'rare' | 'epic' | 'legendary' | 'mythic';
@@ -342,7 +401,15 @@ export type GearEffect =
   | 'grappleCrane' // salvage submerged treasure from 2 spaces
   | 'pirateFlag' // pirates aboard: the vessel gains +2 STR each
   | 'royalFlag' // passengers aboard: the vessel gains +2 DEF and RES
-  | 'ghostFlag'; // hidden from enemies at night
+  | 'ghostFlag' // hidden from enemies at night
+  // ── Twilight Princess ──
+  | 'woodenShield' | 'zoraArmorWeak' | 'villageCharm' | 'hawkeye' | 'lantern' | 'clawshot' | 'spinner' | 'dominion' | 'horseCall'
+  | 'freeTransform' | 'pierceBarrier' | 'warpGrant' | 'revealUndead' | 'phaseOnce' | 'warpThrift' | 'twilightRegen' | 'iceRegen'
+  | 'armorLayers' | 'shadowWard' | 'freeShieldAttack' | 'bigGrapple' | 'shadowGrab' | 'snowWalker' | 'barrierWalker'
+  | 'supportReach' | 'mountedThrift' | 'hiddenCrest' | 'warHorn' | 'twilightConceal' | 'healStamina' | 'sacredForest'
+  | 'sacredFire' | 'purifyStep' | 'boneCrest' | 'iceJewel' | 'dragonHeart'
+  // Extra units
+  | 'healThrift' | 'extraFairy' | 'mpRegen3' | 'fireResist' | 'burningAura' | 'curseTouch' | 'pulsingGuard' | 'stillAvoid' | 'ambushBoost';
 
 export type ItemKind =
   | 'heal' | 'fullHeal' | 'mp' | 'sta' | 'fairy' | 'bomb' | 'stun' | 'learn'
@@ -416,7 +483,7 @@ export interface WorldDef {
   terrainNames: Record<BaseTerrain, string>;
   terrainColors: Record<BaseTerrain, string>;
   /** Regions of the Termina campaign (with the three-day cycle). */
-  campaign?: 'termina' | 'greatSea';
+  campaign?: 'termina' | 'greatSea' | 'twilight';
   /** Battles here are fought at sea (vessels, wind, islands). */
   naval?: boolean;
   map: MapStyle;
@@ -529,14 +596,15 @@ export interface CommanderDef {
   bonus: CommanderBonus;
   bonusText: string;
   /** Campaign this commander starts in by default. */
-  campaign?: 'termina' | 'greatSea';
+  campaign?: 'termina' | 'greatSea' | 'twilight';
   /** Weapons, gear and items handed out to the army at the start (commander first). */
   startingItems?: string[];
 }
 
 export type CommanderBonus = 'extraTreasure' | 'healing' | 'forging' | 'postBattleHeal' | 'rupees' | 'monsters'
   | 'transformThrift' | 'rolling' | 'aquatic' | 'dekuArmy' | 'undeadArmy' | 'lingeringStatus'
-  | 'courageOfTheSea' | 'piratesSpoils' | 'dragonRoost' | 'forestRenewal' | 'hyrulesLegacy' | 'forsaken' | 'unrulyWinds';
+  | 'courageOfTheSea' | 'piratesSpoils' | 'dragonRoost' | 'forestRenewal' | 'hyrulesLegacy' | 'forsaken' | 'unrulyWinds'
+  | 'forgottenTechniques' | 'childrenOfTwilight' | 'sacredResistance' | 'ancientMastery' | 'mightMakesRight' | 'endlessTwilight' | 'divinePower';
 
 export type SkillId = string;
 
@@ -832,7 +900,7 @@ export interface Run {
   /** Army-wide stats and resources. */
   army?: Army;
   /** Which campaign: the endless Hyrule war, Termina with its three-day cycle, or the Great Sea. */
-  campaign?: 'hyrule' | 'termina' | 'greatSea';
+  campaign?: 'hyrule' | 'termina' | 'greatSea' | 'twilight';
   /** Great Sea: the naval campaign's state. */
   sea?: SeaState;
   /** Termina: hours passed in the current three-day cycle (0-71) and resets so far. */
@@ -900,7 +968,11 @@ export type EventEffect =
   | { kind: 'fleet'; pct: number }
   /** Army supplies. */
   | { kind: 'supplies'; amount: number }
-  | { kind: 'takeQuest'; id: string };
+  | { kind: 'takeQuest'; id: string }
+  /** Twilight Princess: the Hero's Shade teaches a random Hidden Skill to a swordsman. */
+  | { kind: 'hiddenSkill' }
+  /** Release a full Vessel of Light (or keep the Twilight for now). */
+  | { kind: 'restoreLight' } | { kind: 'delayLight' };
 
 /** Conditions for an event or a single choice. */
 export interface EventRequires {

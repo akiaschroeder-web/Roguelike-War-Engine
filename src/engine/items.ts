@@ -1,5 +1,6 @@
 // Using consumables from a unit's pack during battle.
 
+import { useTwilightItem } from './twilight';
 import { ITEMS, TEMPLATES } from '../data/registry';
 import { useFairy, type LevelUp } from './combat';
 import { footDist, inBounds, tilesInRange } from './grid';
@@ -228,6 +229,9 @@ export function useItem(b: Battle, u: Unit, index: number, rng: RNG, at?: Pos): 
 
 /** Majora's Mask and Wind Waker items. */
 function useSpecial(b: Battle, u: Unit, def: ItemDef, rng: RNG, res: ItemResult, at?: Pos) {
+  const tpTarget = at ? b.units.find((e) => footDist(at.x, at.y, 1, e.x, e.y, e.size) === 0) : undefined;
+  const tpLine = useTwilightItem(b, u, def.id, rng, tpTarget, at);
+  if (tpLine !== null) { res.lines.push(tpLine); return; }
   const allies = b.units.filter((a) => a.team === u.team);
   const at0 = at ?? { x: u.x, y: u.y };
   const unitOn = (p: Pos) => b.units.find((e) => footDist(p.x, p.y, 1, e.x, e.y, e.size) === 0);
