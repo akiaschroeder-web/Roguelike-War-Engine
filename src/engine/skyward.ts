@@ -236,6 +236,10 @@ export function decorateSkyward(b: Battle, rng: RNG) {
 export function skywardBattleStart(b: Battle, rng: RNG) {
   const st = ssState(b);
   st.deployed = b.units.filter((u) => u.team === 'player' && !u.npc).map(tid);
+  // A Power Generator keeps the ancient rails and sockets running; a Timeshift Stone travels with the Commander.
+  if (b.owned?.includes('powerGenerator')) st.powered = true;
+  const cmd = b.units.find((u) => u.isCommander);
+  if (cmd && b.owned?.includes('timeshiftStoneItem') && isSS(b)) buff(cmd, 'timeshiftOrb', 'Timeshift Stone', 99);
   for (const u of b.units) {
     if (has(u, 'alternatingMaw')) u.ssGuard = rng.chance(50) ? 'h' : 'v';
     if (FACING(u) || has(u, 'predictiveGuard')) u.ssGuard = faceNearest(b, u);
@@ -418,6 +422,7 @@ export function ssStartPhase(b: Battle, u: Unit, events: SSEvent[]) {
     const d = unitDist(a, u);
     if (has(a, 'guardianOfTheSkies') && d <= 3 && isFlying(u)) u.sta = Math.min(u.stats.sta, u.sta + 3);
     if (has(a, 'naturalCamouflage') && d <= 2 && u.size < a.size && here.includes('forest')) addStatus(u, 'veiled', 1);
+    if (has(a, 'ancientNavigation') && d <= 4 && unitTags(u).includes('vessel')) buff(u, 'navigation', 'Ancient Navigation', 1, { mov: 2 });
   }
   b.rngState = rng.state;
 }
@@ -1181,6 +1186,8 @@ export function castSkyward(b: Battle, u: Unit, def: AbilityDef, rng: RNG, targe
       }
       const got = dig(b, u, rng);
       if (has(u, 'buriedFortune') && rng.chance(30)) ssState(b).materials.push(rng.pick(['amberRelic', 'eldinOre', 'ancientFlower']));
+      // Moldini leaves an underground passage behind.
+      if ((has(u, 'buriedFortune') || hasEffect(u, 'mogmaMitts')) && b.tiles[k] === 'plain') { b.tiles[k] = 'burrowingTunnel'; out.lines.push('A Burrowing Tunnel opens here.'); }
       out.lines.push(got.item ? `${u.name} digs up ${ITEMS[got.item]?.name ?? got.item}!` : got.rupees ? `${u.name} digs up ₹${got.rupees}.` : 'Just dirt.');
       break;
     }

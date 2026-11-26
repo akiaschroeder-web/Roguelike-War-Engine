@@ -74,6 +74,10 @@ const TRIAL_REWARDS: Record<string, string[]> = {
 };
 const FLAMES: Record<string, string> = { ancientCistern: 'faroresFlame', lanayruSandSea: 'nayrusFlame', fireSanctuary: 'dinsFlame', demonsRealm: 'hyliasBlessing', sealedGrounds: 'hyliasBlessing' };
 const SONG_PARTS: Record<string, string> = { faronDragon: 'songPartFaron', eldinDragon: 'songPartEldin', lanayruDragon: 'songPartLanayru', levias: 'songPartLevias' };
+const TABLETS: Record<string, string> = { skyloft: 'emeraldTablet', theSky: 'emeraldTablet', faronWoodsSS: 'rubyTablet', eldinVolcano: 'amberTablet' };
+const DUNGEON_KEYS: Record<string, string[]> = {
+  eldinVolcano: ['dragonSculpture'], lanayruDesert: ['goldenCarving'], lanayruSandSea: ['ancientCircuit', 'squidCarving'], ancientCistern: ['blessedIdol'], fireSanctuary: ['mysteriousCrystals'],
+};
 const owns = (run: Run, id: string) => run.convoy.includes(id) || run.roster.some((u) => u.weapons.includes(id) || Object.values(u.gear).includes(id));
 
 /** After a battle: materials, insects, trials, flames, song parts, Gratitude Crystals, medal finds. */
@@ -87,6 +91,7 @@ export function skywardAfterBattle(run: Run, b: Battle, won: boolean, sideDone: 
     if (won) {
       if (!sw.trialsDone.includes(st.trial.region)) sw.trialsDone.push(st.trial.region);
       addQ(run, 'spiritVessel');
+      addQ(run, 'sacredTearItem', st.trial.got);
       const reward = (TRIAL_REWARDS[st.trial.region] ?? []).find((id) => !owns(run, id)) ?? rng.pick(['lifeMedal', 'potionMedal', 'heartMedal', 'treasureMedal', 'rupeeMedal', 'sacredShield']);
       run.convoy.push(reward);
       if (st.trial.region === 'skyloft' && !q(run).includes('stoneOfTrials')) { addQ(run, 'stoneOfTrials'); lines.push('The Stone of Trials: the Sky Keep can rise.'); }
@@ -118,6 +123,14 @@ export function skywardAfterBattle(run: Run, b: Battle, won: boolean, sideDone: 
   if (flame && b.nodeType === 'boss' && !q(run).includes(flame) && (flame !== 'hyliasBlessing' || b.fallen.some((u) => u.isBoss && ['imprisonedFlying', 'demiseBoss', 'imprisoned', 'imprisonedArmed'].includes(u.bossId ?? '')))) {
     addQ(run, flame);
     lines.push(`${flame === 'hyliasBlessing' ? "Hylia's Blessing" : flame === 'faroresFlame' ? "Farore's Flame" : flame === 'nayrusFlame' ? "Nayru's Flame" : "Din's Flame"} burns where the boss fell. (Use it to upgrade the goddess's sword.)`);
+  }
+  // The goddess's tablets open the surface; dungeon keys turn up in the deep places.
+  if (b.nodeType === 'boss') {
+    const tablet = TABLETS[b.world];
+    if (tablet && !q(run).includes(tablet)) { addQ(run, tablet); lines.push(`${tablet === 'emeraldTablet' ? 'The Emerald Tablet: Faron Woods' : tablet === 'rubyTablet' ? 'The Ruby Tablet: Eldin Volcano' : 'The Amber Tablet: the Lanayru Desert'} opens below the clouds.`); }
+  }
+  for (const key of DUNGEON_KEYS[b.world] ?? []) {
+    if ((b.nodeType === 'boss' || b.nodeType === 'elite') && !q(run).includes(key)) { addQ(run, key); lines.push(`Found a key: ${key.replace(/([A-Z])/g, ' $1').replace(/^./, (c) => c.toUpperCase())}.`); break; }
   }
   // The Dragons and Levias teach the Song of the Hero after fighting beside you.
   for (const t of st?.deployed ?? []) {
@@ -155,6 +168,10 @@ export function skywardRegionOptions(run: Run, rng: RNG): string[] {
   if (run.region === 'skyloft' && !been('theSky')) return ['theSky'];
   const pool = SKYWARD_REGIONS.filter((r) => {
     if (recent.includes(r) || r === 'skyloft') return false;
+    // The goddess's tablets open the surface (or, eventually, the war finds its own way down).
+    if (r === 'faronWoodsSS') return qi.includes('emeraldTablet') || run.act >= 3;
+    if (r === 'eldinVolcano') return qi.includes('rubyTablet') || run.act >= 3;
+    if (r === 'lanayruDesert') return qi.includes('amberTablet') || run.act >= 4;
     if (r === 'lanayruSandSea') return qi.includes('ancientSeaChart') || been('lanayruDesert') || run.act >= 4;
     if (r === 'ancientCistern') return been('faronWoodsSS') || run.act >= 3;
     if (r === 'fireSanctuary') return been('eldinVolcano') || run.act >= 4;
@@ -163,7 +180,9 @@ export function skywardRegionOptions(run: Run, rng: RNG): string[] {
     if (r === 'demonsRealm') return been('sealedGrounds') && (been('skyKeep') || run.act >= 7);
     return true;
   });
-  return rng.shuffle(pool).slice(0, 3);
+  // Never a dead end: the surface is always reachable somehow.
+  const options = pool.length ? pool : SKYWARD_REGIONS.filter((r) => !recent.includes(r) && !['skyloft', 'skyKeep', 'demonsRealm'].includes(r));
+  return rng.shuffle(options).slice(0, 3);
 }
 
 // ───────────────────────── Crafting (section 13) ─────────────────────────

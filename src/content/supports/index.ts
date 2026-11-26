@@ -110,7 +110,7 @@ export const GROUP_SUPPORTS: GroupSupport[] = [
   { id: 'ancientEngineering', name: 'Ancient Engineering', members: ['gondo', 'scrapper', 'skipper'], text: 'Equipment upgrades need 30% fewer materials.' },
   { id: 'demonAndBlade', name: 'The Demon and His Blade', members: ['demise', 'ghirahim'], text: 'Dark attacks +5 damage and ignore 20% of RES.' },
   { id: 'siegeSpecialists', name: 'Siege Specialists', members: ['groose', 'auru', 'barnes'], text: 'Siege weapons +20 Hit; Bombardment blasts a bigger area.' },
-  { id: 'forgersOfLegends', name: 'Forgers of Legends', members: ['gondo', 'biggoron', 'medigoron'], text: 'Upgrades and Blacksmith improvements need fewer materials (−30%, −1).' },
+  { id: 'forgersOfLegends', name: 'Forgers of Legends', members: ['gondo', 'biggoron', 'medigoron'], text: 'Equipment upgrades need 30% fewer materials.' },
   { id: 'spiritsOfTheSword', name: 'Spirits of the Sword', members: ['fi', 'ghirahim', 'herosShade'], text: 'Sword attacks +3 damage; sword techniques cost 20% less stamina.' },
 ];
 

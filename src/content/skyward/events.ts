@@ -12,6 +12,8 @@ export const EVENTS: EventDef[] = [
       { label: 'Amber Relics and Jelly Blobs (₹40)', cost: 40, outcome: { text: 'A handful of common parts.', effects: [{ kind: 'quest', id: 'amberRelic' }, { kind: 'quest', id: 'amberRelic' }, { kind: 'quest', id: 'jellyBlob' }, { kind: 'quest', id: 'monsterClaw' }] } },
       { label: 'Eldin Ore and a Monster Horn (₹90)', cost: 90, outcome: { text: 'Heavy, and still warm.', effects: [{ kind: 'quest', id: 'eldinOre' }, { kind: 'quest', id: 'eldinOre' }, { kind: 'quest', id: 'monsterHorn' }] } },
       { label: 'An Ancient Flower and a Dusk Relic (₹160)', cost: 160, outcome: { text: '"Those are rare. Don\'t tell Scrapper."', effects: [{ kind: 'quest', id: 'ancientFlower' }, { kind: 'quest', id: 'duskRelic' }] } },
+      { label: 'Seed Satchel (₹150)', cost: 150, requires: { noQuest: ['largeSeedSatchel'] }, outcome: { text: '"Holds more seeds. Bigger ones next time!"', effects: [{ kind: 'quest', id: 'seedSatchel' }] } },
+      { label: 'Ask about odd jobs', outcome: { text: 'Gondo hands you a bent propeller and a cracked crystal ball. "Their owners would be grateful."', effects: [{ kind: 'quest', id: 'windmillPropeller' }, { kind: 'quest', id: 'crystalBall' }] } },
       { label: 'Just looking', outcome: { text: '"Come back with Treasures!"', effects: [] } },
     ] },
   { id: 'knightAcademy', title: 'The Knight Academy', art: 'gaepora', regions: ['skyloft'],
@@ -47,6 +49,7 @@ export const EVENTS: EventDef[] = [
       { label: 'Heart Potion+ (₹300)', cost: 300, outcome: { text: '"A fine choice!"', effects: [{ kind: 'loot', ids: ['heartPotionPlus'] }] } },
       { label: 'Adventure Pouch Upgrade (₹500)', cost: 500, outcome: { text: '"More room for more shopping!"', effects: [{ kind: 'loot', ids: ['adventurePouch'] }] } },
       { label: 'Bug Medal or Bug Net (₹300)', cost: 300, outcome: { text: '"For the insect lover!"', effects: [{ kind: 'loot', ids: ['bugMedal', 'bugNetSS'] }] } },
+      { label: 'Bigger Seed Satchel (₹350)', cost: 350, requires: { quest: ['seedSatchel'], noQuest: ['largeSeedSatchel'] }, outcome: { text: '"Room for thirty more!"', effects: [{ kind: 'quest', id: 'mediumSeedSatchel' }, { kind: 'quest', id: 'largeSeedSatchel' }] } },
       { label: 'Bring him a Sky Stag Beetle', requires: { quest: ['skyStagBeetle'] }, outcome: { text: 'His son is delighted. Beedle tears up and pays well.', effects: [{ kind: 'takeQuest', id: 'skyStagBeetle' }, { kind: 'quest', id: 'beedlesInsectCage' }, { kind: 'rupees', amount: 200 }, { kind: 'quest', id: 'gratitudeCrystal' }] } },
       { label: 'Leave', outcome: { text: '"Come again!"', effects: [] } },
     ] },
@@ -158,6 +161,6 @@ export const EVENTS: EventDef[] = [
     text: 'An old robot captain stands on a jetty over the sand. "My ship, the Sandship, was stolen. Help me find it."',
     choices: [
       { label: 'Sail with Skipper', outcome: { text: 'A chart and a captain.', effects: [{ kind: 'quest', id: 'ancientSeaChart' }, { kind: 'recruit', pool: ['skipper'] }] } },
-      { label: 'Scavenge the docks', outcome: { text: 'Robot parts everywhere.', effects: [{ kind: 'quest', id: 'ancientFlower' }, { kind: 'quest', id: 'amberRelic' }, { kind: 'quest', id: 'amberRelic' }] } },
+      { label: 'Scavenge the docks', outcome: { text: 'Robot parts everywhere — and a Timeshift Stone small enough to carry.', effects: [{ kind: 'quest', id: 'ancientFlower' }, { kind: 'quest', id: 'amberRelic' }, { kind: 'quest', id: 'timeshiftStoneItem' }] } },
     ] },
 ];
