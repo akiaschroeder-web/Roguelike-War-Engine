@@ -86,7 +86,7 @@ def sleeping_zelda(path: Path) -> Image.Image:
     out = remove_white(big)
     # Keep only the figure (drop sketch specks from the neighbouring drawings).
     al = np.array(out.getchannel("A"))
-    seed = Image.fromarray(np.where(al > 40, 255, 0).astype(np.uint8))
+    seed = Image.fromarray(np.where(al > 40, 255, 0).astype(np.uint8)).copy()
     ImageDraw.floodfill(seed, (out.width // 2, out.height // 2), 128)
     keep = np.array(seed.filter(ImageFilter.MaxFilter(5))) == 128
     out.putalpha(Image.fromarray(np.where(keep, al, 0).astype(np.uint8)))
