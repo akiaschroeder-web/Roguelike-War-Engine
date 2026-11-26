@@ -263,3 +263,7 @@ Batch 6 (8): vahRudania, vahMedoh, vahNaboris, frox, waterblight_whiteblocks (sp
 Batch 7 (4): guardianScout1 (no weapons), guardianScout3 (two blades), guardianScout4 (three weapons), decayedGuardian. The batch-3 scout is renamed guardianScout2.
 
 Batch 8 (16): stalkoblin, malanya, dinraal, farosh, satori, yigaFootsoldier (sickle), yigaBlademaster (red suit, gold pauldrons — provisional), frostPebblit, igneoPebblit, stonePebblit, mothGibdo, aerocuda, evermean, gibdoTOTK (TotK alt art for the existing Gibdo), gloomSpawn, unidentified_maskedFigure (small figure, red beaked mask, coloured ribbons — asked the user).
+
+Batch 9 (10 new): blupee, littleFrox, stalmoblin, stalizalfos, patricia (tusked walrus-like seal with a red gem bow), giantWhiteStallion (pale coat, blond mane), royalWhiteStallion (cream coat, golden mane), masterCycleZero, mountainDeer, mountainBear. (Gloom Spawn re-sent; same image as batch 8.)
+
+Still missing: Naydra, Bubbulfrog, one of Yiga Blademaster/Engineer, identity of unidentified_maskedFigure.
