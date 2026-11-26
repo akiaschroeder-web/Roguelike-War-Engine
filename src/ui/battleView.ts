@@ -563,7 +563,7 @@ export class BattleView {
     // finger wobbles a little or the page re-lays out between press and release.
     let press: { id: number; x: number; y: number; tile: Pos | null } | null = null;
     this.els.tiles.addEventListener('pointerdown', (e) => {
-      if (e.pointerType === 'mouse' && e.button !== 0) return;
+      if (e.pointerType !== 'mouse' || e.button !== 0) return; // touch taps: see touchstart/touchend below
       press = { id: e.pointerId, x: e.clientX, y: e.clientY, tile: tileFrom(e) ?? tileAtPoint(e.clientX, e.clientY) };
     });
     this.els.tiles.addEventListener('pointercancel', () => { press = null; });
@@ -575,6 +575,28 @@ export class BattleView {
       const p = pr.tile ?? tileAtPoint(e.clientX, e.clientY);
       if (!p) return;
       void this.clickTile(p);
+    });
+    // Touch: a small wobble makes the browser start a scroll and cancel the pointer events,
+    // but touchend still arrives. Count it as a tap if the finger stayed within ~12px.
+    let touch: { x: number; y: number; tile: Pos | null; at: number } | null = null;
+    this.els.tiles.addEventListener('touchstart', (e) => {
+      if (e.touches.length !== 1) { touch = null; return; }
+      const t = e.touches[0];
+      touch = { x: t.clientX, y: t.clientY, tile: tileAtPoint(t.clientX, t.clientY), at: Date.now() };
+    }, { passive: true });
+    this.els.tiles.addEventListener('touchmove', (e) => {
+      const t = e.touches[0];
+      if (touch && t && Math.abs(t.clientX - touch.x) + Math.abs(t.clientY - touch.y) > 14) touch = null; // a real scroll
+    }, { passive: true });
+    this.els.tiles.addEventListener('touchend', (e) => {
+      const tc = touch;
+      touch = null;
+      if (!tc?.tile) return;
+      const t = e.changedTouches[0];
+      if (t && Math.abs(t.clientX - tc.x) + Math.abs(t.clientY - tc.y) > 14) return;
+      if (Date.now() - tc.at > 900) return; // a long press, not a tap
+      e.preventDefault(); // no emulated mouse click afterwards
+      void this.clickTile(tc.tile);
     });
     this.els.tiles.addEventListener('contextmenu', (e) => { e.preventDefault(); this.cancel(); });
     this.root.addEventListener('click', (e) => {
