@@ -232,6 +232,10 @@ export function tpStartPhase(b: Battle, u: Unit, events: TPEvent[]) {
     st.timers = st.timers.filter((t) => t.turns > 0);
   }
 
+  // Darkhammer's whirling chain catches anyone who stays next to it.
+  const ham = foes.find((e) => has(e, 'chainDefense') && unitDist(e, u) <= 1);
+  if (ham) hurt(5, `${ham.name}'s chain`);
+  for (const e of foes) if (e.hidden && has(e, 'hiddenBeneath') && unitDist(e, u) <= 1) { e.hidden = false; (e.turnUses ??= {}).revealedTurn = b.turn; }
   // ── Personal skills ──
   if (has(u, 'goldenRegeneration')) heal(u.stats.hp * 0.25, 'Golden Regeneration');
   if (has(u, 'unstableComposition')) {

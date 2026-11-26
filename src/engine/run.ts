@@ -442,9 +442,15 @@ export function recruitOffers(run: Run, rng: RNG, world: WorldId): string[] {
     if (t.race === 'rito' && holding('goldenFeather')) wgt *= 2;
     if (sea && t.home === 'greatSea' && (seaOf(run).reputation >= 50)) wgt *= 2;
     if (RACES[t.race]?.tags?.includes('vessel')) wgt *= 0.6;
+    // Twilight Princess: Twilit creatures haunt twilit provinces; Agitha draws insects; the Bulblin horde draws its own.
+    if (isTwilit(run, world) && (RACES[t.race]?.tags?.includes('twilight') || t.race === 'twili')) wgt *= 3;
+    if (run.roster.some((u) => u.skills.includes('princessOfBugs')) && /insect|parasite|swarm/i.test(t.classId)) wgt *= 2;
+    if (run.bonus === 'mightMakesRight' && t.monster) wgt *= 2;
+    if (ownedGear(run).has('ordonClothes') && !t.monster) wgt *= 1.25;
     return wgt;
   };
-  while (offers.length < 3 + (holding('joyPendant') >= 3 ? 1 : 0) && generics.length) {
+  const network = run.roster.some((u) => u.skills.includes('resistanceNetwork')) ? 1 : 0;
+  while (offers.length < 3 + network + (holding('joyPendant') >= 3 ? 1 : 0) && generics.length) {
     const pick = rng.weighted(generics.map((t) => [t, weightOf(t)] as [UnitTemplate, number]));
     if (!offers.includes(pick.id)) offers.push(pick.id);
   }
@@ -1240,6 +1246,8 @@ export function merchantDiscount(run: Run): number {
   let d = 0;
   if (run.roster.some((u) => u.skills.includes('customerRewards'))) d += Math.min(25, Math.floor(run.stats.battles / 2));
   if (run.questItems?.includes('complimentaryId')) d += 15;
+  if (run.roster.some((u) => u.skills.includes('maloMart'))) d += 15;
+  if (run.questItems?.includes('maloMartCastle')) d += 5;
   return Math.min(40, d);
 }
 

@@ -597,8 +597,16 @@ export function healAmount(b: Battle, healer: Unit, staff: WeaponDef): number {
 
 export function resolveHeal(b: Battle, healer: Unit, target: Unit, rng: RNG, staffId?: string): HealResult {
   const staff = (staffId ? WEAPONS[staffId] : undefined) ?? healWeapons(healer, unitDist(healer, target))[0];
-  const amount = staff ? Math.min(healAmount(b, healer, staff), target.stats.hp - target.hp) : 0;
+  const gentle = healer.skills.includes('gentleTouch') && (isMounted(target) || unitTags(target).includes('beast')) ? 1.1 : 1;
+  const boost = hasEffect(target, 'healBoost') ? 1.25 : 1;
+  const amount = staff ? Math.min(Math.round(healAmount(b, healer, staff) * gentle * boost), target.stats.hp - target.hp) : 0;
   target.hp += amount;
+  if (amount > 0 && hasEffect(target, 'healStamina')) target.sta = Math.min(target.stats.sta, target.sta + Math.ceil(amount / 3));
+  // Renado's Village Healer: healing also lifts one harmful status.
+  if (healer.skills.includes('villageHealer')) {
+    const bad = target.statuses.findIndex((x) => !['regen', 'inspired', 'protected', 'haste', 'veiled'].includes(x.kind));
+    if (bad >= 0) target.statuses.splice(bad, 1);
+  }
   if (staff) spendUse(healer, staff.id);
   if (amount > 0) gainSupport(b, healer, 2, target);
   const levelUps: LevelUp[] = [];
