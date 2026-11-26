@@ -359,3 +359,5 @@ Full C–S dialogue scripts would be a separate writing pass.
 Saved in `art_sources/skyward_sword/`.
 
 Batch 1 (15): skyLink, ssZelda, fi, groose, ssImpa, ghirahim, ghirahimTrue, demise, gaepora, fledge, pipit, karane, batreaux, gondo, scrapper.
+
+Batch 2 (16): skipper, bucha, gorko, moldini, levias, faronSS_uncropped, eldinSS_uncropped (both need cutting out of their backgrounds), lanayruSS, technoblin, cursedBokoblin, ironShieldMoblin (iron shield), moblinSS (wooden shield; planned as the SS alt art for the existing Moblin), quadroBaba, furnix, pyrup, froak.
