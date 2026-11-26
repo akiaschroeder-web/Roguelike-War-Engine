@@ -1,13 +1,14 @@
 // The battlefield itself: fire, Magic Beans, traps, buried treasure, Time Blocks,
 // cracked walls, fog of war and hidden enemies, plus the Environmental Phase.
 
-import { ITEMS } from '../data/registry';
 import { footDist, footprint, inBounds, keyOf, unitAt } from './grid';
 import { RNG } from './rng';
 import { addStatus } from './status';
 import { hasEffect, unitTags } from './units';
 import { decorateWindWaker, wwEnvironment } from './windwaker';
 import { decorateTwilight, twilightBattleStart } from './twilight';
+import { decorateSkyward, skywardBattleStart, ssAfterMove } from './skyward';
+import { GEAR, ITEMS } from '../data/registry';
 import type { Battle, Pos, Terrain, Unit, WorldId } from './types';
 
 const DIRS = [[1, 0], [-1, 0], [0, 1], [0, -1]];
@@ -33,7 +34,9 @@ export function decorateField(b: Battle, rng: RNG, nodeType: string) {
   decorateTermina(b, rng);
   decorateWindWaker(b, rng);
   decorateTwilight(b, rng);
+  decorateSkyward(b, rng);
   twilightBattleStart(b, rng);
+  skywardBattleStart(b, rng);
   // Fog of war
   b.fog = rng.chance(FOGGY[world] ?? 6);
   // Buried treasure
@@ -120,6 +123,7 @@ export function revealNearby(b: Battle): string[] {
 
 /** A player unit ending its move on a trap: 20% max HP and rooted for a turn. */
 export function triggerTraps(b: Battle, u: Unit): number {
+  ssAfterMove(b, u); // Skyward Sword spaces: Sacred Tears, Waking Water, Light Fruit, Timeshift Orbs
   if (moveIsFlying(u)) return 0;
   const tiles = footprint(u.x, u.y, u.size);
   // Hidden spike traps catch your army; Death Armos Cores you planted catch the enemy.
@@ -134,7 +138,8 @@ export function triggerTraps(b: Battle, u: Unit): number {
 }
 
 function moveIsFlying(u: Unit): boolean {
-  return u.gear?.mount === 'loftwing' && u.mounted !== false || ['keese', 'fireKeese', 'iceKeese', 'navi', 'peahat'].includes(u.artId ?? u.templateId ?? '');
+  const mount = u.gear?.mount ? GEAR[u.gear.mount] : undefined;
+  return !!mount?.effects?.includes('flight') && u.mounted !== false || ['keese', 'fireKeese', 'iceKeese', 'navi', 'peahat'].includes(u.artId ?? u.templateId ?? '');
 }
 
 const DIG_LOOT = ['redPotion', 'bluePotion', 'fairy', 'bomb', 'magicJar', 'greenPotion', 'magicBean', 'fireFruit', 'elixir', 'sacredWater', 'staminaPotion'];

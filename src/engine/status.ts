@@ -56,6 +56,9 @@ export function hasStatus(u: Unit, kind: StatusKind): boolean {
 export function immuneTo(u: Unit, kind: StatusKind): boolean {
   const gear = (effect: string) => Object.values(u.gear ?? {}).some((id) => GEAR[id!]?.effects?.includes(effect as never));
   if (kind === 'sleep' && gear('sleepImmune')) return true;
+  // Skyward Sword: the Imprisoned shrugs off ordinary immobilization; sacred shields ward off curses.
+  if (['root', 'stun', 'freeze', 'sleep'].includes(kind) && u.skills?.includes('unstoppableAscension')) return true;
+  if ((kind === 'curse' || kind === 'weaponCurse') && u.gear?.shield && GEAR[u.gear.shield]?.shieldFamily === 'sacred') return true;
   if (kind === 'fear' && (gear('fearImmune') || gear('gibdo') || u.skills.includes('mountainHero'))) return true;
   if (kind === 'curse' && gear('curseImmune')) return true;
   if (kind === 'shock' && gear('shockImmune')) return true;

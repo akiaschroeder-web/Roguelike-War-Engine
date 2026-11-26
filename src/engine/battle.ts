@@ -8,6 +8,7 @@ import { decorateField } from './field';
 import { canRide, enemyFleet, isVessel, layoutNaval, roomAboard } from './naval';
 import { windWakerUpkeepAtStart, wwStartPhase } from './windwaker';
 import { tpStartPhase } from './twilight';
+import { ssStartPhase, trialResult } from './skyward';
 import { resolveSinking } from './naval';
 import { revertMask } from './terminaAbilities';
 import { roomFor } from './transform';
@@ -40,6 +41,8 @@ export interface BattleSetup {
   fleet?: string[];
   /** Fought under the Twilight (Twilight Princess provinces). */
   twilit?: boolean;
+  /** Skyward Sword: a Silent Realm trial for this region. */
+  silentRealm?: string;
 }
 
 /** Enemy level for a given depth. Keeps climbing in endless mode. */
@@ -183,6 +186,7 @@ export function createBattle(setup: BattleSetup): Battle {
   // First-region bosses and leaders hold their ground instead of hunting your Commander.
   if (battle.bossTier === 0) for (const u of units) if (u.isBoss) u.ai = 'stationary';
   battle.twilit = setup.twilit;
+  battle.silentRealm = setup.silentRealm;
   decorateField(battle, rng, setup.nodeType);
   windWakerUpkeepAtStart(battle, rng);
   if (setup.trials?.includes('mist')) battle.fog = true;
@@ -422,6 +426,7 @@ export function startPhase(b: Battle, team: Team): TurnStartEvent[] {
     terminaUpkeep(b, u, events);
     wwStartPhase(b, u, events);
     tpStartPhase(b, u, events);
+    ssStartPhase(b, u, events);
     const max = u.stats.hp;
     const tiles = footprint(u.x, u.y, u.size).map((p) => b.tiles[keyOf(b, p.x, p.y)]);
     const anchor = tiles[0];
@@ -482,6 +487,9 @@ export function checkResult(b: Battle): Battle['result'] {
   const players = b.units.flatMap((u) => [u, ...(u.cargo ?? [])]).filter((u) => u.team === 'player' && !u.npc);
   const enemies = b.units.flatMap((u) => [u, ...(u.cargo ?? [])]).filter((u) => u.team === 'enemy');
   if (!players.length || b.fallen.some((u) => u.isCommander)) return (b.result = 'lost');
+  const trial = trialResult(b);
+  if (trial) return (b.result = trial);
+  if (b.objective.type === 'trial') return undefined;
   if (b.objective.type === 'escort' && b.fallen.some((u) => u.vip)) { b.retreat = true; return (b.result = 'lost'); }
   if (!enemies.length) return (b.result = 'won');
   if (b.objective.type === 'boss' && b.fallen.some((u) => u.isBoss)) return (b.result = 'won');
@@ -517,6 +525,7 @@ export function objectiveText(o: Objective): string {
     case 'escort': return 'Escort: get the VIP (green) safely to the far edge';
     case 'rescue': return 'Rescue the prisoners (move next to them and Free them)';
     case 'capture': return `Hold ${o.need} of the ${o.tiles?.length ?? 3} capture points at once`;
+    case 'trial': return `Silent Realm: gather ${o.need} Sacred Tears within ${o.turns} turns without being caught (you can't fight)`;
   }
 }
 
