@@ -267,3 +267,5 @@ Batch 8 (16): stalkoblin, malanya, dinraal, farosh, satori, yigaFootsoldier (sic
 Batch 9 (10 new): blupee, littleFrox, stalmoblin, stalizalfos, patricia (tusked walrus-like seal with a red gem bow), giantWhiteStallion (pale coat, blond mane), royalWhiteStallion (cream coat, golden mane), masterCycleZero, mountainDeer, mountainBear. (Gloom Spawn re-sent; same image as batch 8.)
 
 Still missing: Naydra, Bubbulfrog, one of Yiga Blademaster/Engineer, identity of unidentified_maskedFigure.
+
+Batch 10 — alt arts (10): goronWarriorTP, zoraWarriorTP, goronWarriorWW (backpack merchant Goron), goronWarriorBotW, zoraWarriorBotW_patternbg, ritoWarriorBotW_patternbg — alts for the generic Goron/Zora/Rito units (apply to every generic unit of that race that uses the base art); lizalfosBotW, moblinBotW, bokoblinBotW, likeLikeBotW — BotW alts for those existing monsters.
