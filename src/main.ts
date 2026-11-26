@@ -2,6 +2,7 @@ import './ui/style.css';
 import { App } from './ui/app';
 
 import { installClickSounds } from './ui/audio';
+import { loadArtPacks } from './ui/media';
 
 installClickSounds(document.body);
-new App(document.getElementById('app')!);
+void loadArtPacks().finally(() => new App(document.getElementById('app')!));

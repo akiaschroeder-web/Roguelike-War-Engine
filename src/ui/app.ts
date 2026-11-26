@@ -1,3 +1,4 @@
+import { imgUrl } from './media';
 import { TEARS_NEEDED, twilightOf } from '../engine/twilightRun';
 import { TWILIT_PROVINCES } from '../content/twilight';
 import { ABILITIES, artFor, BOSSES, ENEMIES, GEAR, QUEST_ITEMS, ITEMS, CLASSES, COMMANDERS, PERMANENT_ITEMS, REGION_IDS, TEMPLATE_LIST, TEMPLATES, WEAPONS, worldDef, WORLDS } from '../data/registry';
@@ -845,7 +846,7 @@ export class App {
       <div class="page event-page">
         <h1>${esc(def.title)}</h1>
         <div class="event-card">
-          ${art ? `<img class="event-art" src="art/${esc(art)}.png" alt="" onerror="this.remove()">` : ''}
+          ${art ? `<img class="event-art" src="${imgUrl('art', art)}" alt="" onerror="this.remove()">` : ''}
           <p>${esc(def.text)}</p>
         </div>
         ${body}

@@ -1,3 +1,4 @@
+import { imgUrl } from './media';
 import { sfx } from './audio';
 import { STATUS_INFO } from '../engine/status';
 // A short side-view battle scene shown when two units fight, in the style of
@@ -51,12 +52,12 @@ export function playCinematic(opts: CinematicOptions): Promise<void> {
   const fighter = (u: Unit, side: 'left' | 'right') => {
     const art = artFor(portraitIdOf(u), u.uid);
     const rider = art
-      ? `<img class="cine-art" src="art/${esc(art)}.png" alt="" draggable="false">`
+      ? `<img class="cine-art" src="${imgUrl('art', art)}" alt="" draggable="false">`
       : `<div class="cine-token">${token(u, 170)}</div>`;
     const mount = isMounted(u) ? mountOf(u) : undefined;
     const mountArt = mount?.art && artFor(mount.art);
     const body = mountArt
-      ? `<div class="cine-mounted ${side}"><img class="cine-mount" src="art/${esc(mountArt)}.png" alt="" draggable="false"><div class="cine-rider">${rider}</div></div>`
+      ? `<div class="cine-mounted ${side}"><img class="cine-mount" src="${imgUrl('art', mountArt)}" alt="" draggable="false"><div class="cine-rider">${rider}</div></div>`
       : rider;
     const i = info[u.uid];
     const max = u.stats.hp;

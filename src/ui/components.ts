@@ -1,3 +1,4 @@
+import { imgUrl } from './media';
 import { ABILITIES, GEAR, ITEMS, artFor, CLASSES, PERMANENT_ITEMS, raceOf, skillDef, WEAPONS, worldDef } from '../data/registry';
 import { STATUS_INFO } from '../engine/status';
 import { GEAR_SLOTS, PACK_SIZE } from '../engine/types';
@@ -79,7 +80,7 @@ export function token(u: TokenLike | Unit, size = 40): string {
   const t: TokenLike = 'uid' in u ? { home: u.home, glyph: u.glyph, team: u.team, isBoss: u.isBoss, isCommander: u.isCommander, portraitId: portraitIdOf(u), seed: u.uid } : u;
   const w = worldDef(t.home);
   const art = artFor(t.portraitId, t.seed);
-  const img = art ? `<img src="portraits/${esc(art)}.png" alt="" draggable="false" onerror="this.parentNode.classList.remove('has-img');this.remove()">` : '';
+  const img = art ? `<img src="${imgUrl('portraits', art)}" alt="" draggable="false" onerror="this.parentNode.classList.remove('has-img');this.remove()">` : '';
   return `<span class="token ${t.team}${art ? ' has-img' : ''}" style="--wc:${w.color};--sz:${size}px"><b>${esc(t.glyph)}</b>${img}${
     t.isBoss ? '<i class="crown">♛</i>' : t.isCommander ? '<i class="crown star">★</i>' : ''
   }</span>`;
