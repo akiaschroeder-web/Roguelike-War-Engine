@@ -41,6 +41,8 @@ const TERRAIN_GLYPH: Record<string, string> = {
   timeshiftField: '⌛', timeshiftStone: '⏳', timeshiftOrb: '🔮', ancientRail: '═', minecart: '🛒', sandPile: '⛰', burrowingTunnel: '🕳',
   waterFruitPlant: '🫐', solidifiedLava: '▩', windPinwheel: '✇', skyIslandEdge: '☁', goddessCube: '◆', trialGate: '⛩', wakingWater: '≋',
   lightFruit: '✹', sealingSpike: '⚔', powerSocket: '⏻', sacredTear: '💧', driedWaterway: '⋯',
+  burnableBush: '❦', boulder: '●', hiddenStairs: '▤', raftDock: '⛵', ladderGap: '╪', pushBlock: '▣', shutterDoor: '▥', bladeTrap: '✦',
+  goriyaCheckpoint: '🍖', secretCave: '◖', gravestone: '✝', lockedDoor: '🔒',
 };
 
 export class BattleView {

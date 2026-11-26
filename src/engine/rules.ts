@@ -21,6 +21,9 @@ const SPECIAL = (open: number, water = INF, rough = 2, gap = INF) => ({
   timeshiftField: open, timeshiftStone: INF, timeshiftOrb: open, ancientRail: rough, minecart: open, sandPile: rough, burrowingTunnel: open,
   waterFruitPlant: INF, solidifiedLava: open, windPinwheel: INF, skyIslandEdge: open, goddessCube: INF, trialGate: open, wakingWater: open,
   lightFruit: open, sealingSpike: INF, powerSocket: INF, sacredTear: open, driedWaterway: rough,
+  // Original Hyrule (per-unit exceptions live in original.ts ogTileCost)
+  burnableBush: rough, boulder: INF, hiddenStairs: open, raftDock: open, ladderGap: INF, pushBlock: INF, shutterDoor: INF, bladeTrap: INF,
+  goriyaCheckpoint: INF, secretCave: open, gravestone: INF, lockedDoor: INF,
 });
 export const MOVE_COSTS: Record<MoveType, Record<Terrain, number>> = {
   foot:    { plain: 1, forest: 2, mountain: 3, water: INF, wall: INF, fort: 1, lava: 2, ...SPECIAL(1) },
@@ -107,6 +110,18 @@ export const TERRAIN_BONUS: Record<Terrain, { avoid: number; def: number; heal: 
   powerSocket: { avoid: 0, def: 0, heal: 0 },
   sacredTear: { avoid: 0, def: 0, heal: 0 },
   driedWaterway: { avoid: 0, def: 0, heal: 0 },
+  burnableBush: { avoid: 15, def: 0, heal: 0 },
+  boulder: { avoid: 0, def: 0, heal: 0 },
+  hiddenStairs: { avoid: 0, def: 0, heal: 0 },
+  raftDock: { avoid: 0, def: 0, heal: 0 },
+  ladderGap: { avoid: 0, def: 0, heal: 0 },
+  pushBlock: { avoid: 0, def: 0, heal: 0 },
+  shutterDoor: { avoid: 0, def: 0, heal: 0 },
+  bladeTrap: { avoid: 0, def: 0, heal: 0 },
+  goriyaCheckpoint: { avoid: 0, def: 0, heal: 0 },
+  secretCave: { avoid: 10, def: 1, heal: 10 },
+  gravestone: { avoid: 0, def: 0, heal: 0 },
+  lockedDoor: { avoid: 0, def: 0, heal: 0 },
 };
 
 /** Water-like spaces: swimmers move through them, others can't. */
@@ -183,6 +198,18 @@ export const SPECIAL_TERRAIN: Record<Exclude<Terrain, BaseTerrain>, { name: stri
   powerSocket: { name: 'Ancient Power Socket', color: '#5a7a8a' },
   sacredTear: { name: 'Sacred Tear', color: '#f8f0c0' },
   driedWaterway: { name: 'Dried Waterway', color: '#b8a070' },
+  burnableBush: { name: 'Burnable Bush', color: '#3a8a3a' },
+  boulder: { name: 'Movable Boulder', color: '#8a7a6a' },
+  hiddenStairs: { name: 'Hidden Staircase', color: '#3a3a4a' },
+  raftDock: { name: 'Raft Dock', color: '#a0784a' },
+  ladderGap: { name: 'Ladder Crossing', color: '#2a2a3a' },
+  pushBlock: { name: 'Push Block', color: '#6a7a9a' },
+  shutterDoor: { name: 'Shutter Door', color: '#5a4a6a' },
+  bladeTrap: { name: 'Blade Trap', color: '#9aa0b0' },
+  goriyaCheckpoint: { name: 'Hungry Goriya', color: '#8a5a3a' },
+  secretCave: { name: 'Secret Cave', color: '#2a1a14' },
+  gravestone: { name: 'Gravestone', color: '#8a8a90' },
+  lockedDoor: { name: 'Locked Door', color: '#7a5a2a' },
 };
 
 /** Lava damage at the start of a unit's turn (as % of max HP). */
