@@ -9,7 +9,7 @@ export const SKILLS: SkillDef[] = [
   k('dungeonExplorer', 'Dungeon Explorer', 'At the start of each turn, reveals hidden staircases, hidden enemies and traps within 3.'),
   k('quickItem', 'Quick Item', 'Once per battle, using a pack item doesn\'t use your action.'),
   k('scatteredWisdom', 'Scattered Wisdom', '+1 MAG and +1 RES for each Triforce of Wisdom fragment the army holds (+8 each once the Triforce is whole).'),
-  k('invisibleDarkness', 'Invisible Darkness', 'Turns invisible at the start of his phase (as an enemy: hidden; on your side: Veiled). Sacred light, detection and Silver Arrows reveal him; Silver Arrows deal him extra damage.'),
+  k('invisibleDarkness', 'Invisible Darkness', 'Turns invisible at the start of his phase (as an enemy: hidden; on your side: Veiled). Sacred light, detection (an enemy within 2) and Silver Arrows reveal him; Silver Arrows deal him extra damage.'),
   k('invisibleAssault', 'Invisible Assault', '+25 Critical when attacking from concealment (hidden or Veiled).'),
   k('princeOfDarkness', 'Prince of Darkness', 'Allied monsters within 2 gain +3 STR and MAG.'),
   // ── Supporting characters ──

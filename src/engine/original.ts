@@ -236,6 +236,10 @@ export function ogAfterMove(b: Battle, u: Unit): string | null {
         else { const h = Math.min(u.stats.hp - u.hp, Math.ceil(u.stats.hp * 0.4)); u.hp += h; lines.push(`A secret cave with a fairy pond: ${u.name} recovers ${h} HP.`); }
       }
     }
+    // Detection: an invisible Ganon close by gives himself away.
+    for (const e of b.units) {
+      if (e.team !== u.team && e.hidden && has(e, 'invisibleDarkness') && unitDist(u, e) <= 2) { e.hidden = false; lines.push(`${u.name} senses ${e.name} nearby — he is revealed!`); }
+    }
     // Blade traps slide down their lane at whoever steps into it.
     for (let i = 0; i < b.tiles.length; i++) {
       if (b.tiles[i] !== 'bladeTrap') continue;
