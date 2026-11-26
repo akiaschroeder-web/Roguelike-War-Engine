@@ -229,3 +229,38 @@ describe('Twilight campaign', () => {
     if (run.event?.type === 'region') for (const r of run.event.options) expect(WORLDS[r].campaign).toBe('twilight');
   });
 });
+
+describe('expanded supports', () => {
+  it('uses the registry: max ranks, shared form progression, and conversations', async () => {
+    const { maxRank, rankOf, gainSupport, activeGroups, specialSupportMods } = await import('../src/engine/supports');
+    const { pairDef, convoSet, SUPPORT_REGISTRY } = await import('../src/content/supports');
+    const { conversationFor } = await import('../src/content/ocarina/conversations');
+    expect(SUPPORT_REGISTRY.length).toBeGreaterThan(600);
+    const b = field();
+    const link = place(b, hero('link'), 2, 2);
+    const winds = place(b, hero('heroOfWinds'), 3, 2);
+    const wolf = place(b, hero('wolfLink'), 5, 5);
+    const midna = place(b, hero('midnaImp'), 5, 6);
+    expect(maxRank(link, winds)).toBe('S');
+    expect(pairDef('wolfLink', 'midnaImp')?.key).toBe('heroOfTwilight|midnaImp');
+    expect(maxRank(wolf, midna)).toBe('S');
+    expect(maxRank(hero('rusl'), hero('ashei'))).toBe('A');
+    // The doc's own chains are used verbatim.
+    expect(convoSet('link', 'heroOfWinds')?.C?.[0][1]).toBe('Is that the Master Sword?');
+    expect(conversationFor('heroOfWinds', 'link', 'S', { a: 'x', b: 'y' }).lines.some(([s]) => s === 'n')).toBe(true);
+    // Wolf Link fighting beside Midna unlocks the wolf-form conversations.
+    b.supports = {};
+    gainSupport(b, wolf, 5, midna);
+    expect(b.formSupports).toContain('heroOfTwilight|midnaImp#wolfLink');
+    // A named pair bonus: A New Generation at S.
+    b.supports[[link.uid, winds.uid].sort().join('|')] = 70;
+    expect(rankOf(70, maxRank(link, winds))).toBe('S');
+    expect(specialSupportMods(b, link, link).str).toBeGreaterThanOrEqual(3);
+    // Group support: the Courage of Generations needs all three heroes (Wolf Link counts as the Hero of Twilight).
+    expect(activeGroups(b, 'player')).toContain('courageOfGenerations');
+    b.units = b.units.filter((x) => x !== wolf);
+    expect(activeGroups(b, 'player')).not.toContain('courageOfGenerations');
+    place(b, hero('heroOfTwilight', 'tp'), 2, 3);
+    expect(activeGroups(b, 'player')).toContain('courageOfGenerations');
+  });
+});

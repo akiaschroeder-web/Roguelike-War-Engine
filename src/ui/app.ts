@@ -1,3 +1,5 @@
+import { TEARS_NEEDED, twilightOf } from '../engine/twilightRun';
+import { TWILIT_PROVINCES } from '../content/twilight';
 import { ABILITIES, artFor, BOSSES, ENEMIES, GEAR, QUEST_ITEMS, ITEMS, CLASSES, COMMANDERS, PERMANENT_ITEMS, REGION_IDS, TEMPLATE_LIST, TEMPLATES, WEAPONS, worldDef } from '../data/registry';
 import { canWield, type LevelUp } from '../engine/combat';
 import { randomSeed } from '../engine/rng';
@@ -367,6 +369,7 @@ export class App {
         <div class="tb-res"><span class="dim small">Morale</span> <b>${armyOf(run).morale}</b></div>
         ${run.sea ? (() => { const sea = seaOf(run); const ships = run.roster.filter(isVessel); return `<div class="tb-res" title="Fleet: vessels owned / Fleet Capacity. Deploy: vessels per sea battle. Crew: passengers they carry."><span class="dim small">Fleet</span> <b>${ships.length}/${fleetCap(run)}</b> <span class="dim small">deploy ${navalDeployCap(run)} · crew ${fleetCrew(run)}</span></div>
           <div class="tb-res" title="Navigation reveals the chart; Salvage improves sunken treasure; Naval Reputation brings pirates and merchants."><span class="dim small">Nav</span> <b>${sea.navigation}</b> <span class="dim small">Salv</span> <b>${sea.salvage}</b> <span class="dim small">Rep</span> <b>${sea.reputation}</b></div>`; })() : ''}
+        ${run.campaign === 'twilight' ? (() => { const tw = twilightOf(run); const prov = Object.keys(TWILIT_PROVINCES).filter((r) => r !== 'ordonProvince'); return `<div class="tb-res" title="Tears of Light gathered in each twilit province (${TEARS_NEEDED} fill its Vessel of Light). Restored provinces have their Light Spirit back."><span class="dim small">Light</span> ${prov.map((r) => tw.restored.includes(r) ? `<b title="${esc(WORLDS[r]?.name ?? r)}: restored">☀</b>` : `<span title="${esc(WORLDS[r]?.name ?? r)}">💧${tw.tears[r] ?? 0}</span>`).join(' ')}</div>`; })() : ''}
         ${run.clock ? (() => { const c = clockLabel(run); return `<div class="tb-clock ${c.hoursLeft <= 12 ? 'bad' : c.day === 3 ? 'warn' : ''}" title="The Moon falls when the third day ends."><span class="dim small">Day ${c.day} ${c.night ? '☾' : '☀'}</span> <b>${c.time}</b> <span class="dim small">${c.hoursLeft}h left</span></div>
           <button class="btn small" data-nav="songoftime" title="Return to the dawn of the first day">🎵 Song of Time</button>`; })() : ''}
         <div class="spacer"></div>
@@ -751,6 +754,7 @@ export class App {
         ${summary.supportUps.length ? `<div class="res-drops"><div class="dim small">Supports</div>${summary.supportUps.map((x, i) => `<div>💞 <b>${esc(x.a)}</b> & <b>${esc(x.b)}</b> reached <b>${x.rank}</b> <button class="btn tiny" data-nav="talk" data-i="${i}">💬 Read</button></div>`).join('')}</div>` : ''}
         ${summary.found.length ? `<div class="res-drops"><div class="dim small">Found on the field</div><div>${summary.found.map((d) => esc(itemName(d))).join(', ')}</div></div>` : ''}
         ${summary.joined.length ? `<div class="res-drops"><div class="dim small">Rescued and joined your army</div><div>${summary.joined.map(esc).join(', ')}</div></div>` : ''}
+        ${summary.twilight?.length ? `<div class="res-drops"><div class="dim small">Twilight</div>${summary.twilight.map((l) => `<div>${esc(l)}</div>`).join('')}</div>` : ''}
         <div class="res-army-stats">${armyReportHtml(summary.army)}</div>
         ${summary.fallen.length ? `<div class="res-fallen"><span class="dim">Fallen:</span> ${summary.fallen.map((u) => `${token(u, 28)} ${esc(u.name)}`).join(' ')}</div>` : '<div class="dim">No losses.</div>'}
         <div class="res-army">${run.roster.map((u) => `<div class="res-unit">${token(u, 36)}<div><b>${esc(u.name)}</b><div class="dim small">Lv ${u.level} · HP ${u.hp}/${u.stats.hp}</div></div></div>`).join('')}</div>
