@@ -79,8 +79,8 @@ export const BOSSES: BossDef[] = [
 ];
 
 export const ROSTERS: Record<string, string[]> = {
-  skyloft: ['remlit', 'remlit', 'keese', 'bokoblin', 'chuchuBlue'],
-  theSky: ['keese', 'fireKeese', 'remlit', 'bokoblin', 'furnix'],
+  skyloft: ['remlit', 'remlit', 'keese', 'bokoblin', 'bokoblin', 'chuchuBlue', 'moblin'],
+  theSky: ['keese', 'fireKeese', 'remlit', 'bokoblin', 'bokoblin', 'moblin', 'furnix', 'furnix', 'technoblin'],
   faronWoodsSS: ['bokoblin', 'bokoblin', 'dekuBaba', 'quadroBaba', 'octorok', 'keese', 'chuchuGreen'],
   eldinVolcano: ['bokoblin', 'fireKeese', 'pyrup', 'magmanos', 'redBubble', 'chuchuRed', 'lizalfos', 'froak'],
   lanayruDesert: ['technoblin', 'technoblin', 'ampilus', 'ampilusEgg', 'aracha', 'sentrobe', 'beamos', 'chuchuYellow', 'froak'],

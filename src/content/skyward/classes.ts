@@ -12,7 +12,7 @@ const HERO = g(80, 50, 25, 60, 55, 35, 30, 50);
 const KNIGHT = g(75, 45, 10, 55, 50, 35, 25, 40);
 const MAGE = g(55, 10, 65, 50, 45, 15, 55, 50);
 const DIVINE = g(60, 10, 70, 55, 45, 20, 65, 60);
-const DEMON = g(85, 55, 50, 55, 45, 35, 40, 20);
+const DEMON = g(70, 45, 40, 50, 40, 25, 30, 20);
 const TANK = g(100, 55, 5, 35, 20, 55, 20, 30);
 const SUPPORT = g(60, 20, 40, 45, 40, 25, 40, 55);
 const BEAST = g(75, 45, 10, 45, 60, 25, 25, 35);
@@ -29,8 +29,8 @@ export const CLASSES: ClassDef[] = [
   c('siegeEngineer', 'Siege Engineer', '🎯', ['siege', 'sling', 'hammer', 'sword'], 'foot', g(85, 50, 0, 45, 30, 40, 20, 35)),
   c('sacredGuardian', 'Sacred Guardian', '🗝', ['dagger', 'sword', 'magic'], 'foot', g(75, 45, 45, 60, 60, 30, 40, 35)),
   c('demonLord', 'Demon Lord', '💎', ['sword', 'dagger', 'magic'], 'foot', DEMON),
-  c('livingDemonBlade', 'Living Demon Blade', '⚔', ['sword', 'magic'], 'foot', g(100, 60, 45, 60, 40, 50, 40, 15)),
-  c('demonKing', 'Demon King', '🔥', ['sword', 'magic'], 'foot', g(130, 65, 55, 45, 30, 50, 45, 15)),
+  c('livingDemonBlade', 'Living Demon Blade', '⚔', ['sword', 'magic'], 'foot', g(85, 50, 40, 50, 35, 40, 30, 15)),
+  c('demonKing', 'Demon King', '🔥', ['sword', 'magic'], 'foot', g(105, 55, 45, 40, 25, 40, 35, 15)),
   // ── Supporting characters ──
   c('knightCommander', 'Knight Commander', '🦉', ['sword', 'staff', 'magic'], 'foot', g(70, 35, 25, 60, 25, 35, 35, 50)),
   c('knightTrainee', 'Knight Trainee', '🏋', ['sword', 'sling'], 'foot', g(65, 45, 10, 45, 45, 30, 25, 55)),
@@ -72,11 +72,11 @@ export const CLASSES: ClassDef[] = [
   c('sealedDemonClass', 'Sealed Demon', '⛓', ['natural'], 'foot', g(150, 60, 25, 25, 15, 50, 40, 10)),
   c('demonicColossus', 'Demonic Colossus', '🖐', ['natural'], 'foot', g(150, 65, 30, 30, 20, 50, 40, 10)),
   c('ascendingDemon', 'Ascending Demon', '🐲', ['natural', 'magic'], 'flying', g(150, 60, 40, 30, 30, 45, 45, 10)),
-  c('undeadSwordmaster', 'Undead Swordmaster', '☠', ['sword'], 'foot', g(95, 55, 5, 65, 40, 40, 25, 15)),
+  c('undeadSwordmaster', 'Undead Swordmaster', '☠', ['sword'], 'foot', g(80, 45, 5, 50, 30, 30, 20, 15)),
   c('ancientPirate', 'Ancient Pirate', '🏴', ['sword'], 'foot', g(80, 50, 5, 60, 50, 35, 25, 20)),
   c('ancientExecutioner', 'Ancient Executioner', '⚡', ['sword', 'magic'], 'foot', g(85, 50, 35, 65, 45, 40, 35, 15)),
   c('reptilianElite', 'Reptilian Elite', '🦎', ['sword', 'natural'], 'foot', g(75, 45, 30, 50, 50, 30, 35, 20)),
   // ── Loftwings ──
   c('aerialMount', 'Aerial Mount', '🐦', ['natural'], 'flying', BEAST),
-  c('sacredAerialMount', 'Sacred Aerial Mount', '🦅', ['natural'], 'flying', g(80, 45, 15, 50, 65, 30, 35, 45)),
+  c('sacredAerialMount', 'Sacred Aerial Mount', '🦅', ['natural'], 'flying', g(70, 35, 10, 45, 55, 20, 25, 40)),
 ];
