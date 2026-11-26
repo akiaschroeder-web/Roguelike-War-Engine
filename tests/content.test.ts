@@ -4,9 +4,10 @@ import { MAJORA } from '../src/content/majora';
 import { WIND_WAKER } from '../src/content/windwaker';
 import { TWILIGHT_PRINCESS } from '../src/content/twilight';
 import { SKYWARD_SWORD } from '../src/content/skyward';
+import { ERA_OF_THE_WILD } from '../src/content/wild';
 import { ABILITIES, BOSSES, CLASSES, ENEMIES, GEAR, ITEMS, RACES, ROSTERS, SKILLS, TEMPLATES, WEAPONS, WORLDS, COMMANDERS, EVENTS, artFor } from '../src/data/registry';
 
-const PACKS = [OCARINA, MAJORA, WIND_WAKER, TWILIGHT_PRINCESS, SKYWARD_SWORD];
+const PACKS = [OCARINA, MAJORA, WIND_WAKER, TWILIGHT_PRINCESS, SKYWARD_SWORD, ERA_OF_THE_WILD];
 const lists = ['races', 'classes', 'weapons', 'gear', 'items', 'abilities', 'skills', 'templates', 'enemies', 'bosses'] as const;
 
 describe('content integrity', () => {

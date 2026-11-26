@@ -302,6 +302,10 @@ export const WEAPONS: WeaponDef[] = [
   nat('vehicleRam', 'Vehicle Ram', 8, 80, 0, 1, 1, { momentum: 3 }),
   w('vehicleCannon', 'Zonai Cannon', 'siege', 'rare', 14, 80, 0, 0, 2, 5, { uses: 0, unique: true, crewed: false, splash: 'adjacent', bombs: true, desc: 'A vehicle-mounted Zonai cannon (energy).' }),
   w('vehicleBeam', 'Beam Emitter', 'siege', 'rare', 10, 90, 0, 0, 1, 4, { uses: 0, unique: true, crewed: false, magicContact: true, desc: 'A vehicle-mounted beam (energy).' }),
+  nat('flameEmitterBlast', 'Flame Emitter', 8, 90, 0, 1, 1, { magicContact: true, element: 'fire', ...fx('ignites') }),
+  nat('frostEmitterBlast', 'Frost Emitter', 7, 90, 0, 1, 1, { magicContact: true, element: 'ice' }),
+  nat('shockEmitterBlast', 'Shock Emitter', 7, 90, 0, 1, 1, { magicContact: true, element: 'lightning' }),
+  nat('beamEmitterBlast', 'Beam Emitter', 9, 90, 0, 1, 4, { magicContact: true }),
   nat('droneBlast', 'Drone Blast', 12, 90, 0, 1, 1, { splash: 'adjacent', bombs: true }),
   nat('drillArm', 'Drill Arm', 12, 80, 0, 1, 1, { armorBreaker: 1.5, ...fx('miningYield', 'vsStone') }),
 ];

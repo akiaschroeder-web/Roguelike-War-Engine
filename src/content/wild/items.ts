@@ -173,15 +173,11 @@ export const ITEMS: ItemDef[] = [
   sp('fireproofElixir', 'Fireproof Elixir', 'rare', 160, 'Fire immunity for 5 turns (no Burning, fire damage halved, safe near lava).'),
   sp('stickyElixir', 'Sticky Elixir', 'uncommon', 90, 'Slip immunity for 6 turns (wet cliffs cost 1, +10 Avoid in rain).'),
   sp('brightElixir', 'Bright Elixir', 'uncommon', 90, 'Illumination for 6 turns.'),
-  // Throwables and utility (section 21)
-  throwIt('fireFruit', 'Fire Fruit', 'common', 50, 'Thrown fire: 8 damage in a small blast; ignites grass, trees and pine cones; melts ice.', { power: 8, element: 'fire' }),
-  throwIt('iceFruit', 'Ice Fruit', 'common', 50, 'Thrown ice: 8 damage, may Freeze; turns water into walkable ice and cools lava.', { power: 8, element: 'ice' }),
-  throwIt('shockFruit', 'Shock Fruit', 'common', 50, 'Thrown lightning: 8 damage, Shock; conducts through water and metal.', { power: 8, element: 'lightning' }),
+  // Throwables and utility (section 21). Fire, Ice and Shock Fruit, Puffshrooms and Muddle Buds are the
+  // existing entries (they gain the battlefield reactions in engine/wild.ts).
   throwIt('splashFruit', 'Splash Fruit', 'common', 40, 'Thrown water: clears sludge, puts out fires and Burning.', { power: 3, element: 'water' }),
   throwIt('dazzlefruit', 'Dazzlefruit', 'uncommon', 60, 'A flash of light: Blinds enemies; hurts the undead and Gloom (10).', { power: 10, element: 'light' }),
   throwIt('bombFlower', 'Bomb Flower', 'uncommon', 70, 'Explodes: 12 damage in a small blast; breaks cracked walls, ore and explosive barrels.', { power: 12, uses: 2 }),
-  throwIt('puffshroom', 'Puffshroom', 'common', 40, 'A cloud of smoke: allies in it are Veiled, enemies Blinded.', { power: 0 }),
-  throwIt('muddleBud', 'Muddle Bud', 'uncommon', 80, 'Confuses enemies in a small area.', { power: 0 }),
   throwIt('brightbloomSeed', 'Brightbloom Seed', 'common', 30, 'Lights Darkness within 2 (and reveals enemies there).', { power: 0, uses: 3, radius: 2 }),
   throwIt('giantBrightbloomSeed', 'Giant Brightbloom Seed', 'uncommon', 70, 'Lights Darkness within 4.', { power: 0, radius: 4 }),
   throwIt('hylianPineCone', 'Hylian Pine Cone', 'common', 20, 'Set it on fire (or throw it into fire) and it makes a strong updraft.', { power: 0, uses: 3, radius: 0 }),

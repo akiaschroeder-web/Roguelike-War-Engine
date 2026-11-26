@@ -134,7 +134,7 @@ export const ABILITIES: AbilityDef[] = [
   p('restoringWaters', 'Restoring Waters', 10, 'Vah Ruta sprays healing water: allies within 3 recover 20% HP.', { target: 'allies', radius: 3, heal: { pct: 0.2 }, tags: ['water'] }, { cooldown: 2 }),
   p('eruptionBarrage', 'Eruption Barrage', 12, 'Volcanic artillery on a space within 2–6: STR + 8 fire in a wide blast, igniting the ground.', { target: 'tile', range: [2, 6], radius: 2, dmg: { stat: 'str', base: 8, vs: 'def', element: 'fire' }, tags: ['fire'] }, { cooldown: 2 }),
   p('updraftDeck', 'Updraft Deck', 6, 'Allies within 3 ride Medoh\'s updraft: airborne for 2 turns (+2 MOV).', { target: 'allies', radius: 3, buff: { id: 'aerial', name: 'Medoh\'s Updraft', turns: 2, stats: { mov: 2 } }, tags: ['wind'] }, { cooldown: 2 }),
-  p('electricBarrier', 'Electric Barrier', 8, 'You and adjacent allies are wrapped in lightning for 2 turns: melee attackers are Shocked and take 4.', { target: 'allies', radius: 1, buff: { id: 'electric', name: 'Electric Barrier', turns: 2 }, tags: ['lightning'] }, { cooldown: 2 }),
+  p('electricBarrierBeast', 'Electric Barrier', 8, 'You and adjacent allies are wrapped in lightning for 2 turns: melee attackers are Shocked and take 4.', { target: 'allies', radius: 1, buff: { id: 'electric', name: 'Electric Barrier', turns: 2 }, tags: ['lightning'] }, { cooldown: 2 }),
   p('combinedBombardment', 'Combined Bombardment', 0, 'The Four Divine Beasts fire together: every enemy within 5 of any of them takes MAG ÷ 2 + 10.', { target: 'self' },
     { grantedBy: { templates: ['vahRuta', 'vahRudania', 'vahMedoh', 'vahNaboris'] }, oncePerBattle: true }),
   // ── Bosses ──
