@@ -1,7 +1,8 @@
 import { imgUrl } from './media';
 import { ABILITIES, GEAR, ITEMS, artFor, CLASSES, PERMANENT_ITEMS, raceOf, skillDef, WEAPONS, worldDef } from '../data/registry';
 import { STATUS_INFO } from '../engine/status';
-import { GEAR_SLOTS, PACK_SIZE } from '../engine/types';
+import { GEAR_SLOTS } from '../engine/types';
+import { packSize } from '../engine/units';
 import type { LevelUp } from '../engine/combat';
 import { effectiveStats, forgeLevel, maxUses, usesLeft, XP_PER_LEVEL } from '../engine/units';
 import type { StatKey, Unit, UnitTemplate, WeaponDef } from '../engine/types';
@@ -35,7 +36,7 @@ export const ITEM_ICONS: Record<string, string> = {
 
 export function packLine(u: Unit): string {
   if (!u.pack.length) return '';
-  return `<div class="pack-line small"><span class="dim">Pack ${u.pack.length}/${PACK_SIZE}:</span> ${u.pack
+  return `<div class="pack-line small"><span class="dim">Pack ${u.pack.length}/${packSize(u)}:</span> ${u.pack
     .map((p) => `${ITEM_ICONS[ITEMS[p.id]?.kind] ?? ''} ${esc(ITEMS[p.id]?.name ?? p.id)}${p.uses > 1 ? ` ×${p.uses}` : ''}`).join(' · ')}</div>`;
 }
 

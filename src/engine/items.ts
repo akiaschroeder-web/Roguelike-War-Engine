@@ -1,6 +1,7 @@
 // Using consumables from a unit's pack during battle.
 
 import { useTwilightItem } from './twilight';
+import { useSkywardItem } from './skyward';
 import { ITEMS, TEMPLATES } from '../data/registry';
 import { useFairy, type LevelUp } from './combat';
 import { footDist, inBounds, tilesInRange } from './grid';
@@ -32,6 +33,9 @@ export interface ItemResult {
 export function canUse(u: Unit, index: number): boolean {
   const def = ITEMS[u.pack[index]?.id];
   if (!def || def.kind === 'fairy') return false;
+  // Skyward Sword's Cursed Medal: the wearer can't use their pack.
+  if (u.gear?.acc1 === 'cursedMedal' || u.gear?.acc2 === 'cursedMedal') return false;
+  if (def.id === 'adventurePouch') return false; // used outside battle
   if (def.kind === 'heal') return u.hp < u.stats.hp;
   if (def.kind === 'fullHeal') return u.hp < u.stats.hp || u.mp < u.stats.mp;
   if (def.kind === 'mp') return u.mp < u.stats.mp;
@@ -232,6 +236,8 @@ function useSpecial(b: Battle, u: Unit, def: ItemDef, rng: RNG, res: ItemResult,
   const tpTarget = at ? b.units.find((e) => footDist(at.x, at.y, 1, e.x, e.y, e.size) === 0) : undefined;
   const tpLine = useTwilightItem(b, u, def.id, rng, tpTarget, at);
   if (tpLine !== null) { res.lines.push(tpLine); return; }
+  const ssLine = useSkywardItem(b, u, def.id, rng, tpTarget, at);
+  if (ssLine !== null) { res.lines.push(ssLine); return; }
   const allies = b.units.filter((a) => a.team === u.team);
   const at0 = at ?? { x: u.x, y: u.y };
   const unitOn = (p: Pos) => b.units.find((e) => footDist(p.x, p.y, 1, e.x, e.y, e.size) === 0);

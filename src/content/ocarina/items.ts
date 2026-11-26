@@ -95,7 +95,7 @@ export const GEAR: GearDef[] = [
   mount('royalWarhorse', 'Royal Warhorse', 'epic', { mov: 3, def: 2 }, '+3 MOV, +2 DEF; +2 damage when charging (attacking after moving 3+ spaces).', 'horseGolden', { effects: ['charge'] }),
   mount('stalhorse', 'Stalhorse', 'rare', { mov: 3, res: 2 }, '+3 MOV, +2 RES. Undead cavalry that never tires.', 'stalhorse', { effects: ['staRegen'] }),
   mount('giantHorse', 'Giant Horse', 'epic', { mov: 2, str: 3, def: 3 }, '+2 MOV, +3 STR, +3 DEF; +2 damage when charging.', 'giantHorse', { effects: ['charge'] }),
-  mount('loftwing', 'Loftwing', 'epic', { mov: 3, spd: 1 }, '+3 MOV, +1 SPD; the rider flies (watch out for arrows).', 'loftwing', { effects: ['flight'] }),
+  // (The Loftwing mount is retired here: Skyward Sword owns it now, as the regular blue Loftwing; the id 'loftwing' still works.)
   mount('sandSeal', 'Sand Seal', 'rare', { mov: 3, spd: 1 }, '+3 MOV, +1 SPD; swims through deep water.', 'sandSeal', { effects: ['swim'] }),
   mount('wolfMount', 'Wolf', 'rare', { mov: 3, spd: 2 }, '+3 MOV, +2 SPD; runs through forests.', 'wolfMount', { effects: ['forestRunner'] }),
   mount('bullbo', 'Bullbo', 'rare', { mov: 2, str: 2 }, '+2 MOV, +2 STR; +2 damage when charging.', 'bullbo', { effects: ['charge'] }),

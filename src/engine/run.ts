@@ -6,6 +6,7 @@ import { createBattle } from './battle';
 import { maxRank, rankOf, supportKey, type SupportRank } from './supports';
 import { pairKey } from '../content/supports';
 import { HIDDEN_SKILLS } from '../content/twilight';
+import { canUsePouch, queueTrial, skywardAfterBattle, skywardQuestCheck, skywardRegionOptions, skywardRupeeMult, skywardStart, usePouch } from './skywardRun';
 import { restoreForm } from './transform';
 import { canWield, type LevelUp } from './combat';
 import { RNG } from './rng';
@@ -38,13 +39,13 @@ export function commanderOf(run: Run): CommanderDef {
   return COMMANDERS.find((c) => c.heroId === run.commanderId) ?? COMMANDERS[0];
 }
 
-export function newRun(seed: number, commanderId: string, campaign?: 'hyrule' | 'termina' | 'greatSea' | 'twilight'): RunWithEvent {
+export function newRun(seed: number, commanderId: string, campaign?: 'hyrule' | 'termina' | 'greatSea' | 'twilight' | 'skyward'): RunWithEvent {
   const rng = new RNG(seed);
   const cmd = COMMANDERS.find((c) => c.heroId === commanderId) ?? COMMANDERS[0];
   const camp = campaign ?? cmd.campaign ?? 'hyrule';
   const home = TEMPLATES[cmd.heroId].home;
   // Hyrule campaigns start in the commander's home region; Termina always starts in Clock Town.
-  const region = camp === 'termina' ? 'clockTown' : camp === 'greatSea' ? 'outsetIsland' : camp === 'twilight' ? 'ordonProvince' : WORLDS[home]?.campaign ? 'hyruleField' : home === 'hyruleCastle' ? 'hyruleField' : home;
+  const region = camp === 'termina' ? 'clockTown' : camp === 'greatSea' ? 'outsetIsland' : camp === 'twilight' ? 'ordonProvince' : camp === 'skyward' ? 'skyloft' : WORLDS[home]?.campaign ? 'hyruleField' : home === 'hyruleCastle' ? 'hyruleField' : home;
   const run: RunWithEvent = {
     seed, rngState: 0, act: 1, region, regionsVisited: [region], map: { rows: 0, nodes: [] }, currentNodeId: null,
     roster: [], fallen: [], rupees: 200, convoy: [], commanderId: cmd.heroId, bonus: cmd.bonus,
@@ -68,6 +69,7 @@ export function newRun(seed: number, commanderId: string, campaign?: 'hyrule' | 
   run.campaign = camp;
   if (camp === 'termina') { run.clock = { hours: 0, resets: 0 }; run.bank = 0; run.questItems = []; }
   if (camp === 'twilight') twilightStart(run, rng);
+  if (camp === 'skyward') skywardStart(run);
   if (camp === 'greatSea') {
     run.sea = newSea();
     run.questItems = [];
@@ -322,7 +324,9 @@ export function startBattle(run: RunWithEvent, uids: string[]): void {
   const floorBonus = node.type === 'dungeon' ? (run.dungeon?.floor ?? 1) - 1 : 0;
   const naval = isNavalNode(run, node);
   // Ships only sail into sea battles; on land they stay in the harbour.
-  const land = run.roster.filter((u) => !isVessel(u) && (uids.includes(u.uid) || u.isCommander)).slice(0, deployCap(run));
+  // A Silent Realm trial takes only a few participants (the Commander and up to two more).
+  const trial = ['battle', 'ambush', 'siege'].includes(node.type) ? run.skyward?.trialPending : undefined;
+  const land = run.roster.filter((u) => !isVessel(u) && (uids.includes(u.uid) || u.isCommander)).sort((a, c) => (trial ? Number(!!c.isCommander) - Number(!!a.isCommander) : 0)).slice(0, trial ? 3 : deployCap(run));
   const ships = naval ? run.roster.filter((u) => isVessel(u) && (uids.includes(u.uid) || u.isCommander)).slice(0, navalDeployCap(run)) : [];
   const chosen = [...land, ...ships];
   run.deployment = chosen.map((u) => u.uid);
@@ -333,13 +337,13 @@ export function startBattle(run: RunWithEvent, uids: string[]): void {
     if (boss) run.bossesFought.push(boss.id);
     run.battle = createBattle({
       world: node.world, nodeType: node.type === 'dungeon' ? kind : node.type, depth: depthOf(run, node) + floorBonus, roster: chosen,
-      seed: rng.int(0, 2 ** 31), boss, healMult: run.bonus === 'healing' ? 1.2 : 1, force, supports: run.supports, trials: run.trials,
+      seed: rng.int(0, 2 ** 31), boss: trial ? undefined : boss, healMult: run.bonus === 'healing' ? 1.2 : run.bonus === 'sacredMission' ? 1.25 : 1, force: trial ? undefined : force, supports: run.supports, trials: run.trials,
       levelBonus: (run.clock?.resets ?? 0) * 2 + (run.clock && clockLabel(run).day === 3 ? 1 : 0),
       gearOwned: [...ownedGear(run), ...(run.questItems ?? [])],
-      naval, night: node.night, fleet: node.fleet, twilit: isTwilit(run, node.world),
+      naval: trial ? false : naval, night: node.night, fleet: node.fleet, twilit: isTwilit(run, node.world), silentRealm: trial,
     });
     run.battle.bonus = run.bonus;
-    run.battle.night = run.clock ? clockLabel(run).night : run.campaign === 'greatSea' ? !!node.night : true;
+    run.battle.night = run.clock ? clockLabel(run).night : run.campaign === 'greatSea' ? !!node.night : run.campaign === 'skyward' ? !!run.battle.ss?.night : true;
     run.battle.statusBonus = run.bonus === 'lingeringStatus' ? 1 : 0;
     run.battle.reserves = run.roster.filter((u) => !chosen.includes(u)).map((u) => ({ ...prepareForBattle(u), x: -1, y: -1 }));
     applyArmyBuffs(run, run.battle);
@@ -449,6 +453,9 @@ export function recruitOffers(run: Run, rng: RNG, world: WorldId): string[] {
     if (run.roster.some((u) => u.skills.includes('princessOfBugs')) && /insect|parasite|swarm/i.test(t.classId)) wgt *= 2;
     if (run.bonus === 'mightMakesRight' && t.monster) wgt *= 2;
     if (ownedGear(run).has('ordonClothes') && !t.monster) wgt *= 1.25;
+    // Skyward Sword: Batreaux's Horns draw demons; Remlit Treats draw animals.
+    if (ownedGear(run).has('batreauxsHorns') && RACES[t.race]?.tags?.includes('demon')) wgt *= 2;
+    if (holding('remlitTreat') && RACES[t.race]?.tags?.includes('beast')) wgt *= 1.5;
     return wgt;
   };
   const network = (run.roster.some((u) => u.skills.includes('resistanceNetwork')) ? 1 : 0)
@@ -492,6 +499,8 @@ export interface BattleSummary {
   dungeon?: { floor: number; of: number; cleared: boolean };
   /** Twilight Princess: Tears of Light, Hidden Skills, artifacts. */
   twilight?: string[];
+  /** Skyward Sword: materials, insects, trials, flames, song parts, Gratitude Crystals. */
+  skyward?: string[];
   /** Support ranks reached this battle. */
   supportUps: { a: string; b: string; aUid: string; bUid: string; rank: SupportRank }[];
 }
@@ -553,7 +562,7 @@ export function finishBattle(run: RunWithEvent): BattleSummary {
   const joined: string[] = [];
   if (won) {
     const badge = ownedGear(run).has('bombersBadge') ? 1.1 : 1;
-    rupees = Math.max(0, Math.round(b.rewardRupees * (run.bonus === 'rupees' || run.bonus === 'piratesSpoils' ? 1.25 : 1) * badge) + (b.bonusRupees ?? 0));
+    rupees = Math.max(0, Math.round(b.rewardRupees * (run.bonus === 'rupees' || run.bonus === 'piratesSpoils' ? 1.25 : 1) * badge * skywardRupeeMult(run)) + (b.bonusRupees ?? 0));
     run.rupees += rupees;
     // Things found on the field (digging, fishing, spoils, salvage)
     for (const id of b.loot ?? []) { give(run, id, null); found.push(id); }
@@ -673,7 +682,8 @@ export function finishBattle(run: RunWithEvent): BattleSummary {
   }
   const army = armyAfterBattle(run, b, won, fallen.length, deployed.size || survivors.size);
   const twilightLines = withRng(run, (rng) => twilightAfterBattle(run, b, won, rng));
-  return { won, rupees, fallen, kills, drops, supportUps, sideQuest, retreated: !won && !!b.retreat, dungeon, found, joined, army, twilight: twilightLines };
+  const skywardLines = withRng(run, (rng) => skywardAfterBattle(run, b, won, !!sideQuest?.done, rng));
+  return { won, rupees, fallen, kills, drops, supportUps, sideQuest, retreated: !won && !!b.retreat, dungeon, found, joined, army, twilight: twilightLines, skyward: skywardLines };
 }
 
 export interface ArmyReport {
@@ -761,6 +771,7 @@ export function meetsRequires(run: Run, r: EventRequires | undefined): boolean {
   if (r.gear && !r.gear.every((id) => owned.has(id))) return false;
   if (r.noGear && r.noGear.some((id) => owned.has(id))) return false;
   if (r.unit && !run.roster.some((u) => r.unit!.includes(u.templateId ?? ''))) return false;
+  if (r.questCount && Object.entries(r.questCount).some(([id, n]) => q.filter((x) => x === id).length < n)) return false;
   if (r.maskCount && [...owned].filter((id) => GEAR[id]?.slot === 'head' && /mask|hat|hood/i.test(GEAR[id].name)).length < r.maskCount) return false;
   return true;
 }
@@ -861,7 +872,7 @@ function applyEffect(run: Run, e: EventEffect, rng: RNG): string | null {
     }
     case 'quest': {
       addQuestItem(run, e.id);
-      const extra = twilightQuestCheck(run);
+      const extra = [...twilightQuestCheck(run), ...skywardQuestCheck(run)];
       return `Quest item: ${QUEST_ITEMS[e.id]?.name ?? e.id}${!(run.questItems ?? []).includes(e.id) && e.id.endsWith('sMask') ? ' (combined into the Couple\'s Mask!)' : ''}${extra.length ? ' ' + extra.join(' ') : ''}`;
     }
     case 'takeQuest': {
@@ -876,6 +887,8 @@ function applyEffect(run: Run, e: EventEffect, rng: RNG): string | null {
       return restoreLight(run, rng);
     case 'delayLight':
       return delayLight(run);
+    case 'silentRealm':
+      return queueTrial(run, currentNode(run)?.world ?? run.region);
     case 'support': {
       const s = (run.supports ??= {});
       for (let i = 0; i < run.roster.length; i++)
@@ -900,6 +913,10 @@ export function offerRegions(run: RunWithEvent): void {
     if (run.campaign === 'greatSea') { run.event = { type: 'region', options: ['greatSea'] }; return; }
     if (run.campaign === 'twilight' && run.act + 1 < FREE_FOR_ALL_REGION + 2) {
       const t = twilightRegionOptions(run, rng);
+      if (t.length) { run.event = { type: 'region', options: t }; return; }
+    }
+    if (run.campaign === 'skyward' && run.act + 1 < FREE_FOR_ALL_REGION + 4) {
+      const t = skywardRegionOptions(run, rng);
       if (t.length) { run.event = { type: 'region', options: t }; return; }
     }
     if (run.campaign === 'termina') {
@@ -1196,6 +1213,7 @@ export function useItemOutside(run: Run, uid: string, index: number): boolean {
   const p = u?.pack[index];
   const def = p && ITEMS[p.id];
   if (!u || !p || !def || !canUseOutside(u, index)) return false;
+  if (def.id === 'adventurePouch') return usePouch(u, index);
   if (def.id === 'goldDust') {
     const razor = u.weapons.indexOf('razorSword');
     if (razor >= 0) { u.weapons[razor] = 'gildedSword'; if (u.wear) delete u.wear.razorSword; }
@@ -1211,6 +1229,7 @@ export function canUseOutside(u: Unit, index: number): boolean {
   const def = ITEMS[u.pack[index]?.id];
   if (!def) return false;
   if (def.kind === 'learn') return !!def.teaches && !u.abilities.includes(def.teaches);
+  if (def.id === 'adventurePouch') return canUsePouch(u, index);
   if (def.kind === 'heal' || def.kind === 'fullHeal') return u.hp < u.stats.hp;
   if (def.id === 'goldDust') return u.weapons.includes('razorSword') || (!!u.weapons[0] && forgeLevel(u, u.weapons[0]) < MAX_FORGE && !!WEAPONS[u.weapons[0]] && WEAPONS[u.weapons[0]].type !== 'natural');
   return false;
@@ -1337,6 +1356,8 @@ export function campTrain(run: RunWithEvent, uid: string): LevelUp | null {
   const unit = run.roster.find((u) => u.uid === uid);
   if (!unit || run.event?.type !== 'camp') return null;
   const gains = withRng(run, (rng) => rollLevelUp(unit, rng));
+  // Fledge's Self-Improvement: training always pays off.
+  if (unit.skills.includes('selfImprovement')) { unit.stats.str++; unit.stats.sta += 2; gains.str = (gains.str ?? 0) + 1; }
   run.event = undefined;
   return { uid: unit.uid, name: unit.name, level: unit.level, gains };
 }

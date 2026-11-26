@@ -7,7 +7,9 @@ import { meltSunBlocks, thawMechanisms } from './field';
 import { canParry, critImmune, masterSwordState, onParry, rangeBonus as wwRangeBonus, scavengePenalty, wwAfterCombat, wwAfterHit, wwElement, wwMods, wwMultiplier, wwOnKill } from './windwaker';
 import { techniqueAllowed, techniqueCost, tpAfterCombat, tpAfterHit, tpCannotAttack, tpCritImmune, tpMods, tpMultiplier, tpOnKill, tpOnStrike, tpRangeBonus, tpSaveFromDeath, tpSideAdjust } from './twilight';
 
-const rangeBonus = (u: Unit, w: WeaponDef) => wwRangeBonus(u, w) + tpRangeBonus(u, w);
+import { sacredDutyCovers, ssAfterCombat, ssAfterHit, ssCannotAttack, ssCanParry, ssElement, ssMods, ssMultiplier, ssOnBlock, ssOnKill, ssOnParry, ssOnStrike, ssRangeBonus, ssSideAdjust, ssXpMult } from './skyward';
+
+const rangeBonus = (u: Unit, w: WeaponDef) => wwRangeBonus(u, w) + tpRangeBonus(u, w) + ssRangeBonus(u, w);
 import { cannonsDown, isVessel, vesselMods } from './naval';
 import type { RNG } from './rng';
 import { isMagical, TERRAIN_BONUS, TRIANGLE } from './rules';
@@ -201,7 +203,8 @@ export function situational(b: Battle, u: Unit, pos: Pos, foe: Unit, initiating:
   if (b.bonus === 'rolling' && initiating && u.movedDist >= 3 && (u.race === 'goron' || hasEffect(u, 'charge') || has('spikedRoll') || has('runawayMachine'))) m.dmg += 3;
   const ww = wwMods(b, u, pos, foe, initiating, WEAPONS[u.weapons[0]]);
   const tp = tpMods(b, u, pos, foe, initiating, WEAPONS[u.weapons[0]]);
-  for (const k of ['str', 'mag', 'skl', 'spd', 'def', 'res', 'hit', 'avoid', 'crit', 'dmg'] as const) ww[k] += tp[k];
+  const ss = ssMods(b, u, pos, foe, initiating, WEAPONS[u.weapons[0]]);
+  for (const k of ['str', 'mag', 'skl', 'spd', 'def', 'res', 'hit', 'avoid', 'crit', 'dmg'] as const) ww[k] += tp[k] + ss[k];
   const vm = vesselMods(b, u);
   m.str += ww.str + vm.str; m.mag += ww.mag; m.skl += ww.skl; m.spd += ww.spd; m.def += ww.def + vm.def; m.res += ww.res + vm.res;
   m.hit += ww.hit + vm.hit; m.avoid += ww.avoid + vm.avoid; m.crit += ww.crit; m.dmg += ww.dmg + vm.dmg;
@@ -220,7 +223,7 @@ function sideStats(
   const d = unitDist({ ...atk, ...atkPos }, { ...def, ...defPos });
   const helpless = !initiating && isHelpless(atk);
   const beaming = !!weapon?.beam && d > 1;
-  if (!weapon || weapon.type === 'staff' || weapon.type === 'instrument' || !canReach(weapon, d, atk) || helpless || (beaming && atk.mp < weapon.beam!) || tpCannotAttack(atk, weapon)) {
+  if (!weapon || weapon.type === 'staff' || weapon.type === 'instrument' || !canReach(weapon, d, atk) || helpless || (beaming && atk.mp < weapon.beam!) || tpCannotAttack(atk, weapon) || ssCannotAttack(b, atk, weapon, initiating)) {
     return { uid: atk.uid, weaponId: weapon?.id ?? null, canAttack: false, dmg: 0, hit: 0, crit: 0, attacks: 0, triangle: 0, effective: false, block: 0, arrowId: null };
   }
   const as = effectiveStats(atk);
@@ -236,7 +239,7 @@ function sideStats(
   const ms = weapon.id === 'masterSword' ? masterSwordState(b, atk) : null;
   const wEff = ms === 'dormant' ? [] : ms ? ['demon', 'undead'] : weapon.effective ?? [];
   const effective = !![...wEff, ...(arrow?.effective ?? [])].some((t) => tags.includes(t));
-  const element = arrow?.element ?? wwElement(atk, weapon) ?? weapon.element;
+  const element = arrow?.element ?? ssElement(atk, weapon) ?? wwElement(atk, weapon) ?? weapon.element;
   const sa = statusMods(atk);
   const sd = statusMods(def);
 
@@ -255,12 +258,16 @@ function sideStats(
   let defense = magical ? ds.res + dm.res : Math.max(0, ds.def + dm.def + sd.def) + terrain.def;
   if (weapon.pierce) defense = Math.floor(defense * (1 - weapon.pierce));
   const adj = tpSideAdjust(b, atk, def, weapon, arrow, defense, magical);
-  defense = adj.defense;
+  const sadj = ssSideAdjust(b, atk, def, weapon, arrow, adj.defense, magical, initiating);
+  defense = sadj.defense;
+  adj.hit += sadj.hit;
+  adj.extraAttack = adj.extraAttack || sadj.extraAttack;
   let dmg = Math.max(0, power - defense);
   if (hasEffect(atk, 'desperation') && atk.hp < atk.stats.hp / 2) dmg = Math.floor(dmg * 1.25);
   dmg = Math.floor(dmg * terminaMultiplier(b, atk, def, defPos, element, magical, weapon));
   dmg = Math.floor(dmg * wwMultiplier(b, atk, def, defPos, element, magical, weapon, d));
   dmg = Math.floor(dmg * tpMultiplier(b, atk, def, defPos, element, magical, weapon, d, arrow) * supportDamageMult(b, atk, element));
+  dmg = Math.floor(dmg * ssMultiplier(b, atk, def, element, magical, weapon, d, arrow));
   if (adj.finish) dmg = Math.max(dmg, def.hp);
   if (atk.isBoss && atk.team === 'enemy' && (b.bossTier ?? 2) < 2) dmg = Math.floor(dmg * (b.bossTier === 0 ? 0.7 : 0.85)); // early bosses hit softer
   if (def.buffs?.some((x) => x.barrier || x.id === 'bubble')) dmg = 0; // Nayru's Love, Wart's bubbles
@@ -453,9 +460,10 @@ export function resolveCombat(b: Battle, attacker: Unit, defender: Unit, rng: RN
       if (bubble >= 0) { target.buffs.splice(bubble, 1); dmg = 0; b.log.push(`${target.name}'s bubble pops!`); }
     }
     const blocked = hit && dmg > 0 && side.block > 0 && rng.chance(side.block);
-    if (blocked) dmg = Math.floor(dmg / 2);
+    if (blocked) { const before = dmg; dmg = Math.floor(dmg / 2); ssOnBlock(b, target, before - dmg, side.element); }
     if (blocked && hasEffect(target, 'stopFollowUp')) stopped.add(by.uid);
     if (dmg > 0) { const os = tpOnStrike(b, by, target, dmg); dmg = os.dmg; if (os.line) b.log.push(os.line); }
+    if (hit) { const ss = ssOnStrike(b, by, target, dmg, weaponDef(side.weaponId), rng); dmg = ss.dmg; if (ss.line) b.log.push(ss.line); }
     // Magic Armor: MP (or Rupees) pay for the damage instead.
     if (dmg > 0 && hasEffect(target, 'magicArmor')) {
       const cost = Math.ceil(dmg / (hasEffect(target, 'nayruPearl') ? 4 : 2));
@@ -499,12 +507,14 @@ export function resolveCombat(b: Battle, attacker: Unit, defender: Unit, rng: RN
     strikes.push({ by: by.uid, target: target.uid, hit, crit, dmg, heal, targetHp: target.hp, byHp: by.hp, killed, blocked, saved, statuses, thawed });
     if (hit) b.log.push(...wwAfterHit(b, by, target, dmg, crit, weaponDef(side.weaponId), side.element, rng));
     if (hit) b.log.push(...tpAfterHit(b, by, target, dmg, crit, weaponDef(side.weaponId), side.element, rng, side.arrowId ? ABILITIES[side.arrowId] : undefined));
+    if (hit) b.log.push(...ssAfterHit(b, by, target, dmg, weaponDef(side.weaponId), side.element, rng, side.arrowId ? ABILITIES[side.arrowId] : undefined));
     if (killed) {
       by.kills++;
       deaths.push(target.uid);
       b.log.push(`${by.name} defeated ${target.name}.`);
       wwOnKill(b, by, target, rng);
       tpOnKill(b, by, target, rng, side.element);
+      ssOnKill(b, by, target, rng);
       killUnit(b, target);
       onKillEffects(b, by, weaponDef(side.weaponId));
       break;
@@ -512,15 +522,16 @@ export function resolveCombat(b: Battle, attacker: Unit, defender: Unit, rng: RN
     // Parries: dodge a blow and strike back through the guard (Hero of Winds), or with both swords (Desert Wind).
     if (!hit && target.hp > 0) {
       const mine = target === attacker ? fc.attacker : fc.defender;
-      const kind = canParry(target, weaponDef(side.weaponId), fc.distance, rng);
+      const kind = canParry(target, weaponDef(side.weaponId), fc.distance, rng) ?? ssCanParry(target, weaponDef(side.weaponId), fc.distance, rng);
       if (kind && mine.canAttack) {
         const tw = weaponDef(mine.weaponId);
         const pierceBonus = kind === 'parry' ? Math.floor(Math.max(0, effectiveStats(by).def) * 0.5) : 0;
         const blows = kind === 'desertWind' ? 2 : 1;
         onParry(b, target, tw);
+        const zap = ssOnParry(target, by);
         for (let k = 0; k < blows && by.hp > 0; k++) {
           const pcrit = rng.chance(Math.min(100, mine.crit + (tw?.parryCrit ?? 0)));
-          let pd = Math.floor((mine.dmg + pierceBonus) * (kind === 'desertWind' ? 0.75 : 1)) * (pcrit ? 3 : 1);
+          let pd = Math.floor((mine.dmg + pierceBonus) * (kind === 'desertWind' ? 0.75 : 1)) * (pcrit ? 3 : 1) + zap;
           pd = Math.min(by.hp, Math.max(0, pd));
           by.hp -= pd;
           const pk = by.hp <= 0 && !useFairy(by);
@@ -564,7 +575,8 @@ export function resolveCombat(b: Battle, attacker: Unit, defender: Unit, rng: RN
       foe.statuses.push({ kind: 'shock', turns: 1 });
     }
   }
-  for (const x of [...wwAfterCombat(b, attacker, defender), ...tpAfterCombat(b, attacker, defender)]) {
+  const landed2 = { atk: strikes.filter((s) => s.by === attacker.uid && !s.splash).reduce((n, s) => n + s.dmg, 0), def: strikes.filter((s) => s.by === defender.uid && !s.splash).reduce((n, s) => n + s.dmg, 0) };
+  for (const x of [...wwAfterCombat(b, attacker, defender), ...tpAfterCombat(b, attacker, defender), ...ssAfterCombat(b, attacker, defender, fc.attacker.arrowId, landed2)]) {
     strikes.push({ by: x.by, target: x.uid, hit: true, crit: false, dmg: x.dmg, heal: 0, targetHp: x.hp, byHp: 0, killed: x.killed, blocked: false, splash: true });
     if (x.killed && !deaths.includes(x.uid)) deaths.push(x.uid);
   }
@@ -574,7 +586,7 @@ export function resolveCombat(b: Battle, attacker: Unit, defender: Unit, rng: RN
   for (const [me, foe] of [[attacker, defender], [defender, attacker]] as const) {
     if (me.team !== 'player' || me.hp <= 0) continue;
     const scholar = b.units.some((a) => a.team === me.team && a.skills.includes('encyclopedicKnowledge'));
-    const amount = Math.round(xpFor(me, foe, dealt.has(me.uid), deaths.includes(foe.uid)) * (weaponDef(me.weapons[0])?.doubleXp ? 2 : 1) * (scholar ? 1.2 : 1));
+    const amount = Math.round(xpFor(me, foe, dealt.has(me.uid), deaths.includes(foe.uid)) * (weaponDef(me.weapons[0])?.doubleXp ? 2 : 1) * (scholar ? 1.2 : 1) * ssXpMult(b, me));
     xp.push({ uid: me.uid, amount });
     for (const gains of gainXp(me, amount, rng)) levelUps.push({ uid: me.uid, name: me.name, level: me.level, gains });
   }
@@ -633,5 +645,6 @@ export function findInterceptor(b: Battle, attacker: Unit, target: Unit, weaponI
     || (p.skills.includes('kingsShield') && target.skills.includes('undyingKingdom') && unitDist(p, target) <= 2)
     || (p.skills.includes('royalGuardDeku') && royal(target) && unitDist(p, target) <= 1)
     || (p.skills.includes('captainsRightHand') && target.isCommander && unitDist(p, target) <= 1)
-    || (p.skills.includes('skyShield') && CLASSES[target.classId]?.moveType === 'flying' && unitDist(p, target) <= 1)));
+    || (p.skills.includes('skyShield') && CLASSES[target.classId]?.moveType === 'flying' && unitDist(p, target) <= 1)
+    || sacredDutyCovers(p, target)));
 }

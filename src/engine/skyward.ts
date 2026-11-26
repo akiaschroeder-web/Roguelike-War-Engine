@@ -624,7 +624,7 @@ export function shieldDurability(u: Unit): { left: number; max: number } | null 
 }
 
 /** After a damaging hit lands. */
-export function ssAfterHit(b: Battle, by: Unit, target: Unit, dmg: number, w: WeaponDef | undefined, element: Element | undefined, rng: RNG, arrow?: AbilityDef): string[] {
+export function ssAfterHit(b: Battle, by: Unit, target: Unit, dmg: number, w: WeaponDef | undefined, element: Element | undefined, _rng: RNG, arrow?: AbilityDef): string[] {
   const lines: string[] = [];
   if (!w) return lines;
   const melee = unitDist(by, target) <= 1;
@@ -728,7 +728,7 @@ export function ssXpMult(b: Battle, u: Unit): number {
 }
 
 /** Stamina cost multiplier for techniques and Dash. */
-export function ssStaminaMult(u: Unit, bonus?: CommanderBonus): number {
+export function ssStaminaMult(u: Unit, bonus?: CommanderBonus | string): number {
   if (hasBuff(u, 'staFree')) return 0;
   let m = 1;
   if (hasBuff(u, 'staThrift')) m *= 0.5;

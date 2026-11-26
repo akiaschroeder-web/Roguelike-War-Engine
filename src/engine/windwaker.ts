@@ -183,6 +183,8 @@ function buff(u: Unit, id: string, name: string, turns: number, stats: Record<st
 const unmovable = (u: Unit) => hasEffect(u, 'unmovable') || u.isBoss || u.size >= 4;
 
 export function pushAway(b: Battle, u: Unit, from: { x: number; y: number; size: number }, steps: number): boolean {
+  // Skyward Sword: the Imprisoned can't be knocked back.
+  if (u.skills.includes('unstoppableAscension') || u.skills.includes('climbingHorror') || u.skills.includes('brokenSeal')) return false;
   if (unmovable(u)) return false;
   const dx = Math.sign(u.x + u.size / 2 - (from.x + from.size / 2)), dy = Math.sign(u.y + u.size / 2 - (from.y + from.size / 2));
   const [sx, sy] = Math.abs(dx) >= Math.abs(dy) && dx ? [dx, 0] : [0, dy || 1];

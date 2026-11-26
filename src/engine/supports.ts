@@ -5,7 +5,8 @@
 // character's bond; some pairs have named bonuses, and group supports switch on
 // when all their members are on the field.
 
-import { SUPPORT_S_PAIRS } from '../data/registry';
+import { SUPPORT_S_PAIRS, WEAPONS } from '../data/registry';
+import { SACRED_ABILITIES } from './skyward';
 import { GROUP_SUPPORTS, PAIR_BONUSES, canonOf, maxRankFor, pairDef, pairKey } from '../content/supports';
 import { unitDist } from './grid';
 import { hasEffect } from './units';
@@ -83,6 +84,8 @@ export function gainSupport(b: Battle, u: Unit, amount = 1, partner?: Unit) {
   for (const a of friends) {
     const k = supportKey(u.uid, a.uid);
     let gain = amount * (hasEffect(u, 'couple') || hasEffect(a, 'couple') ? 2 : 1); // Couple's Mask
+    // The Crimson Loftwing's Chosen Companion: bonds twice as fast with the Hero of the Sky.
+    if ((u.skills.includes('chosenCompanion') && tid(a) === 'heroOfTheSky') || (a.skills.includes('chosenCompanion') && tid(u) === 'heroOfTheSky')) gain *= 2;
     // Colin's Growing Courage: double support with stronger allies.
     if ((u.skills.includes('growingCourage') && a.level > u.level) || (a.skills.includes('growingCourage') && u.level > a.level)) gain *= 2;
     b.supports[k] = Math.min(pointCap(maxRank(u, a)), (b.supports[k] ?? 0) + gain);
@@ -120,6 +123,7 @@ export function specialSupportMods(b: Battle, u: Unit, pos: Pos, foe?: Unit): Gr
   }
   const groups = b.groupSupports ?? activeGroups(b, u.team);
   if (!groups.length) return m;
+  const w = WEAPONS[u.weapons[0]];
   const near = (id: string, r: number) => b.units.some((a) => a !== u && a.team === u.team && memberOf(a, id) && unitDist(u, a, pos) <= r);
   const add = (s: Partial<GroupMods>) => { for (const [k, v] of Object.entries(s)) m[k as keyof GroupMods] += v ?? 0; };
   for (const g of groups) {
@@ -138,13 +142,18 @@ export function specialSupportMods(b: Battle, u: Unit, pos: Pos, foe?: Unit): Gr
       case 'ordonFamily': if (mine && b.units.some((a) => a !== u && memberOf(a, g) && a.hp < a.stats.hp && unitDist(u, a, pos) <= 1)) add({ def: 3, res: 3 }); break;
       case 'thePirateCrew': if (mine) add({ str: 2 }); break;
       case 'friendsOfTheForest': if (mine && b.tiles[pos.y * b.width + pos.x] === 'forest') add({ avoid: 20 }); break;
+      // ── Skyward Sword ──
+      case 'originsOfCourage': if (mine && (w?.element === 'light' || !!w?.sacredMult || !!w?.skywardRate || w?.id === 'masterSword')) add({ str: 4, mag: 4 }); break;
+      case 'demonAndBlade': if (mine && w?.element === 'dark') add({ str: 5, mag: 5 }); break;
+      case 'siegeSpecialists': if (mine && w?.type === 'siege') add({ hit: 20 }); break;
+      case 'spiritsOfTheSword': if (mine && w?.type === 'sword') add({ str: 3 }); break;
     }
   }
   return m;
 }
 
 /** MP and stamina discounts from group supports and named pair bonuses. */
-export function supportCostMult(b: Battle | undefined, u: Unit, kind: 'song' | 'spell' | 'technique' | string, element?: string): number {
+export function supportCostMult(b: Battle | undefined, u: Unit, kind: 'song' | 'spell' | 'technique' | string, element?: string, abilityId?: string): number {
   if (!b || u.team !== 'player') return 1;
   const groups = b.groupSupports ?? activeGroups(b, u.team);
   let m = 1;
@@ -153,6 +162,9 @@ export function supportCostMult(b: Battle | undefined, u: Unit, kind: 'song' | '
   if (kind === 'technique' && groups.includes('mastersOfTheBlade') && memberOf(u, 'mastersOfTheBlade')) m *= 0.75;
   if (kind === 'technique' && b.units.some((a) => a !== u && pairKey(tid(u), tid(a)) === 'herosShade|link'
     && rankOf(b.supports?.[supportKey(u.uid, a.uid)] ?? 0, 'S') === 'S')) m *= 0.75;
+  // Skyward Sword: the Goddess's Servants (sacred magic −30% MP) and the Spirits of the Sword (sword stamina).
+  if (groups.includes('goddessServants') && memberOf(u, 'goddessServants') && (element === 'light' || SACRED_ABILITIES.has(abilityId ?? ''))) m *= 0.7;
+  if (kind === 'technique' && groups.includes('spiritsOfTheSword') && memberOf(u, 'spiritsOfTheSword')) m *= 0.8;
   return m;
 }
 
@@ -160,7 +172,10 @@ export function supportCostMult(b: Battle | undefined, u: Unit, kind: 'song' | '
 export function supportDamageMult(b: Battle, u: Unit, element?: string): number {
   if (u.team !== 'player' || !element) return 1;
   const groups = b.groupSupports ?? activeGroups(b, u.team);
-  return groups.includes('royalWitches') && memberOf(u, 'royalWitches') && ['fire', 'ice', 'dark'].includes(element) ? 1.2 : 1;
+  let m = groups.includes('royalWitches') && memberOf(u, 'royalWitches') && ['fire', 'ice', 'dark'].includes(element) ? 1.2 : 1;
+  // The Ancient Dragons: elemental damage +25%.
+  if (groups.includes('ancientDragons') && memberOf(u, 'ancientDragons') && ['fire', 'ice', 'water', 'lightning', 'nature'].includes(element)) m *= 1.25;
+  return m;
 }
 
 /** A Promise Kept: once per battle, a member next to another member survives a fatal blow. */

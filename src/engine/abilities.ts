@@ -5,6 +5,7 @@ import { castTermina, ENEMY_TRANSFORMS, terminaNeedsTarget, terminaTargets, term
 import { castWindWaker, wwCostMult, wwNeedsTarget, wwNeedsTile, wwTargets, wwTiles, wwUnusable } from './windwaker';
 import { supportCostMult } from './supports';
 import { castTwilight, techniqueAllowed, techniqueCost, tpCostMult, tpNeedsTarget, tpNeedsTile, tpTargets, tpTiles, tpUnusable } from './twilight';
+import { castSkyward, SS_ENEMY_TRANSFORMS, ssCostMult, ssNeedsTarget, ssNeedsTile, ssTargets, ssTiles, ssUnusable, TRANSFORM_ABILITIES } from './skyward';
 import { buildAt, buildTargets, canDig, dig, hasTimeBlocks, ignite, meltSunBlocks, toggleTimeBlocks } from './field';
 import { roomFor, transformInto } from './transform';
 import { useFairy, type LevelUp } from './combat';
@@ -25,7 +26,7 @@ export function instrumentDiscount(u: Unit): number | null {
 
 /** MP (or stamina, for techniques) an ability costs this unit. */
 export function abilityCost(u: Unit, def: AbilityDef, b?: Battle): number {
-  const m = wwCostMult(b, u, def) * tpCostMult(b, u, def) * supportCostMult(b, u, def.kind, def.element);
+  const m = wwCostMult(b, u, def) * tpCostMult(b, u, def) * ssCostMult(b, u, def) * supportCostMult(b, u, def.kind, def.element, def.id);
   if (def.sta) return techniqueCost(u, def, b?.bonus);
   if (m !== 1) return Math.max(def.kind === 'song' ? 1 : 0, Math.floor(abilityCost(u, def) * m));
   if (def.mp && u.buffs?.some((x) => x.id === 'chateau')) return 0; // Chateau Romani
@@ -88,6 +89,9 @@ export function unusableReason(b: Battle, u: Unit, def: AbilityDef): string | nu
   if ((def.kind === 'spell' || def.kind === 'song') && hasStatus(u, 'silence')) return 'Silenced';
   if (def.oncePerBattle && u.usedAbilities?.includes(def.id)) return 'Already used this battle';
   if (u.cooldowns?.[def.id]) return `Recharging (${u.cooldowns[def.id]} turn${u.cooldowns[def.id] > 1 ? 's' : ''})`;
+  if (TRANSFORM_ABILITIES.has(def.id) && u.buffs?.some((x) => x.id === 'sacredSeal')) return 'Sealed: can\'t transform';
+  const ssr = ssUnusable(b, u, def);
+  if (ssr) return ssr;
   if (def.sta ? u.sta < abilityCost(u, def, b) : u.mp < abilityCost(u, def, b)) return def.sta ? 'Not enough stamina' : 'Not enough MP';
   const tr = terminaUnusable(b, u, def);
   if (tr !== undefined) return tr;
@@ -131,7 +135,7 @@ export function castableAbilities(b: Battle, u: Unit): AbilityDef[] {
 }
 
 export function needsTile(def: AbilityDef): boolean {
-  return !!def.warp || wwNeedsTile(def) || tpNeedsTile(def) || def.id === 'hookshotPull' || def.id === 'buildHere' || def.id === 'transportAlly';
+  return !!def.warp || wwNeedsTile(def) || tpNeedsTile(def) || ssNeedsTile(def) || def.id === 'hookshotPull' || def.id === 'buildHere' || def.id === 'transportAlly';
 }
 
 /** Destination tiles for tile-targeted abilities (warps, Hookshot, Build, Transport). */
@@ -141,6 +145,7 @@ export function abilityTiles(b: Battle, u: Unit, def: AbilityDef): Pos[] {
   if (def.id === 'buildHere') return buildTargets(b, u);
   if (wwNeedsTile(def)) return wwTiles(b, u, def);
   if (tpNeedsTile(def)) return tpTiles(b, u, def);
+  if (ssNeedsTile(def)) return ssTiles(b, u, def);
   if (def.id === 'transportAlly') {
     const t = transportee(b, u);
     if (!t) return [];
@@ -188,6 +193,7 @@ export function abilityTargets(b: Battle, u: Unit, def: AbilityDef): Unit[] {
   if (terminaNeedsTarget(def)) return terminaTargets(b, u, def);
   if (wwNeedsTarget(def)) return wwTargets(b, u, def);
   if (tpNeedsTarget(def)) return tpTargets(b, u, def);
+  if (ssNeedsTarget(def)) return ssTargets(b, u, def);
   if (def.id === 'masterCraftsman') {
     return b.units.filter((a) => a.team === u.team && unitDist(u, a) <= 1 && a.weapons.some((w) => (a.wear?.[w] ?? 0) > 0));
   }
@@ -198,7 +204,7 @@ export function abilityTargets(b: Battle, u: Unit, def: AbilityDef): Unit[] {
 }
 
 export function needsTarget(def: AbilityDef): boolean {
-  if (terminaNeedsTarget(def) || wwNeedsTarget(def) || tpNeedsTarget(def)) return true;
+  if (terminaNeedsTarget(def) || wwNeedsTarget(def) || tpNeedsTarget(def) || ssNeedsTarget(def)) return true;
   return def.id === 'greatFairysBlessing' || def.id === 'masterCraftsman';
 }
 
@@ -426,7 +432,7 @@ export function castAbility(b: Battle, u: Unit, id: string, rng: RNG, targetUid?
     }
     default:
       if (!def.warp) {
-        const tm = castTwilight(b, u, def, rng, target, at) ?? castWindWaker(b, u, def, rng, target, at) ?? castTermina(b, u, def, rng, target, at);
+        const tm = castSkyward(b, u, def, rng, target, at) ?? castTwilight(b, u, def, rng, target, at) ?? castWindWaker(b, u, def, rng, target, at) ?? castTermina(b, u, def, rng, target, at);
         if (!tm) return null;
         res.hits.push(...tm.hits);
         res.heals.push(...tm.heals);
@@ -467,7 +473,7 @@ function sister(b: Battle, u: Unit): Unit | undefined {
 /** Enemy Ganondorf and the witch sisters transform on their own when they can. */
 export function enemyAutoTransform(b: Battle, u: Unit, rng: RNG): AbilityResult | null {
   if (u.team !== 'enemy') return null;
-  for (const id of ['transformGanon', 'twinrovaFusion', ...ENEMY_TRANSFORMS]) {
+  for (const id of ['transformGanon', 'twinrovaFusion', ...ENEMY_TRANSFORMS, ...SS_ENEMY_TRANSFORMS]) {
     if (!u.abilities.includes(id)) continue;
     const def = ABILITIES[id];
     if (def && !unusableReason(b, u, def)) return castAbility(b, u, id, rng);

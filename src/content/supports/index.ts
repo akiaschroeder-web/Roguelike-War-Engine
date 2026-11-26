@@ -101,6 +101,17 @@ export const GROUP_SUPPORTS: GroupSupport[] = [
   { id: 'aPromiseKept', name: 'A Promise Kept', members: ['kafei', 'anju', 'terminaLink'], text: 'Once per battle, a member survives a fatal blow next to another member.' },
   { id: 'thePirateCrew', name: 'The Pirate Crew', members: ['tetra', 'gonzo', 'niko'], text: '+2 STR (boarding and ship decks +4) and vessels +1 MOV.' },
   { id: 'friendsOfTheForest', name: 'Friends of the Forest', members: ['saria', 'mido', 'skullKid'], text: '+20 Avoid in forests.' },
+  // Skyward Sword (docs/skyward-sword-pack.md section 23)
+  { id: 'originsOfCourage', name: 'Origins of Courage', members: ['heroOfTheSky', 'zeldaSS', 'fi'], text: 'Sacred weapons (light, the Goddess Swords, the Master Sword) deal +4 damage.' },
+  { id: 'firstKnights', name: 'The First Knights', members: ['heroOfTheSky', 'groose', 'pipit', 'karane'], text: 'Sword experience +25% and +1 stamina recovered each turn.' },
+  { id: 'ancientDragons', name: 'The Ancient Dragons', members: ['faronDragon', 'eldinDragon', 'lanayruDragon'], text: 'Elemental damage +25%.' },
+  { id: 'heroesSong', name: 'Song of the Hero', members: ['faronDragon', 'eldinDragon', 'lanayruDragon', 'levias'], text: 'Unlocks a cooperative sacred attack (Guardians\' Chorus): every enemy near any of them takes sacred damage.' },
+  { id: 'goddessServants', name: "The Goddess's Servants", members: ['hylia', 'impaSS', 'fi'], text: 'Sacred magic costs 30% less MP.' },
+  { id: 'ancientEngineering', name: 'Ancient Engineering', members: ['gondo', 'scrapper', 'skipper'], text: 'Equipment upgrades need 30% fewer materials.' },
+  { id: 'demonAndBlade', name: 'The Demon and His Blade', members: ['demise', 'ghirahim'], text: 'Dark attacks +5 damage and ignore 20% of RES.' },
+  { id: 'siegeSpecialists', name: 'Siege Specialists', members: ['groose', 'auru', 'barnes'], text: 'Siege weapons +20 Hit; Bombardment blasts a bigger area.' },
+  { id: 'forgersOfLegends', name: 'Forgers of Legends', members: ['gondo', 'biggoron', 'medigoron'], text: 'Upgrades and Blacksmith improvements need fewer materials (−30%, −1).' },
+  { id: 'spiritsOfTheSword', name: 'Spirits of the Sword', members: ['fi', 'ghirahim', 'herosShade'], text: 'Sword attacks +3 damage; sword techniques cost 20% less stamina.' },
 ];
 
 /** The registered conversation set for a pair (form-specific when `form` is given). */

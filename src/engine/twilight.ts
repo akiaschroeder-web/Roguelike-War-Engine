@@ -13,6 +13,7 @@ import { restoreForm, roomFor, transformInto } from './transform';
 import { effectiveStats, hasEffect, isMounted, makeEnemy, moveTypeOf, unitTags } from './units';
 import { pullToward, pushAway } from './windwaker';
 import { activeGroups, promiseKept } from './supports';
+import { ssHazardImmune, ssStaminaMult } from './skyward';
 import type { AbilityDef, Battle, Element, Pos, StatusKind, Terrain, Unit, WeaponDef } from './types';
 
 declare module './types' {
@@ -219,13 +220,13 @@ export function tpStartPhase(b: Battle, u: Unit, events: TPEvent[]) {
   }
   if (here.includes('sacredLight') && (unitTags(u).includes('twilight') || unitTags(u).includes('shadow'))) hurt(u.stats.hp * 0.1, 'Sacred Light');
   if (here.includes('sacredLight') && !unitTags(u).includes('twilight') && !unitTags(u).includes('shadow')) heal(u.stats.hp * 0.1, 'Sacred Light');
-  if (here.includes('flames') && !hasEffect(u, 'fireImmune') && !unitTags(u).includes('fire')) { hurt(u.stats.hp * 0.1, 'Burning ground'); }
+  if (here.includes('flames') && !hasEffect(u, 'fireImmune') && !unitTags(u).includes('fire') && !ssHazardImmune(u)) { hurt(u.stats.hp * 0.1, 'Burning ground'); }
   if (u.race === 'lightSpirit' || hasEffect(u, 'purifyStep') || WEAPONS[u.weapons[0]]?.dispelsTwilight) purify(b, u, u.race === 'lightSpirit' ? 1 : 0, u.size);
   if (has(u, 'lightOfTheLake')) purify(b, u, 2, u.size);
   // ── Spaces ──
   if (here.includes('windVent') && (isFlying(u) || hasEffect(u, 'clawshot'))) buff(u, 'vent', 'Wind Vent', 1, { mov: 2 });
   if (here.includes('spinnerRail') && hasEffect(u, 'spinner')) buff(u, 'rail', 'Spinner Rail', 1, { mov: 3 });
-  if (here.includes('sinkingSand') && !hasEffect(u, 'sandWalker') && !hasEffect(u, 'spinner') && !isFlying(u) && !has(u, 'sandBurrow')) { buff(u, 'sink', 'Sinking Sand', 1, { mov: -2, spd: -2 }); hurt(2, 'Sinking Sand'); }
+  if (here.includes('sinkingSand') && !hasEffect(u, 'sandWalker') && !hasEffect(u, 'spinner') && !isFlying(u) && !has(u, 'sandBurrow') && !ssHazardImmune(u)) { buff(u, 'sink', 'Sinking Sand', 1, { mov: -2, spd: -2 }); hurt(2, 'Sinking Sand'); }
   if (b.world === 'snowpeak' && !isFlying(u) && !hasEffect(u, 'snowWalker') && !has(u, 'mountainTraining') && u.race !== 'yeti' && !has(u, 'snowPredator') && !has(u, 'slidingCollision')) buff(u, 'snow', 'Deep Snow', 1, { mov: -1 });
   if (b.world === 'snowpeak' && has(u, 'slidingCollision')) buff(u, 'slide', 'Sliding', 1, { mov: 3 });
   if (b.world === 'snowpeak' && hasEffect(u, 'iceRegen')) heal(3, 'Chilfos Ice Armor');
@@ -477,7 +478,7 @@ export function tpCannotAttack(u: Unit, w: WeaponDef): boolean {
 export function techniqueAllowed(u: Unit, a: AbilityDef, b?: Battle): boolean {
   if (a.hidden && !u.abilities.includes(a.id)) return false;
   if (a.mounted && !isMounted(u)) return false;
-  if (a.id === 'shieldAttack' && !u.gear.shield) return false;
+  if ((a.id === 'shieldAttack' || a.id === 'shieldBash') && !u.gear.shield) return false;
   if (a.id === 'mortalDraw' && b && (u.turnUses?.lastAttackTurn ?? -9) >= b.turn - 1) return false;
   if (a.id === 'greatSpin' && u.hp < u.stats.hp) return false;
   if (a.grantedBy?.templates && !a.grantedBy.templates.includes(u.templateId ?? u.bossId ?? '')) return false;
@@ -497,6 +498,7 @@ export function techniqueCost(u: Unit, a: AbilityDef, bonus?: string): number {
   }
   if (bonus === 'forgottenTechniques' && u.team === 'player') c = Math.floor(c * 0.8);
   if (hasEffect(u, 'farorePearl')) c = Math.ceil(c * 0.75);
+  c = Math.floor(c * ssStaminaMult(u, bonus));
   return Math.max(0, c);
 }
 

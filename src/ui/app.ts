@@ -1,6 +1,9 @@
 import { imgUrl } from './media';
 import { TEARS_NEEDED, twilightOf } from '../engine/twilightRun';
 import { TWILIT_PROVINCES } from '../content/twilight';
+import { availableRecipes, craft, materialBag, questCount, recipeCost, recipeHolders, repairShield, shieldRepairCost } from '../engine/skywardRun';
+import { packSize } from '../engine/units';
+import { shieldDurability } from '../engine/skyward';
 import { ABILITIES, artFor, BOSSES, ENEMIES, GEAR, QUEST_ITEMS, ITEMS, CLASSES, COMMANDERS, PERMANENT_ITEMS, REGION_IDS, TEMPLATE_LIST, TEMPLATES, WEAPONS, worldDef, WORLDS, ART_VARIANTS } from '../data/registry';
 import { canWield, type LevelUp } from '../engine/combat';
 import { randomSeed } from '../engine/rng';
@@ -12,7 +15,7 @@ import {
   type Meta, type Reward, type RunEvent, type RunWithEvent,
 } from '../engine/run';
 import { equip } from '../engine/combat';
-import { GEAR_SLOTS, PACK_SIZE, type GearSlot, type MapNode, type NodeType, type Unit } from '../engine/types';
+import { GEAR_SLOTS, type GearSlot, type MapNode, type NodeType, type Unit } from '../engine/types';
 import { forgeLevel, slotFor } from '../engine/units';
 import { maxRank, pointCap, rankOf } from '../engine/supports';
 import { GROUP_SUPPORTS, PAIR_BONUSES, canonOf, formPairs, pairDef, pairKey } from '../content/supports';
@@ -282,7 +285,7 @@ export class App {
         <div class="page">
           <div class="page-head"><button class="btn" data-nav="back">← Back</button><h1>Choose your Commander</h1><span></span></div>
           <p class="dim center-text">Each commander brings their own army and a special bonus. If the commander falls, the campaign is over.</p>
-          ${(['hyrule', 'termina', 'greatSea', 'twilight'] as const).map((pack) => `<h2 class="pack-head">${pack === 'hyrule' ? 'Ocarina of Time · Hyrule' : pack === 'termina' ? "Majora's Mask · Termina" : pack === 'greatSea' ? 'The Wind Waker · The Great Sea' : 'Twilight Princess · Twilight Hyrule'}</h2>
+          ${(['hyrule', 'termina', 'greatSea', 'twilight', 'skyward'] as const).map((pack) => `<h2 class="pack-head">${pack === 'hyrule' ? 'Ocarina of Time · Hyrule' : pack === 'termina' ? "Majora's Mask · Termina" : pack === 'greatSea' ? 'The Wind Waker · The Great Sea' : pack === 'twilight' ? 'Twilight Princess · Twilight Hyrule' : 'Skyward Sword · The Sky'}</h2>
           <div class="card-grid">${COMMANDERS.filter((c) => (c.campaign ?? 'hyrule') === pack).map((c) => {
             const t = TEMPLATES[c.heroId];
             const army = c.units.map((id) => TEMPLATES[id]);
@@ -299,11 +302,12 @@ export class App {
           <div class="run-options">
             <h3>Campaign options</h3>
             <div class="opt-row"><span class="dim small">Campaign</span><select data-opt="campaign">
-              <option value="">Commander's home${chosen ? ` (${({ hyrule: 'Hyrule', termina: 'Termina', greatSea: 'the Great Sea', twilight: 'Twilight Hyrule' } as const)[COMMANDERS.find((c) => c.heroId === chosen)?.campaign ?? 'hyrule']})` : ''}</option>
+              <option value="">Commander's home${chosen ? ` (${({ hyrule: 'Hyrule', termina: 'Termina', greatSea: 'the Great Sea', twilight: 'Twilight Hyrule', skyward: 'the Sky' } as const)[COMMANDERS.find((c) => c.heroId === chosen)?.campaign ?? 'hyrule']})` : ''}</option>
               <option value="hyrule" ${choices.campaign === 'hyrule' ? 'selected' : ''}>Hyrule: the endless war</option>
               <option value="termina" ${choices.campaign === 'termina' ? 'selected' : ''}>Termina: three days until the Moon falls</option>
               <option value="greatSea" ${choices.campaign === 'greatSea' ? 'selected' : ''}>The Great Sea: sail a 7×7 chart of islands and fleets</option>
-              <option value="twilight" ${choices.campaign === 'twilight' ? 'selected' : ''}>Twilight Hyrule: restore the Light Spirits</option></select></div>
+              <option value="twilight" ${choices.campaign === 'twilight' ? 'selected' : ''}>Twilight Hyrule: restore the Light Spirits</option>
+              <option value="skyward" ${choices.campaign === 'skyward' ? 'selected' : ''}>The Sky: from Skyloft to the Demon's Realm</option></select></div>
             ${p.heroes.length ? `<div class="opt-row"><span class="dim small">Companion (Hall of Heroes)</span><select data-opt="hero"><option value="">None</option>${p.heroes.map((id) => `<option value="${id}" ${choices.hero === id ? 'selected' : ''}>${esc(TEMPLATES[id]?.name ?? id)}</option>`).join('')}</select></div>` : ''}
             ${p.kits.length ? `<div class="opt-row"><span class="dim small">Starting kit (Royal Treasury)</span><select data-opt="kit"><option value="">None</option>${KITS.filter((k) => p.kits.includes(k.id)).map((k) => `<option value="${k.id}" ${choices.kit === k.id ? 'selected' : ''}>${esc(k.name)}</option>`).join('')}</select></div>` : ''}
             ${p.formations.length ? `<div class="opt-row"><span class="dim small">Formation (Military Academy)</span><select data-opt="formation"><option value="">Standard</option>${FORMATIONS.filter((f) => p.formations.includes(f.id)).map((f) => `<option value="${f.id}" ${choices.formation === f.id ? 'selected' : ''}>${esc(f.name)}</option>`).join('')}</select></div>` : ''}
@@ -372,6 +376,8 @@ export class App {
         ${run.sea ? (() => { const sea = seaOf(run); const ships = run.roster.filter(isVessel); return `<div class="tb-res" title="Fleet: vessels owned / Fleet Capacity. Deploy: vessels per sea battle. Crew: passengers they carry."><span class="dim small">Fleet</span> <b>${ships.length}/${fleetCap(run)}</b> <span class="dim small">deploy ${navalDeployCap(run)} · crew ${fleetCrew(run)}</span></div>
           <div class="tb-res" title="Navigation reveals the chart; Salvage improves sunken treasure; Naval Reputation brings pirates and merchants."><span class="dim small">Nav</span> <b>${sea.navigation}</b> <span class="dim small">Salv</span> <b>${sea.salvage}</b> <span class="dim small">Rep</span> <b>${sea.reputation}</b></div>`; })() : ''}
         ${run.campaign === 'twilight' ? (() => { const tw = twilightOf(run); const prov = Object.keys(TWILIT_PROVINCES).filter((r) => r !== 'ordonProvince'); return `<div class="tb-res" title="Tears of Light gathered in each twilit province (${TEARS_NEEDED} fill its Vessel of Light). Restored provinces have their Light Spirit back."><span class="dim small">Light</span> ${prov.map((r) => tw.restored.includes(r) ? `<b title="${esc(WORLDS[r]?.name ?? r)}: restored">☀</b>` : `<span title="${esc(WORLDS[r]?.name ?? r)}">💧${tw.tears[r] ?? 0}</span>`).join(' ')}</div>`; })() : ''}
+        ${run.campaign === 'skyward' ? (() => { const qi = run.questItems ?? []; const parts = ['songPartFaron', 'songPartEldin', 'songPartLanayru', 'songPartLevias'].filter((p) => qi.includes(p)).length; const mats = materialBag(run).reduce((n, m) => n + m.n, 0);
+          return `<div class="tb-res" title="Gratitude Crystals (trade with Batreaux) · crafting Treasures and insects in the bag · Song of the Hero parts${run.skyward?.trialPending ? ' · a Silent Realm trial is next' : ''}"><span class="dim small">Gratitude</span> <b>💎${questCount(run, 'gratitudeCrystal')}</b> <span class="dim small">Treasures</span> <b>${mats}</b> <span class="dim small">Song</span> <b>${qi.includes('songOfTheHeroComplete') ? '🎵' : `${parts}/4`}</b>${run.skyward?.trialPending ? ' <b title="Silent Realm trial next">⛩</b>' : ''}</div>`; })() : ''}
         ${run.clock ? (() => { const c = clockLabel(run); return `<div class="tb-clock ${c.hoursLeft <= 12 ? 'bad' : c.day === 3 ? 'warn' : ''}" title="The Moon falls when the third day ends."><span class="dim small">Day ${c.day} ${c.night ? '☾' : '☀'}</span> <b>${c.time}</b> <span class="dim small">${c.hoursLeft}h left</span></div>
           <button class="btn small" data-nav="songoftime" title="Return to the dawn of the first day">🎵 Song of Time</button>`; })() : ''}
         <div class="spacer"></div>
@@ -488,7 +494,7 @@ export class App {
           id && slot === 'shield' && WEAPONS[u.weapons[0]]?.twoHanded ? ' <span class="badge">inactive: two-handed weapon</span>' : ''}</span>
           ${id ? `<button class="btn small" data-k="ungear" data-slot="${slot}">To convoy</button>` : ''}</div>`;
       }).join('')}</div>
-      <h3>Pack <span class="dim small">${u.pack.length}/${PACK_SIZE}</span></h3>
+      <h3>Pack <span class="dim small">${u.pack.length}/${packSize(u)}</span></h3>
       <div class="equip-list">${u.pack.length ? u.pack.map((p, i) => {
         const def = ITEMS[p.id];
         const usable = canUseOutside(u, i);
@@ -551,7 +557,7 @@ export class App {
       const slot = slotFor(u, g.slot);
       return u.gear[slot] ? `Replaces ${esc(itemName(u.gear[slot]!))}` : `${SLOT_LABELS[slot]} slot empty`;
     }
-    if (ITEMS[id]) return u.pack.length >= PACK_SIZE ? 'Pack full: goes to convoy' : `Pack ${u.pack.length}/${PACK_SIZE}`;
+    if (ITEMS[id]) return u.pack.length >= packSize(u) ? 'Pack full: goes to convoy' : `Pack ${u.pack.length}/${packSize(u)}`;
     const p = PERMANENT_ITEMS[id];
     if (p) return `${p.stat.toUpperCase()} ${u.stats[p.stat]} → ${u.stats[p.stat] + p.amount}`;
     return '';
@@ -763,6 +769,7 @@ export class App {
         ${summary.found.length ? `<div class="res-drops"><div class="dim small">Found on the field</div><div>${summary.found.map((d) => esc(itemName(d))).join(', ')}</div></div>` : ''}
         ${summary.joined.length ? `<div class="res-drops"><div class="dim small">Rescued and joined your army</div><div>${summary.joined.map(esc).join(', ')}</div></div>` : ''}
         ${summary.twilight?.length ? `<div class="res-drops"><div class="dim small">Twilight</div>${summary.twilight.map((l) => `<div>${esc(l)}</div>`).join('')}</div>` : ''}
+        ${summary.skyward?.length ? `<div class="res-drops"><div class="dim small">Skyward</div>${summary.skyward.map((l) => `<div>${esc(l)}</div>`).join('')}</div>` : ''}
         <div class="res-army-stats">${armyReportHtml(summary.army)}</div>
         ${summary.fallen.length ? `<div class="res-fallen"><span class="dim">Fallen:</span> ${summary.fallen.map((u) => `${token(u, 28)} ${esc(u.name)}`).join(' ')}</div>` : '<div class="dim">No losses.</div>'}
         <div class="res-army">${run.roster.map((u) => `<div class="res-unit">${token(u, 36)}<div><b>${esc(u.name)}</b><div class="dim small">Lv ${u.level} · HP ${u.hp}/${u.stats.hp}</div></div></div>`).join('')}</div>
@@ -1035,6 +1042,7 @@ export class App {
             <button class="choice" data-nav="train"><b>⚔ Train</b><span>One unit trains hard and gains a full level.</span></button>
             <button class="choice" data-nav="drill"><b>⚑ Drill</b><span>The whole army drills together: everyone gains 45 XP.</span></button>
           </div>
+          ${this.workshopHtml()}
           ${armyOf(run).fairyDust > 0 && run.fallen.length ? `<h3>Infirmary <span class="dim small">${armyOf(run).fairyDust} Fairy Dust</span></h3>
             <div class="shop-list">${run.fallen.map((u) => `<div class="shop-item"><div>${token(u, 24)} ${esc(u.name)}</div><button class="btn small" data-nav="dust" data-uid="${u.uid}" ${run.roster.length >= armyCap(run) ? 'disabled' : ''}>Revive (1 Fairy Dust)</button></div>`).join('')}</div>` : ''}
         </div>
@@ -1042,6 +1050,7 @@ export class App {
       </div>`);
     this.on({
       ...this.common(() => this.campScreen()),
+      ...this.workshopHandlers(() => this.campScreen()),
       rest: () => { campRest(run); this.finishEvent(); },
       feast: () => { if (campFeast(run)) this.finishEvent(); },
       dust: (el) => { if (reviveWithDust(run, el.dataset.uid!)) { this.save(); this.campScreen(); } },
@@ -1184,6 +1193,34 @@ export class App {
     return `<h3>Supports</h3><div class="equip-list">${rows.join('') || '<div class="dim small">Fight near allies to build supports (C → B → A, and S for special pairs).</div>'}</div>${groupRows.length ? `<h3>Group supports</h3><div class="equip-list">${groupRows.join('')}</div><p class="dim small">Active in battle when every member is deployed.</p>` : ''}`;
   }
 
+  /** Skyward Sword's upgrade workshop (section 13): recipes, the materials bag and shield repairs. */
+  private workshopHtml(): string {
+    const run = this.run!;
+    const recipes = availableRecipes(run);
+    const bag = materialBag(run);
+    const shields = run.roster.filter((u) => shieldRepairCost(u) > 0);
+    if (!recipes.length && !bag.length && !shields.length) return '';
+    const holderName = (h: string | null) => (h === null ? 'convoy' : run.roster.find((u) => u.uid === h)?.name ?? '?');
+    const rows = recipes.flatMap((r) => recipeHolders(run, r).map((h) => {
+      const c = recipeCost(run, r);
+      const parts = [...Object.entries(c.mats).map(([id, n]) => `${esc(QUEST_ITEMS[id]?.name ?? id)} ×${n} <span class="dim">(${questCount(run, id)})</span>`), ...c.sacred.map((s) => `<b>${esc(QUEST_ITEMS[s]?.name ?? s)}</b>`)];
+      return `<div class="shop-item"><div>${esc(itemName(r.from))} → <b>${esc(itemName(r.to))}</b> <span class="dim small">(${esc(holderName(h))})</span><div class="dim small">${parts.join(', ') || 'no materials'}${c.generic ? ` · ${c.generic} army materials fill the gaps` : ''}</div></div>
+        <button class="btn small" data-nav="craft" data-id="${esc(r.id)}" data-holder="${h ?? ''}" ${c.ok ? '' : 'disabled'}>${c.rupees ? `₹${c.rupees}` : 'Forge'}</button></div>`;
+    })).join('');
+    const fixes = shields.map((u) => { const d = shieldDurability(u)!; const cost = shieldRepairCost(u);
+      return `<div class="shop-item"><div>${token(u, 24)} ${esc(itemName(u.gear.shield!))} <span class="dim small">${d.left}/${d.max} durability</span></div><button class="btn small" data-nav="shieldfix" data-uid="${u.uid}" ${run.rupees < cost ? 'disabled' : ''}>Repair ₹${cost}</button></div>`; }).join('');
+    return `<h3>Upgrade workshop <span class="dim small">Treasures: ${bag.map((m) => `${esc(m.name)} ×${m.n}`).join(', ') || 'none yet'} · army materials ${armyOf(run).materials}</span></h3>
+      <div class="shop-list">${rows || '<div class="dim small">Nothing you carry can be upgraded yet.</div>'}${fixes}</div>`;
+  }
+
+  private workshopHandlers(rerender: () => void) {
+    const run = this.run!;
+    return {
+      craft: (el: HTMLElement) => { if (craft(run, el.dataset.id!, el.dataset.holder || null)) { sfx('secret'); this.save(); rerender(); } },
+      shieldfix: (el: HTMLElement) => { if (repairShield(run, el.dataset.uid!)) { this.save(); rerender(); } },
+    };
+  }
+
   private blacksmithScreen() {
     music('shop');
     const run = this.run!;
@@ -1212,12 +1249,14 @@ export class App {
               const p = forgePrice(run, id);
               return `<div class="shop-item ${sold ? 'sold' : ''}"><div>${itemLine(id)}</div><button class="btn small" data-nav="forge" data-id="${id}" ${sold || run.rupees < p ? 'disabled' : ''}>${sold ? 'Forged' : `₹${p}`}</button></div>`;
             }).join('')}</div>
+            ${this.workshopHtml()}
             <div class="center-text"><button class="btn primary big" data-nav="leave">Leave</button></div>
           </div>
           ${this.partyHtml()}
         </div>`);
       this.on({
         ...this.common(render),
+        ...this.workshopHandlers(render),
         repair: (el) => { if (repairWeapon(run, el.dataset.uid!, el.dataset.w!)) { this.save(); render(); } },
         improve: (el) => { if (improveWeapon(run, el.dataset.uid!, el.dataset.w!)) { this.save(); render(); } },
         forge: async (el) => {
