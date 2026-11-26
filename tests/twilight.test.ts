@@ -279,3 +279,18 @@ describe('support conversations', () => {
     for (const k of Object.keys(SUPPORT_CONVOS)) expect(SUPPORT_REGISTRY.some((p) => p.key === k), k).toBe(true);
   });
 });
+
+describe('art variants', () => {
+  it('mixes originals and alternates across units, and honours the player\'s pick', async () => {
+    const { artFor } = await import('../src/data/registry');
+    for (const id of ['hyruleSoldier', 'chuchuRed', 'darknut']) {
+      const picks = Array.from({ length: 200 }, (_, i) => artFor(id, `p${i}`));
+      const base = picks.filter((p) => p === id).length;
+      expect(base).toBeGreaterThan(70);
+      expect(base).toBeLessThan(130);
+      expect(new Set(picks).size).toBeGreaterThan(1);
+    }
+    expect(artFor('chuchuRed', 'p3', 'chuchuRedTP')).toBe('chuchuRedTP');
+    expect(artFor('hyruleSoldier')).toBe('hyruleSoldier');
+  });
+});

@@ -50,7 +50,7 @@ export function playCinematic(opts: CinematicOptions): Promise<void> {
   const w = worldDef(opts.world);
 
   const fighter = (u: Unit, side: 'left' | 'right') => {
-    const art = artFor(portraitIdOf(u), u.uid);
+    const art = artFor(portraitIdOf(u), u.uid, u.artPick);
     const rider = art
       ? `<img class="cine-art" src="${imgUrl('art', art)}" alt="" draggable="false">`
       : `<div class="cine-token">${token(u, 170)}</div>`;

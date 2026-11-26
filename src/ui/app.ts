@@ -1,7 +1,7 @@
 import { imgUrl } from './media';
 import { TEARS_NEEDED, twilightOf } from '../engine/twilightRun';
 import { TWILIT_PROVINCES } from '../content/twilight';
-import { ABILITIES, artFor, BOSSES, ENEMIES, GEAR, QUEST_ITEMS, ITEMS, CLASSES, COMMANDERS, PERMANENT_ITEMS, REGION_IDS, TEMPLATE_LIST, TEMPLATES, WEAPONS, worldDef, WORLDS } from '../data/registry';
+import { ABILITIES, artFor, BOSSES, ENEMIES, GEAR, QUEST_ITEMS, ITEMS, CLASSES, COMMANDERS, PERMANENT_ITEMS, REGION_IDS, TEMPLATE_LIST, TEMPLATES, WEAPONS, worldDef, WORLDS, ART_VARIANTS } from '../data/registry';
 import { canWield, type LevelUp } from '../engine/combat';
 import { randomSeed } from '../engine/rng';
 import {
@@ -30,6 +30,7 @@ import { conversationFor, type ConvoRank } from '../content/ocarina/conversation
 import { armyCap, armyOf, BLESSINGS, cpMax, deployCap, moraleBonus, moraleLabel, ORDERS, ordersFor, repDiscount, supplyCap, useBlessing, xpToNext } from '../engine/army';
 import {
   confirmDialog, esc, hpBar, itemLine, itemName, modal, SLOT_ICONS, SLOT_LABELS, weaponLine, showLevelUps, templateCard, token, unitDetails,
+  portraitIdOf,
 } from './components';
 
 const NODE_INFO: Record<NodeType, { icon: string; label: string; desc: string }> = {
@@ -495,6 +496,7 @@ export class App {
         return `<div class="equip-row"><span>${esc(def?.name ?? p.id)}${p.uses > 1 ? ` ×${p.uses}` : ''} <span class="dim small">${esc(def?.desc ?? '')}</span></span>
           <span>${usable ? `<button class="btn small" data-k="use" data-i="${i}">${label}</button>` : ''}<button class="btn small" data-k="unpack" data-i="${i}">To convoy</button></span></div>`;
       }).join('') : '<div class="dim small">Empty. Buy potions, bombs and Deku Nuts from merchants.</div>'}</div>
+      ${(() => { const vs = (ART_VARIANTS[portraitIdOf(u) ?? ''] ?? []).filter((v) => artFor(v)); return vs.length > 1 ? `<div class="equip-row"><span>🎨 Art <span class="dim small">${vs.indexOf(artFor(portraitIdOf(u), u.uid, u.artPick) ?? '') + 1}/${vs.length}</span></span><button class="btn small" data-k="art">Change art</button></div>` : ''; })()}
       ${this.supportsHtml(u)}
       ${t ? `<p class="bio">${esc(t.bio)}</p>` : ''}
       <button class="btn primary" data-close>Close</button>`, { dismissable: true });
@@ -511,6 +513,11 @@ export class App {
       if (k.dataset.k === 'ungear') stashGear(run, uid, k.dataset.slot as GearSlot);
       if (k.dataset.k === 'unpack') stashItem(run, uid, Number(k.dataset.i));
       if (k.dataset.k === 'use') useItemOutside(run, uid, Number(k.dataset.i));
+      if (k.dataset.k === 'art') {
+        const vs = (ART_VARIANTS[portraitIdOf(u) ?? ''] ?? []).filter((v) => artFor(v));
+        const cur = artFor(portraitIdOf(u), u.uid, u.artPick) ?? vs[0];
+        u.artPick = vs[(vs.indexOf(cur) + 1) % vs.length];
+      }
       this.save();
       m.close();
       rerender();

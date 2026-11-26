@@ -708,6 +708,8 @@ export interface Unit {
   kills: number;
   movedDist: number;
   survivedOnce?: boolean;
+  /** Art variant the player picked for this unit. */
+  artPick?: string;
 }
 
 export type ObjectiveType = 'rout' | 'boss' | 'survive' | 'seize' | 'defend' | 'escape' | 'capture' | 'escort' | 'rescue';

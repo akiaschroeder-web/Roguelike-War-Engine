@@ -142,13 +142,20 @@ export function skillDef(id: string): SkillDef {
  * The art id a unit should display, or null if no image exists yet.
  * `seed` (e.g. the unit's uid) picks a stable variant for generic units.
  */
-export function artFor(id: string | undefined, seed = ''): string | null {
+export function artFor(id: string | undefined, seed = '', pick?: string): string | null {
   if (!id) return null;
   const variants = ART_VARIANTS[id]?.filter((v) => ART_IDS.has(v));
   if (variants?.length) {
-    let h = 0;
-    for (const c of seed) h = (h * 31 + c.charCodeAt(0)) >>> 0;
-    return variants[h % variants.length];
+    if (pick && variants.includes(pick)) return pick; // the player chose this look
+    if (!seed || variants.length === 1) return variants[0];
+    // FNV-1a with a final mix, so neighbouring uids don't simply alternate.
+    let h = 0x811c9dc5;
+    for (const c of `${id}:${seed}`) h = Math.imul(h ^ c.charCodeAt(0), 0x01000193) >>> 0;
+    h = (h ^ (h >>> 16)) >>> 0; h = Math.imul(h, 0x45d9f3b) >>> 0; h = (h ^ (h >>> 16)) >>> 0;
+    // The original art turns up half the time; the alternates share the rest.
+    const r = h % 100;
+    if (r < 50) return variants[0];
+    return variants[1 + (Math.floor(h / 100) % (variants.length - 1))];
   }
   if (ART_IDS.has(id)) return id;
   const alias = ART_ALIASES[id];

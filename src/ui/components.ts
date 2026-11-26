@@ -68,6 +68,8 @@ interface TokenLike {
   portraitId?: string;
   /** Picks a stable art variant (unit uid). */
   seed?: string;
+  /** The player's chosen art variant. */
+  artPick?: string;
 }
 
 export const portraitIdOf = (u: Pick<Unit, 'templateId' | 'bossId' | 'artId'>) => u.bossId ?? u.templateId ?? u.artId;
@@ -77,9 +79,9 @@ export const portraitIdOf = (u: Pick<Unit, 'templateId' | 'bossId' | 'artId'>) =
  * initials act as a placeholder (the image hides itself when missing).
  */
 export function token(u: TokenLike | Unit, size = 40): string {
-  const t: TokenLike = 'uid' in u ? { home: u.home, glyph: u.glyph, team: u.team, isBoss: u.isBoss, isCommander: u.isCommander, portraitId: portraitIdOf(u), seed: u.uid } : u;
+  const t: TokenLike = 'uid' in u ? { home: u.home, glyph: u.glyph, team: u.team, isBoss: u.isBoss, isCommander: u.isCommander, portraitId: portraitIdOf(u), seed: u.uid, artPick: u.artPick } : u;
   const w = worldDef(t.home);
-  const art = artFor(t.portraitId, t.seed);
+  const art = artFor(t.portraitId, t.seed, t.artPick);
   const img = art ? `<img src="${imgUrl('portraits', art)}" alt="" draggable="false" onerror="this.parentNode.classList.remove('has-img');this.remove()">` : '';
   return `<span class="token ${t.team}${art ? ' has-img' : ''}" style="--wc:${w.color};--sz:${size}px"><b>${esc(t.glyph)}</b>${img}${
     t.isBoss ? '<i class="crown">♛</i>' : t.isCommander ? '<i class="crown star">★</i>' : ''
