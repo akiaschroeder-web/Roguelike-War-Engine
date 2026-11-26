@@ -1,6 +1,6 @@
 import { delayLight, isTwilit, restoreLight, teachHiddenSkill, twilightAfterBattle, twilightQuestCheck, twilightRegionOptions, twilightStart } from './twilightRun';
 import {
-  EVENTS, FACTIONS, GEAR, QUEST_ITEMS, RACES, WORLDS, ITEMS, MONSTER_CHANCE, BOSSES, bossPool, COMMANDERS, PERMANENT_ITEMS, REGION_IDS, TEMPLATE_LIST, TEMPLATES, WEAPONS,
+  EVENTS, FACTIONS, GEAR, QUEST_ITEMS, RACES, WORLDS, ITEMS, MONSTER_CHANCE, BOSSES, bossPool, rosterFor, COMMANDERS, PERMANENT_ITEMS, REGION_IDS, TEMPLATE_LIST, TEMPLATES, WEAPONS,
 } from '../data/registry';
 import { createBattle } from './battle';
 import { maxRank, rankOf, supportKey, type SupportRank } from './supports';
@@ -39,13 +39,13 @@ export function commanderOf(run: Run): CommanderDef {
   return COMMANDERS.find((c) => c.heroId === run.commanderId) ?? COMMANDERS[0];
 }
 
-export function newRun(seed: number, commanderId: string, campaign?: 'hyrule' | 'termina' | 'greatSea' | 'twilight' | 'skyward'): RunWithEvent {
+export function newRun(seed: number, commanderId: string, campaign?: 'hyrule' | 'termina' | 'greatSea' | 'twilight' | 'skyward' | 'random'): RunWithEvent {
   const rng = new RNG(seed);
   const cmd = COMMANDERS.find((c) => c.heroId === commanderId) ?? COMMANDERS[0];
   const camp = campaign ?? cmd.campaign ?? 'hyrule';
   const home = TEMPLATES[cmd.heroId].home;
   // Hyrule campaigns start in the commander's home region; Termina always starts in Clock Town.
-  const region = camp === 'termina' ? 'clockTown' : camp === 'greatSea' ? 'outsetIsland' : camp === 'twilight' ? 'ordonProvince' : camp === 'skyward' ? 'skyloft' : WORLDS[home]?.campaign ? 'hyruleField' : home === 'hyruleCastle' ? 'hyruleField' : home;
+  const region = camp === 'random' ? rng.pick(REGION_IDS.filter((r) => r !== 'moon')) : camp === 'termina' ? 'clockTown' : camp === 'greatSea' ? 'outsetIsland' : camp === 'twilight' ? 'ordonProvince' : camp === 'skyward' ? 'skyloft' : WORLDS[home]?.campaign ? 'hyruleField' : home === 'hyruleCastle' ? 'hyruleField' : home;
   const run: RunWithEvent = {
     seed, rngState: 0, act: 1, region, regionsVisited: [region], map: { rows: 0, nodes: [] }, currentNodeId: null,
     roster: [], fallen: [], rupees: 200, convoy: [], commanderId: cmd.heroId, bonus: cmd.bonus,
@@ -64,9 +64,10 @@ export function newRun(seed: number, commanderId: string, campaign?: 'hyrule' | 
     const taker = run.roster.find((u) => canTake(u, id) && (kindOf(id) !== 'gear' || !u.gear[slotFor(u, GEAR[id].slot)]));
     if (!taker || !give(run, id, taker.uid)) run.convoy.push(id);
   }
-  run.map = generateRegionMap(rng, run.act, region);
-  run.rngState = rng.state;
   run.campaign = camp;
+  run.map = generateRegionMap(rng, run.act, region);
+  randomizeWorlds(run, rng);
+  run.rngState = rng.state;
   if (camp === 'termina') { run.clock = { hours: 0, resets: 0 }; run.bank = 0; run.questItems = []; }
   if (camp === 'twilight') twilightStart(run, rng);
   if (camp === 'skyward') skywardStart(run);
@@ -81,6 +82,24 @@ export function newRun(seed: number, commanderId: string, campaign?: 'hyrule' | 
     run.rngState = rng.state;
   }
   return run;
+}
+
+/** Random campaign: every fight on the map happens in a random region from any pack
+ *  (its terrain, monsters, armies, events and boss). Early on the draw comes from the gentler
+ *  half of the regions, widening to three quarters in the second region and to all of them after. */
+let REGION_RANK: WorldId[] | undefined;
+function randomizeWorlds(run: Run, rng: RNG): void {
+  if (run.campaign !== 'random') return;
+  const p = (st: Partial<Record<string, number>> | undefined, d: number) => (st?.hp ?? d) + 2 * Math.max(st?.str ?? 6, st?.mag ?? 6);
+  REGION_RANK ??= REGION_IDS.filter((r) => r !== 'moon').map((r) => {
+    const ro = rosterFor(r), bs = bossPool(r);
+    const monsters = ro.reduce((t, x) => t + p(x.stats, 20), 0) / Math.max(1, ro.length);
+    const bosses = bs.reduce((t, x) => t + p(x.stats, 50), 0) / Math.max(1, bs.length);
+    return [r, monsters + bosses / 3] as const;
+  }).sort((x, y) => x[1] - y[1]).map((x) => x[0]);
+  const share = run.act <= 1 ? 0.5 : run.act === 2 ? 0.75 : 1;
+  const pool = REGION_RANK.slice(0, Math.max(6, Math.ceil(REGION_RANK.length * share)));
+  for (const n of run.map.nodes) n.world = rng.pick(pool);
 }
 
 export function generateRegionMap(rng: RNG, act: number, region: WorldId): RunMap {
@@ -284,7 +303,8 @@ export function enterNode(run: RunWithEvent, nodeId: string): void {
       case 'event': {
         // A full Vessel of Light: the Light Spirit's spring comes first.
         if (run.twilight?.pending && EVENTS.lightSpiritSpring) { run.event = { type: 'event', eventId: 'lightSpiritSpring' }; break; }
-        const pool = Object.values(EVENTS).filter((e) => (!e.regions || e.regions.includes(node.world)) && meetsRequires(run, e.requires));
+        // The Random campaign draws events from every region.
+        const pool = Object.values(EVENTS).filter((e) => (run.campaign === 'random' || !e.regions || e.regions.includes(node.world)) && meetsRequires(run, e.requires));
         const fresh = pool.filter((e) => !(run.eventsSeen ?? []).includes(e.id));
         const ev = rng.pick(fresh.length ? fresh : pool);
         (run.eventsSeen ??= []).push(ev.id);
@@ -925,7 +945,7 @@ export function offerRegions(run: RunWithEvent): void {
     }
     const recent = run.regionsVisited.slice(-2);
     // Hyrule's war stays in Hyrule until the Free-for-All, when Termina's regions join in.
-    const pool = REGION_IDS.filter((r) => !recent.includes(r) && (run.act + 1 >= FREE_FOR_ALL_REGION || !WORLDS[r]?.campaign) && r !== 'moon');
+    const pool = REGION_IDS.filter((r) => !recent.includes(r) && (run.campaign === 'random' || run.act + 1 >= FREE_FOR_ALL_REGION || !WORLDS[r]?.campaign) && r !== 'moon');
     const options = rng.shuffle(pool).slice(0, 3);
     run.event = { type: 'region', options };
   });
@@ -1004,7 +1024,7 @@ export function songOfTimeReset(run: RunWithEvent): string[] {
   a.blessing = undefined;
   a.feast = false;
   // The current route starts over.
-  withRng(run, (rng) => { run.map = generateRegionMap(rng, run.act, run.region); });
+  withRng(run, (rng) => { run.map = generateRegionMap(rng, run.act, run.region); randomizeWorlds(run, rng); });
   run.currentNodeId = null;
   run.event = undefined;
   return lost;
@@ -1053,7 +1073,7 @@ export function advanceRegion(run: RunWithEvent, region: WorldId): void {
   run.regionsVisited.push(region);
   run.currentNodeId = null;
   run.event = undefined;
-  withRng(run, (rng) => { run.map = generateRegionMap(rng, run.act, region); });
+  withRng(run, (rng) => { run.map = generateRegionMap(rng, run.act, region); randomizeWorlds(run, rng); });
   run.rupees += 150;
 }
 

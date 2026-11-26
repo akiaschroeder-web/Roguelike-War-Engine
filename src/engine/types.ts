@@ -950,7 +950,7 @@ export interface Run {
   /** Army-wide stats and resources. */
   army?: Army;
   /** Which campaign: the endless Hyrule war, Termina with its three-day cycle, or the Great Sea. */
-  campaign?: 'hyrule' | 'termina' | 'greatSea' | 'twilight' | 'skyward';
+  campaign?: 'hyrule' | 'termina' | 'greatSea' | 'twilight' | 'skyward' | 'random';
   /** Great Sea: the naval campaign's state. */
   sea?: SeaState;
   /** Termina: hours passed in the current three-day cycle (0-71) and resets so far. */
