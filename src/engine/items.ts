@@ -55,6 +55,8 @@ function curable(def: ItemDef): StatusKind[] {
 export function canUseHere(b: Battle, u: Unit, index: number): boolean {
   const def = ITEMS[u.pack[index]?.id];
   if (!def || !canUse(u, index)) return false;
+  // The Silent Realm: no fighting, not even with bombs.
+  if (b.ss?.trial && u.team === 'player' && (['bomb', 'fruit', 'stun', 'muddle'].includes(def.kind) || (def.kind === 'special' && def.targeted))) return false;
   if (def.kind === 'tool') {
     if (def.tool === 'lens') return u.mp >= 1 && !u.buffs.some((x) => x.id === 'lens');
     if (def.tool === 'fishing') return canFish(b, u);
