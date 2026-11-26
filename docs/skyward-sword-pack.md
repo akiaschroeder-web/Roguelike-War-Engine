@@ -367,3 +367,5 @@ Batch 3 (16): ampilus, ampilusEgg, aracha, magmanos, sentrobe, beamosSS (SS alt 
 Batch 4 (7): imprisonedArmed, imprisonedFlying, stalmaster, scervo, dreadfuse, darkLizalfos, loftwingSS (Zelda's blue Loftwing, for the regular Loftwing unit).
 
 Still missing: Hylia.
+
+Batch 5 (7): lizalfosSS, stalfosSS, chuchuGreenSS, chuchuBlueSS, chuchuRedSS, chuchuYellowSS (SS alt arts for existing units), hylia. All art received.
