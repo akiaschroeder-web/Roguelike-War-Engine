@@ -271,3 +271,4 @@ Still missing: Naydra, Bubbulfrog, one of Yiga Blademaster/Engineer, identity of
 Batch 10 — alt arts (10): goronWarriorTP, zoraWarriorTP, goronWarriorWW (backpack merchant Goron), goronWarriorBotW, zoraWarriorBotW_patternbg, ritoWarriorBotW_patternbg — alts for the generic Goron/Zora/Rito units (apply to every generic unit of that race that uses the base art); lizalfosBotW, moblinBotW, bokoblinBotW, likeLikeBotW — BotW alts for those existing monsters.
 
 Batch 11: naydra_patternbg. The user labelled the upside-down multi-faced frog spirit (saved earlier as malanya.png) as the Bubbulfrog — identity being confirmed with the user (in TotK that model is Malanya).
+User answer: the red-suited Yiga (yigaBlademaster.png) is used for both the Yiga Blademaster and the Yiga Engineer. The frog spirit image (malanya.png) is used for both Malanya and the Bubbulfrog.
