@@ -3,6 +3,7 @@
 // 31; materials, cooking, fusion and the camp facilities of section 32; Zonai
 // vehicles and Autobuild blueprints (kept between campaigns); monster tiers for recruits.
 
+import { appStorage } from '../storage';
 import { BOSSES, ENEMIES, GEAR, ITEMS, REGION_BOSSES, TEMPLATES, WEAPONS, WORLDS } from '../data/registry';
 import { FORAGE, MATERIAL_BY_ID, MATERIALS, MEALS, VEHICLES, VEHICLE_BY_ID, WILD_CLIMATE, ZONAI_DEVICES, type CookFamily } from '../content/wild';
 import { adjustMorale, armyCap, armyOf } from './army';
@@ -64,9 +65,7 @@ const skill = (run: Run, s: string) => run.roster.some((u) => u.skills.includes(
 
 // ───────────────────────── Blueprints (kept between campaigns) ─────────────────────────
 
-function storage(): Storage | null {
-  try { return typeof localStorage !== 'undefined' ? localStorage : null; } catch { return null; }
-}
+const storage = appStorage;
 export function savedBlueprints(): string[] {
   try { const raw = storage()?.getItem(BLUEPRINT_KEY); return raw ? (JSON.parse(raw) as string[]).filter((v) => VEHICLE_BY_ID[v]) : []; } catch { return []; }
 }

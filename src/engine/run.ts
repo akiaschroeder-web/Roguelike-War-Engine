@@ -20,6 +20,7 @@ import { chartComplete, fleetCap, generateSeaChart, navalDeployCap, newSea, reve
 import { capacityOf, isVessel } from './naval';
 import { addToPack, canRide, forgeLevel, gainXp, makeHero, maxUses, rollLevelUp, slotFor } from './units';
 import { VESSEL_SLOTS } from './types';
+import { appStorage } from '../storage';
 import { VESSEL_SLOTS_BY_SIZE } from '../content/windwaker';
 import type { TourCampaign, Battle, BossDef, CommanderDef, EventDef, EventEffect, EventOutcome, EventRequires, EnemyForce, FactionDef, GearSlot, MapNode, NodeType, Rarity, Run, RunMap, Unit, UnitTemplate, WorldId } from './types';
 
@@ -1566,13 +1567,7 @@ export interface Meta extends MetaProgress {
   bossesDefeated: string[];
 }
 
-function storage(): Storage | null {
-  try {
-    return typeof localStorage !== 'undefined' ? localStorage : null;
-  } catch {
-    return null;
-  }
-}
+const storage = appStorage;
 
 export function saveRun(run: RunWithEvent | null): void {
   try {

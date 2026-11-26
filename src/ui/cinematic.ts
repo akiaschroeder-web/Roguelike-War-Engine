@@ -1,3 +1,4 @@
+import { appStorage } from '../storage';
 import { imgUrl } from './media';
 import { sfx } from './audio';
 import { STATUS_INFO } from '../engine/status';
@@ -31,7 +32,7 @@ const PREF_KEY = 'hyrule.battleAnims';
 
 export function animationsEnabled(): boolean {
   try {
-    return localStorage.getItem(PREF_KEY) !== 'off';
+    return appStorage().getItem(PREF_KEY) !== 'off';
   } catch {
     return true;
   }
@@ -39,7 +40,7 @@ export function animationsEnabled(): boolean {
 
 export function setAnimationsEnabled(on: boolean) {
   try {
-    localStorage.setItem(PREF_KEY, on ? 'on' : 'off');
+    appStorage().setItem(PREF_KEY, on ? 'on' : 'off');
   } catch { /* ignore */ }
 }
 

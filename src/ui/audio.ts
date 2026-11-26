@@ -1,3 +1,4 @@
+import { appStorage } from '../storage';
 // Sound effects (synthesized with Web Audio, so no files are needed) and
 // optional background music. Drop music files into public/music/ named after
 // the tracks below (e.g. public/music/battle.mp3); missing tracks just stay silent.
@@ -18,13 +19,15 @@ const KEY = 'hyrule.audio';
 
 function load(): AudioSettings {
   try {
-    const raw = localStorage.getItem(KEY);
+    const raw = appStorage().getItem(KEY);
     if (raw) return { sfx: 0.6, music: 0.5, muted: false, ...JSON.parse(raw) };
   } catch { /* ignore */ }
   return { sfx: 0.6, music: 0.5, muted: false };
 }
 
 let settings = load();
+/** Re-read the settings once the cloud save has loaded. */
+export function reloadAudioSettings() { settings = load(); }
 let ctx: AudioContext | null = null;
 let master: GainNode | null = null;
 
@@ -34,7 +37,7 @@ export function audioSettings(): AudioSettings {
 
 export function setAudio(next: Partial<AudioSettings>) {
   settings = { ...settings, ...next };
-  try { localStorage.setItem(KEY, JSON.stringify(settings)); } catch { /* ignore */ }
+  try { appStorage().setItem(KEY, JSON.stringify(settings)); } catch { /* ignore */ }
   if (master) master.gain.value = settings.muted ? 0 : settings.sfx;
   if (musicEl) musicEl.volume = settings.muted ? 0 : settings.music;
 }

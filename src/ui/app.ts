@@ -17,6 +17,7 @@ import {
   TOUR_NAMES,
 } from '../engine/run';
 import { equip } from '../engine/combat';
+import { saveStatus } from '../storage';
 import { GEAR_SLOTS, type GearSlot, type MapNode, type NodeType, type TourCampaign, type Unit } from '../engine/types';
 import { forgeLevel, slotFor } from '../engine/units';
 import { maxRank, pointCap, rankOf } from '../engine/supports';
@@ -107,6 +108,7 @@ export class App {
           <button class="btn" data-nav="codex">Hyrule Archives</button>
         </div>
         <div class="records dim small">Campaigns ${this.meta.runs} · Furthest region ${this.meta.bestRegion} · Battles reached ${this.meta.bestDepth}</div>
+        <div class="dim small save-status">${saveStatus() === 'local' ? '💾 Saves are kept in this browser only' : saveStatus() === 'error' ? '⚠ Cloud save is retrying — your progress is also kept in this browser' : '☁ Saves are kept with your account and survive closing the page'}</div>
         <div class="dim small fan">Fan project · not affiliated with Nintendo</div>
       </div>`, 'center');
     this.on({
