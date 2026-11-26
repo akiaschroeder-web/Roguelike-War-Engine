@@ -1,12 +1,14 @@
 // The expanded support network (docs/support-expansion.md): every pairing's
 // highest rank and theme, their conversations, named pair bonuses and group supports.
 
-import { SUPPORT_REGISTRY, type SupportPairDef } from './registry';
+import { SUPPORT_REGISTRY as BASE_REGISTRY, type SupportPairDef } from './registry';
+import { SUPPORT_REGISTRY_SS } from './registrySS';
 import { CONVOS as EXAMPLES } from './convos/examples';
 import { WRITTEN } from './written';
 
 export type { SupportPairDef };
-export { SUPPORT_REGISTRY };
+/** Every registered pairing, all packs. */
+export const SUPPORT_REGISTRY: SupportPairDef[] = [...BASE_REGISTRY, ...SUPPORT_REGISTRY_SS];
 
 export type SupportLine = ['a' | 'b' | 'n', string];
 export type SupportRankKey = 'C' | 'B' | 'A' | 'S';
@@ -21,6 +23,8 @@ export const SUPPORT_CANON: Record<string, string> = {
   // Boss forms of recruitable characters
   zantBoss: 'zant', ganondorfTPBoss: 'ganondorfTP', kingBulblinBoss: 'kingBulblin', darkBeastGanonBoss: 'ganondorfTP', ganondorfWWBoss: 'ganondorfWW',
   darkBeastGanon: 'ganondorfTP',
+  // Skyward Sword forms
+  ghirahimTrue: 'ghirahim', imprisonedArmed: 'imprisoned', imprisonedFlying: 'imprisoned',
 };
 export const canonOf = (id: string) => SUPPORT_CANON[id] ?? id;
 export const pairKey = (a: string, b: string) => { const x = canonOf(a), y = canonOf(b); return x < y ? `${x}|${y}` : `${y}|${x}`; };

@@ -1,0 +1,106 @@
+#!/usr/bin/env python3
+"""Parse section 23 of docs/skyward-sword-pack.md into src/content/supports/registrySS.ts.
+
+Entries look like `Link×Zelda S (theme) · Link×Fi S (theme)`; each ### subsection names its group.
+Usage: python3 scripts/build_ss_supports.py
+"""
+import importlib.util, json, re, sys
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parent.parent
+DOC = (ROOT / 'docs' / 'skyward-sword-pack.md').read_text()
+body = DOC[DOC.index('## 23. Support Options'):DOC.index('### Group supports')]
+
+# Reuse the older registry's name table.
+src = (ROOT / 'scripts' / 'build_supports.py').read_text()
+COMMON = eval(src[src.index('COMMON = {') + len('COMMON = '):src.index('\n}\n', src.index('COMMON = {')) + 2])
+
+SS = {
+    'Link': 'heroOfTheSky', 'Sky': 'heroOfTheSky', 'Hero of the Sky': 'heroOfTheSky', 'Zelda': 'zeldaSS', 'SS Zelda': 'zeldaSS',
+    'Impa': 'impaSS', 'SS Impa': 'impaSS', 'Fi': 'fi', 'Groose': 'groose', 'Ghirahim': 'ghirahim', 'Demise': 'demise',
+    'Gaepora': 'gaepora', 'Fledge': 'fledge', 'Pipit': 'pipit', 'Karane': 'karane', 'Batreaux': 'batreaux', 'Gondo': 'gondo',
+    'Scrapper': 'scrapper', 'Skipper': 'skipper', 'Bucha': 'bucha', 'Gorko': 'gorko', 'Moldini': 'moldini', 'Levias': 'levias',
+    'Faron': 'faronDragon', 'Eldin': 'eldinDragon', 'Lanayru': 'lanayruDragon', 'SS Faron': 'faronDragon', 'SS Eldin': 'eldinDragon',
+    'SS Lanayru': 'lanayruDragon', 'TP Faron': 'faron', 'TP Eldin': 'eldin', 'TP Lanayru': 'lanayru', 'Hylia': 'hylia',
+    'Crimson Loftwing': 'crimsonLoftwing', 'Loftwing': 'skyLoftwing', 'The Imprisoned': 'imprisoned', 'Scervo': 'scervo',
+    'Dreadfuse': 'dreadfuse', 'Koloktos': 'koloktos', 'Stalmaster': 'stalmaster', 'Scaldera': 'scaldera', 'Magmanos': 'magmanos',
+    'Moldarach': 'moldarach', 'Aracha': 'aracha', 'Furnix': 'furnix', 'Ampilus': 'ampilus', 'Froak': 'froak', 'Sentrobe': 'sentrobe',
+    'Beamos': 'beamos', 'Tentalus': 'tentalus', 'OoT Zelda': 'zelda', 'OoT Impa': 'impa', 'OoT Ganondorf': 'ganondorf',
+    'WW Ganondorf': 'ganondorfWW', 'TP Ganondorf': 'ganondorfTP', 'TP Zelda': 'zeldaTP', 'Yellow ChuChu': 'chuchuYellow',
+    'Blue ChuChu': 'chuchuBlue', 'Bombling': 'bombling', 'Zephos': 'zephos', 'Cyclos': 'cyclos', 'Ganon': 'ganon', 'King of Red Lions': 'kingOfRedLions',
+}
+SKIP = {'Epona', 'Four Giants'}
+# Fi's form-specific Master Sword conversations: one pair per Master Sword-carrying hero.
+MASTER_SWORD_HEROES = ['link', 'heroOfWinds', 'heroOfTwilight']
+FORMS = {'kingOfRedLions': 'kingDaphnes'}  # old forms: the pair is form-specific
+CANON = {'ghirahimTrue': 'ghirahim', 'imprisonedArmed': 'imprisoned', 'imprisonedFlying': 'imprisoned', 'ganon': 'ganondorf'}
+
+
+def resolve(name, unresolved):
+    name = name.strip()
+    if name in SKIP:
+        return None
+    if name in SS:
+        return SS[name]
+    if name in COMMON:
+        return COMMON[name]
+    unresolved.add(name)
+    return None
+
+
+pairs, unresolved = [], set()
+section = None
+for line in body.splitlines():
+    if line.startswith('### '):
+        section = line[4:].strip()
+        continue
+    for entry in [e.strip() for e in line.split(' · ') if '×' in e]:
+        entry = entry.rstrip('.')
+        m = re.match(r'^(.+?)×(.+?) ([ABS])(?: \((.*)\))?$', entry)
+        if not m:
+            print('SKIP ENTRY', entry, file=sys.stderr)
+            continue
+        left, right, mx, theme = m.group(1), m.group(2), m.group(3), m.group(4) or ''
+        if right.strip() == 'Master Sword-carrying heroes':
+            for h in MASTER_SWORD_HEROES:
+                pairs.append(dict(a='fi', b=h, max=mx, theme=theme or 'Their relationship with the Master Sword.', section=section, names=[left, right]))
+            continue
+        a, b = resolve(left, unresolved), resolve(right, unresolved)
+        if not a or not b:
+            continue
+        form = a if a in FORMS else b if b in FORMS else None
+        a, b = FORMS.get(a, a), FORMS.get(b, b)
+        pairs.append(dict(a=CANON.get(a, a), b=CANON.get(b, b), max=mx, theme=theme, section=section, names=[left, right], form=form))
+
+existing = set(re.findall(r"key: '([^']+)'", (ROOT / 'src/content/supports/registry.ts').read_text()))
+seen, out = set(), []
+for p in pairs:
+    k = '|'.join(sorted([p['a'], p['b']])) + ('#' + p['form'] if p.get('form') else '')
+    if k in seen:
+        continue
+    seen.add(k)
+    if k in existing:
+        print('ALREADY REGISTERED', k, file=sys.stderr)
+        continue
+    p['key'] = k
+    out.append(p)
+if unresolved:
+    print('UNRESOLVED:', sorted(unresolved), file=sys.stderr)
+print(len(out), 'pairs', file=sys.stderr)
+
+rows = []
+for p in out:
+    theme = p['theme'].replace('\\', '\\\\').replace("'", "\\'")
+    rows.append(f"  {{ key: '{p['key']}', a: '{p['a']}', b: '{p['b']}', max: '{p['max']}', game: 'ss', theme: '{theme}'" + (f", form: '{p['form']}'" if p.get('form') else '') + " },")
+(ROOT / 'src/content/supports/registrySS.ts').write_text(
+    "// Generated by scripts/build_ss_supports.py from docs/skyward-sword-pack.md section 23. Do not edit by hand.\n"
+    "import type { SupportPairDef } from './registry';\n\n"
+    "export const SUPPORT_REGISTRY_SS: SupportPairDef[] = [\n" + "\n".join(rows) + "\n];\n")
+
+jobdir = Path(sys.argv[1]) if len(sys.argv) > 1 else None
+if jobdir:
+    jobdir.mkdir(parents=True, exist_ok=True)
+    jobs = [dict(key=p['key'], a=p['a'], b=p['b'], docNames=p['names'], max=p['max'],
+                 ranks=['C', 'B', 'A'] + (['S'] if p['max'] == 'S' else []), theme=p['theme'], section=p['section'], **({'form': p['form']} if p.get('form') else {})) for p in out]
+    (jobdir / 'ss_all.json').write_text(json.dumps(jobs, ensure_ascii=False, indent=1))
+    print('jobs', len(jobs), file=sys.stderr)
