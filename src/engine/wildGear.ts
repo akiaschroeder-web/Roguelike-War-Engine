@@ -65,6 +65,7 @@ const FAMILY: Record<string, (id: string) => boolean> = {
 
 /** Disguises: does `enemy` (an AI unit) leave `target` alone? */
 export function wildIgnores(enemy: Unit, target: Unit, dist: number, turn = 1): boolean {
+  if (target.wildDisabled) return true; // a disabled Divine Beast is no threat
   if (dist <= 1 || target.attacked || enemy.lastHitBy === target.uid) return false;
   const tr = wildTraits(target);
   if (!tr.length) return false;

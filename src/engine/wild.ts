@@ -549,10 +549,10 @@ export function wildEnvironment(b: Battle, events: { text: string; uid?: string;
     const k = keyOf(b, f.x, f.y);
     for (const p of tilesInRange(b, f, 1, 1, 1)) {
       const nk = keyOf(b, p.x, p.y);
-      if (FLAMMABLE.has(b.tiles[nk]) && b.tiles[nk] !== 'forest' && !(b.fires ?? []).some((o) => o.x === p.x && o.y === p.y) && rng.chance(rain ? 10 : 45)) next.push(nk);
+      if (FLAMMABLE.has(b.tiles[nk]) && b.tiles[nk] !== 'forest' && !(b.fires ?? []).some((o) => o.x === p.x && o.y === p.y) && rng.chance(rain ? 10 : 65)) next.push(nk);
     }
     // Fire + grass makes an updraft; fire + a Hylian pine cone makes a strong one.
-    if ((b.tiles[k] === 'dryGrass' || b.tiles[k] === 'burningGrass') && f.turns <= 1) setTimed(b, k, 'updraft', 2);
+    if ((b.tiles[k] === 'dryGrass' || b.tiles[k] === 'burningGrass') && f.turns <= 1) { b.tiles[k] = 'plain'; setTimed(b, k, 'updraft', 2); }
     if (st.cones.includes(k)) { for (const p of [{ x: f.x, y: f.y }, ...tilesInRange(b, f, 1, 1, 1)]) { const ck = keyOf(b, p.x, p.y); if (!['wall', 'fort'].includes(b.tiles[ck])) setTimed(b, ck, 'updraft', 3); } st.cones = st.cones.filter((c) => c !== k); events.push({ text: 'A pine cone bursts into flame: a strong updraft!' }); }
     if (f.turns <= 1 && (b.tiles[k] === 'tallTree' || b.tiles[k] === 'fallenLog')) b.tiles[k] = 'plain';
     if (b.tiles[k] === 'iceBlock' || b.tiles[k] === 'frozenWater') b.tiles[k] = 'water';
@@ -590,7 +590,7 @@ export function react(b: Battle, at: Pos, element: Element | 'wind' | undefined,
     const k = keyOf(b, p.x, p.y);
     const t = b.tiles[k];
     if (element === 'fire') {
-      if (FLAMMABLE.has(t) || wildState(b).cones.includes(k)) ignite(b, k, t === 'tallTree' ? 3 : 2);
+      if (FLAMMABLE.has(t) || wildState(b).cones.includes(k)) ignite(b, k, 3);
       if (t === 'frozenWater' || t === 'iceBlock') { b.tiles[k] = 'water'; lines.push('The ice melts.'); }
       if (t === 'explosiveBarrel') lines.push(...breakAround(b, p, 1));
     } else if (element === 'ice') {
@@ -993,7 +993,8 @@ export function wildSaveFromDeath(b: Battle, target: Unit, by?: Unit): { line: s
     addStatus(target, 'exposed', 2);
     return { line: `${target.name}'s eye detaches — destroy it!`, heal: 0 };
   }
-  if (has(target, 'divineBeastSystems') && target.team === 'player' && !target.wildDisabled) {
+  if (has(target, 'divineBeastSystems') && target.team === 'player') {
+    if (target.wildDisabled) return { line: `${target.name} is disabled and can't be destroyed.`, heal: 0 };
     target.wildDisabled = true;
     return { line: `${target.name} is disabled, but not destroyed.`, heal: 0 };
   }
@@ -1862,7 +1863,7 @@ export function useWildItem(b: Battle, u: Unit, id: string, rng: RNG, target?: U
       const turret = makeEnemy({ id: `${id}Device`, name, classId: 'stationaryGuardian', race: 'zonaiVehicle', weapons: [`${id}Blast`], stats: { hp: 14, str: 0, mag: 8, skl: 10, spd: 0, def: 6, res: 4, lck: 0, con: 10, mov: 0, sta: 0, mp: 0 }, glyph: name.slice(0, 2).toUpperCase() },
         b.world, Math.max(1, u.level), `p${b.uidCounter++}`, rng);
       void element; void might; void range;
-      if (!free(b, turret, at.x, at.y)) return 'No room.';
+      if (!inBounds(b, at.x, at.y) || unitAt(b, at.x, at.y) || ['wall', 'water', 'lava', 'chasm'].includes(b.tiles[keyOf(b, at.x, at.y)])) return 'No room.';
       Object.assign(turret, { x: at.x, y: at.y, team: u.team, npc: u.team === 'player', summoned: true, ai: 'stationary', moved: true, acted: true });
       b.units.push(turret);
       st.upkeep[turret.uid] = DEVICE_ENERGY[id].cost;
