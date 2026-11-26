@@ -7,7 +7,7 @@ import { addStatus } from './status';
 import { hasEffect, unitTags } from './units';
 import { decorateWindWaker, wwEnvironment } from './windwaker';
 import { decorateTwilight, twilightBattleStart } from './twilight';
-import { decorateSkyward, skywardBattleStart, ssAfterMove } from './skyward';
+import { decorateSkyward, skywardBattleStart } from './skyward';
 import { GEAR, ITEMS } from '../data/registry';
 import type { Battle, Pos, Terrain, Unit, WorldId } from './types';
 
@@ -123,7 +123,6 @@ export function revealNearby(b: Battle): string[] {
 
 /** A player unit ending its move on a trap: 20% max HP and rooted for a turn. */
 export function triggerTraps(b: Battle, u: Unit): number {
-  ssAfterMove(b, u); // Skyward Sword spaces: Sacred Tears, Waking Water, Light Fruit, Timeshift Orbs
   if (moveIsFlying(u)) return 0;
   const tiles = footprint(u.x, u.y, u.size);
   // Hidden spike traps catch your army; Death Armos Cores you planted catch the enemy.

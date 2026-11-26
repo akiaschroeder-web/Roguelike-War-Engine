@@ -6,6 +6,7 @@ import { canUse, canUseHere, isTargeted, targetTiles, useItem } from '../engine/
 import { adjacentMailboxes, environmentPhase, isSeen, openMailbox, pressInversion, revealNearby, triggerTraps, visibleTiles } from '../engine/field';
 import { planAction } from '../engine/ai';
 import { syncPosition } from '../engine/windwaker';
+import { ssAfterMove } from '../engine/skyward';
 import { enemyUnload, windLabel } from '../engine/naval';
 import { sideQuestText } from '../engine/run';
 import { adjacentCaptives, checkResult, freeCaptive, mountToggleBlocked, moveUnit, toggleMount, objectiveText, spawnReinforcements, startPhase, type TurnStartEvent } from '../engine/battle';
@@ -166,7 +167,8 @@ export class BattleView {
     const enemies = b.units.filter((u) => u.team === 'enemy').length;
     const o = b.objective;
     const progress = o.type === 'survive' || o.type === 'defend' ? ` (${Math.min(b.turn, o.turns!)}/${o.turns})`
-      : o.type === 'capture' ? ` (${o.tiles!.filter((t) => b.units.some((u) => u.team === 'player' && t.x >= u.x && t.x < u.x + u.size && t.y >= u.y && t.y < u.y + u.size)).length}/${o.need})` : '';
+      : o.type === 'capture' ? ` (${o.tiles!.filter((t) => b.units.some((u) => u.team === 'player' && t.x >= u.x && t.x < u.x + u.size && t.y >= u.y && t.y < u.y + u.size)).length}/${o.need})`
+      : o.type === 'trial' ? ` (${b.ss?.trial?.got ?? 0}/${o.need} tears · turn ${Math.min(b.turn, o.turns ?? 14)}/${o.turns ?? 14})` : '';
     const base = { elite: 'Elite battle', boss: 'Regional boss', ambush: 'Ambush', siege: 'Siege' }[b.nodeType as string] ?? 'Battle';
     const kind = this.dungeon ? `Dungeon floor ${this.dungeon.floor}/${this.dungeon.of}${b.nodeType === 'elite' ? ' (guardian)' : ''}` : base;
     const sq = b.sideQuest ? `<span class="dim small">Side quest: ${esc(sideQuestText(b.sideQuest))} (${esc(sideReward(b.sideQuest))})</span>` : '';
@@ -739,7 +741,8 @@ export class BattleView {
   }
 
   private attackTargets(u: Unit): Unit[] {
-    return this.b.units.filter((t) => t.team !== u.team && isSeen(this.b, t) && attackWeapons(u, unitDist(u, t)).length > 0);
+    // Only targets the unit can actually strike (Weapon Curse, the Silent Realm and a moved Groosenator can't).
+    return this.b.units.filter((t) => t.team !== u.team && isSeen(this.b, t) && attackWeapons(u, unitDist(u, t)).some((w) => forecast(this.b, u, u, t, w.id).attacker.canAttack));
   }
 
   private healTargets(u: Unit): Unit[] {
@@ -941,6 +944,8 @@ export class BattleView {
   /** After a player unit moves: traps spring, hidden things are revealed. */
   private afterMove(u: Unit) {
     syncPosition(this.b, u);
+    const ss = ssAfterMove(this.b, u); // Skyward Sword spaces: Sacred Tears, Waking Water, Light Fruit, Timeshift Orbs
+    if (ss) { sfx('secret'); this.addLog(`✨ ${esc(ss)}`); }
     if (pressInversion(this.b, u)) { sfx('secret'); this.addLog('🔄 The Inversion Switch flips the walls and floors!'); }
     const dmg = triggerTraps(this.b, u);
     if (dmg) { sfx('hit'); this.float(u, `TRAP −${dmg}`, 'dmg'); this.addLog(`⚠ <b class="player">${esc(u.name)}</b> stepped on a spike trap (−${dmg} HP, rooted)!`); }
@@ -1357,6 +1362,7 @@ export class BattleView {
       if (moved) await this.walk(e, plan.path);
       syncPosition(b, e);
       if (moved) {
+        ssAfterMove(b, e);
         const trap = triggerTraps(b, e);
         if (trap) { sfx('bomb'); this.float(e, `TRAP −${trap}`, 'dmg'); this.addLog(`💥 ${esc(e.name)} sets off your Death Armos Core (−${trap})!`); }
       }

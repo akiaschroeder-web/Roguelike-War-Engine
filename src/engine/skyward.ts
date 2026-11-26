@@ -370,6 +370,7 @@ export function ssStartPhase(b: Battle, u: Unit, events: SSEvent[]) {
     u.ssHatch = (u.ssHatch ?? 0) + 1;
     if (u.ssHatch >= 4 && TEMPLATES.ampilus && roomFor(b, u, 1)) {
       transformInto(b, u, 'ampilus');
+      u.artId = 'ampilus';
       u.moved = u.acted = true;
       events.push({ uid: u.uid, heal: 0, damage: 0, source: 'hatches into an Ampilus!' });
     }
