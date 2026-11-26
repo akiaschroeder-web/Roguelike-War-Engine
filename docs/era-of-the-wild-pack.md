@@ -272,3 +272,4 @@ Batch 10 — alt arts (10): goronWarriorTP, zoraWarriorTP, goronWarriorWW (backp
 
 Batch 11: naydra_patternbg. The user labelled the upside-down multi-faced frog spirit (saved earlier as malanya.png) as the Bubbulfrog — identity being confirmed with the user (in TotK that model is Malanya).
 User answer: the red-suited Yiga (yigaBlademaster.png) is used for both the Yiga Blademaster and the Yiga Engineer. The frog spirit image (malanya.png) is used for both Malanya and the Bubbulfrog.
+Correction from the user: the small masked figure is Malanya (now malanya.png); the frog spirit image is the Bubbulfrog (now bubbulfrog.png). This replaces the "both" note above.
