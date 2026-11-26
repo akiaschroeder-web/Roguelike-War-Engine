@@ -44,8 +44,15 @@ PACKS = {
         'Patra': 'patra', 'Digdogger': 'digdogger', 'Wild Zelda': 'zeldaWild', 'Hero of the Wild': 'heroOfTheWild', 'Wild Ganondorf': 'ganondorfWild',
         'Calamity Ganon': 'calamityGanon', 'King Rhoam': 'kingRhoam', 'Yona': 'yona', 'Flame Gleeok': 'gleeokFlame', 'Meg': 'meg',
     }),
+    'aol': dict(doc='docs/adventure-of-link-pack.md', start='## 11. Supports', end='## 12. New Commander', suffix='Aol', game='aol', names={
+        'Sleeping Zelda': 'sleepingZelda', 'Hero of Hyrule': 'heroOfHyrule', 'Original Zelda': 'zeldaHyrule', 'Original Ganon': 'ganonHyrule',
+        'Wild Zelda': 'zeldaWild', 'Sonia': 'sonia', 'King Rhoam': 'kingRhoam', 'Old Man': 'oldMan', 'Old Woman': 'oldWoman',
+        'Rebonack': 'rebonack', 'Horsehead': 'horsehead', 'Gooma': 'gooma', 'Helmethead': 'helmethead', 'Carock': 'carock', 'Wizzrobe': 'wizzrobe',
+        'Thunderbird': 'thunderbird', 'Fokka': 'fokka', 'Revali': 'revali', 'Moa': 'moa', 'Ghini': 'ghini', 'Bot': 'bot', 'Zol': 'zol',
+        'Daira': 'daira', 'Doomknocker': 'doomknocker', 'Goriya': 'goriya', 'Lynel': 'lynel',
+    }),
 }
-SKIP = {'Epona', 'Four Giants', 'Syrup'}
+SKIP = {'Epona', 'Four Giants', 'Syrup', 'Agahnim', 'Wizzrobe'}
 CANON = {'ghirahimTrue': 'ghirahim', 'imprisonedArmed': 'imprisoned', 'imprisonedFlying': 'imprisoned', 'ganon': 'ganondorf', 'sheik': 'zelda',
          'lightDragon': 'zeldaWild', 'demonDragon': 'ganondorfWild', 'darkBeastGanonWild': 'calamityGanon', 'mineruConstruct': 'mineru'}
 FORMS = {'kingOfRedLions': 'kingDaphnes', 'lightDragon': 'zeldaWild'}

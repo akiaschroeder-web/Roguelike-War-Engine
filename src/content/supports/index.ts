@@ -5,12 +5,13 @@ import { SUPPORT_REGISTRY as BASE_REGISTRY, type SupportPairDef } from './regist
 import { SUPPORT_REGISTRY_SS } from './registrySS';
 import { SUPPORT_REGISTRY_WILD } from './registryWild';
 import { SUPPORT_REGISTRY_ORIGINAL } from './registryOriginal';
+import { SUPPORT_REGISTRY_AOL } from './registryAol';
 import { CONVOS as EXAMPLES } from './convos/examples';
 import { WRITTEN } from './written';
 
 export type { SupportPairDef };
 /** Every registered pairing, all packs. */
-export const SUPPORT_REGISTRY: SupportPairDef[] = [...BASE_REGISTRY, ...SUPPORT_REGISTRY_SS, ...SUPPORT_REGISTRY_WILD, ...SUPPORT_REGISTRY_ORIGINAL];
+export const SUPPORT_REGISTRY: SupportPairDef[] = [...BASE_REGISTRY, ...SUPPORT_REGISTRY_SS, ...SUPPORT_REGISTRY_WILD, ...SUPPORT_REGISTRY_ORIGINAL, ...SUPPORT_REGISTRY_AOL];
 
 export type SupportLine = ['a' | 'b' | 'n', string];
 export type SupportRankKey = 'C' | 'B' | 'A' | 'S';
