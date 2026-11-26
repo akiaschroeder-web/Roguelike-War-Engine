@@ -9,6 +9,7 @@ import { decorateWindWaker, wwEnvironment } from './windwaker';
 import { decorateTwilight, twilightBattleStart } from './twilight';
 import { decorateSkyward, skywardBattleStart } from './skyward';
 import { decorateWild, wildBattleStart, wildEnvironment } from './wild';
+import { decorateOriginal, originalBattleStart } from './original';
 import { GEAR, ITEMS } from '../data/registry';
 import type { Battle, Pos, Terrain, Unit, WorldId } from './types';
 
@@ -40,6 +41,8 @@ export function decorateField(b: Battle, rng: RNG, nodeType: string) {
   twilightBattleStart(b, rng);
   skywardBattleStart(b, rng);
   wildBattleStart(b, rng);
+  decorateOriginal(b, rng);
+  originalBattleStart(b, rng);
   // Fog of war
   b.fog = rng.chance(FOGGY[world] ?? 6);
   // Buried treasure

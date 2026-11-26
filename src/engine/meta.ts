@@ -132,6 +132,7 @@ export const TRIALS: TrialDef[] = [
   { id: 'famine', name: 'Famine', desc: 'Start with half supplies; merchants charge double for supplies.', mult: 0.15 },
   { id: 'wounds', name: 'Lingering Wounds', desc: 'No HP recovery after battles.', mult: 0.25 },
   { id: 'mist', name: 'Endless Mist', desc: 'Every battle is fought in fog.', mult: 0.15 },
+  { id: 'secondQuest', name: 'Second Quest', desc: 'Original Hyrule: rearranged Levels — the bosses move, secrets hide in new places (and more of them), and every Level fields one more, tougher enemy.', mult: 0.4 },
 ];
 
 export function trialMultiplier(trials: string[] | undefined): number {
@@ -197,7 +198,7 @@ export function awardMedals(p: MetaProgress, n: number) {
 // ───────────────────────── Applying to a new campaign ─────────────────────────
 
 export interface RunChoices {
-  campaign?: 'hyrule' | 'termina' | 'greatSea' | 'twilight' | 'skyward' | 'wild' | 'random';
+  campaign?: 'hyrule' | 'termina' | 'greatSea' | 'twilight' | 'skyward' | 'wild' | 'original' | 'random';
   hero?: string;
   kit?: string;
   formation?: string;

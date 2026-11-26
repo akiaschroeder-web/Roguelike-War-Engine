@@ -4,6 +4,7 @@
 import { GEAR, WEAPONS } from '../data/registry';
 import { wildImmune } from './wildGear';
 import type { RNG } from './rng';
+import { ogImmune } from './original';
 import type { Battle, Element, StatusKind, Unit } from './types';
 
 export const STATUS_INFO: Record<StatusKind, { name: string; icon: string; desc: string; good?: boolean }> = {
@@ -67,6 +68,7 @@ export function immuneTo(u: Unit, kind: StatusKind): boolean {
   if (kind === 'shock' && gear('shockImmune')) return true;
   // Era of the Wild: armor sets, helms, elixirs and racial traits.
   if (wildImmune(u, kind)) return true;
+  if (ogImmune(u, kind)) return true;
   return false;
 }
 

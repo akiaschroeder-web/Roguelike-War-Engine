@@ -286,7 +286,7 @@ export class App {
         <div class="page">
           <div class="page-head"><button class="btn" data-nav="back">← Back</button><h1>Choose your Commander</h1><span></span></div>
           <p class="dim center-text">Each commander brings their own army and a special bonus. If the commander falls, the campaign is over.</p>
-          ${(['hyrule', 'termina', 'greatSea', 'twilight', 'skyward', 'wild'] as const).map((pack) => `<h2 class="pack-head">${pack === 'hyrule' ? 'Ocarina of Time · Hyrule' : pack === 'termina' ? "Majora's Mask · Termina" : pack === 'greatSea' ? 'The Wind Waker · The Great Sea' : pack === 'twilight' ? 'Twilight Princess · Twilight Hyrule' : pack === 'skyward' ? 'Skyward Sword · The Sky' : 'Era of the Wild · Hyrule Reborn'}</h2>
+          ${(['hyrule', 'termina', 'greatSea', 'twilight', 'skyward', 'wild', 'original'] as const).map((pack) => `<h2 class="pack-head">${pack === 'hyrule' ? 'Ocarina of Time · Hyrule' : pack === 'termina' ? "Majora's Mask · Termina" : pack === 'greatSea' ? 'The Wind Waker · The Great Sea' : pack === 'twilight' ? 'Twilight Princess · Twilight Hyrule' : pack === 'skyward' ? 'Skyward Sword · The Sky' : pack === 'wild' ? 'Era of the Wild · Hyrule Reborn' : 'The Legend of Zelda · Original Hyrule'}</h2>
           <div class="card-grid">${COMMANDERS.filter((c) => (c.campaign ?? 'hyrule') === pack).map((c) => {
             const t = TEMPLATES[c.heroId];
             const army = c.units.map((id) => TEMPLATES[id]);
@@ -303,13 +303,14 @@ export class App {
           <div class="run-options">
             <h3>Campaign options</h3>
             <div class="opt-row"><span class="dim small">Campaign</span><select data-opt="campaign">
-              <option value="">Commander's home${chosen ? ` (${({ hyrule: 'Hyrule', termina: 'Termina', greatSea: 'the Great Sea', twilight: 'Twilight Hyrule', skyward: 'the Sky', wild: 'Hyrule Reborn' } as const)[COMMANDERS.find((c) => c.heroId === chosen)?.campaign ?? 'hyrule']})` : ''}</option>
+              <option value="">Commander's home${chosen ? ` (${({ hyrule: 'Hyrule', termina: 'Termina', greatSea: 'the Great Sea', twilight: 'Twilight Hyrule', skyward: 'the Sky', wild: 'Hyrule Reborn', original: 'Original Hyrule' } as const)[COMMANDERS.find((c) => c.heroId === chosen)?.campaign ?? 'hyrule']})` : ''}</option>
               <option value="hyrule" ${choices.campaign === 'hyrule' ? 'selected' : ''}>Hyrule: the endless war</option>
               <option value="termina" ${choices.campaign === 'termina' ? 'selected' : ''}>Termina: three days until the Moon falls</option>
               <option value="greatSea" ${choices.campaign === 'greatSea' ? 'selected' : ''}>The Great Sea: sail a 7×7 chart of islands and fleets</option>
               <option value="twilight" ${choices.campaign === 'twilight' ? 'selected' : ''}>Twilight Hyrule: restore the Light Spirits</option>
               <option value="skyward" ${choices.campaign === 'skyward' ? 'selected' : ''}>The Sky: from Skyloft to the Demon's Realm</option>
               <option value="wild" ${choices.campaign === 'wild' ? 'selected' : ''}>Hyrule Reborn: surface, sky and Depths, under the Blood Moon</option>
+              <option value="original" ${choices.campaign === 'original' ? 'selected' : ''}>Original Hyrule: the nine Levels and the Triforce of Wisdom</option>
               <option value="random" ${choices.campaign === 'random' ? 'selected' : ''}>Random: any region, any enemy, any event</option></select></div>
             ${p.heroes.length ? `<div class="opt-row"><span class="dim small">Companion (Hall of Heroes)</span><select data-opt="hero"><option value="">None</option>${p.heroes.map((id) => `<option value="${id}" ${choices.hero === id ? 'selected' : ''}>${esc(TEMPLATES[id]?.name ?? id)}</option>`).join('')}</select></div>` : ''}
             ${p.kits.length ? `<div class="opt-row"><span class="dim small">Starting kit (Royal Treasury)</span><select data-opt="kit"><option value="">None</option>${KITS.filter((k) => p.kits.includes(k.id)).map((k) => `<option value="${k.id}" ${choices.kit === k.id ? 'selected' : ''}>${esc(k.name)}</option>`).join('')}</select></div>` : ''}
@@ -383,6 +384,8 @@ export class App {
           return `<div class="tb-res" title="Gratitude Crystals (trade with Batreaux) · crafting Treasures and insects in the bag · Song of the Hero parts${run.skyward?.trialPending ? ' · a Silent Realm trial is next' : ''}"><span class="dim small">Gratitude</span> <b>💎${questCount(run, 'gratitudeCrystal')}</b> <span class="dim small">Treasures</span> <b>${mats}</b> <span class="dim small">Song</span> <b>${qi.includes('songOfTheHeroComplete') ? '🎵' : `${parts}/4`}</b>${run.skyward?.trialPending ? ' <b title="Silent Realm trial next">⛩</b>' : ''}</div>`; })() : ''}
         ${run.campaign === 'wild' ? (() => { const s = wildStatus(run); const icon = s.layer === 'sky' ? '☁ Sky' : s.layer === 'depths' ? '◉ Depths' : '⛰ Surface';
           return `<div class="tb-res" title="Layer · Energy Cell capacity · Zonaite · Korok Seeds · Spirit Orbs and Lights of Blessing · Poes · max HP lost to Gloom · the Blood Moon"><span class="dim small">${icon}</span> <b>⚡${s.energy}</b> <span class="dim small">Zonaite</span> <b>${s.zonaite}</b> <span class="dim small">Seeds</span> <b>🌰${s.seeds}</b> <span class="dim small">Orbs</span> <b>${s.orbs}</b> <span class="dim small">Poes</span> <b>${s.poes}</b>${s.gloom ? ` <span class="dim small">Gloom</span> <b class="bad">−${s.gloom}</b>` : ''} <b>${esc(s.moon)}</b></div>`; })() : ''}
+        ${run.campaign === 'original' ? (() => { const qi = run.questItems ?? []; const n = qi.includes('fullTriforce') ? 8 : Math.min(8, questCount(run, 'wisdomFragment'));
+          return `<div class="tb-res" title="Fragments of the Triforce of Wisdom (one from each Level's boss). All eight open Death Mountain.${run.trials?.includes('secondQuest') ? ' · Second Quest' : ''}"><span class="dim small">Triforce</span> <b>${n >= 8 ? '🔺 whole' : `🔺${n}/8`}</b>${run.trials?.includes('secondQuest') ? ' <span class="dim small">2nd Quest</span>' : ''}</div>`; })() : ''}
         ${run.clock ? (() => { const c = clockLabel(run); return `<div class="tb-clock ${c.hoursLeft <= 12 ? 'bad' : c.day === 3 ? 'warn' : ''}" title="The Moon falls when the third day ends."><span class="dim small">Day ${c.day} ${c.night ? '☾' : '☀'}</span> <b>${c.time}</b> <span class="dim small">${c.hoursLeft}h left</span></div>
           <button class="btn small" data-nav="songoftime" title="Return to the dawn of the first day">🎵 Song of Time</button>`; })() : ''}
         <div class="spacer"></div>
@@ -776,6 +779,7 @@ export class App {
         ${summary.twilight?.length ? `<div class="res-drops"><div class="dim small">Twilight</div>${summary.twilight.map((l) => `<div>${esc(l)}</div>`).join('')}</div>` : ''}
         ${summary.skyward?.length ? `<div class="res-drops"><div class="dim small">Skyward</div>${summary.skyward.map((l) => `<div>${esc(l)}</div>`).join('')}</div>` : ''}
         ${summary.wild?.length ? `<div class="res-drops"><div class="dim small">The Wild</div>${summary.wild.map((l) => `<div>${esc(l)}</div>`).join('')}</div>` : ''}
+        ${summary.original?.length ? `<div class="res-drops"><div class="dim small">Hyrule</div>${summary.original.map((l) => `<div>${esc(l)}</div>`).join('')}</div>` : ''}
         <div class="res-army-stats">${armyReportHtml(summary.army)}</div>
         ${summary.fallen.length ? `<div class="res-fallen"><span class="dim">Fallen:</span> ${summary.fallen.map((u) => `${token(u, 28)} ${esc(u.name)}`).join(' ')}</div>` : '<div class="dim">No losses.</div>'}
         <div class="res-army">${run.roster.map((u) => `<div class="res-unit">${token(u, 36)}<div><b>${esc(u.name)}</b><div class="dim small">Lv ${u.level} · HP ${u.hp}/${u.stats.hp}</div></div></div>`).join('')}</div>

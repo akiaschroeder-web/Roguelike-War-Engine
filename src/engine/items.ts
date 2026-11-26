@@ -3,6 +3,7 @@
 import { useTwilightItem } from './twilight';
 import { useSkywardItem } from './skyward';
 import { useWildItem, wildCanUseItem, wildItemReaction } from './wild';
+import { ogCanUseItem, ogHealItemMult, ogOnBlast, ogQuickItem, useOriginalItem } from './original';
 import { ITEMS, TEMPLATES } from '../data/registry';
 import { useFairy, type LevelUp } from './combat';
 import { footDist, inBounds, tilesInRange } from './grid';
@@ -70,6 +71,8 @@ export function canUseHere(b: Battle, u: Unit, index: number): boolean {
   if (def.id === 'cannonball') return u.weapons.some((w) => WEAPONS[w]?.type === 'siege' && (u.wear?.[w] ?? 0) > 0);
   if (def.id === 'seahatRotor' || def.id === 'helmarocFeather') return u.movedDist === 0;
   if (def.id === 'giantsHorn') return !!giantReserve(b);
+  const og = ogCanUseItem(b, u, def.id);
+  if (og !== undefined) return og;
   if (isTargeted(def)) return targetTiles(b, u, def).length > 0;
   return true;
 }
@@ -129,7 +132,7 @@ export function useItem(b: Battle, u: Unit, index: number, rng: RNG, at?: Pos): 
   const res: ItemResult = { item: def, heals: [], hits: [], stunned: [], statuses: [], lines: [], levelUps: [] };
   let xp = 0;
   if (def.kind === 'heal' || def.kind === 'fullHeal') {
-    const amount = Math.min(def.kind === 'fullHeal' ? u.stats.hp : def.power, u.stats.hp - u.hp);
+    const amount = Math.min(def.kind === 'fullHeal' ? u.stats.hp : Math.ceil(def.power * ogHealItemMult(b, u)), u.stats.hp - u.hp);
     u.hp += amount;
     if (def.kind === 'fullHeal') u.mp = u.stats.mp;
     res.heals.push({ uid: u.uid, amount });
@@ -146,10 +149,12 @@ export function useItem(b: Battle, u: Unit, index: number, rng: RNG, at?: Pos): 
     xp = 5;
     useSpecial(b, u, def, rng, res, at);
   } else if (def.kind === 'bomb' || def.kind === 'fruit') {
+    let broken = 0;
     if (def.kind === 'bomb') {
-      const broken = blastTerrain(b, at!, def.radius ?? 0, def.breaksWalls);
+      broken = blastTerrain(b, at!, def.radius ?? 0, def.breaksWalls);
       if (broken) res.lines.push(`The blast breaks ${broken} cracked wall${broken > 1 ? 's' : ''}!`);
     }
+    if (def.kind === 'bomb') res.lines.push(...ogOnBlast(b, at!, def.radius ?? 0, broken, blastVictims(b, u, def, at!), def.power, rng));
     if (def.element === 'fire') {
       const tiles: Pos[] = [];
       const r = def.radius ?? 0;
@@ -230,6 +235,8 @@ export function useItem(b: Battle, u: Unit, index: number, rng: RNG, at?: Pos): 
     }
   }
   if (at && (def.kind === 'fruit' || def.kind === 'cloud')) res.lines.push(...wildItemReaction(b, u, def.id, at));
+  // Link's Quick Item: once per battle, an item costs no action.
+  if (!res.free && ogQuickItem(u)) { res.free = true; res.lines.push(`${u.name} uses it in a flash (Quick Item).`); }
   consume(u, index);
   if (u.team === 'player' && xp) {
     for (const gains of gainXp(u, Math.min(60, xp), rng)) res.levelUps.push({ uid: u.uid, name: u.name, level: u.level, gains });
@@ -246,6 +253,8 @@ function useSpecial(b: Battle, u: Unit, def: ItemDef, rng: RNG, res: ItemResult,
   if (ssLine !== null) { res.lines.push(ssLine); return; }
   const wildLine = useWildItem(b, u, def.id, rng, tpTarget, at);
   if (wildLine !== null) { res.lines.push(wildLine); return; }
+  const ogLine = useOriginalItem(b, u, def.id, rng, tpTarget, at);
+  if (ogLine !== null) { res.lines.push(ogLine); return; }
   const allies = b.units.filter((a) => a.team === u.team);
   const at0 = at ?? { x: u.x, y: u.y };
   const unitOn = (p: Pos) => b.units.find((e) => footDist(p.x, p.y, 1, e.x, e.y, e.size) === 0);

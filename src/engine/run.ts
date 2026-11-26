@@ -7,6 +7,7 @@ import { maxRank, rankOf, supportKey, type SupportRank } from './supports';
 import { pairKey } from '../content/supports';
 import { HIDDEN_SKILLS } from '../content/twilight';
 import { canUsePouch, queueTrial, skywardAfterBattle, skywardQuestCheck, skywardRegionOptions, skywardRupeeMult, skywardStart, usePouch } from './skywardRun';
+import { inOriginalLevels, originalAfterBattle, originalBossFor, originalRegionOptions, originalStart } from './originalRun';
 import { restoreForm } from './transform';
 import { applyWildEffect, colossalCap, returnBoss, wildAfterBattle, wildBattleSetup, wildCampVisit, wildDecorateMap, wildOnRecruit, wildRecruitWeight, wildRegionOptions, wildRestBonus, wildStart } from './wildRun';
 import { canWield, type LevelUp } from './combat';
@@ -40,13 +41,13 @@ export function commanderOf(run: Run): CommanderDef {
   return COMMANDERS.find((c) => c.heroId === run.commanderId) ?? COMMANDERS[0];
 }
 
-export function newRun(seed: number, commanderId: string, campaign?: 'hyrule' | 'termina' | 'greatSea' | 'twilight' | 'skyward' | 'wild' | 'random'): RunWithEvent {
+export function newRun(seed: number, commanderId: string, campaign?: 'hyrule' | 'termina' | 'greatSea' | 'twilight' | 'skyward' | 'wild' | 'original' | 'random'): RunWithEvent {
   const rng = new RNG(seed);
   const cmd = COMMANDERS.find((c) => c.heroId === commanderId) ?? COMMANDERS[0];
   const camp = campaign ?? cmd.campaign ?? 'hyrule';
   const home = TEMPLATES[cmd.heroId].home;
   // Hyrule campaigns start in the commander's home region; Termina always starts in Clock Town.
-  const region = camp === 'random' ? rng.pick(REGION_IDS.filter((r) => r !== 'moon')) : camp === 'termina' ? 'clockTown' : camp === 'greatSea' ? 'outsetIsland' : camp === 'twilight' ? 'ordonProvince' : camp === 'skyward' ? 'skyloft' : camp === 'wild' ? 'greatPlateau' : WORLDS[home]?.campaign ? 'hyruleField' : home === 'hyruleCastle' ? 'hyruleField' : home;
+  const region = camp === 'random' ? rng.pick(REGION_IDS.filter((r) => r !== 'moon')) : camp === 'termina' ? 'clockTown' : camp === 'greatSea' ? 'outsetIsland' : camp === 'twilight' ? 'ordonProvince' : camp === 'skyward' ? 'skyloft' : camp === 'wild' ? 'greatPlateau' : camp === 'original' ? 'level1Eagle' : WORLDS[home]?.campaign ? 'hyruleField' : home === 'hyruleCastle' ? 'hyruleField' : home;
   const run: RunWithEvent = {
     seed, rngState: 0, act: 1, region, regionsVisited: [region], map: { rows: 0, nodes: [] }, currentNodeId: null,
     roster: [], fallen: [], rupees: 200, convoy: [], commanderId: cmd.heroId, bonus: cmd.bonus,
@@ -73,6 +74,7 @@ export function newRun(seed: number, commanderId: string, campaign?: 'hyrule' | 
   if (camp === 'twilight') twilightStart(run, rng);
   if (camp === 'skyward') skywardStart(run);
   if (camp === 'wild') { wildStart(run); withRng(run, (r2) => wildDecorateMap(run, run.map, r2)); }
+  if (camp === 'original') originalStart(run);
   if (camp === 'greatSea') {
     run.sea = newSea();
     run.questItems = [];
@@ -219,6 +221,9 @@ function bossPower(b: BossDef): number {
 }
 
 function bossFor(run: Run, rng: RNG, node: MapNode): BossDef {
+  // Original Hyrule: every Level has its own boss (the Second Quest moves them around).
+  const level = originalBossFor(run, node);
+  if (level) return level;
   // Not canon: anyone can be a boss, even someone already in your army.
   // After the free-for-all point, bosses come from every region.
   let pool = isFreeForAll(run) ? Object.values(BOSSES) : bossPool(node.world);
@@ -366,7 +371,7 @@ export function startBattle(run: RunWithEvent, uids: string[]): void {
     if (boss) run.bossesFought.push(boss.id);
     run.battle = createBattle({
       world: node.world, nodeType: node.type === 'dungeon' ? kind : node.type, depth: depthOf(run, node) + floorBonus, roster: chosen,
-      seed: rng.int(0, 2 ** 31), boss: trial ? undefined : boss, healMult: run.bonus === 'healing' ? 1.2 : run.bonus === 'sacredMission' ? 1.25 : run.bonus === 'healingWaters' ? 1.3 : 1, force: trial ? undefined : force, supports: run.supports, trials: run.trials,
+      seed: rng.int(0, 2 ** 31), boss: trial ? undefined : boss, healMult: run.bonus === 'healing' || run.bonus === 'wisdomOfHyrule' ? 1.2 : run.bonus === 'sacredMission' ? 1.25 : run.bonus === 'healingWaters' ? 1.3 : 1, force: trial ? undefined : force, supports: run.supports, trials: run.trials,
       levelBonus: (run.clock?.resets ?? 0) * 2 + (run.clock && clockLabel(run).day === 3 ? 1 : 0) + (run.wild && run.wild.bloodMoon > 0 && !run.roster.some((u) => u.skills.includes('lunarPrediction')) ? 1 : 0),
       gearOwned: [...ownedGear(run), ...(run.questItems ?? [])],
       naval: trial ? false : naval, night: node.night, fleet: node.fleet, twilit: isTwilit(run, node.world), silentRealm: trial,
@@ -390,7 +395,7 @@ export function startBattle(run: RunWithEvent, uids: string[]): void {
 export const FREE_FOR_ALL_REGION = 4;
 
 export function isFreeForAll(run: Run): boolean {
-  return run.act >= FREE_FOR_ALL_REGION;
+  return run.act >= FREE_FOR_ALL_REGION && !inOriginalLevels(run);
 }
 
 /** A force drawn from the entire cast: any monster, soldier, hero, villain or boss. */
@@ -535,6 +540,8 @@ export interface BattleSummary {
   skyward?: string[];
   /** Era of the Wild: materials, foraging, Gloom, the Blood Moon. */
   wild?: string[];
+  /** Original Hyrule: Triforce fragments, secrets, the Merchant's finds. */
+  original?: string[];
   /** Support ranks reached this battle. */
   supportUps: { a: string; b: string; aUid: string; bUid: string; rank: SupportRank }[];
 }
@@ -719,7 +726,8 @@ export function finishBattle(run: RunWithEvent): BattleSummary {
   const twilightLines = withRng(run, (rng) => twilightAfterBattle(run, b, won, rng));
   const skywardLines = withRng(run, (rng) => skywardAfterBattle(run, b, won, !!sideQuest?.done, rng));
   const wildLines = withRng(run, (rng) => wildAfterBattle(run, b, won, rng));
-  return { won, rupees, fallen, kills, drops, supportUps, sideQuest, retreated: !won && !!b.retreat, dungeon, found, joined, army, twilight: twilightLines, skyward: skywardLines, wild: wildLines };
+  const originalLines = withRng(run, (rng) => originalAfterBattle(run, b, won, rng));
+  return { won, rupees, fallen, kills, drops, supportUps, sideQuest, retreated: !won && !!b.retreat, dungeon, found, joined, army, twilight: twilightLines, skyward: skywardLines, wild: wildLines, original: originalLines };
 }
 
 export interface ArmyReport {
@@ -955,6 +963,10 @@ export function offerRegions(run: RunWithEvent): void {
     }
     if (run.campaign === 'skyward' && run.act + 1 < FREE_FOR_ALL_REGION + 4) {
       const t = skywardRegionOptions(run, rng);
+      if (t.length) { run.event = { type: 'region', options: t }; return; }
+    }
+    if (run.campaign === 'original') {
+      const t = originalRegionOptions(run);
       if (t.length) { run.event = { type: 'region', options: t }; return; }
     }
     if (run.campaign === 'wild' && run.act + 1 < FREE_FOR_ALL_REGION + 5) {
@@ -1332,6 +1344,7 @@ export function merchantDiscount(run: Run): number {
   if (run.roster.some((u) => u.skills.includes('maloMart'))) d += 15;
   if (['beedle', 'malo', 'maskSalesman'].every((t) => run.roster.some((u) => u.templateId === t))) d += 10;
   if (run.questItems?.includes('maloMartCastle')) d += 5;
+  if (run.roster.some((u) => u.skills.includes('secretMerchandise'))) d += 15; // the Original Hyrule Merchant
   return Math.min(40, d);
 }
 

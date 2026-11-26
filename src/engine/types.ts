@@ -150,7 +150,10 @@ export type Terrain = BaseTerrain | 'cracked' | 'timeBlock' | 'timeGap' | 'bridg
   | 'monsterCamp' | 'monsterLookout' | 'explosiveBarrel' | 'sludge' | 'korokPuzzle' | 'stable' | 'shrineEntrance' | 'sheikahTower' | 'skyviewTower'
   | 'floatingIsland' | 'fallingRuin' | 'deviceDispenser' | 'launchPlatform' | 'waterSphere' | 'lowGravity' | 'zonaiTerminal' | 'crystalPedestal' | 'floatingPlatform'
   | 'gloom' | 'gloomPool' | 'lightroot' | 'darkness' | 'poeSpirit' | 'bargainerStatue' | 'zonaiteDeposit' | 'abandonedMine' | 'ascendPillar' | 'yigaHideout'
-  | 'chasm' | 'pristinePedestal' | 'frozenWater';
+  | 'chasm' | 'pristinePedestal' | 'frozenWater'
+  // Original Hyrule battlefield spaces (bombable walls are the existing cracked walls)
+  | 'burnableBush' | 'boulder' | 'hiddenStairs' | 'raftDock' | 'ladderGap' | 'pushBlock' | 'shutterDoor' | 'bladeTrap' | 'goriyaCheckpoint'
+  | 'secretCave' | 'gravestone' | 'lockedDoor';
 
 export type Team = 'player' | 'enemy';
 
@@ -521,7 +524,9 @@ export type GearEffect =
   | 'sailcloth' | 'hazardResist' | 'fastSwim' | 'knightsUniform' | 'bugMedal' | 'cursedMedal' | 'heartMedal' | 'rupeeMedal' | 'treasureMedal' | 'potionMedal'
   | 'disarmImmune' | 'markedSight' | 'demonRecruit' | 'teleportBoost' | 'silentVestments' | 'multiWeapon' | 'ancientGrip' | 'skyBoots' | 'burrowBoots'
   | 'crimsonFeather' | 'academyCrest' | 'gratitudePendant' | 'fiCrystal' | 'ghirahimDiamond' | 'demisesFlame' | 'moltenCore' | 'ancientEye' | 'powerCore'
-  | 'parasiteGem' | 'fireBlessing' | 'thunderBlessing' | 'crimsonDive';
+  | 'parasiteGem' | 'fireBlessing' | 'thunderBlessing' | 'crimsonDive'
+  // ── Original Hyrule ──
+  | 'magicalShield' | 'blueRing' | 'redRing' | 'raft' | 'stepladder' | 'recorder' | 'bookOfMagic' | 'magicalKey' | 'letter' | 'blueCandle' | 'redCandle';
 
 export type ItemKind =
   | 'heal' | 'fullHeal' | 'mp' | 'sta' | 'fairy' | 'bomb' | 'stun' | 'learn'
@@ -595,7 +600,7 @@ export interface WorldDef {
   terrainNames: Record<BaseTerrain, string>;
   terrainColors: Record<BaseTerrain, string>;
   /** Regions of the Termina campaign (with the three-day cycle). */
-  campaign?: 'termina' | 'greatSea' | 'twilight' | 'skyward' | 'wild';
+  campaign?: 'termina' | 'greatSea' | 'twilight' | 'skyward' | 'wild' | 'original';
   /** Era of the Wild: which layer of the three-layer map. */
   layer?: 'surface' | 'sky' | 'depths';
   /** Battles here are fought at sea (vessels, wind, islands). */
@@ -710,7 +715,7 @@ export interface CommanderDef {
   bonus: CommanderBonus;
   bonusText: string;
   /** Campaign this commander starts in by default. */
-  campaign?: 'termina' | 'greatSea' | 'twilight' | 'skyward' | 'wild';
+  campaign?: 'termina' | 'greatSea' | 'twilight' | 'skyward' | 'wild' | 'original';
   /** Weapons, gear and items handed out to the army at the start (commander first). */
   startingItems?: string[];
 }
@@ -722,7 +727,8 @@ export type CommanderBonus = 'extraTreasure' | 'healing' | 'forging' | 'postBatt
   | 'knightAcademy' | 'sacredMission' | 'groosesEngineering' | 'demonicSwordsmanship' | 'demonKingsDominion'
   // Era of the Wild
   | 'fusionMastery' | 'sacredResearch' | 'healingWaters' | 'goronGuard' | 'ritoGale' | 'gerudoLightning' | 'waterBarriers' | 'goronMining' | 'windRiders'
-  | 'lightningFields' | 'zonaiEngineering' | 'kingOfLight' | 'yigaAmbush' | 'demonKingsGloom' | 'calamityCorruption';
+  | 'lightningFields' | 'zonaiEngineering' | 'kingOfLight' | 'yigaAmbush' | 'demonKingsGloom' | 'calamityCorruption'
+  | 'hiddenTreasure' | 'wisdomOfHyrule' | 'concealedDarkness';
 
 export type SkillId = string;
 
@@ -1024,7 +1030,7 @@ export interface Run {
   /** Army-wide stats and resources. */
   army?: Army;
   /** Which campaign: the endless Hyrule war, Termina with its three-day cycle, or the Great Sea. */
-  campaign?: 'hyrule' | 'termina' | 'greatSea' | 'twilight' | 'skyward' | 'wild' | 'random';
+  campaign?: 'hyrule' | 'termina' | 'greatSea' | 'twilight' | 'skyward' | 'wild' | 'original' | 'random';
   /** Great Sea: the naval campaign's state. */
   sea?: SeaState;
   /** Termina: hours passed in the current three-day cycle (0-71) and resets so far. */

@@ -10,8 +10,9 @@ import { techniqueAllowed, techniqueCost, tpAfterCombat, tpAfterHit, tpCannotAtt
 import { sacredDutyCovers, ssAfterCombat, ssAfterHit, ssCannotAttack, ssCanParry, ssElement, ssMods, ssMultiplier, ssOnBlock, ssOnKill, ssOnParry, ssOnStrike, ssRangeBonus, ssSideAdjust, ssXpMult } from './skyward';
 
 import { wildAfterCombat, wildAfterHit, wildAfterHeal, wildCannotAttack, wildCanParry, wildElement, wildFlurry, wildHealMult, wildInterceptor, wildMight, wildMods, wildMultiplier, wildOnKill, wildOnStrike, wildRangeBonus, wildSaveFromDeath, wildSideAdjust, wildXpMult } from './wild';
+import { ogAfterHit, ogExtraAttack, ogMods, ogMultiplier, ogOnKill, ogOnStrike, ogRangeBonus } from './original';
 
-const rangeBonus = (u: Unit, w: WeaponDef) => wwRangeBonus(u, w) + tpRangeBonus(u, w) + ssRangeBonus(u, w) + wildRangeBonus(u, w);
+const rangeBonus = (u: Unit, w: WeaponDef) => wwRangeBonus(u, w) + tpRangeBonus(u, w) + ssRangeBonus(u, w) + wildRangeBonus(u, w) + ogRangeBonus(u, w);
 import { cannonsDown, isVessel, vesselMods } from './naval';
 import type { RNG } from './rng';
 import { isMagical, TERRAIN_BONUS, TRIANGLE } from './rules';
@@ -209,7 +210,8 @@ export function situational(b: Battle, u: Unit, pos: Pos, foe: Unit, initiating:
   const tp = tpMods(b, u, pos, foe, initiating, WEAPONS[u.weapons[0]]);
   const ss = ssMods(b, u, pos, foe, initiating, WEAPONS[u.weapons[0]]);
   const wd = wildMods(b, u, pos, foe, initiating, WEAPONS[u.weapons[0]]);
-  for (const k of ['str', 'mag', 'skl', 'spd', 'def', 'res', 'hit', 'avoid', 'crit', 'dmg'] as const) ww[k] += tp[k] + ss[k] + wd[k];
+  const og = ogMods(b, u, pos, foe, initiating, WEAPONS[u.weapons[0]]);
+  for (const k of ['str', 'mag', 'skl', 'spd', 'def', 'res', 'hit', 'avoid', 'crit', 'dmg'] as const) ww[k] += tp[k] + ss[k] + wd[k] + og[k];
   const vm = vesselMods(b, u);
   m.str += ww.str + vm.str; m.mag += ww.mag; m.skl += ww.skl; m.spd += ww.spd; m.def += ww.def + vm.def; m.res += ww.res + vm.res;
   m.hit += ww.hit + vm.hit; m.avoid += ww.avoid + vm.avoid; m.crit += ww.crit; m.dmg += ww.dmg + vm.dmg;
@@ -267,7 +269,7 @@ function sideStats(
   const wadj = wildSideAdjust(b, atk, def, weapon, arrow, sadj.defense, magical, initiating);
   defense = wadj.defense;
   adj.hit += sadj.hit + wadj.hit;
-  adj.extraAttack = adj.extraAttack || sadj.extraAttack || wadj.extraAttack;
+  adj.extraAttack = adj.extraAttack || sadj.extraAttack || wadj.extraAttack || ogExtraAttack(atk, weapon, initiating);
   let dmg = Math.max(0, power - defense);
   if (hasEffect(atk, 'desperation') && atk.hp < atk.stats.hp / 2) dmg = Math.floor(dmg * 1.25);
   dmg = Math.floor(dmg * terminaMultiplier(b, atk, def, defPos, element, magical, weapon));
@@ -275,6 +277,7 @@ function sideStats(
   dmg = Math.floor(dmg * tpMultiplier(b, atk, def, defPos, element, magical, weapon, d, arrow) * supportDamageMult(b, atk, element));
   dmg = Math.floor(dmg * ssMultiplier(b, atk, def, element, magical, weapon, d, arrow));
   dmg = Math.floor(dmg * wildMultiplier(b, atk, def, element, magical, weapon, d, arrow));
+  dmg = Math.floor(dmg * ogMultiplier(b, atk, def, magical, weapon, d));
   if (adj.finish) dmg = Math.max(dmg, def.hp);
   if (atk.isBoss && atk.team === 'enemy' && (b.bossTier ?? 2) < 2) dmg = Math.floor(dmg * (b.bossTier === 0 ? 0.7 : 0.85)); // early bosses hit softer
   if (def.buffs?.some((x) => x.barrier || x.id === 'bubble')) dmg = 0; // Nayru's Love, Wart's bubbles
@@ -472,6 +475,7 @@ export function resolveCombat(b: Battle, attacker: Unit, defender: Unit, rng: RN
     if (dmg > 0) { const os = tpOnStrike(b, by, target, dmg); dmg = os.dmg; if (os.line) b.log.push(os.line); }
     if (hit) { const ss = ssOnStrike(b, by, target, dmg, weaponDef(side.weaponId), rng); dmg = ss.dmg; if (ss.line) b.log.push(ss.line); }
     if (hit && dmg > 0) { const ws = wildOnStrike(b, by, target, dmg, weaponDef(side.weaponId), rng, blocked); dmg = ws.dmg; if (ws.line) b.log.push(ws.line); }
+    if (hit) { const og = ogOnStrike(b, by, target, dmg); dmg = og.dmg; if (og.line) b.log.push(og.line); }
     // Magic Armor: MP (or Rupees) pay for the damage instead.
     if (dmg > 0 && hasEffect(target, 'magicArmor')) {
       const cost = Math.ceil(dmg / (hasEffect(target, 'nayruPearl') ? 4 : 2));
@@ -520,6 +524,7 @@ export function resolveCombat(b: Battle, attacker: Unit, defender: Unit, rng: RN
     if (hit) b.log.push(...tpAfterHit(b, by, target, dmg, crit, weaponDef(side.weaponId), side.element, rng, side.arrowId ? ABILITIES[side.arrowId] : undefined));
     if (hit) b.log.push(...ssAfterHit(b, by, target, dmg, weaponDef(side.weaponId), side.element, rng, side.arrowId ? ABILITIES[side.arrowId] : undefined));
     if (hit) b.log.push(...wildAfterHit(b, by, target, dmg, weaponDef(side.weaponId), side.element, rng, side.arrowId ? ABILITIES[side.arrowId] : undefined));
+    if (hit) ogAfterHit(b, by, target, dmg, weaponDef(side.weaponId));
     if (killed) {
       by.kills++;
       deaths.push(target.uid);
@@ -528,6 +533,7 @@ export function resolveCombat(b: Battle, attacker: Unit, defender: Unit, rng: RN
       tpOnKill(b, by, target, rng, side.element);
       ssOnKill(b, by, target, rng);
       wildOnKill(b, by, target, rng);
+      ogOnKill(b, by, target, rng, dmg, side.element, weaponDef(side.weaponId));
       killUnit(b, target);
       onKillEffects(b, by, weaponDef(side.weaponId));
       break;

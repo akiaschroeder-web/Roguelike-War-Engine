@@ -8,6 +8,7 @@ import { planAction } from '../engine/ai';
 import { syncPosition } from '../engine/windwaker';
 import { ssAfterMove } from '../engine/skyward';
 import { wildAfterMove } from '../engine/wild';
+import { ogAfterMove } from '../engine/original';
 import { enemyUnload, windLabel } from '../engine/naval';
 import { sideQuestText } from '../engine/run';
 import { adjacentCaptives, checkResult, freeCaptive, mountToggleBlocked, moveUnit, toggleMount, objectiveText, spawnReinforcements, startPhase, type TurnStartEvent } from '../engine/battle';
@@ -48,6 +49,8 @@ const TERRAIN_GLYPH: Record<string, string> = {
   lowGravity: '⇞', zonaiTerminal: '⌘', crystalPedestal: '🔷', floatingPlatform: '▱', gloom: '☣', gloomPool: '🩸', lightroot: '🌟', darkness: '■',
   poeSpirit: '👻', bargainerStatue: '🗿', zonaiteDeposit: '❖', abandonedMine: '⛏', ascendPillar: '⇧', yigaHideout: '🍌', chasm: '◉', pristinePedestal: '⚔',
   frozenWater: '❅',
+  burnableBush: '❦', boulder: '●', hiddenStairs: '▤', raftDock: '⛵', ladderGap: '╪', pushBlock: '▣', shutterDoor: '▥', bladeTrap: '✦',
+  goriyaCheckpoint: '🍖', secretCave: '◖', gravestone: '✝', lockedDoor: '🔒',
 };
 
 export class BattleView {
@@ -956,6 +959,8 @@ export class BattleView {
     if (ss) { sfx('secret'); this.addLog(`✨ ${esc(ss)}`); }
     const wl = wildAfterMove(this.b, u); // Era of the Wild spaces: Poes, pedestals, mines, Gloom trails
     if (wl) { sfx('secret'); this.addLog(`✨ ${esc(wl)}`); }
+    const og = ogAfterMove(this.b, u); // Original Hyrule spaces: hidden staircases, secret caves, blade traps
+    if (og) { sfx('secret'); this.addLog(`🗝 ${esc(og)}`); }
     if (pressInversion(this.b, u)) { sfx('secret'); this.addLog('🔄 The Inversion Switch flips the walls and floors!'); }
     const dmg = triggerTraps(this.b, u);
     if (dmg) { sfx('hit'); this.float(u, `TRAP −${dmg}`, 'dmg'); this.addLog(`⚠ <b class="player">${esc(u.name)}</b> stepped on a spike trap (−${dmg} HP, rooted)!`); }
@@ -1374,6 +1379,7 @@ export class BattleView {
       if (moved) {
         ssAfterMove(b, e);
         wildAfterMove(b, e);
+        ogAfterMove(b, e);
         const trap = triggerTraps(b, e);
         if (trap) { sfx('bomb'); this.float(e, `TRAP −${trap}`, 'dmg'); this.addLog(`💥 ${esc(e.name)} sets off your Death Armos Core (−${trap})!`); }
       }

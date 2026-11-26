@@ -10,6 +10,7 @@ import { windWakerUpkeepAtStart, wwStartPhase } from './windwaker';
 import { tpStartPhase } from './twilight';
 import { ssStartPhase, trialResult } from './skyward';
 import { wildStartPhase } from './wild';
+import { ogStartPhase } from './original';
 import { resolveSinking } from './naval';
 import { revertMask } from './terminaAbilities';
 import { roomFor } from './transform';
@@ -64,8 +65,10 @@ export function createBattle(setup: BattleSetup): Battle {
   const rng = new RNG(setup.seed);
   const pc = setup.roster.length;
   const isBossFight = setup.nodeType === 'boss' || setup.nodeType === 'elite';
-  const level = enemyLevelFor(setup.depth, setup.nodeType) + (setup.trials?.includes('hardened') ? 2 : 0) + (setup.levelBonus ?? 0);
   const world = worldDef(setup.world);
+  // Second Quest (Original Hyrule): harder formations in the Levels.
+  const secondQuest = !!setup.trials?.includes('secondQuest') && world.campaign === 'original';
+  const level = enemyLevelFor(setup.depth, setup.nodeType) + (setup.trials?.includes('hardened') ? 2 : 0) + (setup.levelBonus ?? 0) + (secondQuest ? 1 : 0);
 
   let objective: Objective = { type: 'rout' };
   if (isBossFight) objective = { type: 'boss' };
@@ -82,6 +85,7 @@ export function createBattle(setup: BattleSetup): Battle {
   if (setup.nodeType === 'boss') enemyCount += setup.depth < 7 ? 0 : 2;
   if (objective.type === 'survive') enemyCount = Math.max(3, enemyCount - 2);
   if (setup.trials?.includes('swarm')) enemyCount += 2;
+  if (secondQuest) enemyCount += 1;
 
   // Each enemy slot is either a monster archetype or a character/soldier template.
   const force = setup.force;
@@ -188,6 +192,7 @@ export function createBattle(setup: BattleSetup): Battle {
   if (battle.bossTier === 0) for (const u of units) if (u.isBoss) u.ai = 'stationary';
   battle.twilit = setup.twilit;
   battle.silentRealm = setup.silentRealm;
+  if (secondQuest) battle.secondQuest = true;
   decorateField(battle, rng, setup.nodeType);
   windWakerUpkeepAtStart(battle, rng);
   if (setup.trials?.includes('mist')) battle.fog = true;
@@ -429,6 +434,7 @@ export function startPhase(b: Battle, team: Team): TurnStartEvent[] {
     tpStartPhase(b, u, events);
     ssStartPhase(b, u, events);
     wildStartPhase(b, u, events);
+    ogStartPhase(b, u, events);
     const max = u.stats.hp;
     const tiles = footprint(u.x, u.y, u.size).map((p) => b.tiles[keyOf(b, p.x, p.y)]);
     const anchor = tiles[0];
