@@ -4,6 +4,7 @@ import { TWILIT_PROVINCES } from '../content/twilight';
 import { availableRecipes, craft, materialBag, questCount, recipeCost, recipeHolders, repairShield, shieldRepairCost } from '../engine/skywardRun';
 import { packSize } from '../engine/units';
 import { shieldDurability } from '../engine/skyward';
+import { doWildCamp, FACILITIES, wildCampOptions, wildOf, wildStatus } from '../engine/wildRun';
 import { ABILITIES, artFor, BOSSES, ENEMIES, GEAR, QUEST_ITEMS, ITEMS, CLASSES, COMMANDERS, PERMANENT_ITEMS, REGION_IDS, TEMPLATE_LIST, TEMPLATES, WEAPONS, worldDef, WORLDS, ART_VARIANTS } from '../data/registry';
 import { canWield, type LevelUp } from '../engine/combat';
 import { randomSeed } from '../engine/rng';
@@ -285,7 +286,7 @@ export class App {
         <div class="page">
           <div class="page-head"><button class="btn" data-nav="back">← Back</button><h1>Choose your Commander</h1><span></span></div>
           <p class="dim center-text">Each commander brings their own army and a special bonus. If the commander falls, the campaign is over.</p>
-          ${(['hyrule', 'termina', 'greatSea', 'twilight', 'skyward'] as const).map((pack) => `<h2 class="pack-head">${pack === 'hyrule' ? 'Ocarina of Time · Hyrule' : pack === 'termina' ? "Majora's Mask · Termina" : pack === 'greatSea' ? 'The Wind Waker · The Great Sea' : pack === 'twilight' ? 'Twilight Princess · Twilight Hyrule' : 'Skyward Sword · The Sky'}</h2>
+          ${(['hyrule', 'termina', 'greatSea', 'twilight', 'skyward', 'wild'] as const).map((pack) => `<h2 class="pack-head">${pack === 'hyrule' ? 'Ocarina of Time · Hyrule' : pack === 'termina' ? "Majora's Mask · Termina" : pack === 'greatSea' ? 'The Wind Waker · The Great Sea' : pack === 'twilight' ? 'Twilight Princess · Twilight Hyrule' : pack === 'skyward' ? 'Skyward Sword · The Sky' : 'Era of the Wild · Hyrule Reborn'}</h2>
           <div class="card-grid">${COMMANDERS.filter((c) => (c.campaign ?? 'hyrule') === pack).map((c) => {
             const t = TEMPLATES[c.heroId];
             const army = c.units.map((id) => TEMPLATES[id]);
@@ -302,12 +303,13 @@ export class App {
           <div class="run-options">
             <h3>Campaign options</h3>
             <div class="opt-row"><span class="dim small">Campaign</span><select data-opt="campaign">
-              <option value="">Commander's home${chosen ? ` (${({ hyrule: 'Hyrule', termina: 'Termina', greatSea: 'the Great Sea', twilight: 'Twilight Hyrule', skyward: 'the Sky' } as const)[COMMANDERS.find((c) => c.heroId === chosen)?.campaign ?? 'hyrule']})` : ''}</option>
+              <option value="">Commander's home${chosen ? ` (${({ hyrule: 'Hyrule', termina: 'Termina', greatSea: 'the Great Sea', twilight: 'Twilight Hyrule', skyward: 'the Sky', wild: 'Hyrule Reborn' } as const)[COMMANDERS.find((c) => c.heroId === chosen)?.campaign ?? 'hyrule']})` : ''}</option>
               <option value="hyrule" ${choices.campaign === 'hyrule' ? 'selected' : ''}>Hyrule: the endless war</option>
               <option value="termina" ${choices.campaign === 'termina' ? 'selected' : ''}>Termina: three days until the Moon falls</option>
               <option value="greatSea" ${choices.campaign === 'greatSea' ? 'selected' : ''}>The Great Sea: sail a 7×7 chart of islands and fleets</option>
               <option value="twilight" ${choices.campaign === 'twilight' ? 'selected' : ''}>Twilight Hyrule: restore the Light Spirits</option>
               <option value="skyward" ${choices.campaign === 'skyward' ? 'selected' : ''}>The Sky: from Skyloft to the Demon's Realm</option>
+              <option value="wild" ${choices.campaign === 'wild' ? 'selected' : ''}>Hyrule Reborn: surface, sky and Depths, under the Blood Moon</option>
               <option value="random" ${choices.campaign === 'random' ? 'selected' : ''}>Random: any region, any enemy, any event</option></select></div>
             ${p.heroes.length ? `<div class="opt-row"><span class="dim small">Companion (Hall of Heroes)</span><select data-opt="hero"><option value="">None</option>${p.heroes.map((id) => `<option value="${id}" ${choices.hero === id ? 'selected' : ''}>${esc(TEMPLATES[id]?.name ?? id)}</option>`).join('')}</select></div>` : ''}
             ${p.kits.length ? `<div class="opt-row"><span class="dim small">Starting kit (Royal Treasury)</span><select data-opt="kit"><option value="">None</option>${KITS.filter((k) => p.kits.includes(k.id)).map((k) => `<option value="${k.id}" ${choices.kit === k.id ? 'selected' : ''}>${esc(k.name)}</option>`).join('')}</select></div>` : ''}
@@ -379,6 +381,8 @@ export class App {
         ${run.campaign === 'twilight' ? (() => { const tw = twilightOf(run); const prov = Object.keys(TWILIT_PROVINCES).filter((r) => r !== 'ordonProvince'); return `<div class="tb-res" title="Tears of Light gathered in each twilit province (${TEARS_NEEDED} fill its Vessel of Light). Restored provinces have their Light Spirit back."><span class="dim small">Light</span> ${prov.map((r) => tw.restored.includes(r) ? `<b title="${esc(WORLDS[r]?.name ?? r)}: restored">☀</b>` : `<span title="${esc(WORLDS[r]?.name ?? r)}">💧${tw.tears[r] ?? 0}</span>`).join(' ')}</div>`; })() : ''}
         ${run.campaign === 'skyward' ? (() => { const qi = run.questItems ?? []; const parts = ['songPartFaron', 'songPartEldin', 'songPartLanayru', 'songPartLevias'].filter((p) => qi.includes(p)).length; const mats = materialBag(run).reduce((n, m) => n + m.n, 0);
           return `<div class="tb-res" title="Gratitude Crystals (trade with Batreaux) · crafting Treasures and insects in the bag · Song of the Hero parts${run.skyward?.trialPending ? ' · a Silent Realm trial is next' : ''}"><span class="dim small">Gratitude</span> <b>💎${questCount(run, 'gratitudeCrystal')}</b> <span class="dim small">Treasures</span> <b>${mats}</b> <span class="dim small">Song</span> <b>${qi.includes('songOfTheHeroComplete') ? '🎵' : `${parts}/4`}</b>${run.skyward?.trialPending ? ' <b title="Silent Realm trial next">⛩</b>' : ''}</div>`; })() : ''}
+        ${run.campaign === 'wild' ? (() => { const s = wildStatus(run); const icon = s.layer === 'sky' ? '☁ Sky' : s.layer === 'depths' ? '◉ Depths' : '⛰ Surface';
+          return `<div class="tb-res" title="Layer · Energy Cell capacity · Zonaite · Korok Seeds · Spirit Orbs and Lights of Blessing · Poes · max HP lost to Gloom · the Blood Moon"><span class="dim small">${icon}</span> <b>⚡${s.energy}</b> <span class="dim small">Zonaite</span> <b>${s.zonaite}</b> <span class="dim small">Seeds</span> <b>🌰${s.seeds}</b> <span class="dim small">Orbs</span> <b>${s.orbs}</b> <span class="dim small">Poes</span> <b>${s.poes}</b>${s.gloom ? ` <span class="dim small">Gloom</span> <b class="bad">−${s.gloom}</b>` : ''} <b>${esc(s.moon)}</b></div>`; })() : ''}
         ${run.clock ? (() => { const c = clockLabel(run); return `<div class="tb-clock ${c.hoursLeft <= 12 ? 'bad' : c.day === 3 ? 'warn' : ''}" title="The Moon falls when the third day ends."><span class="dim small">Day ${c.day} ${c.night ? '☾' : '☀'}</span> <b>${c.time}</b> <span class="dim small">${c.hoursLeft}h left</span></div>
           <button class="btn small" data-nav="songoftime" title="Return to the dawn of the first day">🎵 Song of Time</button>`; })() : ''}
         <div class="spacer"></div>
@@ -771,6 +775,7 @@ export class App {
         ${summary.joined.length ? `<div class="res-drops"><div class="dim small">Rescued and joined your army</div><div>${summary.joined.map(esc).join(', ')}</div></div>` : ''}
         ${summary.twilight?.length ? `<div class="res-drops"><div class="dim small">Twilight</div>${summary.twilight.map((l) => `<div>${esc(l)}</div>`).join('')}</div>` : ''}
         ${summary.skyward?.length ? `<div class="res-drops"><div class="dim small">Skyward</div>${summary.skyward.map((l) => `<div>${esc(l)}</div>`).join('')}</div>` : ''}
+        ${summary.wild?.length ? `<div class="res-drops"><div class="dim small">The Wild</div>${summary.wild.map((l) => `<div>${esc(l)}</div>`).join('')}</div>` : ''}
         <div class="res-army-stats">${armyReportHtml(summary.army)}</div>
         ${summary.fallen.length ? `<div class="res-fallen"><span class="dim">Fallen:</span> ${summary.fallen.map((u) => `${token(u, 28)} ${esc(u.name)}`).join(' ')}</div>` : '<div class="dim">No losses.</div>'}
         <div class="res-army">${run.roster.map((u) => `<div class="res-unit">${token(u, 36)}<div><b>${esc(u.name)}</b><div class="dim small">Lv ${u.level} · HP ${u.hp}/${u.stats.hp}</div></div></div>`).join('')}</div>
@@ -997,6 +1002,7 @@ export class App {
             <h3>Gear</h3><div class="shop-list">${ev.gear.map((id) => row('gear', id, priceOf(run, 'gear', id))).join('') || '<div class="dim">None in stock.</div>'}</div>
             <h3>Items <span class="dim small">restocked: buy as many as you like</span></h3><div class="shop-list">${ev.items.map((id) => row('item', id, priceOf(run, 'item', id))).join('') || '<div class="dim">None in stock.</div>'}</div>
             <h3>Permanent upgrades</h3><div class="shop-list">${ev.permanents.map((id) => row('permanent', id, priceOf(run, 'permanent', id))).join('')}</div>
+            ${this.wildFacilitiesHtml('shop')}
             ${run.clock ? `<h3>🏦 Clock Town Bank <span class="dim small">balance ₹${run.bank ?? 0}: safe through the Song of Time</span></h3>
             <div class="row"><button class="btn small" data-nav="deposit" ${run.rupees ? '' : 'disabled'}>Deposit all (₹${run.rupees})</button><button class="btn small" data-nav="withdraw" ${run.bank ? '' : 'disabled'}>Withdraw all</button></div>` : ''}
             <h3>Supplies <span class="dim small">${armyOf(run).supplies}/${supplyCap(run)}</span></h3>
@@ -1007,6 +1013,7 @@ export class App {
         </div>`);
       this.on({
         ...this.common(render),
+        ...this.wildHandlers(render),
         buy: async (el) => {
           const kind = el.dataset.kind as ItemKindTag;
           const id = el.dataset.id!;
@@ -1044,6 +1051,7 @@ export class App {
             <button class="choice" data-nav="drill"><b>⚑ Drill</b><span>The whole army drills together: everyone gains 45 XP.</span></button>
           </div>
           ${this.workshopHtml()}
+          ${this.wildFacilitiesHtml('camp')}
           ${armyOf(run).fairyDust > 0 && run.fallen.length ? `<h3>Infirmary <span class="dim small">${armyOf(run).fairyDust} Fairy Dust</span></h3>
             <div class="shop-list">${run.fallen.map((u) => `<div class="shop-item"><div>${token(u, 24)} ${esc(u.name)}</div><button class="btn small" data-nav="dust" data-uid="${u.uid}" ${run.roster.length >= armyCap(run) ? 'disabled' : ''}>Revive (1 Fairy Dust)</button></div>`).join('')}</div>` : ''}
         </div>
@@ -1052,6 +1060,7 @@ export class App {
     this.on({
       ...this.common(() => this.campScreen()),
       ...this.workshopHandlers(() => this.campScreen()),
+      ...this.wildHandlers(() => this.campScreen()),
       rest: () => { campRest(run); this.finishEvent(); },
       feast: () => { if (campFeast(run)) this.finishEvent(); },
       dust: (el) => { if (reviveWithDust(run, el.dataset.uid!)) { this.save(); this.campScreen(); } },
@@ -1194,6 +1203,40 @@ export class App {
     return `<h3>Supports</h3><div class="equip-list">${rows.join('') || '<div class="dim small">Fight near allies to build supports (C → B → A, and S for special pairs).</div>'}</div>${groupRows.length ? `<h3>Group supports</h3><div class="equip-list">${groupRows.join('')}</div><p class="dim small">Active in battle when every member is deployed.</p>` : ''}`;
   }
 
+  /** Era of the Wild camp facilities (section 32), shown as expansions of the camp, shop and blacksmith. */
+  private wildFacilitiesHtml(where: 'camp' | 'shop' | 'smith'): string {
+    const run = this.run!;
+    const opts = wildCampOptions(run, where);
+    if (!opts.length) return '';
+    const w = wildOf(run);
+    const groups = [...new Set(opts.map((o) => o.facility))];
+    return `<h3>The Wild <span class="dim small">Research ${w.research} · Construction ${w.construction} · Cooking ${w.cooking} · Fusion ${w.fusion} · Energy Cell ${w.energyCap} · Colossal ${w.colossal} · Gloom Res ${w.gloomRes} · Explore ${w.explore.surface}/${w.explore.sky}/${w.explore.depths}</span></h3>
+      ${groups.map((g) => `<details class="wild-facility"><summary><b>${FACILITIES[g].icon} ${esc(FACILITIES[g].name)}</b></summary><div class="shop-list">${opts.filter((o) => o.facility === g).map((o, i) => {
+        const sel = o.select ? `<select data-wsel="${esc(o.key)}-${i}">${o.select.map((c) => `<option value="${esc(c.id)}">${esc(c.label)}</option>`).join('')}</select>` : '';
+        return `<div class="shop-item"><div>${esc(o.label)}<div class="dim small">${esc(o.desc)}</div></div><span>${sel}<button class="btn small" data-nav="wildcamp" data-key="${esc(o.key)}" data-sel="${o.select ? `${esc(o.key)}-${i}` : ''}" data-where="${where}" ${o.ok ? '' : 'disabled'}>Go</button></span></div>`;
+      }).join('')}</div></details>`).join('')}`;
+  }
+
+  private wildHandlers(rerender: () => void) {
+    const run = this.run!;
+    return {
+      wildcamp: async (el: HTMLElement) => {
+        const key = el.dataset.key!;
+        const opt = wildCampOptions(run, el.dataset.where as 'camp' | 'shop' | 'smith').find((o) => o.key === key);
+        if (!opt) return;
+        const arg = el.dataset.sel ? (this.root.querySelector<HTMLSelectElement>(`[data-wsel="${el.dataset.sel}"]`)?.value ?? undefined) : undefined;
+        let uid: string | undefined;
+        if (opt.pick) { const picked = await this.unitPicker(esc(opt.label), opt.pick, () => ''); if (!picked) return; uid = picked; }
+        const rng = new RNG(run.rngState);
+        const line = doWildCamp(run, key, rng, uid, arg);
+        run.rngState = rng.state;
+        this.save();
+        rerender();
+        if (line) { sfx('secret'); const m = modal(`<p>${esc(line)}</p><button class="btn primary" data-close>OK</button>`, { dismissable: true }); void m; }
+      },
+    };
+  }
+
   /** Skyward Sword's upgrade workshop (section 13): recipes, the materials bag and shield repairs. */
   private workshopHtml(): string {
     const run = this.run!;
@@ -1251,6 +1294,7 @@ export class App {
               return `<div class="shop-item ${sold ? 'sold' : ''}"><div>${itemLine(id)}</div><button class="btn small" data-nav="forge" data-id="${id}" ${sold || run.rupees < p ? 'disabled' : ''}>${sold ? 'Forged' : `₹${p}`}</button></div>`;
             }).join('')}</div>
             ${this.workshopHtml()}
+            ${this.wildFacilitiesHtml('smith')}
             <div class="center-text"><button class="btn primary big" data-nav="leave">Leave</button></div>
           </div>
           ${this.partyHtml()}
@@ -1258,6 +1302,7 @@ export class App {
       this.on({
         ...this.common(render),
         ...this.workshopHandlers(render),
+        ...this.wildHandlers(render),
         repair: (el) => { if (repairWeapon(run, el.dataset.uid!, el.dataset.w!)) { this.save(); render(); } },
         improve: (el) => { if (improveWeapon(run, el.dataset.uid!, el.dataset.w!)) { this.save(); render(); } },
         forge: async (el) => {

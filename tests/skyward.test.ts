@@ -103,7 +103,7 @@ describe('Skyward Sword content', () => {
     expect(noArt).toEqual([]);
     expect(artFor('skyLoftwing')).toBe('loftwingBlue');
     expect(artFor('crimsonLoftwing')).toBe('loftwing');
-    expect(ART_VARIANTS.moblin).toEqual(['moblin', 'moblinWW', 'moblinSS']);
+    expect(ART_VARIANTS.moblin).toEqual(['moblin', 'moblinWW', 'moblinSS', 'moblinBotW']);
     expect(ART_VARIANTS.chuchuRed).toEqual(['chuchuRed', 'chuchuRedMM', 'chuchuRedTP', 'chuchuRedSS']);
     expect(ART_VARIANTS.beamos).toEqual(['beamos', 'beamosSS']);
     expect(ART_VARIANTS.stalfos).toContain('stalfosTP');

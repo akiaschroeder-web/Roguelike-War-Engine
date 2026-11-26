@@ -7,6 +7,7 @@ import { adjacentMailboxes, environmentPhase, isSeen, openMailbox, pressInversio
 import { planAction } from '../engine/ai';
 import { syncPosition } from '../engine/windwaker';
 import { ssAfterMove } from '../engine/skyward';
+import { wildAfterMove } from '../engine/wild';
 import { enemyUnload, windLabel } from '../engine/naval';
 import { sideQuestText } from '../engine/run';
 import { adjacentCaptives, checkResult, freeCaptive, mountToggleBlocked, moveUnit, toggleMount, objectiveText, spawnReinforcements, startPhase, type TurnStartEvent } from '../engine/battle';
@@ -186,7 +187,8 @@ export class BattleView {
       ${b.weather ? `<div class="weather"><span class="dim small">Weather</span><b>${b.weather.kind === 'rain' ? '🌧 Rain' : '🌪 Sandstorm'} (${b.weather.turns})</b></div>` : ''}
       ${b.fog ? '<div class="weather"><span class="dim small">Visibility</span><b>🌫 Fog</b></div>' : ''}
       ${b.wind ? `<div class="weather" title="Ships sail faster with the wind (+2 MOV) and slower against it (−2)."><span class="dim small">Wind</span><b>${esc(windLabel(b.wind))}</b></div>` : ''}
-      ${b.night && b.naval ? '<div class="weather"><span class="dim small">Time</span><b>☾ Night</b></div>' : ''}`;
+      ${b.night && b.naval ? '<div class="weather"><span class="dim small">Time</span><b>☾ Night</b></div>' : ''}
+      ${b.wild ? `<div class="weather" title="The army's shared Energy Cell powers Zonai Devices and vehicles."><span class="dim small">Energy</span><b>⚡${b.wild.energy}/${b.wild.energyMax}</b></div>${b.wild.bloodMoon ? '<div class="weather"><span class="dim small">Sky</span><b class="bad">🌕 Blood Moon</b></div>' : ''}` : ''}`;
   }
 
   private posStyle(el: HTMLElement, x: number, y: number) {
@@ -952,6 +954,8 @@ export class BattleView {
     syncPosition(this.b, u);
     const ss = ssAfterMove(this.b, u); // Skyward Sword spaces: Sacred Tears, Waking Water, Light Fruit, Timeshift Orbs
     if (ss) { sfx('secret'); this.addLog(`✨ ${esc(ss)}`); }
+    const wl = wildAfterMove(this.b, u); // Era of the Wild spaces: Poes, pedestals, mines, Gloom trails
+    if (wl) { sfx('secret'); this.addLog(`✨ ${esc(wl)}`); }
     if (pressInversion(this.b, u)) { sfx('secret'); this.addLog('🔄 The Inversion Switch flips the walls and floors!'); }
     const dmg = triggerTraps(this.b, u);
     if (dmg) { sfx('hit'); this.float(u, `TRAP −${dmg}`, 'dmg'); this.addLog(`⚠ <b class="player">${esc(u.name)}</b> stepped on a spike trap (−${dmg} HP, rooted)!`); }
@@ -1369,6 +1373,7 @@ export class BattleView {
       syncPosition(b, e);
       if (moved) {
         ssAfterMove(b, e);
+        wildAfterMove(b, e);
         const trap = triggerTraps(b, e);
         if (trap) { sfx('bomb'); this.float(e, `TRAP −${trap}`, 'dmg'); this.addLog(`💥 ${esc(e.name)} sets off your Death Armos Core (−${trap})!`); }
       }
