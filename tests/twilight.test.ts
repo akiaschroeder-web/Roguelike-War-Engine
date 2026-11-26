@@ -264,3 +264,18 @@ describe('expanded supports', () => {
     expect(activeGroups(b, 'player')).toContain('courageOfGenerations');
   });
 });
+
+describe('support conversations', () => {
+  it('every registered pair has a written conversation for each rank it can reach', async () => {
+    const { SUPPORT_REGISTRY, SUPPORT_CONVOS } = await import('../src/content/supports');
+    const { CONVERSATIONS } = await import('../src/content/ocarina/conversations');
+    const missing: string[] = [];
+    for (const p of SUPPORT_REGISTRY) {
+      const set = SUPPORT_CONVOS[p.key] ?? CONVERSATIONS[p.key];
+      const ranks: ('C' | 'B' | 'A' | 'S')[] = ['C', 'B', 'A', ...(p.max === 'S' ? ['S' as const] : [])];
+      for (const r of ranks) if (!set?.[r]?.length) missing.push(`${p.key} ${r}`);
+    }
+    expect(missing).toEqual([]);
+    for (const k of Object.keys(SUPPORT_CONVOS)) expect(SUPPORT_REGISTRY.some((p) => p.key === k), k).toBe(true);
+  });
+});
