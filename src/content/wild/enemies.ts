@@ -183,7 +183,7 @@ export const BOSS_AS_TEMPLATE: Record<string, string> = {
 };
 
 export const ROSTERS: Record<string, string[]> = {
-  greatPlateau: ['bokoblin', 'bokoblin', 'bokoblin', 'keese', 'stalkoblin', 'chuchuGreen', 'octorok', 'decayedGuardian', 'stonePebblit'],
+  greatPlateau: ['bokoblin', 'bokoblin', 'bokoblin', 'keese', 'stalkoblin', 'chuchuGreen', 'octorok', 'stonePebblit'],
   centralHyrule: ['bokoblin', 'moblin', 'lizalfos', 'guardianStalker', 'guardianScout2', 'decayedGuardian', 'lynel', 'stalkoblin', 'stalmoblin', 'battleTalus'],
   hyruleCastleWild: ['guardianScout2', 'guardianScout3', 'guardianTurret', 'moblin', 'lizalfos', 'lynel', 'stalizalfos', 'gloomSpawn'],
   hateno: ['bokoblin', 'bokoblin', 'moblin', 'chuchuBlue', 'keese', 'octorok', 'stalkoblin'],

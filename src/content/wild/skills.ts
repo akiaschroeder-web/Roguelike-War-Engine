@@ -88,7 +88,7 @@ export const SKILLS: SkillDef[] = [
   k('masterOfCombat', 'Master of Combat', 'Switches between melee and ranged freely (counters at any range it can reach) and +10 Hit.'),
   k('giantsGrasp', "Giant's Grasp", 'Uproots trees and throws big objects: +5 Might fighting next to a forest or tall tree, and its throws push targets back.'),
   k('detachedEye', 'Detached Eye', 'Survives the first fatal blow with 1 HP while its eye detaches (Exposed for 2 turns); only then can it be destroyed.'),
-  k('livingOre', 'Living Ore', 'Body damage −50% until the ore is exposed (after 2 hits, or by hammers and explosions).'),
+  k('livingOre', 'Living Ore', 'Melee body damage −50% until the ore is exposed (after 2 landed hits; hammers and explosions ignore it). Arrows and thrown weapons strike the ore on its back (half its DEF).'),
   k('moltenSurface', 'Molten Surface', 'Burns melee attackers (5 damage, may Burn) unless they resist fire.'),
   k('frozenSurface', 'Frozen Surface', 'Melee attackers may Freeze (30%) unless they resist cold.'),
   k('monsterPlatform', 'Monster Platform', 'Carries up to four size-1 allies: adjacent allies gain +2 DEF and +10 Avoid.'),

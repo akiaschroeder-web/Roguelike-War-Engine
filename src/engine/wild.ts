@@ -250,7 +250,7 @@ export function tierFor(level: number, rng: RNG, bloodMoon = false): number {
   if ((bloodMoon || level >= 24) && level >= 16 && roll >= 105) return 4;
   if (level >= 12 && roll >= 85) return 3;
   if (level >= 8 && roll >= 65) return 2;
-  if (level >= 3 && roll >= 40) return 1;
+  if (level >= 5 && roll >= 50) return 1;
   return 0;
 }
 
@@ -840,6 +840,8 @@ export function wildSideAdjust(b: Battle, atk: Unit, def: Unit, w: WeaponDef, ar
   if (initiating && (has(atk, 'threeHeads') || has(atk, 'tripleMagma') || has(atk, 'elementalHeads'))) out.extraAttack = true;
   if (initiating && w.wild?.includes('repeatedCut')) out.hit += 0;
   if (hasBuff(def, 'timeSlow')) out.hit += 10;
+  // Living Ore: arrows and thrown weapons strike the ore on its back (half its DEF).
+  if (has(def, 'livingOre') && unitDist(atk, def) >= 2 && !magical) out.defense = Math.floor(out.defense * 0.5);
   void b;
   return out;
 }
@@ -894,7 +896,7 @@ export function wildMultiplier(b: Battle, atk: Unit, def: Unit, element: Element
   // ── Defender skills ──
   if (has(def, 'hatredUnleashed') && !sacred && !hasStatus(def, 'exposed')) mult *= 0.25;
   if (has(def, 'hatredUnleashed') && sacred) mult *= 1.5;
-  if (has(def, 'livingOre') && !hasStatus(def, 'exposed') && !(w.type === 'hammer' || w.armorBreaker || w.bombs)) mult *= 0.5;
+  if (has(def, 'livingOre') && !hasStatus(def, 'exposed') && dist <= 1 && !(w.type === 'hammer' || w.armorBreaker || w.bombs)) mult *= 0.5;
   if (has(def, 'armoredLegs') && (b.wild?.hits[def.uid] ?? 0) < 3) mult *= 0.5;
   if (has(def, 'resistsCutting') && ['sword', 'lance', 'axe'].includes(w.type)) mult *= 0.5;
   if (has(def, 'resistsCutting') && (w.type === 'hammer' || w.bombs)) mult *= 2;
@@ -1021,6 +1023,12 @@ export function wildAfterHit(b: Battle, by: Unit, target: Unit, dmg: number, w: 
   // Single-use fused materials break after one attack (Forest Dweller's weapons may regrow them).
   const fz = fuseOf(by.fused?.[w.id]);
   if (fz?.single && by.team === 'player' && !(w.wild?.includes('regrowFuse') && rng.chance(40))) { lines.push(`${by.name}'s fused ${fz.name} shatters.`); delete by.fused![w.id]; }
+  // Landed blows wear down armor and ore even when they barely scratch it.
+  if (st && target.hp > 0 && (has(target, 'armoredLegs') || has(target, 'livingOre'))) {
+    st.hits[target.uid] = (st.hits[target.uid] ?? 0) + 1;
+    if (has(target, 'livingOre') && st.hits[target.uid] === 2) { addStatus(target, 'exposed', 3); lines.push(`${target.name}'s ore is exposed!`); }
+    if (has(target, 'armoredLegs') && st.hits[target.uid] === 3) { addStatus(target, 'exposed', 99); lines.push(`${target.name}'s legs break!`); }
+  }
   if (dmg <= 0 || target.hp <= 0) return lines;
   if (st && target.team === 'player') st.alliesHurt++;
   // Gloom and Malice
@@ -1052,11 +1060,9 @@ export function wildAfterHit(b: Battle, by: Unit, target: Unit, dmg: number, w: 
   }
   // Divine Beast armor segments break under big hits.
   if (target.wildSeg && dmg >= target.stats.hp * 0.1) { target.wildSeg--; lines.push(`An armor segment on ${target.name} breaks (${target.wildSeg} left).`); }
-  if (st && (has(target, 'armoredLegs') || has(target, 'hatredUnleashed') || has(target, 'livingOre'))) {
+  if (st && has(target, 'hatredUnleashed')) {
     st.hits[target.uid] = (st.hits[target.uid] ?? 0) + 1;
-    if (has(target, 'hatredUnleashed') && st.hits[target.uid] % 3 === 0) { addStatus(target, 'exposed', 1); lines.push(`A Malice weak point opens on ${target.name}!`); }
-    if (has(target, 'livingOre') && st.hits[target.uid] === 2) { addStatus(target, 'exposed', 3); lines.push(`${target.name}'s ore is exposed!`); }
-    if (has(target, 'armoredLegs') && st.hits[target.uid] === 3) { addStatus(target, 'exposed', 99); lines.push(`${target.name}'s legs break!`); }
+    if (st.hits[target.uid] % 3 === 0) { addStatus(target, 'exposed', 1); lines.push(`A Malice weak point opens on ${target.name}!`); }
   }
   if (has(by, 'targetLock') && st) st.locks[by.uid] = target.uid;
   if (has(target, 'rupeeSpirit')) b.bonusRupees = (b.bonusRupees ?? 0) + 20;
