@@ -257,3 +257,5 @@ Batch 3 (16): yona, bludo, buliara, hudson_patternbg, tauro, koltin (small, pale
 Batch 4 (15): captainConstructBlade (teal/orange, blade crest — Captain I–III), captainConstructGold (golden sun crest — Captain IV), stewardConstruct (bare hands), forgeConstruct (holding a shovel/hammer), hinox, lynel (white-maned Lynel), igneoTalus, stoneTalus, frostTalus, battleTalus, stalnox, molduga, molduking, horriblin, bossBokoblin_patternbg.
 
 Batch 5 (16): gleeokFlame, gleeokFrost, gleeokThunder_patternbg, kingGleeok_patternbg, colgera, mazKoshia, queenGibdo_patternbg, mucktorok_patternbg, marbledGohma, seizedConstruct, moragia, fluxConstruct1 (plain teal), fluxConstruct2 (teal with gold trim), fluxConstruct3 (gold), phantomGanondorf, vahRuta. Note: the Gleeok/Colgera/Gohma/Moragia images use near-transparent navy backgrounds like the patterned ones.
+
+Batch 6 (8): vahRudania, vahMedoh, vahNaboris, frox, waterblight_whiteblocks (spear; has opaque white/black rectangles in the background to strip), thunderblight (scimitar + shield), windblight (arm cannon + drones), fireblight (arm blade).
