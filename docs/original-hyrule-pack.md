@@ -66,3 +66,5 @@ Saved in `art_sources/original_hyrule/`. Batch 1 (15): link1, zelda1 (JPEG on wh
 Still needed: Aquamentus, Manhandla, Digdogger, Lesser Digdogger.
 
 Batch 2 (10): aquamentus, digdogger (also used for Lesser Digdogger unless separate art arrives), and Zelda 1 alt arts: dodongo1 (Dodongo), gohma1 (alt for Queen Gohma — the doc maps Gohma to it), octorok1, moldorm1, gleeok1 (alt for the Flame Gleeok, the classic Gleeok), darknut1, lynel1 (alt for the Era of the Wild Lynel), tektite1. User says the art is done; Manhandla has no image (asked).
+
+Batch 3: manhandla. All Original Hyrule art received. Lesser Digdogger shares the Digdogger art; the flying-eye swarm stays Patra.
