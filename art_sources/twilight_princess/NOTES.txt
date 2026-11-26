@@ -3,3 +3,4 @@ postmanMM -> alt art for postman; kargarocTP -> alt for kargaroc; bullboTP -> al
 freezardTP -> alt for freezard (no base Freezard unit exists yet); whiteWolfosOoT -> alt; skullfishMM -> alt; lizalfosTP/dinolfosTP -> alts
 darknutTP, bokoblinTP -> alts
 IMG_1815 = Hero's Shade (confirmed). chuchu{Green,Red,Blue,Yellow}TP, poeTP, poeTP2, moblinWW, greatFairyTP -> alts. greatFairyTP has black background.
+stalfosTP, greatFairyWW -> alts; redBubbleWW/blueBubbleWW -> alts of red/blue bubble; bubbleMM = MM 'Bubble' unit; Stallord's Head -> crop from stallord
