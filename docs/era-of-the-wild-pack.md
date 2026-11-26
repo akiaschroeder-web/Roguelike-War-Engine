@@ -261,3 +261,5 @@ Batch 5 (16): gleeokFlame, gleeokFrost, gleeokThunder_patternbg, kingGleeok_patt
 Batch 6 (8): vahRudania, vahMedoh, vahNaboris, frox, waterblight_whiteblocks (spear; has opaque white/black rectangles in the background to strip), thunderblight (scimitar + shield), windblight (arm cannon + drones), fireblight (arm blade).
 
 Batch 7 (4): guardianScout1 (no weapons), guardianScout3 (two blades), guardianScout4 (three weapons), decayedGuardian. The batch-3 scout is renamed guardianScout2.
+
+Batch 8 (16): stalkoblin, malanya, dinraal, farosh, satori, yigaFootsoldier (sickle), yigaBlademaster (red suit, gold pauldrons — provisional), frostPebblit, igneoPebblit, stonePebblit, mothGibdo, aerocuda, evermean, gibdoTOTK (TotK alt art for the existing Gibdo), gloomSpawn, unidentified_maskedFigure (small figure, red beaked mask, coloured ribbons — asked the user).
