@@ -249,3 +249,5 @@ Ancient Tech Lab (Sheikah research, Guardian upgrades) · Zonai Workshop (vehicl
 Saved in `art_sources/era_of_the_wild/`.
 
 Batch 1 (15): wildLink (JPEG on white — needs the white background removed), wildZelda, ganondorfWild, ganondorfWildDemonKing (the fiery Demon King phase — planned as alt art for Ganondorf), demonDragon, calamityGanon, darkBeastGanonWild, mipha, daruk, revali, urbosa, sidon, yunobo, tulin, riju.
+
+Batch 2 (16): mineruConstruct (Mineru standing in front of her Construct — used for the Construct; Mineru alone can be cropped from it unless a solo image comes), rauruZonai, sonia, lightDragon_patternbg, dorephan_patternbg, muzu_patternbg (these three sit on a blue logo-pattern background that has to be removed), impaWild (elderly Impa), purah (adult and child forms together), robbie, paya, kohga, sooga (red horned Yiga with twin blades — read as the optional Sooga), teba, kass, hestu, kingRhoam.
