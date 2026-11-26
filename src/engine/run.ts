@@ -8,6 +8,7 @@ import { pairKey } from '../content/supports';
 import { HIDDEN_SKILLS } from '../content/twilight';
 import { canUsePouch, queueTrial, skywardAfterBattle, skywardQuestCheck, skywardRegionOptions, skywardRupeeMult, skywardStart, usePouch } from './skywardRun';
 import { restoreForm } from './transform';
+import { applyWildEffect, colossalCap, returnBoss, wildAfterBattle, wildBattleSetup, wildCampVisit, wildDecorateMap, wildOnRecruit, wildRecruitWeight, wildRegionOptions, wildRestBonus, wildStart } from './wildRun';
 import { canWield, type LevelUp } from './combat';
 import { RNG } from './rng';
 import { ARMY_CAPACITY, DEPLOY_CAPACITY } from './rules';
@@ -39,13 +40,13 @@ export function commanderOf(run: Run): CommanderDef {
   return COMMANDERS.find((c) => c.heroId === run.commanderId) ?? COMMANDERS[0];
 }
 
-export function newRun(seed: number, commanderId: string, campaign?: 'hyrule' | 'termina' | 'greatSea' | 'twilight' | 'skyward' | 'random'): RunWithEvent {
+export function newRun(seed: number, commanderId: string, campaign?: 'hyrule' | 'termina' | 'greatSea' | 'twilight' | 'skyward' | 'wild' | 'random'): RunWithEvent {
   const rng = new RNG(seed);
   const cmd = COMMANDERS.find((c) => c.heroId === commanderId) ?? COMMANDERS[0];
   const camp = campaign ?? cmd.campaign ?? 'hyrule';
   const home = TEMPLATES[cmd.heroId].home;
   // Hyrule campaigns start in the commander's home region; Termina always starts in Clock Town.
-  const region = camp === 'random' ? rng.pick(REGION_IDS.filter((r) => r !== 'moon')) : camp === 'termina' ? 'clockTown' : camp === 'greatSea' ? 'outsetIsland' : camp === 'twilight' ? 'ordonProvince' : camp === 'skyward' ? 'skyloft' : WORLDS[home]?.campaign ? 'hyruleField' : home === 'hyruleCastle' ? 'hyruleField' : home;
+  const region = camp === 'random' ? rng.pick(REGION_IDS.filter((r) => r !== 'moon')) : camp === 'termina' ? 'clockTown' : camp === 'greatSea' ? 'outsetIsland' : camp === 'twilight' ? 'ordonProvince' : camp === 'skyward' ? 'skyloft' : camp === 'wild' ? 'greatPlateau' : WORLDS[home]?.campaign ? 'hyruleField' : home === 'hyruleCastle' ? 'hyruleField' : home;
   const run: RunWithEvent = {
     seed, rngState: 0, act: 1, region, regionsVisited: [region], map: { rows: 0, nodes: [] }, currentNodeId: null,
     roster: [], fallen: [], rupees: 200, convoy: [], commanderId: cmd.heroId, bonus: cmd.bonus,
@@ -71,6 +72,7 @@ export function newRun(seed: number, commanderId: string, campaign?: 'hyrule' | 
   if (camp === 'termina') { run.clock = { hours: 0, resets: 0 }; run.bank = 0; run.questItems = []; }
   if (camp === 'twilight') twilightStart(run, rng);
   if (camp === 'skyward') skywardStart(run);
+  if (camp === 'wild') { wildStart(run); withRng(run, (r2) => wildDecorateMap(run, run.map, r2)); }
   if (camp === 'greatSea') {
     run.sea = newSea();
     run.questItems = [];
@@ -272,10 +274,12 @@ export function enterNode(run: RunWithEvent, nodeId: string): void {
         const gear = rng.shuffle(Object.values(GEAR).filter((a) => !a.unique && rar.includes(a.rarity))).slice(0, 4).map((a) => a.id);
         const items = rng.shuffle(Object.values(ITEMS).filter((i) => rar.includes(i.rarity) || i.rarity === 'common')).slice(0, 4).map((i) => i.id);
         const permanents = rng.shuffle(Object.keys(PERMANENT_ITEMS)).slice(0, 2);
+        wildCampVisit(run);
         run.event = { type: 'shop', weapons, gear, items, permanents, sold: [] };
         break;
       }
       case 'camp':
+        wildCampVisit(run);
         run.event = { type: 'camp' };
         break;
       case 'blacksmith': {
@@ -289,7 +293,9 @@ export function enterNode(run: RunWithEvent, nodeId: string): void {
         break;
       case 'treasure': {
         const salvage = run.campaign === 'greatSea' ? 1 + (seaOf(run).salvage - 1) * 0.25 : 1;
-        run.event = { type: 'treasure', rewards: treasureRewards(run, rng), rupees: Math.round((100 + run.act * 60) * salvage) };
+        const oldMap = run.campaign === 'wild' && WORLDS[node.world]?.layer === 'depths' && (run.questItems ?? []).includes('oldMap');
+        if (oldMap) run.questItems!.splice(run.questItems!.indexOf('oldMap'), 1);
+        run.event = { type: 'treasure', rewards: treasureRewards(run, rng, oldMap), rupees: Math.round((100 + run.act * 60) * salvage * (oldMap ? 2 : 1)) };
         const q = (run.questItems ??= []);
         const shards = q.filter((x) => x.startsWith('triforceShard')).length;
         if (shards < 8 && (q.includes('incredibleChart') || q.includes('triforceChart'))) {
@@ -346,19 +352,22 @@ export function startBattle(run: RunWithEvent, uids: string[]): void {
   // Ships only sail into sea battles; on land they stay in the harbour.
   // A Silent Realm trial takes only a few participants (the Commander and up to two more).
   const trial = ['battle', 'ambush', 'siege'].includes(node.type) ? run.skyward?.trialPending : undefined;
-  const land = run.roster.filter((u) => !isVessel(u) && (uids.includes(u.uid) || u.isCommander)).sort((a, c) => (trial ? Number(!!c.isCommander) - Number(!!a.isCommander) : 0)).slice(0, trial ? 3 : deployCap(run));
+  let colossal = colossalCap(run);
+  const land = run.roster.filter((u) => !isVessel(u) && (uids.includes(u.uid) || u.isCommander)).sort((a, c) => (trial ? Number(!!c.isCommander) - Number(!!a.isCommander) : 0))
+    // Era of the Wild: Colossal Deployment Capacity limits size-5 units (the commander doesn't count).
+    .filter((u) => u.isCommander || (u.baseSize ?? u.size) < 5 || colossal-- > 0).slice(0, trial ? 3 : deployCap(run));
   const ships = naval ? run.roster.filter((u) => isVessel(u) && (uids.includes(u.uid) || u.isCommander)).slice(0, navalDeployCap(run)) : [];
   const chosen = [...land, ...ships];
   run.deployment = chosen.map((u) => u.uid);
   run.event = undefined;
   withRng(run, (rng) => {
     const force = pickForce(run, rng, node, kind);
-    const boss = (kind !== 'elite' && kind !== 'boss') || force?.leader ? undefined : bossFor(run, rng, node);
+    const boss = (kind !== 'elite' && kind !== 'boss') || force?.leader ? undefined : returnBoss(node) ?? bossFor(run, rng, node);
     if (boss) run.bossesFought.push(boss.id);
     run.battle = createBattle({
       world: node.world, nodeType: node.type === 'dungeon' ? kind : node.type, depth: depthOf(run, node) + floorBonus, roster: chosen,
-      seed: rng.int(0, 2 ** 31), boss: trial ? undefined : boss, healMult: run.bonus === 'healing' ? 1.2 : run.bonus === 'sacredMission' ? 1.25 : 1, force: trial ? undefined : force, supports: run.supports, trials: run.trials,
-      levelBonus: (run.clock?.resets ?? 0) * 2 + (run.clock && clockLabel(run).day === 3 ? 1 : 0),
+      seed: rng.int(0, 2 ** 31), boss: trial ? undefined : boss, healMult: run.bonus === 'healing' ? 1.2 : run.bonus === 'sacredMission' ? 1.25 : run.bonus === 'healingWaters' ? 1.3 : 1, force: trial ? undefined : force, supports: run.supports, trials: run.trials,
+      levelBonus: (run.clock?.resets ?? 0) * 2 + (run.clock && clockLabel(run).day === 3 ? 1 : 0) + (run.wild && run.wild.bloodMoon > 0 && !run.roster.some((u) => u.skills.includes('lunarPrediction')) ? 1 : 0),
       gearOwned: [...ownedGear(run), ...(run.questItems ?? [])],
       naval: trial ? false : naval, night: node.night, fleet: node.fleet, twilit: isTwilit(run, node.world), silentRealm: trial,
     });
@@ -367,6 +376,7 @@ export function startBattle(run: RunWithEvent, uids: string[]): void {
     run.battle.statusBonus = run.bonus === 'lingeringStatus' ? 1 : 0;
     run.battle.reserves = run.roster.filter((u) => !chosen.includes(u)).map((u) => ({ ...prepareForBattle(u), x: -1, y: -1 }));
     applyArmyBuffs(run, run.battle);
+    wildBattleSetup(run, run.battle);
     if (run.questItems?.includes('piratesCharm') && run.battle.cp !== undefined) { run.battle.cp++; run.battle.cpMax = (run.battle.cpMax ?? 0) + 1; }
   });
 }
@@ -452,7 +462,7 @@ export function recruitOffers(run: Run, rng: RNG, world: WorldId): string[] {
     if (offers.length >= 2) offers[1] = rares[0].id;
     else offers.push(rares[0].id);
   }
-  const generics = TEMPLATE_LIST.filter((t) => t.generic && shipOk(t));
+  const generics = TEMPLATE_LIST.filter((t) => t.generic && shipOk(t) && t.race !== 'zonaiVehicle');
   const monsterWeight = run.bonus === 'monsters' || run.bonus === 'forsaken' ? 3 : 1;
   const holding = (id: string) => run.convoy.filter((x) => x === id).length + run.roster.reduce((n, u) => n + u.pack.filter((p) => p.id === id).reduce((m, p) => m + p.uses, 0), 0);
   if (holding('joyPendant') >= 3 && generics.length) offers.push(rng.pick(generics).id);
@@ -475,6 +485,8 @@ export function recruitOffers(run: Run, rng: RNG, world: WorldId): string[] {
     if (ownedGear(run).has('ordonClothes') && !t.monster) wgt *= 1.25;
     // Skyward Sword: Batreaux's Horns draw demons; Remlit Treats draw animals.
     if (ownedGear(run).has('batreauxsHorns') && RACES[t.race]?.tags?.includes('demon')) wgt *= 2;
+    // Era of the Wild: Kilton, Paya and Koltin; vehicles are built, never recruited.
+    wgt *= wildRecruitWeight(run, t);
     if (holding('remlitTreat') && RACES[t.race]?.tags?.includes('beast')) wgt *= 1.5;
     return wgt;
   };
@@ -521,6 +533,8 @@ export interface BattleSummary {
   twilight?: string[];
   /** Skyward Sword: materials, insects, trials, flames, song parts, Gratitude Crystals. */
   skyward?: string[];
+  /** Era of the Wild: materials, foraging, Gloom, the Blood Moon. */
+  wild?: string[];
   /** Support ranks reached this battle. */
   supportUps: { a: string; b: string; aUid: string; bUid: string; rank: SupportRank }[];
 }
@@ -536,7 +550,8 @@ export function finishBattle(run: RunWithEvent): BattleSummary {
   // into Koume and Kotake (both fall if Twinrova fell).
   const split = (u: Unit): Unit[] => {
     const partner = u.fusedPartner;
-    const me = restoreForm(u);
+    // Era of the Wild: a dragon stays a dragon (only a sacred event reverses it).
+    const me = u.permanentForm ? u : restoreForm(u);
     if (!partner) return [me];
     const ratio = me.hp > 0 ? me.hp / me.stats.hp : 0;
     return [me, { ...partner, hp: me.hp > 0 ? Math.max(1, Math.ceil(partner.stats.hp * ratio)) : 0 }];
@@ -703,7 +718,8 @@ export function finishBattle(run: RunWithEvent): BattleSummary {
   const army = armyAfterBattle(run, b, won, fallen.length, deployed.size || survivors.size);
   const twilightLines = withRng(run, (rng) => twilightAfterBattle(run, b, won, rng));
   const skywardLines = withRng(run, (rng) => skywardAfterBattle(run, b, won, !!sideQuest?.done, rng));
-  return { won, rupees, fallen, kills, drops, supportUps, sideQuest, retreated: !won && !!b.retreat, dungeon, found, joined, army, twilight: twilightLines, skyward: skywardLines };
+  const wildLines = withRng(run, (rng) => wildAfterBattle(run, b, won, rng));
+  return { won, rupees, fallen, kills, drops, supportUps, sideQuest, retreated: !won && !!b.retreat, dungeon, found, joined, army, twilight: twilightLines, skyward: skywardLines, wild: wildLines };
 }
 
 export interface ArmyReport {
@@ -909,6 +925,8 @@ function applyEffect(run: Run, e: EventEffect, rng: RNG): string | null {
       return delayLight(run);
     case 'silentRealm':
       return queueTrial(run, currentNode(run)?.world ?? run.region);
+    case 'wild':
+      return applyWildEffect(run, e, rng);
     case 'support': {
       const s = (run.supports ??= {});
       for (let i = 0; i < run.roster.length; i++)
@@ -937,6 +955,10 @@ export function offerRegions(run: RunWithEvent): void {
     }
     if (run.campaign === 'skyward' && run.act + 1 < FREE_FOR_ALL_REGION + 4) {
       const t = skywardRegionOptions(run, rng);
+      if (t.length) { run.event = { type: 'region', options: t }; return; }
+    }
+    if (run.campaign === 'wild' && run.act + 1 < FREE_FOR_ALL_REGION + 5) {
+      const t = wildRegionOptions(run, rng);
       if (t.length) { run.event = { type: 'region', options: t }; return; }
     }
     if (run.campaign === 'termina') {
@@ -1073,7 +1095,7 @@ export function advanceRegion(run: RunWithEvent, region: WorldId): void {
   run.regionsVisited.push(region);
   run.currentNodeId = null;
   run.event = undefined;
-  withRng(run, (rng) => { run.map = generateRegionMap(rng, run.act, region); randomizeWorlds(run, rng); });
+  withRng(run, (rng) => { run.map = generateRegionMap(rng, run.act, region); randomizeWorlds(run, rng); wildDecorateMap(run, run.map, rng); });
   run.rupees += 150;
 }
 
@@ -1089,7 +1111,7 @@ export function recruitLevel(run: Run): number {
 export function recruit(run: RunWithEvent, templateId: string): Unit | null {
   if (run.roster.length >= armyCap(run)) return null;
   const bonusLvl = run.bonus === 'dekuArmy' && TEMPLATES[templateId]?.race === 'deku' ? 1 : 0;
-  const unit = withRng(run, (rng) => makeHero(templateId, nextUid(run), recruitLevel(run) + bonusLvl, rng));
+  const unit = withRng(run, (rng) => { const u = makeHero(templateId, nextUid(run), recruitLevel(run) + bonusLvl, rng); wildOnRecruit(run, u, rng); return u; });
   run.roster.push(unit);
   if (run.event?.type === 'recruit') {
     for (const id of run.event.offers) if (ownedTemplateUnique(id) && !run.seenHeroes.includes(id)) run.seenHeroes.push(id);
@@ -1117,6 +1139,8 @@ export function giveWeapon(run: Run, id: string, uid: string | null): boolean {
   if (st) {
     if (st.wear) (u.wear ??= {})[id] = st.wear;
     if (st.forge) (u.forge ??= {})[id] = st.forge;
+    if (st.mod === 'decayed' || st.mod === 'pristine') (u.wmod ??= {})[id] = st.mod;
+    if (st.fuse) (u.fused ??= {})[id] = st.fuse;
     delete run.itemState![id];
   }
   return true;
@@ -1133,6 +1157,9 @@ export function giveGear(run: Run, id: string, uid: string | null): boolean {
   const old = u.gear[slot];
   if (old) run.convoy.push(old);
   u.gear[slot] = id;
+  // The Ancient Hero's Aspect occupies head, body and feet.
+  if (def.wildFx?.includes('fullBody')) for (const s of ['head', 'feet'] as const) { if (u.gear[s]) { run.convoy.push(u.gear[s]!); delete u.gear[s]; } }
+  else if ((slot === 'head' || slot === 'feet') && u.gear.body && GEAR[u.gear.body]?.wildFx?.includes('fullBody')) { run.convoy.push(u.gear.body); delete u.gear.body; }
   return true;
 }
 
@@ -1198,11 +1225,13 @@ export function stashWeapon(run: Run, uid: string, weaponId: string, force = fal
   u.weapons.splice(i, 1);
   run.convoy.push(weaponId);
   // Remember wear and improvements while it sits in the convoy.
-  const wear = u.wear?.[weaponId], forge = u.forge?.[weaponId];
-  if (wear || forge) {
-    (run.itemState ??= {})[weaponId] = { wear, forge };
+  const wear = u.wear?.[weaponId], forge = u.forge?.[weaponId], mod = u.wmod?.[weaponId], fuse = u.fused?.[weaponId];
+  if (wear || forge || mod || fuse) {
+    (run.itemState ??= {})[weaponId] = { wear, forge, mod, fuse };
     if (u.wear) delete u.wear[weaponId];
     if (u.forge) delete u.forge[weaponId];
+    if (u.wmod) delete u.wmod[weaponId];
+    if (u.fused) delete u.fused[weaponId];
   }
   return true;
 }
@@ -1367,6 +1396,7 @@ export function campRest(run: RunWithEvent): void {
   if (fed) a.supplies -= 4;
   const anju = run.roster.some((u) => u.skills.includes('hospitality')); // Anju's Hospitality
   const oasis = run.questItems?.includes('cabanaDeed') ? 0.2 : 0;
+  wildRestBonus(run);
   for (const u of run.roster) u.hp = Math.min(u.stats.hp, u.hp + Math.ceil(u.stats.hp * Math.min(1, (fed ? 1 : anju ? 0.75 : 0.5) + oasis)));
   adjustMorale(run, (fed ? 5 : 0) + (anju ? 5 : 0));
   run.event = undefined;

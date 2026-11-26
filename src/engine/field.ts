@@ -8,6 +8,7 @@ import { hasEffect, unitTags } from './units';
 import { decorateWindWaker, wwEnvironment } from './windwaker';
 import { decorateTwilight, twilightBattleStart } from './twilight';
 import { decorateSkyward, skywardBattleStart } from './skyward';
+import { decorateWild, wildBattleStart, wildEnvironment } from './wild';
 import { GEAR, ITEMS } from '../data/registry';
 import type { Battle, Pos, Terrain, Unit, WorldId } from './types';
 
@@ -35,8 +36,10 @@ export function decorateField(b: Battle, rng: RNG, nodeType: string) {
   decorateWindWaker(b, rng);
   decorateTwilight(b, rng);
   decorateSkyward(b, rng);
+  decorateWild(b, rng);
   twilightBattleStart(b, rng);
   skywardBattleStart(b, rng);
+  wildBattleStart(b, rng);
   // Fog of war
   b.fog = rng.chance(FOGGY[world] ?? 6);
   // Buried treasure
@@ -302,6 +305,9 @@ export function environmentPhase(b: Battle): EnvEvent[] {
       events.push({ text: `${u.name} is caught in the flames.`, uid: u.uid, damage: Math.max(0, dmg) });
     }
   }
+
+  // Era of the Wild: fire across grass, updrafts, Gloom pools, storms
+  wildEnvironment(b, events);
 
   // Magic Beans
   for (const s of b.sprouts ?? []) {

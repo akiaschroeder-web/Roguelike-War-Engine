@@ -147,6 +147,12 @@ export function specialSupportMods(b: Battle, u: Unit, pos: Pos, foe?: Unit): Gr
       case 'demonAndBlade': if (mine && w?.element === 'dark') add({ str: 5, mag: 5 }); break;
       case 'siegeSpecialists': if (mine && w?.type === 'siege') add({ hit: 20 }); break;
       case 'spiritsOfTheSword': if (mine && w?.type === 'sword') add({ str: 3 }); break;
+      // ── Era of the Wild ──
+      case 'fiveChampions': if (mine && near(g, 3)) add({ str: 4, skl: 4, res: 4 }); break;
+      case 'threeGenerationsOfRito': if (mine) add({ skl: 3, spd: 3 }); break;
+      case 'zoraRoyalFamily': if ((mine || near(g, 2)) && (u.race === 'zora' || hasEffect(u, 'swim'))) add({ def: 3 }); break;
+      case 'goronChampions': if (mine) add({ str: 5, def: 5 }); break;
+      case 'ancientWarMachines': if (mine) add({ def: 4, ...(near(g, 3) ? { hit: 10 } : {}) }); break;
     }
   }
   return m;

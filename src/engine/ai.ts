@@ -2,6 +2,7 @@ import { attackWeapons, expectedDamage, forecast, healAmount, healWeapons } from
 import { computeMoves, distanceField, footDist, keyOf, posOf, unitDist, type Moves } from './grid';
 import { LAVA_DAMAGE_PCT, TERRAIN_BONUS, WATERY } from './rules';
 import { hasEffect, isLavaImmune } from './units';
+import { wildIgnores } from './wildGear';
 import type { Battle, Pos, Unit } from './types';
 
 export interface AIPlan {
@@ -32,7 +33,9 @@ export function planAction(b: Battle, unit: Unit): AIPlan {
     && !(hasEffect(u, 'gibdo') && ['gibdo', 'redead'].includes(unit.artId ?? '') && unit.lastHitBy !== u.uid)
     // Ghost ships slip by at night; Poes won't touch Jalhalla's Mask.
     && !(b.night && (hasEffect(u, 'ghostFlag') || u.skills.includes('phantomVoyage')) && !u.attacked && unitDist(unit, u) > 1)
-    && !(hasEffect(u, 'poeCommand') && unit.artId === 'poe'));
+    && !(hasEffect(u, 'poeCommand') && unit.artId === 'poe')
+    // Era of the Wild disguises: monster masks, Gerudo and Yiga outfits, skeletal disguises.
+    && !wildIgnores(unit, u, unitDist(unit, u), b.turn));
   const friends = b.units.filter((u) => u.team === unit.team && u !== unit);
   const lavaPenalty = (k: number) => (b.tiles[k] === 'lava' && !isLavaImmune(unit) ? LAVA_DAMAGE_PCT / 4 : 0);
 

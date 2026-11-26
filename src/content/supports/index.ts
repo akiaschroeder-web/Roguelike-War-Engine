@@ -116,6 +116,25 @@ export const GROUP_SUPPORTS: GroupSupport[] = [
   { id: 'siegeSpecialists', name: 'Siege Specialists', members: ['groose', 'auru', 'barnes'], text: 'Siege weapons +20 Hit; Bombardment blasts a bigger area.' },
   { id: 'forgersOfLegends', name: 'Forgers of Legends', members: ['gondo', 'biggoron', 'medigoron'], text: 'Equipment upgrades need 30% fewer materials.' },
   { id: 'spiritsOfTheSword', name: 'Spirits of the Sword', members: ['fi', 'ghirahim', 'herosShade'], text: 'Sword attacks +3 damage; sword techniques cost 20% less stamina.' },
+  // Era of the Wild (docs/era-of-the-wild-pack.md section 30)
+  { id: 'championsOfHyrule', name: 'Champions of Hyrule', members: ['mipha', 'daruk', 'revali', 'urbosa'], text: "Champion abilities gain one more charge; Mipha's Grace restores all HP instead." },
+  { id: 'fiveChampions', name: 'The Five Champions', members: ['heroOfTheWild', 'mipha', 'daruk', 'revali', 'urbosa'], text: '+4 STR, SKL and RES while fighting together (within 3 of another member).' },
+  { id: 'sagesOfTheNewEra', name: 'Sages of the New Era', members: ['sidon', 'yunobo', 'tulin', 'riju', 'mineru'], text: 'Sage ability cooldowns −1 (minimum 1).' },
+  { id: 'acrossOneHundredYears', name: 'Across One Hundred Years', members: ['heroOfTheWild', 'zeldaWild', 'kingRhoam', 'impaWild'], text: '+10 morale at the start of battle; members are immune to fear.' },
+  { id: 'foundingOfHyrule', name: 'The Founding of Hyrule', members: ['rauruZonai', 'sonia', 'mineru'], text: 'Sacred and Zonai abilities +25%.' },
+  { id: 'sheikahResearchTeam', name: 'Sheikah Research Team', members: ['purah', 'robbie', 'impaWild'], text: 'Ancient research costs 30% less.' },
+  { id: 'ancientAndModernTech', name: 'Ancient and Modern Technology', members: ['purah', 'robbie', 'mineru', 'gondo'], text: 'Repair and crafting 30% more efficient (cheaper vehicles and repairs; machines heal 30% more).' },
+  { id: 'threeGenerationsOfRito', name: 'The Three Generations of Rito', members: ['revali', 'teba', 'tulin'], text: '+3 SKL and SPD and +1 aerial MOV.' },
+  { id: 'zoraRoyalFamily', name: 'The Zora Royal Family', members: ['dorephan', 'mipha', 'sidon', 'yona'], text: 'Aquatic allies near a member heal 25% more, regenerate a little and gain +3 DEF.' },
+  { id: 'gerudoLegacy', name: 'Gerudo Legacy', members: ['nabooru', 'urbosa', 'riju'], text: 'Lightning damage +25% and sword Critical +10.' },
+  { id: 'goronChampions', name: 'Goron Champions', members: ['darunia', 'darmani', 'darbus', 'daruk', 'yunobo'], text: '+5 STR and DEF; heavy weapons hit 20% harder.' },
+  { id: 'fourDivineBeasts', name: 'The Four Divine Beasts', members: ['vahRuta', 'vahRudania', 'vahMedoh', 'vahNaboris'], text: 'Unlocks Combined Bombardment: every enemy near any of them is shelled.' },
+  { id: 'threeSacredDragons', name: 'The Three Sacred Dragons', members: ['dinraal', 'naydra', 'farosh'], text: 'Their elemental attacks cover more area (they hit the spaces around the target) and +10%.' },
+  { id: 'yigaEngineeringDivision', name: 'The Yiga Engineering Division', members: ['kohga', 'yigaEngineer', 'groose'], text: 'Vehicles cost 30% less to build; siege weapons +20% damage.' },
+  { id: 'ancientWarMachines', name: 'The Ancient War Machines', members: ['guardianStalker', 'koloktos', 'fluxConstruct3'], text: '+4 DEF for machines; members within 3 of each other +10 Hit (coordinated attacks).' },
+  { id: 'firstAndTheLast', name: 'The First and the Last', members: ['heroOfTheSky', 'heroOfTheWild', 'fi'], text: 'Master Sword +5 Might, more energy and faster recharge.' },
+  { id: 'legacyOfHylia', name: 'The Legacy of Hylia', members: ['hylia', 'zeldaSS', 'zeldaWild'], text: 'Sacred abilities cost 30% less MP.' },
+  { id: 'demonKings', name: 'The Demon Kings', members: ['demise', 'ganondorf', 'ganondorfWW', 'ganondorfTP', 'ganondorfWild'], text: 'Dark damage +25%.' },
 ];
 
 /** The registered conversation set for a pair (form-specific when `form` is given). */

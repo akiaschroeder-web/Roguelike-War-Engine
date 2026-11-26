@@ -1,5 +1,6 @@
 import { ABILITIES, CLASSES, GEAR, ITEMS, RACES, TEMPLATES, WEAPONS } from '../data/registry';
 import { STATUS_STATS } from './status';
+import { armorStarDef, wildLavaImmune, wildMaxUses, wildPrepare } from './wildGear';
 import { vesselMov } from './naval';
 import type { RNG } from './rng';
 import { MAX_LEVEL, XP_PER_LEVEL } from './rules';
@@ -181,6 +182,7 @@ export function effectiveStats(unit: Unit): Stats {
   for (const st of unit.statuses ?? []) {
     for (const [k, v] of Object.entries(STATUS_STATS[st.kind] ?? {})) (s as Record<string, number>)[k] += v as number;
   }
+  s.def += armorStarDef(unit);
   if (moveTypeOf(unit) === 'flying') {
     if (hasEffect(unit, 'flyMov')) s.mov += 1;
     if (hasEffect(unit, 'helmarocPlume')) s.mov += 2;
@@ -209,7 +211,7 @@ export function hasEffect(unit: Unit, effect: string): boolean {
 
 export function isLavaImmune(u: Unit): boolean {
   return !!RACES[u.race]?.lavaImmune || hasEffect(u, 'lavaImmune') || hasEffect(u, 'hazardResist') || moveTypeOf(u) === 'flying'
-    || !!u.buffs?.some((b) => b.id === 'magmanosCore') || !!u.skills?.includes('moltenBody');
+    || !!u.buffs?.some((b) => b.id === 'magmanosCore') || !!u.skills?.includes('moltenBody') || wildLavaImmune(u);
 }
 
 export function canSwim(u: Unit): boolean {
@@ -218,7 +220,7 @@ export function canSwim(u: Unit): boolean {
 
 /** Temporarily airborne (Deku Flower glide, Twinmold Wing Fragment, Tingle's balloon). */
 export function isGliding(u: Unit): boolean {
-  return !!u.buffs?.some((b) => b.id === 'glide' || b.id === 'wing') || hasEffect(u, 'balloon');
+  return !!u.buffs?.some((b) => b.id === 'glide' || b.id === 'wing' || b.id === 'aerial') || hasEffect(u, 'balloon');
 }
 
 /** Which slot a gear piece goes into on this unit (second accessory slot if the first is taken). */
@@ -269,6 +271,7 @@ export function prepareForBattle(unit: Unit): Unit {
     mp: unit.stats.mp, sta: unit.stats.sta, statuses: [], buffs: [], usedAbilities: [], faroreMark: undefined, cooldowns: {},
     hp: Math.max(1, unit.hp), moved: false, acted: false, kills: 0, movedDist: 0, survivedOnce: false, attacked: false, lastHitBy: undefined,
   };
+  wildPrepare(out);
   // Wart's bubbles: the first damaging hit of each battle is absorbed.
   if (out.skills.includes('bubbleShield') || hasEffect(out, 'bubble')) out.buffs.push({ id: 'bubble', name: 'Bubble', turns: 99 });
   // The Garo Master starts the battle hidden in the shadows.
@@ -288,7 +291,7 @@ export function maxUses(w: WeaponDef | undefined): number {
 }
 
 export function usesLeft(u: Unit, weaponId: string): number | null {
-  const max = maxUses(WEAPONS[weaponId]);
+  const max = wildMaxUses(u, weaponId, maxUses(WEAPONS[weaponId]));
   if (!max) return null;
   return Math.max(0, max - (u.wear?.[weaponId] ?? 0));
 }
@@ -303,13 +306,15 @@ export function forgeLevel(u: Unit, weaponId: string): number {
  */
 export function spendUse(u: Unit, weaponId: string): { broke: boolean; into?: string } {
   if (u.team !== 'player') return { broke: false };
-  const max = maxUses(WEAPONS[weaponId]);
+  const max = wildMaxUses(u, weaponId, maxUses(WEAPONS[weaponId]));
   if (!max) return { broke: false };
   u.wear ??= {};
   u.wear[weaponId] = (u.wear[weaponId] ?? 0) + (WEAPONS[weaponId]?.wearRate ?? 1);
   if (u.wear[weaponId] < max) return { broke: false };
   delete u.wear[weaponId];
   if (u.forge) delete u.forge[weaponId];
+  if (u.fused) delete u.fused[weaponId];
+  if (u.wmod) delete u.wmod[weaponId];
   const i = u.weapons.indexOf(weaponId);
   const into = WEAPONS[weaponId]?.brokenInto;
   if (i >= 0) {

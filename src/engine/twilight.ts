@@ -14,6 +14,7 @@ import { effectiveStats, hasEffect, isMounted, makeEnemy, moveTypeOf, unitTags }
 import { pullToward, pushAway } from './windwaker';
 import { activeGroups, promiseKept } from './supports';
 import { ssHazardImmune, ssStaminaMult } from './skyward';
+import { wildStaminaMult } from './wild';
 import type { AbilityDef, Battle, Element, Pos, StatusKind, Terrain, Unit, WeaponDef } from './types';
 
 declare module './types' {
@@ -498,7 +499,7 @@ export function techniqueCost(u: Unit, a: AbilityDef, bonus?: string): number {
   }
   if (bonus === 'forgottenTechniques' && u.team === 'player') c = Math.floor(c * 0.8);
   if (hasEffect(u, 'farorePearl')) c = Math.ceil(c * 0.75);
-  c = Math.floor(c * ssStaminaMult(u, bonus));
+  c = Math.floor(c * ssStaminaMult(u, bonus) * wildStaminaMult(u, a.id));
   return Math.max(0, c);
 }
 

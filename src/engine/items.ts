@@ -2,6 +2,7 @@
 
 import { useTwilightItem } from './twilight';
 import { useSkywardItem } from './skyward';
+import { useWildItem, wildCanUseItem, wildItemReaction } from './wild';
 import { ITEMS, TEMPLATES } from '../data/registry';
 import { useFairy, type LevelUp } from './combat';
 import { footDist, inBounds, tilesInRange } from './grid';
@@ -62,6 +63,8 @@ export function canUseHere(b: Battle, u: Unit, index: number): boolean {
     if (def.tool === 'fishing') return canFish(b, u);
     if (def.tool === 'shovel') return canDig(b, u);
   }
+  const wl = wildCanUseItem(b, u, def.id);
+  if (wl !== undefined && !wl) return false;
   if (def.id === 'twinmoldWingFragment' && u.movedDist > 0) return false;
   if ((def.id === 'cannonball' || def.id === 'chainShot') && !isVessel(u)) return false;
   if (def.id === 'cannonball') return u.weapons.some((w) => WEAPONS[w]?.type === 'siege' && (u.wear?.[w] ?? 0) > 0);
@@ -226,6 +229,7 @@ export function useItem(b: Battle, u: Unit, index: number, rng: RNG, at?: Pos): 
       xp += 6;
     }
   }
+  if (at && (def.kind === 'fruit' || def.kind === 'cloud')) res.lines.push(...wildItemReaction(b, u, def.id, at));
   consume(u, index);
   if (u.team === 'player' && xp) {
     for (const gains of gainXp(u, Math.min(60, xp), rng)) res.levelUps.push({ uid: u.uid, name: u.name, level: u.level, gains });
@@ -240,6 +244,8 @@ function useSpecial(b: Battle, u: Unit, def: ItemDef, rng: RNG, res: ItemResult,
   if (tpLine !== null) { res.lines.push(tpLine); return; }
   const ssLine = useSkywardItem(b, u, def.id, rng, tpTarget, at);
   if (ssLine !== null) { res.lines.push(ssLine); return; }
+  const wildLine = useWildItem(b, u, def.id, rng, tpTarget, at);
+  if (wildLine !== null) { res.lines.push(wildLine); return; }
   const allies = b.units.filter((a) => a.team === u.team);
   const at0 = at ?? { x: u.x, y: u.y };
   const unitOn = (p: Pos) => b.units.find((e) => footDist(p.x, p.y, 1, e.x, e.y, e.size) === 0);
