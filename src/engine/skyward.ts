@@ -1266,9 +1266,9 @@ function blowTiles(b: Battle, u: Unit, r: number, rng: RNG, out: SSOutcome) {
 
 /** MP multiplier for Skyward Sword abilities. */
 export function ssCostMult(b: Battle | undefined, u: Unit, def: AbilityDef): number {
+  if (!b) return 1;
   let m = 1;
   if (has(u, 'goddessReborn') && (SACRED_ABILITIES.has(def.id) || def.element === 'light')) m *= 0.75;
-  void b;
   return m;
 }
 

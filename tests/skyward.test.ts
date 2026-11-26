@@ -278,7 +278,7 @@ describe('the Silent Realm', () => {
     expect(run.skyward?.trialPending).toBeTruthy();
     const node = availableNodes(run).find((n) => n.type === 'battle')!;
     enterNode(run, node.id);
-    if (run.event?.type === 'deploy') startBattle(run, run.roster.map((u) => u.uid));
+    if ((run.event as RunWithEvent['event'])?.type === 'deploy') startBattle(run, run.roster.map((u) => u.uid));
     expect(run.battle?.objective.type).toBe('trial');
     expect(run.battle!.units.filter((u) => u.team === 'player').length).toBeLessThanOrEqual(3);
     run.battle!.result = 'won';
@@ -416,7 +416,7 @@ describe('characters, forms and groups', () => {
     const b = field();
     const z = place(b, hero('zeldaSS'), 3, 3);
     const impa = place(b, hero('impaSS'), 3, 4);
-    const e = place(b, foe('bokoblin', 'e'), 4, 3, 'enemy');
+    const e = place(b, foe('pyrup', 'e'), 5, 3, 'enemy');
     expect(findInterceptor(b, e, z)).toBe(impa);
     const d = place(b, hero('demise', 'd', 5), 8, 2);
     const full = ssMods(b, d, d, e, true).str;
