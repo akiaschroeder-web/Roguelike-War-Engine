@@ -369,3 +369,15 @@ Batch 4 (7): imprisonedArmed, imprisonedFlying, stalmaster, scervo, dreadfuse, d
 Still missing: Hylia.
 
 Batch 5 (7): lizalfosSS, stalfosSS, chuchuGreenSS, chuchuBlueSS, chuchuRedSS, chuchuYellowSS (SS alt arts for existing units), hylia. All art received.
+
+## Implementation IDs (fixed; supports and content both use these)
+
+Template ids (art id is the same unless noted):
+- Main: heroOfTheSky, zeldaSS, fi, groose, impaSS, ghirahim, ghirahimTrue (form of ghirahim), demise
+- Supporting: gaepora, fledge, pipit, karane, batreaux, gondo, scrapper, skipper, bucha, gorko, moldini, levias, faronDragon, eldinDragon, lanayruDragon, hylia
+- Monsters: technoblin, cursedBokoblin, ironShieldMoblin, quadroBaba, furnix, pyrup, froak, ampilus, ampilusEgg, aracha, magmanos, sentrobe, beamos (existing enemy id, gets a recruitable template), watcher, earthGuardian, skyGuardian, remlit
+- Bosses: scaldera, moldarach, koloktos, tentalus, bilocyte, imprisoned, imprisonedArmed, imprisonedFlying (forms of imprisoned), stalmaster, scervo, dreadfuse, darkLizalfos
+- Loftwings: skyLoftwing (art loftwingBlue), crimsonLoftwing (art loftwing, the retired mount's art)
+
+Alt art (ART_VARIANTS additions): moblin += moblinSS, beamos = [beamos, beamosSS], lizalfos += lizalfosSS, stalfos += stalfosSS, chuchuGreen/Blue/Red/Yellow += chuchu<Color>SS.
+Campaign id: 'skyward'. Pack folder: src/content/skyward/.
