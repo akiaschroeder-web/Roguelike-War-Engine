@@ -273,3 +273,23 @@ Batch 10 — alt arts (10): goronWarriorTP, zoraWarriorTP, goronWarriorWW (backp
 Batch 11: naydra_patternbg. The user labelled the upside-down multi-faced frog spirit (saved earlier as malanya.png) as the Bubbulfrog — identity being confirmed with the user (in TotK that model is Malanya).
 User answer: the red-suited Yiga (yigaBlademaster.png) is used for both the Yiga Blademaster and the Yiga Engineer. The frog spirit image (malanya.png) is used for both Malanya and the Bubbulfrog.
 Correction from the user: the small masked figure is Malanya (now malanya.png); the frog spirit image is the Bubbulfrog (now bubbulfrog.png). This replaces the "both" note above.
+
+## Implementation IDs (fixed; supports and content both use these)
+
+Campaign id: 'wild'. Pack folder: src/content/wild/. Art ids are in art_sources/era_of_the_wild/IDS.md (already processed into public/art, public/portraits and artManifest).
+
+Template ids (art id is the same unless noted):
+- Heroes/villains: heroOfTheWild, zeldaWild, lightDragon (form of zeldaWild), ganondorfWild (variants [ganondorfWild, ganondorfWildDemonKing]), demonDragon (form of ganondorfWild), phantomGanondorf, calamityGanon, darkBeastGanonWild (form of calamityGanon)
+- Champions: mipha, daruk, revali, urbosa. Sages: sidon, yunobo, tulin, riju, mineru (art: alias mineruConstruct until a solo image exists), mineruConstruct (form of mineru, also recruitable alone)
+- Ancients: rauruZonai, sonia. Divine creatures: dinraal, naydra, farosh, satori, malanya
+- Supporting: impaWild, purah, robbie, paya, kohga, sooga (optional bonus), teba, kass, hestu, kingRhoam, dorephan, muzu, yona, bludo, buliara, hudson, kilton, koltin, tauro, penn, hino, granteson
+- Yiga: yigaFootsoldier, yigaBlademaster, yigaEngineer (art yigaBlademaster)
+- Guardians: guardianStalker, guardianSkywatcher, guardianTurret, decayedGuardian, guardianScout1, guardianScout2, guardianScout3, guardianScout4
+- Constructs: soldierConstruct1, soldierConstruct2 (art soldierConstructSpear), soldierConstruct3, soldierConstruct4 (art soldierConstructAxe), captainConstruct1, captainConstruct2, captainConstruct3 (art captainConstructBlade), captainConstruct4 (art captainConstructGold), stewardConstruct, forgeConstruct
+- Large monsters: lynel, hinox, stalnox, stoneTalus, igneoTalus, frostTalus, battleTalus, molduga, molduking, bossBokoblin, horriblin, gleeokFlame, gleeokFrost, gleeokThunder, kingGleeok
+- Small monsters: stonePebblit, igneoPebblit, frostPebblit, evermean, aerocuda, mothGibdo, gloomSpawn, bubbulfrog, blupee, littleFrox, frox, stalkoblin, stalmoblin, stalizalfos. (The existing gibdo gets alt art gibdoTOTK and the elemental-husk behaviour; no duplicate Gibdo unit.)
+- Bosses: waterblight, fireblight, windblight, thunderblight, mazKoshia, colgera, marbledGohma, mucktorok, queenGibdo, seizedConstruct, moragia, fluxConstruct1, fluxConstruct2, fluxConstruct3
+- Divine Beasts: vahRuta, vahRudania, vahMedoh, vahNaboris
+- Mounts: giantWhiteStallion, royalWhiteStallion, patricia, mountainBear, mountainDeer, masterCycleZero (Giant Horse, Golden Horse, Stalhorse and Sand Seal reuse existing entries/art)
+
+Alt art (ART_VARIANTS, appended): ganondorfWild += ganondorfWildDemonKing; gibdo += gibdoTOTK; lizalfos += lizalfosBotW; moblin += moblinBotW; bokoblin += bokoblinBotW; likeLike += likeLikeBotW; goronWarrior += goronWarriorTP, goronWarriorWW, goronWarriorBotW; zoraWarrior += zoraWarriorTP, zoraWarriorBotW; ritoGeneric += ritoWarriorBotW. Every generic unit of those races that uses the base art gets the same variants.
