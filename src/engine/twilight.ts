@@ -12,6 +12,7 @@ import { addStatus, hasStatus } from './status';
 import { restoreForm, roomFor, transformInto } from './transform';
 import { effectiveStats, hasEffect, isMounted, makeEnemy, moveTypeOf, unitTags } from './units';
 import { pullToward, pushAway } from './windwaker';
+import { activeGroups, promiseKept } from './supports';
 import type { AbilityDef, Battle, Element, Pos, StatusKind, Terrain, Unit, WeaponDef } from './types';
 
 declare module './types' {
@@ -166,8 +167,10 @@ export function decorateTwilight(b: Battle, rng: RNG) {
   }
 }
 
-/** Battle start: the Hero's Shade's Crest teaches a skill; Meg's illusions appear. */
+/** Battle start: the Hero's Shade's Crest teaches a skill; Meg's illusions appear; group supports switch on. */
 export function twilightBattleStart(b: Battle, rng: RNG) {
+  b.groupSupports = activeGroups(b, 'player');
+  for (const g of b.groupSupports) b.log.push(`Group support: ${g.replace(/([A-Z])/g, ' $1').toLowerCase()}.`);
   for (const u of [...b.units]) {
     if (hasEffect(u, 'hiddenCrest') && u.weapons.some((w) => WEAPONS[w]?.type === 'sword')) {
       const left = HIDDEN_SKILLS.filter((s) => !u.abilities.includes(s));
@@ -266,7 +269,7 @@ export function tpStartPhase(b: Battle, u: Unit, events: TPEvent[]) {
     if (s) buff(u, 'sorcery', 'Unstable Sorcery', 1, s);
   }
   // Corrupted Roots spread the Twilight.
-  if (has(u, 'corruptedRoots')) {
+  if (has(u, 'corruptedRoots') && !b.units.some((s) => s.race === 'lightSpirit' && unitDist(s, u) <= 4)) {
     const spots = tilesInRange(b, u, 1, 1, u.size).filter((p) => tileAt(b, p.x, p.y) === 'plain' || tileAt(b, p.x, p.y) === 'forest');
     if (spots.length) { const p = rng.pick(spots); b.tiles[keyOf(b, p.x, p.y)] = 'twilightFog'; }
   }
@@ -314,6 +317,17 @@ export function tpStartPhase(b: Battle, u: Unit, events: TPEvent[]) {
     st.dormant = st.dormant.filter((x) => x.turns >= 0);
   }
 
+  // ── Group supports ──
+  const groups = u.team === 'player' ? b.groupSupports ?? [] : [];
+  if (groups.length) {
+    const tidOf = (x: Unit) => x.templateId ?? '';
+    if (groups.includes('ancientWaters') && (u.race === 'zora' || u.race === 'zoraSpirit' || unitTags(u).includes('aquatic') || u.race === 'aquaticDeity' || u.race === 'aquaticCreature')) heal(u.stats.hp * 0.1, 'The Ancient Waters');
+    if (groups.includes('restorationOfLight') && ['ordona', 'faron', 'eldin', 'lanayru'].includes(tidOf(u))) purify(b, u, 2, u.size);
+    if (groups.includes('theResistance') && ['telma', 'rusl', 'ashei', 'auru', 'shad'].includes(tidOf(u))) revealAround(b, u, 4, events);
+    if ((groups.includes('outsetFamily') && ['heroOfWinds', 'aryll', 'grandma'].includes(tidOf(u))) || (groups.includes('fallenHeroes') && ['herosShade', 'darmani', 'mikau'].includes(tidOf(u)))) u.statuses = u.statuses.filter((s) => s.kind !== 'fear');
+    if (groups.includes('ranchFamily') && isMounted(u) && b.units.some((x) => x.team === u.team && Object.values(x.gear).includes('epona'))) buff(u, 'ranch', 'The Ranch Family', 1, { mov: 1 });
+    if (groups.includes('thePirateCrew') && unitTags(u).includes('vessel')) buff(u, 'crew', 'The Pirate Crew', 1, { mov: 1 });
+  }
   // ── Auras from allies ──
   for (const a of mine) {
     if (a === u) continue;
@@ -531,6 +545,7 @@ export function tpSaveFromDeath(b: Battle, target: Unit): string | null {
     buff(target, 'defiance', 'Divine Defiance', 2, { str: 5, mag: 5 });
     return `${target.name} refuses to fall!`;
   }
+  if (promiseKept(b, target)) return `A promise kept: ${target.name} holds on!`;
   const prot = target.buffs.find((x) => x.id === 'divineProtection');
   if (prot) { target.buffs = target.buffs.filter((x) => x !== prot); return `The Fairy Queen's protection saves ${target.name}!`; }
   if (target.race === 'zora') {

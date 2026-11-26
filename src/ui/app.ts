@@ -11,7 +11,8 @@ import {
 import { equip } from '../engine/combat';
 import { GEAR_SLOTS, PACK_SIZE, type GearSlot, type MapNode, type NodeType, type Unit } from '../engine/types';
 import { forgeLevel, slotFor } from '../engine/units';
-import { isSPair, rankOf } from '../engine/supports';
+import { maxRank, pointCap, rankOf } from '../engine/supports';
+import { GROUP_SUPPORTS, PAIR_BONUSES, canonOf, formPairs, pairDef, pairKey } from '../content/supports';
 import { BattleView } from './battleView';
 import { CHART_SIZE, fleetCap, lockReason, navalDeployCap, sectorName, seaOf } from '../engine/sea';
 import { capacityOf, isVessel } from '../engine/naval';
@@ -251,12 +252,13 @@ export class App {
       if (!k) return;
       if (k.dataset.k === 'tab') { m.close(); this.codex(k.dataset.id!); }
       if (k.dataset.k === 'read') {
-        const [a, b, r] = p.convos[Number(k.dataset.i)].split('|');
+        const [a, b, r, form] = p.convos[Number(k.dataset.i)].split('|');
         const ta = tt(a), tb = tt(b);
         if (!ta || !tb) return;
-        const { lines, swap } = conversationFor(a, b, r as ConvoRank, { a: ta.name, b: tb.name });
+        const { lines, swap } = conversationFor(a, b, r as ConvoRank, { a: ta.name, b: tb.name }, form);
         modal(`<h2>${esc(ta.name)} & ${esc(tb.name)} <span class="dim small">Support ${r}</span></h2>
           <div class="convo">${lines.map(([sp, text]) => {
+            if (sp === 'n') return `<div class="convo-narration">${esc(text)}</div>`;
             const t = (sp === 'a') !== swap ? ta : tb;
             return `<div class="convo-line ${t === ta ? 'left' : 'right'}">${token({ home: t.home, glyph: t.glyph, team: 'player', portraitId: t.id }, 40)}<div class="bubble"><b>${esc(t.name)}</b><div>${esc(text)}</div></div></div>`;
           }).join('')}</div><div class="center-text"><button class="btn primary" data-close>Close</button></div>`, { dismissable: true });
@@ -497,7 +499,7 @@ export class App {
       if (!k) return;
       if (k.dataset.k === 'talk') {
         const other = run.roster.find((x) => x.uid === k.dataset.uid);
-        if (other) this.showConversation(u, other, k.dataset.rank as ConvoRank);
+        if (other) this.showConversation(u, other, k.dataset.rank as ConvoRank, k.dataset.form);
         return;
       }
       if (k.dataset.k === 'equip') equip(u, k.dataset.id!);
@@ -1124,17 +1126,18 @@ export class App {
   }
 
   /** Show a support conversation between two units. */
-  private showConversation(a: Unit, b: Unit, rank: ConvoRank) {
+  private showConversation(a: Unit, b: Unit, rank: ConvoRank, form?: string) {
     const run = this.run!;
-    const { lines, swap } = conversationFor(a.templateId ?? a.uid, b.templateId ?? b.uid, rank, { a: a.name, b: b.name });
-    const who = (s: 'a' | 'b') => ((s === 'a') !== swap ? a : b);
-    const key = `${[a.templateId, b.templateId].sort().join('|')}|${rank}`;
+    const { lines, swap } = conversationFor(a.templateId ?? a.uid, b.templateId ?? b.uid, rank, { a: a.name, b: b.name }, form);
+    const who = (s: 'a' | 'b' | 'n') => ((s === 'a') !== swap ? a : b);
+    const key = `${[canonOf(a.templateId ?? ''), canonOf(b.templateId ?? '')].sort().join('|')}|${rank}${form ? `|${form}` : ''}`;
     if (!(run.convosSeen ??= []).includes(key)) run.convosSeen.push(key);
     if (!this.meta.convos.includes(key)) { this.meta.convos.push(key); saveMeta(this.meta); }
     this.save();
     modal(`
-        <h2>${esc(a.name)} & ${esc(b.name)} <span class="dim small">Support ${rank}</span></h2>
+        <h2>${esc(a.name)} & ${esc(b.name)} <span class="dim small">Support ${rank}${form ? ` · ${esc(TEMPLATES[form]?.name ?? form)}` : ''}</span></h2>
         <div class="convo">${lines.map(([s, t]) => {
+          if (s === 'n') return `<div class="convo-narration">${esc(t)}</div>`;
           const u = who(s);
           const left = u === a;
           return `<div class="convo-line ${left ? 'left' : 'right'}">${token(u, 40)}<div class="bubble"><b>${esc(u.name)}</b><div>${esc(t)}</div></div></div>`;
@@ -1149,13 +1152,24 @@ export class App {
       .map(([k, pts]) => {
         const other = run.roster.find((x) => x.uid !== u.uid && k.split('|').includes(x.uid));
         if (!other) return '';
-        const s = isSPair(u, other);
-        const r = rankOf(pts, s);
+        const max = maxRank(u, other);
+        const r = rankOf(pts, max);
+        const def = pairDef(u.templateId ?? '', other.templateId ?? '');
         const reached = (['C', 'B', 'A', 'S'] as ConvoRank[]).filter((x) => r && 'CBAS'.indexOf(x) <= 'CBAS'.indexOf(r));
         const talks = reached.map((x) => `<button class="btn tiny" data-k="talk" data-uid="${other.uid}" data-rank="${x}" title="Read the ${x} conversation">💬${x}</button>`).join('');
-        return `<div class="equip-row"><span>${token(other, 22)} ${esc(other.name)}</span><span><b>${r || '–'}</b> <span class="dim small">${pts}/${s ? 70 : 40}${s ? ' · S possible' : ''}</span> ${talks}</span></div>`;
+        const pk = pairKey(u.templateId ?? '', other.templateId ?? '');
+        const formTalks = formPairs(u.templateId ?? '', other.templateId ?? '').filter((f) => (run.formSupports ?? []).includes(`${pk}#${f.form}`))
+          .flatMap((f) => reached.filter((x) => 'CBAS'.indexOf(x) <= 'CBAS'.indexOf(f.max)).map((x) => `<button class="btn tiny" data-k="talk" data-uid="${other.uid}" data-rank="${x}" data-form="${f.form}" title="${esc(TEMPLATES[f.form!]?.name ?? '')}: ${esc(f.theme)}">🎭${x}</button>`)).join('');
+        const bonus = PAIR_BONUSES[pk];
+        return `<div class="equip-row"><span>${token(other, 22)} ${esc(other.name)}</span><span><b>${r || '–'}</b> <span class="dim small">${pts}/${pointCap(max)} · max ${max}</span> ${talks}${formTalks}</span></div>`
+          + (def ? `<span class="support-theme">${esc(def.theme)}${bonus ? ` · <b>${esc(bonus.name)}</b> (${bonus.rank}): ${esc(bonus.text)}` : ''}</span>` : '');
       }).filter(Boolean);
-    return `<h3>Supports</h3><div class="equip-list">${rows.join('') || '<div class="dim small">Fight near allies to build supports (C → B → A, and S for special pairs).</div>'}</div>`;
+    const mine = GROUP_SUPPORTS.filter((g) => g.members.includes(canonOf(u.templateId ?? '')));
+    const groupRows = mine.map((g) => {
+      const have = g.members.filter((m) => run.roster.some((x) => canonOf(x.templateId ?? '') === m));
+      return `<div class="equip-row"><span>👥 <b>${esc(g.name)}</b> <span class="dim small">${have.length}/${g.members.length} in the army</span></span></div><span class="support-theme">${esc(g.text)} · ${g.members.map((m) => esc(TEMPLATES[m]?.name ?? m)).join(', ')}</span>`;
+    });
+    return `<h3>Supports</h3><div class="equip-list">${rows.join('') || '<div class="dim small">Fight near allies to build supports (C → B → A, and S for special pairs).</div>'}</div>${groupRows.length ? `<h3>Group supports</h3><div class="equip-list">${groupRows.join('')}</div><p class="dim small">Active in battle when every member is deployed.</p>` : ''}`;
   }
 
   private blacksmithScreen() {

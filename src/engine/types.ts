@@ -915,6 +915,8 @@ export interface Run {
   metaBonus?: { armyCap?: number; cp?: number };
   /** Discovered support conversations (keys 'templateA|templateB|rank'). */
   convosSeen?: string[];
+  /** Form-specific support conversations unlocked (pair key#form). */
+  formSupports?: string[];
   /** uids chosen for the pending battle. */
   deployment?: string[];
   uidCounter: number;

@@ -2,7 +2,10 @@
 // between battles. Lines are [speaker, text], speaker 'a' or 'b' matching the
 // pair's order in the key ('a|b').
 
-export type ConvoLine = ['a' | 'b', string];
+import { canonOf, convoSet } from '../supports';
+
+/** 'n' lines are narration (stage directions). */
+export type ConvoLine = ['a' | 'b' | 'n', string];
 export type ConvoRank = 'C' | 'B' | 'A' | 'S';
 
 export const CONVERSATIONS: Record<string, Partial<Record<ConvoRank, ConvoLine[]>>> = {
@@ -108,9 +111,12 @@ const GENERIC: Record<'C' | 'B' | 'A', ConvoLine[][]> = {
 };
 
 /** The conversation for a pair at a rank: hand-written if there is one, otherwise a generic one. */
-export function conversationFor(ta: string, tb: string, rank: ConvoRank, names: { a: string; b: string }): { lines: ConvoLine[]; swap: boolean } {
+export function conversationFor(ta: string, tb: string, rank: ConvoRank, names: { a: string; b: string }, form?: string): { lines: ConvoLine[]; swap: boolean } {
+  ta = canonOf(ta); tb = canonOf(tb);
   const key = ta < tb ? `${ta}|${tb}` : `${tb}|${ta}`;
   const swap = ta > tb;
+  const written = convoSet(ta, tb, form)?.[rank];
+  if (written) return { lines: written, swap };
   const special = CONVERSATIONS[key]?.[rank];
   if (special) return { lines: special, swap };
   const pool = GENERIC[rank === 'S' ? 'A' : rank];

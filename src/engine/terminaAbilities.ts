@@ -45,6 +45,7 @@ export function songRadius(b: Battle, u: Unit, def: AbilityDef): number {
   const t = b.tiles[keyOf(b, u.x, u.y)];
   if (watery(t) && (u.skills.includes('voiceOfTheOcean') || u.weapons.includes('zoraGuitar'))) r += 2;
   if (t === 'forest' && u.weapons.includes('dekuPipes')) r += 1;
+  if ((b.groupSupports ?? []).includes('voicesOfTheSea') && ['ruto', 'lulu', 'medli'].includes(u.templateId ?? '')) r += 2;
   return r;
 }
 

@@ -3,6 +3,7 @@
 import { ABILITIES, ITEMS, TEMPLATES, WEAPONS } from '../data/registry';
 import { castTermina, ENEMY_TRANSFORMS, terminaNeedsTarget, terminaTargets, terminaUnusable } from './terminaAbilities';
 import { castWindWaker, wwCostMult, wwNeedsTarget, wwNeedsTile, wwTargets, wwTiles, wwUnusable } from './windwaker';
+import { supportCostMult } from './supports';
 import { castTwilight, techniqueAllowed, techniqueCost, tpCostMult, tpNeedsTarget, tpNeedsTile, tpTargets, tpTiles, tpUnusable } from './twilight';
 import { buildAt, buildTargets, canDig, dig, hasTimeBlocks, ignite, meltSunBlocks, toggleTimeBlocks } from './field';
 import { roomFor, transformInto } from './transform';
@@ -24,7 +25,7 @@ export function instrumentDiscount(u: Unit): number | null {
 
 /** MP (or stamina, for techniques) an ability costs this unit. */
 export function abilityCost(u: Unit, def: AbilityDef, b?: Battle): number {
-  const m = wwCostMult(b, u, def) * tpCostMult(b, u, def);
+  const m = wwCostMult(b, u, def) * tpCostMult(b, u, def) * supportCostMult(b, u, def.kind, def.element);
   if (def.sta) return techniqueCost(u, def, b?.bonus);
   if (m !== 1) return Math.max(def.kind === 'song' ? 1 : 0, Math.floor(abilityCost(u, def) * m));
   if (def.mp && u.buffs?.some((x) => x.id === 'chateau')) return 0; // Chateau Romani

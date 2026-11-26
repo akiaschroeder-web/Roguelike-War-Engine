@@ -1,5 +1,5 @@
 import { ABILITIES, CLASSES, GEAR, ITEMS, RACES, WEAPONS } from '../data/registry';
-import { gainSupport, supportBonus } from './supports';
+import { gainSupport, specialSupportMods, supportBonus, supportCostMult, supportDamageMult } from './supports';
 import { coordinatedBonus, moraleBonus } from './army';
 import { isHelpless, onDamaged, rollElement, statusMods, weatherMight } from './status';
 import { keyOf, terrainAt, unitDist } from './grid';
@@ -205,6 +205,8 @@ export function situational(b: Battle, u: Unit, pos: Pos, foe: Unit, initiating:
   const vm = vesselMods(b, u);
   m.str += ww.str + vm.str; m.mag += ww.mag; m.skl += ww.skl; m.spd += ww.spd; m.def += ww.def + vm.def; m.res += ww.res + vm.res;
   m.hit += ww.hit + vm.hit; m.avoid += ww.avoid + vm.avoid; m.crit += ww.crit; m.dmg += ww.dmg + vm.dmg;
+  const gs = specialSupportMods(b, u, pos, foe);
+  m.str += gs.str; m.mag += gs.mag; m.skl += gs.skl; m.spd += gs.spd; m.def += gs.def; m.res += gs.res; m.hit += gs.hit; m.avoid += gs.avoid;
   const sup = supportBonus(b, u, pos);
   const cm = hasEffect(u, 'couple') ? 1.25 : 1;
   m.hit += Math.round(sup.hit * cm); m.avoid += Math.round(sup.avoid * cm); m.crit += Math.round(sup.crit * cm); m.def += sup.def; m.res += sup.def;
@@ -258,7 +260,7 @@ function sideStats(
   if (hasEffect(atk, 'desperation') && atk.hp < atk.stats.hp / 2) dmg = Math.floor(dmg * 1.25);
   dmg = Math.floor(dmg * terminaMultiplier(b, atk, def, defPos, element, magical, weapon));
   dmg = Math.floor(dmg * wwMultiplier(b, atk, def, defPos, element, magical, weapon, d));
-  dmg = Math.floor(dmg * tpMultiplier(b, atk, def, defPos, element, magical, weapon, d, arrow));
+  dmg = Math.floor(dmg * tpMultiplier(b, atk, def, defPos, element, magical, weapon, d, arrow) * supportDamageMult(b, atk, element));
   if (adj.finish) dmg = Math.max(dmg, def.hp);
   if (atk.isBoss && atk.team === 'enemy' && (b.bossTier ?? 2) < 2) dmg = Math.floor(dmg * (b.bossTier === 0 ? 0.7 : 0.85)); // early bosses hit softer
   if (def.buffs?.some((x) => x.barrier || x.id === 'bubble')) dmg = 0; // Nayru's Love, Wart's bubbles
@@ -410,7 +412,7 @@ export function resolveCombat(b: Battle, attacker: Unit, defender: Unit, rng: RN
   if (attacker.statuses.some((x) => x.kind === 'veiled')) attacker.statuses = attacker.statuses.filter((x) => x.kind !== 'veiled');
   if (fc.attacker.arrowId) {
     const mod = ABILITIES[fc.attacker.arrowId];
-    if (mod.sta) attacker.sta -= techniqueCost(attacker, mod, b.bonus);
+    if (mod.sta) attacker.sta -= Math.ceil(techniqueCost(attacker, mod, b.bonus) * supportCostMult(b, attacker, 'technique'));
     else attacker.mp -= mod.mp;
   }
 
@@ -598,7 +600,10 @@ export function healAmount(b: Battle, healer: Unit, staff: WeaponDef): number {
 export function resolveHeal(b: Battle, healer: Unit, target: Unit, rng: RNG, staffId?: string): HealResult {
   const staff = (staffId ? WEAPONS[staffId] : undefined) ?? healWeapons(healer, unitDist(healer, target))[0];
   const gentle = healer.skills.includes('gentleTouch') && (isMounted(target) || unitTags(target).includes('beast')) ? 1.1 : 1;
-  const boost = hasEffect(target, 'healBoost') ? 1.25 : 1;
+  const groups = b.groupSupports ?? [];
+  const boost = (hasEffect(target, 'healBoost') ? 1.25 : 1) * (groups.includes('guardiansOfTheWorld') && target.team === 'player' ? 1.2 : 1)
+    * (groups.includes('outsetFamily') && ['heroOfWinds', 'aryll', 'grandma'].includes(target.templateId ?? '') ? 1.25 : 1)
+    * (groups.includes('voicesOfTheSea') && ['ruto', 'lulu', 'medli'].includes(healer.templateId ?? '') ? 1.25 : 1);
   const amount = staff ? Math.min(Math.round(healAmount(b, healer, staff) * gentle * boost), target.stats.hp - target.hp) : 0;
   target.hp += amount;
   if (amount > 0 && hasEffect(target, 'healStamina')) target.sta = Math.min(target.stats.sta, target.sta + Math.ceil(amount / 3));

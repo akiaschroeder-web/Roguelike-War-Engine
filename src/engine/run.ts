@@ -3,7 +3,9 @@ import {
   EVENTS, FACTIONS, GEAR, QUEST_ITEMS, RACES, WORLDS, ITEMS, MONSTER_CHANCE, BOSSES, bossPool, COMMANDERS, PERMANENT_ITEMS, REGION_IDS, TEMPLATE_LIST, TEMPLATES, WEAPONS,
 } from '../data/registry';
 import { createBattle } from './battle';
-import { isSPair, rankOf, supportKey, type SupportRank } from './supports';
+import { maxRank, rankOf, supportKey, type SupportRank } from './supports';
+import { pairKey } from '../content/supports';
+import { HIDDEN_SKILLS } from '../content/twilight';
 import { restoreForm } from './transform';
 import { canWield, type LevelUp } from './combat';
 import { RNG } from './rng';
@@ -449,7 +451,8 @@ export function recruitOffers(run: Run, rng: RNG, world: WorldId): string[] {
     if (ownedGear(run).has('ordonClothes') && !t.monster) wgt *= 1.25;
     return wgt;
   };
-  const network = run.roster.some((u) => u.skills.includes('resistanceNetwork')) ? 1 : 0;
+  const network = (run.roster.some((u) => u.skills.includes('resistanceNetwork')) ? 1 : 0)
+    + (['telma', 'rusl', 'ashei', 'auru', 'shad'].every((t) => run.roster.some((u) => u.templateId === t)) ? 1 : 0);
   while (offers.length < 3 + network + (holding('joyPendant') >= 3 ? 1 : 0) && generics.length) {
     const pick = rng.weighted(generics.map((t) => [t, weightOf(t)] as [UnitTemplate, number]));
     if (!offers.includes(pick.id)) offers.push(pick.id);
@@ -621,11 +624,23 @@ export function finishBattle(run: RunWithEvent): BattleSummary {
     const [x, y] = k.split('|');
     const ux = byUid.get(x), uy = byUid.get(y);
     if (!ux || !uy) continue;
-    const s = isSPair(ux, uy);
+    const s = maxRank(ux, uy);
     const r = rankOf(pts, s);
-    if (r && r !== rankOf(before[k] ?? 0, s)) supportUps.push({ a: ux.name, b: uy.name, aUid: ux.uid, bUid: uy.uid, rank: r });
+    if (r && r !== rankOf(before[k] ?? 0, s)) {
+      supportUps.push({ a: ux.name, b: uy.name, aUid: ux.uid, bUid: uy.uid, rank: r });
+      // A Legacy Remembered: the Hero's Shade passes on all seven Hidden Skills.
+      if (r === 'S' && pairKey(ux.templateId ?? '', uy.templateId ?? '') === 'herosShade|link') {
+        const hero = [ux, uy].find((u) => u.templateId === 'link');
+        if (hero) for (const h of HIDDEN_SKILLS) if (!hero.abilities.includes(h)) hero.abilities.push(h);
+      }
+    }
   }
   run.supports = after;
+  run.formSupports = [...new Set([...(run.formSupports ?? []), ...(b.formSupports ?? [])])];
+  // Group supports at camp: The Resistance brings supplies; the Ranch Family heals.
+  const groups = b.groupSupports ?? [];
+  if (won && groups.includes('theResistance')) armyOf(run).supplies += 2;
+  if (won && groups.includes('ranchFamily')) for (const u of run.roster) u.hp = Math.min(u.stats.hp, u.hp + Math.ceil(u.stats.hp * 0.1));
 
   // Side quest
   let sideQuest: BattleSummary['sideQuest'];
@@ -1247,6 +1262,7 @@ export function merchantDiscount(run: Run): number {
   if (run.roster.some((u) => u.skills.includes('customerRewards'))) d += Math.min(25, Math.floor(run.stats.battles / 2));
   if (run.questItems?.includes('complimentaryId')) d += 15;
   if (run.roster.some((u) => u.skills.includes('maloMart'))) d += 15;
+  if (['beedle', 'malo', 'maskSalesman'].every((t) => run.roster.some((u) => u.templateId === t))) d += 10;
   if (run.questItems?.includes('maloMartCastle')) d += 5;
   return Math.min(40, d);
 }
