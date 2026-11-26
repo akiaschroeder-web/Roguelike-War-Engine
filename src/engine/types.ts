@@ -18,7 +18,9 @@ export type StatusKind =
   | 'silence' | 'root' | 'blind' | 'curse' | 'confuse' | 'sleep' | 'bleed' | 'fear' | 'weaken' | 'exposed'
   | 'regen' | 'inspired' | 'protected' | 'haste' | 'veiled'
   /** Twilight Princess: no conventional weapon attacks (Bubbles). Dark ChuChu turned to stone. */
-  | 'weaponCurse' | 'petrified';
+  | 'weaponCurse' | 'petrified'
+  /** Era of the Wild: Malice corruption (damage over time, −RES; corrupts machinery). */
+  | 'malice';
 
 export interface Status {
   kind: StatusKind;
@@ -79,7 +81,44 @@ export interface AbilityDef {
   perTurn?: boolean;
   /** Doesn't end the unit's turn (Hookshot: you can still attack). */
   freeAction?: boolean;
+  /** Era of the Wild: data-driven effect (engine/wild.ts castWild). */
+  wild?: WildAbilitySpec;
   implemented: boolean;
+}
+
+/** A data-driven Era of the Wild ability: who it targets and what it does. */
+export interface WildAbilitySpec {
+  /** foe/ally: one unit in range · foes/allies: everyone within `radius` of the caster · tile: a space in range · self. */
+  target: 'foe' | 'ally' | 'self' | 'foes' | 'allies' | 'tile';
+  range?: [number, number];
+  /** Area around the caster (foes/allies), the target (foe/ally) or the tile. */
+  radius?: number;
+  dmg?: { stat: 'str' | 'mag' | 'skl'; base: number; vs?: 'def' | 'res'; element?: Element; sacred?: boolean; pierce?: number; hits?: number; weapon?: boolean };
+  heal?: { base?: number; pct?: number; stat?: 'mag' };
+  status?: { kind: StatusKind; turns: number; chance?: number };
+  buff?: { id: string; name: string; turns: number; stats?: Partial<Record<StatKey | 'mov', number>>; barrier?: boolean };
+  /** Damage-absorbing shield points. */
+  shield?: number;
+  cleanse?: boolean;
+  /** Removes Gloom and Malice. */
+  purify?: boolean;
+  /** Gloom (max HP lost) inflicted. */
+  gloom?: number;
+  push?: number;
+  pull?: number;
+  terrain?: Terrain;
+  terrainTurns?: number;
+  /** Move the caster to the chosen tile (tile abilities) or next to the target. */
+  move?: boolean;
+  /** Uses per battle (Champion abilities). */
+  charges?: number;
+  summon?: string;
+  reveal?: number;
+  free?: boolean;
+  /** Sacred / Zonai / Sage ability (bonuses and discounts). */
+  tags?: ('sacred' | 'zonai' | 'sage' | 'champion' | 'water' | 'lightning' | 'wind' | 'fire' | 'gloom' | 'mechanical')[];
+  /** Usable only below this fraction of max HP. */
+  belowHp?: number;
 }
 
 /**
@@ -105,7 +144,13 @@ export type Terrain = BaseTerrain | 'cracked' | 'timeBlock' | 'timeGap' | 'bridg
   // Skyward Sword battlefield spaces
   | 'timeshiftField' | 'timeshiftStone' | 'timeshiftOrb' | 'ancientRail' | 'minecart' | 'sandPile' | 'burrowingTunnel' | 'waterFruitPlant'
   | 'solidifiedLava' | 'windPinwheel' | 'skyIslandEdge' | 'goddessCube' | 'trialGate' | 'wakingWater' | 'lightFruit' | 'sealingSpike'
-  | 'powerSocket' | 'sacredTear' | 'driedWaterway';
+  | 'powerSocket' | 'sacredTear' | 'driedWaterway'
+  // Era of the Wild battlefield spaces (surface, sky and depths)
+  | 'climbableCliff' | 'wetCliff' | 'burningGrass' | 'dryGrass' | 'tallTree' | 'fallenLog' | 'oreDeposit' | 'rareOre' | 'luminousOre' | 'cookingPot'
+  | 'monsterCamp' | 'monsterLookout' | 'explosiveBarrel' | 'sludge' | 'korokPuzzle' | 'stable' | 'shrineEntrance' | 'sheikahTower' | 'skyviewTower'
+  | 'floatingIsland' | 'fallingRuin' | 'deviceDispenser' | 'launchPlatform' | 'waterSphere' | 'lowGravity' | 'zonaiTerminal' | 'crystalPedestal' | 'floatingPlatform'
+  | 'gloom' | 'gloomPool' | 'lightroot' | 'darkness' | 'poeSpirit' | 'bargainerStatue' | 'zonaiteDeposit' | 'abandonedMine' | 'ascendPillar' | 'yigaHideout'
+  | 'chasm' | 'pristinePedestal' | 'frozenWater';
 
 export type Team = 'player' | 'enemy';
 
@@ -309,16 +354,33 @@ export interface WeaponDef {
   revealsWeakness?: boolean;
   /** Weight never slows the wielder. */
   noWeightPenalty?: boolean;
+  // ── Era of the Wild ──
+  /** Weapon effects handled by engine/wild.ts. */
+  wild?: WildFx[];
+  /** Arrows loosed per shot (Lynel bows, Great Eagle Bow, Duplex Bow). */
+  shots?: number;
+  /** Fused materials give this multiple of their Might bonus (Gerudo weapons, Scimitar of the Seven). */
+  fuseMult?: number;
 }
+
+/** Era of the Wild weapon effects (section 13). */
+export type WildFx =
+  | 'fragile' | 'ignites' | 'cookingBonus' | 'clearsSludge' | 'knockback' | 'vsPlant' | 'counterBonus' | 'criticalHp' | 'flurryBonus'
+  | 'nearBreakingDouble' | 'regrowFuse' | 'wetDouble' | 'windGust' | 'sneakBonus' | 'unawareCrit' | 'wideArc' | 'thrown' | 'thrownMulti'
+  | 'vsAncient' | 'ancientDamage' | 'zonaiFusion' | 'energyEfficient' | 'gemElement' | 'proficiencyXp' | 'sacredBoost' | 'gloomBoth'
+  | 'vsWood' | 'cleave' | 'vsStone' | 'miningYield' | 'chargedBonus' | 'windSlash' | 'windBlade' | 'repeatedCut' | 'vsGuardian'
+  | 'aquatic' | 'waterMagic' | 'vsAquatic' | 'gemBoost' | 'spellRange' | 'accuracy' | 'wetAccuracy' | 'longCrit' | 'fastFire'
+  | 'aerialAccuracy' | 'energyRange' | 'mechAccuracy' | 'sacredArrows' | 'mtGrowsHp' | 'durable' | 'bone' | 'wideElement' | 'masterSwordWild'
+  | 'disarms' | 'gloomHit' | 'malice' | 'lowDurability' | 'iceBlocks' | 'sludgeSpray' | 'zonai';
 
 export type Rarity = 'common' | 'uncommon' | 'rare' | 'epic' | 'legendary' | 'mythic';
 
-export type GearSlotKind = 'shield' | 'head' | 'body' | 'hands' | 'feet' | 'accessory' | 'mount' | VesselSlot;
+export type GearSlotKind = 'shield' | 'head' | 'body' | 'hands' | 'feet' | 'accessory' | 'mount' | 'tool' | VesselSlot;
 /** Ship equipment slots (vessels only). */
 export type VesselSlot = 'hull' | 'sail' | 'utility' | 'flag';
 /** Equipment slots on a unit. Accessories have two slots. */
-export type GearSlot = 'shield' | 'head' | 'body' | 'hands' | 'feet' | 'acc1' | 'acc2' | 'mount' | VesselSlot;
-export const GEAR_SLOTS: GearSlot[] = ['shield', 'head', 'body', 'hands', 'feet', 'acc1', 'acc2', 'mount', 'hull', 'sail', 'utility', 'flag'];
+export type GearSlot = 'shield' | 'head' | 'body' | 'hands' | 'feet' | 'acc1' | 'acc2' | 'tool' | 'mount' | VesselSlot;
+export const GEAR_SLOTS: GearSlot[] = ['shield', 'head', 'body', 'hands', 'feet', 'acc1', 'acc2', 'tool', 'mount', 'hull', 'sail', 'utility', 'flag'];
 export const VESSEL_SLOTS: VesselSlot[] = ['hull', 'sail', 'utility', 'flag'];
 
 export interface GearDef {
@@ -347,6 +409,11 @@ export interface GearDef {
   durability?: number;
   /** Shield family (Skyward Sword): wooden, iron or sacred. */
   shieldFamily?: 'wood' | 'iron' | 'sacred';
+  // ── Era of the Wild ──
+  /** Armor set (head + body + feet of one set give its set bonus). */
+  wildSet?: string;
+  /** Wild traits (resistances, disguises, runes…) handled by engine/wildGear.ts. */
+  wildFx?: string[];
 }
 
 export type GearEffect =
@@ -528,7 +595,9 @@ export interface WorldDef {
   terrainNames: Record<BaseTerrain, string>;
   terrainColors: Record<BaseTerrain, string>;
   /** Regions of the Termina campaign (with the three-day cycle). */
-  campaign?: 'termina' | 'greatSea' | 'twilight' | 'skyward';
+  campaign?: 'termina' | 'greatSea' | 'twilight' | 'skyward' | 'wild';
+  /** Era of the Wild: which layer of the three-layer map. */
+  layer?: 'surface' | 'sky' | 'depths';
   /** Battles here are fought at sea (vessels, wind, islands). */
   naval?: boolean;
   map: MapStyle;
@@ -641,7 +710,7 @@ export interface CommanderDef {
   bonus: CommanderBonus;
   bonusText: string;
   /** Campaign this commander starts in by default. */
-  campaign?: 'termina' | 'greatSea' | 'twilight' | 'skyward';
+  campaign?: 'termina' | 'greatSea' | 'twilight' | 'skyward' | 'wild';
   /** Weapons, gear and items handed out to the army at the start (commander first). */
   startingItems?: string[];
 }
@@ -650,7 +719,10 @@ export type CommanderBonus = 'extraTreasure' | 'healing' | 'forging' | 'postBatt
   | 'transformThrift' | 'rolling' | 'aquatic' | 'dekuArmy' | 'undeadArmy' | 'lingeringStatus'
   | 'courageOfTheSea' | 'piratesSpoils' | 'dragonRoost' | 'forestRenewal' | 'hyrulesLegacy' | 'forsaken' | 'unrulyWinds'
   | 'forgottenTechniques' | 'childrenOfTwilight' | 'sacredResistance' | 'ancientMastery' | 'mightMakesRight' | 'endlessTwilight' | 'divinePower'
-  | 'knightAcademy' | 'sacredMission' | 'groosesEngineering' | 'demonicSwordsmanship' | 'demonKingsDominion';
+  | 'knightAcademy' | 'sacredMission' | 'groosesEngineering' | 'demonicSwordsmanship' | 'demonKingsDominion'
+  // Era of the Wild
+  | 'fusionMastery' | 'sacredResearch' | 'healingWaters' | 'goronGuard' | 'ritoGale' | 'gerudoLightning' | 'waterBarriers' | 'goronMining' | 'windRiders'
+  | 'lightningFields' | 'zonaiEngineering' | 'kingOfLight' | 'yigaAmbush' | 'demonKingsGloom' | 'calamityCorruption';
 
 export type SkillId = string;
 
@@ -912,6 +984,8 @@ export interface MapNode {
   /** Special fleet (the Ghost Ship). */
   fleet?: string[];
   night?: boolean;
+  /** Era of the Wild: a regional boss returned under the Blood Moon (optional fight). */
+  bossReturn?: string;
 }
 
 export interface RunMap {
@@ -940,7 +1014,7 @@ export interface Run {
   bossesFought: string[];
   battle?: Battle;
   /** Wear/forge state of weapons sitting in the convoy, by weapon id. */
-  itemState?: Record<string, { wear?: number; forge?: number }>;
+  itemState?: Record<string, { wear?: number; forge?: number; mod?: string; fuse?: string }>;
   /** Support points between pairs of units (key: 'uidA|uidB', sorted). */
   supports?: Record<string, number>;
   /** Random events already seen this run. */
@@ -950,7 +1024,7 @@ export interface Run {
   /** Army-wide stats and resources. */
   army?: Army;
   /** Which campaign: the endless Hyrule war, Termina with its three-day cycle, or the Great Sea. */
-  campaign?: 'hyrule' | 'termina' | 'greatSea' | 'twilight' | 'skyward' | 'random';
+  campaign?: 'hyrule' | 'termina' | 'greatSea' | 'twilight' | 'skyward' | 'wild' | 'random';
   /** Great Sea: the naval campaign's state. */
   sea?: SeaState;
   /** Termina: hours passed in the current three-day cycle (0-71) and resets so far. */
@@ -1026,7 +1100,9 @@ export type EventEffect =
   /** Release a full Vessel of Light (or keep the Twilight for now). */
   | { kind: 'restoreLight' } | { kind: 'delayLight' }
   /** Skyward Sword: the army's next battle is a Silent Realm trial. */
-  | { kind: 'silentRealm' };
+  | { kind: 'silentRealm' }
+  /** Era of the Wild: campaign effects (engine/wildRun.ts). */
+  | { kind: 'wild'; op: string; amount?: number; id?: string };
 
 /** Conditions for an event or a single choice. */
 export interface EventRequires {

@@ -1,0 +1,36 @@
+import type { CommanderDef } from '../../engine/types';
+
+// Section 28. Divine Beasts and other colossal units need more Colossal Deployment
+// Capacity and aren't in starting armies.
+export const COMMANDERS: CommanderDef[] = [
+  { heroId: 'heroOfTheWild', armyName: 'Champion of Hyrule', units: ['purah', 'hyruleSoldier', 'royalWhiteStallion'], bonus: 'fusionMastery', campaign: 'wild',
+    bonusText: 'Fused weapons and shields last 25% longer (fusion durability +25%).', startingItems: ['potLid', 'paraglider', 'fireFruit', 'mightyBananaSkewer'] },
+  { heroId: 'zeldaWild', armyName: 'Royal Research Expedition', units: ['impaWild', 'robbie', 'hyruleKnight'], bonus: 'sacredResearch', campaign: 'wild',
+    bonusText: 'Sacred damage and research efficiency +25% (Ancient Tech Lab research costs less).', startingItems: ['sheikahSlate', 'heartyElixir'] },
+  { heroId: 'mipha', armyName: 'Zora Royal Guard', units: ['zoraWarrior', 'zoraMystic'], bonus: 'healingWaters', campaign: 'wild',
+    bonusText: 'Healing +30%.', startingItems: ['zoraHead', 'energizingMushroomSkewer'] },
+  { heroId: 'daruk', armyName: 'Goron Vanguard', units: ['goronWarrior', 'goronRoller'], bonus: 'goronGuard', campaign: 'wild',
+    bonusText: 'Physical damage received −15%.', startingItems: ['flamebreakerBody', 'bombFlower'] },
+  { heroId: 'revali', armyName: 'Rito Flight', units: ['ritoArcher', 'ritoScout'], bonus: 'ritoGale', campaign: 'wild',
+    bonusText: 'Aerial (flying) units +2 MOV.', startingItems: ['snowquillHead', 'korokFrond'] },
+  { heroId: 'urbosa', armyName: 'Gerudo Royal Guard', units: ['gerudoGuard', 'gerudoThief'], bonus: 'gerudoLightning', campaign: 'wild',
+    bonusText: 'Lightning damage +25%.', startingItems: ['gerudoVaiBody', 'shockFruit'] },
+  { heroId: 'sidon', armyName: 'Zora Resolve', units: ['yona', 'zoraWarrior'], bonus: 'waterBarriers', campaign: 'wild',
+    bonusText: 'Water abilities also give their target a water barrier (absorbs 6).', startingItems: ['splashFruit', 'heartyFriedWildGreens'] },
+  { heroId: 'yunobo', armyName: 'YunoboCo', units: ['bludo', 'goronWarrior'], bonus: 'goronMining', campaign: 'wild',
+    bonusText: 'Mining yield up (ore deposits give more) and +50% damage to obstacles.', startingItems: ['bombFlower', 'cobbleCrusher'] },
+  { heroId: 'tulin', armyName: 'Rito Wind Riders', units: ['teba', 'ritoArcher'], bonus: 'windRiders', campaign: 'wild',
+    bonusText: 'Bows +1 range; flying units and units on an updraft +1 MOV.', startingItems: ['korokFrond', 'hastyElixir'] },
+  { heroId: 'riju', armyName: 'Gerudo Lightning Guard', units: ['buliara', 'gerudoGuard'], bonus: 'lightningFields', campaign: 'wild',
+    bonusText: 'Lightning areas are 1 space larger.', startingItems: ['shockFruit', 'electroElixir'] },
+  { heroId: 'mineru', armyName: 'Spirit Temple Constructs', units: ['mineruConstruct', 'stewardConstruct'], bonus: 'zonaiEngineering', campaign: 'wild',
+    bonusText: 'Zonai Devices and vehicles use 30% less energy.', startingItems: ['zonaiArm', 'zonaiFan', 'zonaiBattery'] },
+  { heroId: 'rauruZonai', armyName: 'First Kingdom of Hyrule', units: ['sonia', 'captainConstruct1'], bonus: 'kingOfLight', campaign: 'wild',
+    bonusText: 'Sacred and Zonai abilities +25%.', startingItems: ['zonaiArm', 'secretStoneLight'] },
+  { heroId: 'kohga', armyName: 'The Yiga Clan', units: ['yigaFootsoldier', 'yigaEngineer'], bonus: 'yigaAmbush', campaign: 'wild',
+    bonusText: 'Better ambushes (your army starts Veiled and strikes first in ambushes) and vehicles cost 30% less.', startingItems: ['yigaHead', 'zonaiRocket'] },
+  { heroId: 'ganondorfWild', armyName: "Demon King's Legion", units: ['phantomGanondorf', 'gloomSpawn'], bonus: 'demonKingsGloom', campaign: 'wild',
+    bonusText: 'Demonic attacks inflict twice as much Gloom.', startingItems: ['secretStoneDarkness'] },
+  { heroId: 'calamityGanon', armyName: 'The Calamity', units: ['guardianScout2', 'cursedBokoblin'], bonus: 'calamityCorruption', campaign: 'wild',
+    bonusText: 'Allied machines stay corrupted (+15% damage) and Malice attacks corrupt twice as often.', startingItems: ['ancientCorePendant'] },
+];

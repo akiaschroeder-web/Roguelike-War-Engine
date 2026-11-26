@@ -41,6 +41,12 @@ const TERRAIN_GLYPH: Record<string, string> = {
   timeshiftField: '⌛', timeshiftStone: '⏳', timeshiftOrb: '🔮', ancientRail: '═', minecart: '🛒', sandPile: '⛰', burrowingTunnel: '🕳',
   waterFruitPlant: '🫐', solidifiedLava: '▩', windPinwheel: '✇', skyIslandEdge: '☁', goddessCube: '◆', trialGate: '⛩', wakingWater: '≋',
   lightFruit: '✹', sealingSpike: '⚔', powerSocket: '⏻', sacredTear: '💧', driedWaterway: '⋯',
+  climbableCliff: '⛰', wetCliff: '☔', burningGrass: '🔥', dryGrass: '⺌', tallTree: '🌲', fallenLog: '🪵', oreDeposit: '⛏', rareOre: '💎', luminousOre: '✧',
+  cookingPot: '🍲', monsterCamp: '⛺', monsterLookout: '♜', explosiveBarrel: '🛢', sludge: '≋', korokPuzzle: '🌰', stable: '🐴', shrineEntrance: '⛩',
+  sheikahTower: '🗼', skyviewTower: '🛰', floatingIsland: '☁', fallingRuin: '🧱', deviceDispenser: '🎰', launchPlatform: '⏫', waterSphere: '◍',
+  lowGravity: '⇞', zonaiTerminal: '⌘', crystalPedestal: '🔷', floatingPlatform: '▱', gloom: '☣', gloomPool: '🩸', lightroot: '🌟', darkness: '■',
+  poeSpirit: '👻', bargainerStatue: '🗿', zonaiteDeposit: '❖', abandonedMine: '⛏', ascendPillar: '⇧', yigaHideout: '🍌', chasm: '◉', pristinePedestal: '⚔',
+  frozenWater: '❅',
 };
 
 export class BattleView {

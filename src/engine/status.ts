@@ -2,6 +2,7 @@
 // and timed buffs.
 
 import { GEAR, WEAPONS } from '../data/registry';
+import { wildImmune } from './wildGear';
 import type { RNG } from './rng';
 import type { Battle, Element, StatusKind, Unit } from './types';
 
@@ -29,6 +30,7 @@ export const STATUS_INFO: Record<StatusKind, { name: string; icon: string; desc:
   veiled: { name: 'Veiled', icon: '☁', desc: '+30 Avoid (hidden in a cloud).', good: true },
   weaponCurse: { name: 'Weapon Curse', icon: '⛓', desc: 'Can\'t make weapon attacks (spells, items and natural abilities still work).' },
   petrified: { name: 'Petrified', icon: '🗿', desc: 'Turned to stone: can\'t move or act; hammers deal double damage.' },
+  malice: { name: 'Malice', icon: '🟣', desc: 'Corrupted by Malice: loses 8% max HP each turn and has −3 RES. Sacred light burns it away.' },
 };
 
 /** Stat changes from statuses (applied in effectiveStats). */
@@ -39,6 +41,7 @@ export const STATUS_STATS: Partial<Record<StatusKind, Partial<Record<'str' | 'ma
   exposed: { def: -3, res: -3 },
   protected: { def: 3, res: 3 },
   haste: { mov: 2, spd: 2 },
+  malice: { res: -3 },
 };
 
 export const NEGATIVE_STATUSES = (Object.keys(STATUS_INFO) as StatusKind[]).filter((k) => !STATUS_INFO[k].good);
@@ -62,6 +65,8 @@ export function immuneTo(u: Unit, kind: StatusKind): boolean {
   if (kind === 'fear' && (gear('fearImmune') || gear('gibdo') || u.skills.includes('mountainHero'))) return true;
   if (kind === 'curse' && gear('curseImmune')) return true;
   if (kind === 'shock' && gear('shockImmune')) return true;
+  // Era of the Wild: armor sets, helms, elixirs and racial traits.
+  if (wildImmune(u, kind)) return true;
   return false;
 }
 
@@ -175,7 +180,7 @@ export function tickStatuses(u: Unit, roll = 100): StatusTick {
   let lostTurn: StatusKind | null = null;
   for (const s of u.statuses) {
     if (s.kind === 'burn' || s.kind === 'poison') damage += Math.max(1, Math.ceil(u.stats.hp * 0.1));
-    if (s.kind === 'bleed') damage += Math.max(1, Math.ceil(u.stats.hp * 0.08));
+    if (s.kind === 'bleed' || s.kind === 'malice') damage += Math.max(1, Math.ceil(u.stats.hp * 0.08));
     if (s.kind === 'regen') heal += Math.ceil(u.stats.hp * 0.1);
     if ((s.kind === 'freeze' || s.kind === 'stun' || s.kind === 'sleep') && !lostTurn) lostTurn = s.kind;
   }
