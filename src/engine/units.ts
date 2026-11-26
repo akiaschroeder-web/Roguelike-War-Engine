@@ -151,11 +151,13 @@ export function unitTags(u: Unit): string[] {
 /** Gear that is currently active (a shield does nothing with a two-handed weapon). */
 export function activeGear(unit: Unit): GearDef[] {
   const twoHanded = !!WEAPONS[unit.weapons[0]]?.twoHanded;
+  // Skyward Sword's Cursed Medal: the wearer's shield does nothing.
+  const cursed = unit.gear?.acc1 === 'cursedMedal' || unit.gear?.acc2 === 'cursedMedal';
   const out: GearDef[] = [];
   for (const slot of GEAR_SLOTS) {
     const id = unit.gear?.[slot];
     if (!id || !GEAR[id]) continue;
-    if (slot === 'shield' && twoHanded) continue;
+    if (slot === 'shield' && (twoHanded || cursed)) continue;
     if (slot === 'mount' && !isMounted(unit)) continue;
     out.push(GEAR[id]);
   }
@@ -206,11 +208,12 @@ export function hasEffect(unit: Unit, effect: string): boolean {
 }
 
 export function isLavaImmune(u: Unit): boolean {
-  return !!RACES[u.race]?.lavaImmune || hasEffect(u, 'lavaImmune') || moveTypeOf(u) === 'flying';
+  return !!RACES[u.race]?.lavaImmune || hasEffect(u, 'lavaImmune') || hasEffect(u, 'hazardResist') || moveTypeOf(u) === 'flying'
+    || !!u.buffs?.some((b) => b.id === 'magmanosCore') || !!u.skills?.includes('moltenBody');
 }
 
 export function canSwim(u: Unit): boolean {
-  return !!RACES[u.race]?.swims || hasEffect(u, 'swim') || hasEffect(u, 'remainsAquatic') || !!u.buffs?.some((b) => b.id === 'seahorse');
+  return !!RACES[u.race]?.swims || hasEffect(u, 'swim') || hasEffect(u, 'remainsAquatic') || !!u.buffs?.some((b) => b.id === 'seahorse' || b.id === 'airPotion');
 }
 
 /** Temporarily airborne (Deku Flower glide, Twinmold Wing Fragment, Tingle's balloon). */
@@ -224,6 +227,11 @@ export function slotFor(unit: Unit, kind: GearSlotKind): GearSlot {
   return unit.gear.acc1 && !unit.gear.acc2 ? 'acc2' : 'acc1';
 }
 
+/** Pack slots for this unit (6, plus Adventure Pouch Upgrades up to 10). */
+export function packSize(u: Unit): number {
+  return Math.min(10, PACK_SIZE + (u.packBonus ?? 0));
+}
+
 /** Max uses in one pack slot (e.g. Bombs come in 3s and stack to 9). */
 export const stackCap = (itemId: string) => (ITEMS[itemId]?.uses ?? 1) * 3;
 
@@ -234,7 +242,7 @@ export function addToPack(unit: Unit, itemId: string, uses?: number): boolean {
   let n = uses ?? def.uses;
   const cap = stackCap(itemId);
   const room = unit.pack.filter((p) => p.id === itemId).reduce((r, p) => r + (cap - p.uses), 0)
-    + (PACK_SIZE - unit.pack.length) * cap;
+    + (packSize(unit) - unit.pack.length) * cap;
   if (room < n) return false;
   for (const p of unit.pack) {
     if (p.id !== itemId || n <= 0) continue;
