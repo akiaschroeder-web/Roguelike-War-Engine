@@ -101,7 +101,11 @@ export type Terrain = BaseTerrain | 'cracked' | 'timeBlock' | 'timeGap' | 'bridg
   // Twilight Princess battlefield spaces
   | 'twilightFog' | 'twilightBarrier' | 'sacredLight' | 'spinnerRail' | 'spinnerGear' | 'clawshotGrate' | 'hangingPeahat'
   | 'magneticSurface' | 'magneticCrane' | 'dominionStatue' | 'sinkingSand' | 'iceWall' | 'iceBlock' | 'buriedPassage'
-  | 'howlingStone' | 'windVent' | 'cannonTransport' | 'flames';
+  | 'howlingStone' | 'windVent' | 'cannonTransport' | 'flames'
+  // Skyward Sword battlefield spaces
+  | 'timeshiftField' | 'timeshiftStone' | 'timeshiftOrb' | 'ancientRail' | 'minecart' | 'sandPile' | 'burrowingTunnel' | 'waterFruitPlant'
+  | 'solidifiedLava' | 'windPinwheel' | 'skyIslandEdge' | 'goddessCube' | 'trialGate' | 'wakingWater' | 'lightFruit' | 'sealingSpike'
+  | 'powerSocket' | 'sacredTear' | 'driedWaterway';
 
 export type Team = 'player' | 'enemy';
 
@@ -274,6 +278,37 @@ export interface WeaponDef {
   unstable?: boolean;
   /** Natural contact attack that deals magic damage. */
   magicContact?: boolean;
+  // ── Skyward Sword ──
+  /** Can charge a Skyward Strike: charge levels gained per action. */
+  skywardRate?: number;
+  /** Extra Might (and range at 4+) for Skyward Strikes. */
+  skywardBonus?: number;
+  /** Dowsing reaches this much further. */
+  dowsingBonus?: number;
+  /** Damage multiplier against demons and the undead (sacred weapons). */
+  sacredMult?: number;
+  /** Hit bonus while riding a flying mount. */
+  flightHit?: number;
+  /** Parries restore this much stamina. */
+  parryStamina?: number;
+  /** Stationary siege engine: can't fire after moving. */
+  stationary?: boolean;
+  /** Hits root smaller enemies. */
+  restrains?: boolean;
+  /** Damage multiplier against enemies that moved 3+ spaces this turn. */
+  fleeingBonus?: number;
+  /** Consecutive hits on the same target push it back. */
+  consecutivePush?: boolean;
+  /** Counterattacks deal this much extra lightning damage. */
+  counterLightning?: number;
+  /** Floods the target's space. */
+  waterTerrain?: boolean;
+  /** Blows flying targets away. */
+  displacesFlyers?: boolean;
+  /** Hits leave the target Exposed. */
+  revealsWeakness?: boolean;
+  /** Weight never slows the wielder. */
+  noWeightPenalty?: boolean;
 }
 
 export type Rarity = 'common' | 'uncommon' | 'rare' | 'epic' | 'legendary' | 'mythic';
@@ -308,6 +343,10 @@ export interface GearDef {
   minSize?: number;
   /** MP spent each turn while transformed with this mask. */
   upkeep?: number;
+  /** Shields: durability (blocks wear it down; it breaks at 0). */
+  durability?: number;
+  /** Shield family (Skyward Sword): wooden, iron or sacred. */
+  shieldFamily?: 'wood' | 'iron' | 'sacred';
 }
 
 export type GearEffect =
@@ -409,7 +448,13 @@ export type GearEffect =
   | 'supportReach' | 'mountedThrift' | 'hiddenCrest' | 'warHorn' | 'twilightConceal' | 'healStamina' | 'sacredForest'
   | 'sacredFire' | 'purifyStep' | 'boneCrest' | 'iceJewel' | 'dragonHeart'
   // Extra units
-  | 'healThrift' | 'extraFairy' | 'mpRegen3' | 'fireResist' | 'burningAura' | 'curseTouch' | 'pulsingGuard' | 'stillAvoid' | 'ambushBoost';
+  | 'healThrift' | 'extraFairy' | 'mpRegen3' | 'fireResist' | 'burningAura' | 'curseTouch' | 'pulsingGuard' | 'stillAvoid' | 'ambushBoost'
+  // ── Skyward Sword ──
+  | 'frontalShield' | 'beetle' | 'hookBeetle' | 'quickBeetle' | 'toughBeetle' | 'gustBellows' | 'bugNet' | 'bigBugNet' | 'diggingMitts' | 'mogmaMitts'
+  | 'sailcloth' | 'hazardResist' | 'fastSwim' | 'knightsUniform' | 'bugMedal' | 'cursedMedal' | 'heartMedal' | 'rupeeMedal' | 'treasureMedal' | 'potionMedal'
+  | 'disarmImmune' | 'markedSight' | 'demonRecruit' | 'teleportBoost' | 'silentVestments' | 'multiWeapon' | 'ancientGrip' | 'skyBoots' | 'burrowBoots'
+  | 'crimsonFeather' | 'academyCrest' | 'gratitudePendant' | 'fiCrystal' | 'ghirahimDiamond' | 'demisesFlame' | 'moltenCore' | 'ancientEye' | 'powerCore'
+  | 'parasiteGem' | 'fireBlessing' | 'thunderBlessing' | 'crimsonDive';
 
 export type ItemKind =
   | 'heal' | 'fullHeal' | 'mp' | 'sta' | 'fairy' | 'bomb' | 'stun' | 'learn'
@@ -483,7 +528,7 @@ export interface WorldDef {
   terrainNames: Record<BaseTerrain, string>;
   terrainColors: Record<BaseTerrain, string>;
   /** Regions of the Termina campaign (with the three-day cycle). */
-  campaign?: 'termina' | 'greatSea' | 'twilight';
+  campaign?: 'termina' | 'greatSea' | 'twilight' | 'skyward';
   /** Battles here are fought at sea (vessels, wind, islands). */
   naval?: boolean;
   map: MapStyle;
@@ -596,7 +641,7 @@ export interface CommanderDef {
   bonus: CommanderBonus;
   bonusText: string;
   /** Campaign this commander starts in by default. */
-  campaign?: 'termina' | 'greatSea' | 'twilight';
+  campaign?: 'termina' | 'greatSea' | 'twilight' | 'skyward';
   /** Weapons, gear and items handed out to the army at the start (commander first). */
   startingItems?: string[];
 }
@@ -604,7 +649,8 @@ export interface CommanderDef {
 export type CommanderBonus = 'extraTreasure' | 'healing' | 'forging' | 'postBattleHeal' | 'rupees' | 'monsters'
   | 'transformThrift' | 'rolling' | 'aquatic' | 'dekuArmy' | 'undeadArmy' | 'lingeringStatus'
   | 'courageOfTheSea' | 'piratesSpoils' | 'dragonRoost' | 'forestRenewal' | 'hyrulesLegacy' | 'forsaken' | 'unrulyWinds'
-  | 'forgottenTechniques' | 'childrenOfTwilight' | 'sacredResistance' | 'ancientMastery' | 'mightMakesRight' | 'endlessTwilight' | 'divinePower';
+  | 'forgottenTechniques' | 'childrenOfTwilight' | 'sacredResistance' | 'ancientMastery' | 'mightMakesRight' | 'endlessTwilight' | 'divinePower'
+  | 'knightAcademy' | 'sacredMission' | 'groosesEngineering' | 'demonicSwordsmanship' | 'demonKingsDominion';
 
 export type SkillId = string;
 
@@ -712,7 +758,9 @@ export interface Unit {
   artPick?: string;
 }
 
-export type ObjectiveType = 'rout' | 'boss' | 'survive' | 'seize' | 'defend' | 'escape' | 'capture' | 'escort' | 'rescue';
+export type ObjectiveType = 'rout' | 'boss' | 'survive' | 'seize' | 'defend' | 'escape' | 'capture' | 'escort' | 'rescue'
+  /** Skyward Sword: a Silent Realm trial (gather Sacred Tears without fighting). */
+  | 'trial';
 
 export interface Objective {
   type: ObjectiveType;
@@ -902,7 +950,7 @@ export interface Run {
   /** Army-wide stats and resources. */
   army?: Army;
   /** Which campaign: the endless Hyrule war, Termina with its three-day cycle, or the Great Sea. */
-  campaign?: 'hyrule' | 'termina' | 'greatSea' | 'twilight';
+  campaign?: 'hyrule' | 'termina' | 'greatSea' | 'twilight' | 'skyward';
   /** Great Sea: the naval campaign's state. */
   sea?: SeaState;
   /** Termina: hours passed in the current three-day cycle (0-71) and resets so far. */
@@ -976,7 +1024,9 @@ export type EventEffect =
   /** Twilight Princess: the Hero's Shade teaches a random Hidden Skill to a swordsman. */
   | { kind: 'hiddenSkill' }
   /** Release a full Vessel of Light (or keep the Twilight for now). */
-  | { kind: 'restoreLight' } | { kind: 'delayLight' };
+  | { kind: 'restoreLight' } | { kind: 'delayLight' }
+  /** Skyward Sword: the army's next battle is a Silent Realm trial. */
+  | { kind: 'silentRealm' };
 
 /** Conditions for an event or a single choice. */
 export interface EventRequires {
@@ -989,6 +1039,8 @@ export interface EventRequires {
   noGear?: string[];
   /** Number of masks owned. */
   maskCount?: number;
+  /** At least this many of each quest item (Gratitude Crystals, materials). */
+  questCount?: Record<string, number>;
 }
 
 export interface EventOutcome {

@@ -1,0 +1,163 @@
+import type { EventDef } from '../../engine/types';
+
+const SKY = ['skyloft', 'theSky'];
+const SURFACE = ['faronWoodsSS', 'eldinVolcano', 'lanayruDesert'];
+const take = (id: string, n: number) => Array.from({ length: n }, () => ({ kind: 'takeQuest' as const, id }));
+
+export const EVENTS: EventDef[] = [
+  // ── Skyloft ──
+  { id: 'gondosScrapShop', title: "Gondo's Scrap Shop", art: 'gondo', regions: ['skyloft', 'lanayruDesert'],
+    text: '"Upgrades! Repairs! Robots fixed, mostly!" Gondo pushes his glasses up and points at a crate of parts.',
+    choices: [
+      { label: 'Amber Relics and Jelly Blobs (₹40)', cost: 40, outcome: { text: 'A handful of common parts.', effects: [{ kind: 'quest', id: 'amberRelic' }, { kind: 'quest', id: 'amberRelic' }, { kind: 'quest', id: 'jellyBlob' }, { kind: 'quest', id: 'monsterClaw' }] } },
+      { label: 'Eldin Ore and a Monster Horn (₹90)', cost: 90, outcome: { text: 'Heavy, and still warm.', effects: [{ kind: 'quest', id: 'eldinOre' }, { kind: 'quest', id: 'eldinOre' }, { kind: 'quest', id: 'monsterHorn' }] } },
+      { label: 'An Ancient Flower and a Dusk Relic (₹160)', cost: 160, outcome: { text: '"Those are rare. Don\'t tell Scrapper."', effects: [{ kind: 'quest', id: 'ancientFlower' }, { kind: 'quest', id: 'duskRelic' }] } },
+      { label: 'Just looking', outcome: { text: '"Come back with Treasures!"', effects: [] } },
+    ] },
+  { id: 'knightAcademy', title: 'The Knight Academy', art: 'gaepora', regions: ['skyloft'],
+    text: 'Headmaster Gaepora watches the cadets spar in the courtyard. "Would your soldiers care to join the lesson?"',
+    choices: [
+      { label: 'Join the sparring', outcome: { text: 'Bruises, lessons, and a little pride.', effects: [{ kind: 'xp', amount: 20 }, { kind: 'support', amount: 2 }] } },
+      { label: 'Ask for volunteers', outcome: { text: 'A cadet steps forward.', effects: [{ kind: 'recruit', pool: ['pipit', 'karane', 'fledge', 'hyruleKnight'] }] } },
+      { label: 'Buy a uniform (₹250)', cost: 250, outcome: { text: 'Pressed and starched.', effects: [{ kind: 'loot', ids: ['knightsUniform'] }] } },
+    ] },
+  { id: 'skyloftResidents', title: 'Skyloft by Night', art: 'karane', regions: ['skyloft'],
+    text: 'Skyloft is quiet after dark, except for everyone who needs a favour.',
+    choices: [
+      { label: "Deliver Cawlin's letter", outcome: { text: 'It was not meant for who he thought. Everyone is grateful anyway.', effects: [{ kind: 'quest', id: 'cawlinsLetter' }, { kind: 'quest', id: 'gratitudeCrystal' }, { kind: 'quest', id: 'gratitudeCrystal' }] } },
+      { label: 'Look for the lost Rattle', gamble: { chance: 60,
+        win: { text: 'It was on the roof. The baby stops crying.', effects: [{ kind: 'quest', id: 'rattle' }, { kind: 'quest', id: 'gratitudeCrystal' }, { kind: 'quest', id: 'gratitudeCrystal' }, { kind: 'quest', id: 'gratitudeCrystal' }] },
+        lose: { text: 'A Remlit steals your lantern. Nobody finds the rattle.', effects: [{ kind: 'hp', pct: -0.05 }] } } },
+      { label: 'Fix the windmill (Windmill Propeller)', requires: { quest: ['windmillPropeller'] }, outcome: { text: 'The lighthouse turns again.', effects: [{ kind: 'takeQuest', id: 'windmillPropeller' }, { kind: 'quest', id: 'gratitudeCrystal' }, { kind: 'quest', id: 'gratitudeCrystal' }, { kind: 'rupees', amount: 100 }] } },
+      { label: 'Visit Sparrot the fortune teller (Crystal Ball)', requires: { quest: ['crystalBall'] }, outcome: { text: '"I see... luck. Lots of it. Probably."', effects: [{ kind: 'takeQuest', id: 'crystalBall' }, { kind: 'stat', stat: 'lck', amount: 3 }, { kind: 'quest', id: 'gratitudeCrystal' }] } },
+      { label: 'Go to bed', outcome: { text: 'You sleep like a knight.', effects: [{ kind: 'hp', pct: 0.15 }] } },
+    ] },
+  { id: 'batreauxsHouse', title: "Batreaux's House", art: 'batreaux', regions: SKY,
+    text: 'Behind a door in the graveyard, a huge demon wrings his hands. "Gratitude Crystals! Did you bring me any? I want to be human so badly!"',
+    choices: [
+      { label: 'Give 3 crystals (Extra Wallet)', requires: { questCount: { gratitudeCrystal: 3 }, noQuest: ['extraWallet'] }, outcome: { text: 'He hands you a wallet. It is enormous.', effects: [...take('gratitudeCrystal', 3), { kind: 'quest', id: 'extraWallet' }] } },
+      { label: 'Give 6 crystals (a permanent blessing)', requires: { questCount: { gratitudeCrystal: 6 } }, outcome: { text: 'A Piece of Heart, glowing in his huge claws.', effects: [...take('gratitudeCrystal', 6), { kind: 'stat', stat: 'hp', amount: 5 }, { kind: 'stat', stat: 'res', amount: 1 }] } },
+      { label: 'Give 10 crystals (Cursed Medal)', requires: { questCount: { gratitudeCrystal: 10 } }, outcome: { text: '"I won\'t need this anymore. It\'s cursed, so... careful!"', effects: [...take('gratitudeCrystal', 10), { kind: 'loot', ids: ['cursedMedal'] }] } },
+      { label: 'Give 15 crystals (Tycoon Wallet)', requires: { questCount: { gratitudeCrystal: 15 }, noQuest: ['tycoonWallet'] }, outcome: { text: 'Batreaux turns human! He gives you everything he saved — and he wants to come along.', effects: [...take('gratitudeCrystal', 15), { kind: 'quest', id: 'tycoonWallet' }, { kind: 'rupees', amount: 500 }, { kind: 'recruit', pool: ['batreaux'] }] } },
+      { label: 'Ask what he needs', outcome: { text: '"People in Skyloft need help. Help them, and the crystals come to you!"', effects: [{ kind: 'quest', id: 'gratitudeCrystal' }] } },
+    ] },
+  { id: 'beedlesAirshop', title: "Beedle's Airshop", art: 'beedle', regions: SKY,
+    text: 'A shop on a flying island, pedalled along by a single exhausted merchant. "Thank you! Come again! Please!"',
+    choices: [
+      { label: 'Heart Potion+ (₹300)', cost: 300, outcome: { text: '"A fine choice!"', effects: [{ kind: 'loot', ids: ['heartPotionPlus'] }] } },
+      { label: 'Adventure Pouch Upgrade (₹500)', cost: 500, outcome: { text: '"More room for more shopping!"', effects: [{ kind: 'loot', ids: ['adventurePouch'] }] } },
+      { label: 'Bug Medal or Bug Net (₹300)', cost: 300, outcome: { text: '"For the insect lover!"', effects: [{ kind: 'loot', ids: ['bugMedal', 'bugNetSS'] }] } },
+      { label: 'Bring him a Sky Stag Beetle', requires: { quest: ['skyStagBeetle'] }, outcome: { text: 'His son is delighted. Beedle tears up and pays well.', effects: [{ kind: 'takeQuest', id: 'skyStagBeetle' }, { kind: 'quest', id: 'beedlesInsectCage' }, { kind: 'rupees', amount: 200 }, { kind: 'quest', id: 'gratitudeCrystal' }] } },
+      { label: 'Leave', outcome: { text: '"Come again!"', effects: [] } },
+    ] },
+  { id: 'funFunIsland', title: 'Fun Fun Island', art: 'loftwingBlue', regions: ['theSky'],
+    text: 'A man on a spinning wheel waves from an island. "Dive through the rings and land on the wheel! Only ₹20!"',
+    choices: [
+      { label: 'Take the dive (₹20)', cost: 20, gamble: { chance: 35,
+        win: { text: 'Gold Rupee! The crowd (one man) goes wild.', effects: [{ kind: 'rupees', amount: 300 }, { kind: 'quest', id: 'partyWheel' }] },
+        lose: { text: 'You land on a red. Better luck next time.', effects: [{ kind: 'rupees', amount: 10 }] } } },
+      { label: 'Fly on', outcome: { text: 'The wheel spins on without you.', effects: [] } },
+    ] },
+  // ── The Silent Realm ──
+  { id: 'trialGate', title: 'A Trial Gate', art: 'watcher', regions: ['skyloft', ...SURFACE, 'skyKeep'],
+    text: 'A golden symbol is carved into the ground. When a sword touches it, the world goes silent and grey.',
+    choices: [
+      { label: 'Enter the Silent Realm', outcome: { text: 'The goddess\'s trial awaits. Your next battle will be the Silent Realm: gather the Sacred Tears without fighting, and don\'t let the Guardians touch you.', effects: [{ kind: 'silentRealm' }] } },
+      { label: 'Not yet', outcome: { text: 'The symbol waits.', effects: [] } },
+    ] },
+  { id: 'goddessChest', title: 'A Goddess Chest', art: 'hylia', regions: [...SKY, ...SURFACE],
+    text: 'A gold-banded chest on a lonely island, sealed until someone strikes its Goddess Cube far below. Someone did.',
+    choices: [
+      { label: 'Open it', outcome: { text: 'Something left for the goddess\'s hero.', effects: [{ kind: 'loot', ids: ['heartMedal', 'rupeeMedal', 'treasureMedal', 'potionMedal', 'lifeMedal', 'heartPotionPlus', 'guardianPotion', 'sailcloth'] }] } },
+    ] },
+  // ── The surface ──
+  { id: 'kikwiElder', title: 'The Kikwi Elder', art: 'bucha', regions: ['faronWoodsSS', 'ancientCistern'],
+    text: 'A Kikwi the size of a hill blocks the path. "Kwee! My little ones are hiding from the Bokoblins. Will you find them, kwee?"',
+    choices: [
+      { label: 'Search the woods', gamble: { chance: 65,
+        win: { text: 'Three Kikwis, found. Bucha shows you the way to Skyview — and offers to come.', effects: [{ kind: 'recruit', pool: ['bucha'] }, { kind: 'quest', id: 'gratitudeCrystal' }] },
+        lose: { text: 'You find a Bokoblin camp instead.', effects: [{ kind: 'hp', pct: -0.08 }, { kind: 'quest', id: 'monsterClaw' }] } } },
+      { label: 'Trade for Mushroom Spores', outcome: { text: '"Kwee! Good for plants."', effects: [{ kind: 'loot', ids: ['mushroomSpores', 'glitteringSpores'] }] } },
+      { label: 'Ask about the Great Tree', requires: { noQuest: ['lifeTreeSeedling', 'lifeTreeFruit'] }, outcome: { text: 'The elder gives you a seedling from the Great Tree. "Plant it in the old days, kwee."', effects: [{ kind: 'quest', id: 'lifeTreeSeedling' }] } },
+    ] },
+  { id: 'mogmaDigSite', title: 'The Mogma Turf', art: 'moldini', regions: ['eldinVolcano', 'fireSanctuary'],
+    text: 'A Mogma pops out of the ground in sunglasses. "Treasure hunters, eh? This turf\'s ours. Unless you want to dig together."',
+    choices: [
+      { label: 'Dig together', outcome: { text: 'Rubble, gravel, and something shiny.', effects: [{ kind: 'quest', id: 'eldinOre' }, { kind: 'quest', id: 'amberRelic' }, { kind: 'loot', ids: ['diggingMitts', 'staminaFruit', 'heartPotionPlus'] }] } },
+      { label: 'Recruit the Mogma', outcome: { text: '"Fine. But I keep what I find."', effects: [{ kind: 'recruit', pool: ['moldini'] }] } },
+      { label: 'Buy Mogma Mitts (₹600)', cost: 600, outcome: { text: '"Dig like a Mogma!"', effects: [{ kind: 'loot', ids: ['mogmaMitts'] }] } },
+    ] },
+  { id: 'gorkosLecture', title: "Gorko's Lecture", art: 'gorko', regions: ['lanayruDesert', 'eldinVolcano', 'faronWoodsSS'],
+    text: 'A Goron squats beside a Goddess Statue. "Did you know the goddess left these all over the land? Let me tell you about every single one."',
+    choices: [
+      { label: 'Listen to everything', outcome: { text: 'Three hours later you know a lot about statues.', effects: [{ kind: 'xp', amount: 15 }, { kind: 'quest', id: 'powerGenerator' }] } },
+      { label: 'Invite him along', outcome: { text: '"An expedition! I\'ll bring my notes."', effects: [{ kind: 'recruit', pool: ['gorko'] }] } },
+    ] },
+  { id: 'timeshiftCache', title: 'A Timeshift Stone', art: 'technoblin', regions: ['lanayruDesert', 'lanayruSandSea'],
+    text: 'A crystal half-buried in the sand. Strike it and the desert turns green for a moment; robots sit up and look around.',
+    choices: [
+      { label: 'Chip off a fragment', outcome: { text: 'It still glows.', effects: [{ kind: 'loot', ids: ['timeshiftFragment'] }, { kind: 'quest', id: 'ancientFlower' }] } },
+      { label: 'Search the ancient ruins', gamble: { chance: 55,
+        win: { text: 'An old robot hands you a chart of a sea that isn\'t there anymore.', effects: [{ kind: 'quest', id: 'ancientSeaChart' }, { kind: 'quest', id: 'ancientFlower' }, { kind: 'quest', id: 'amberRelic' }] },
+        lose: { text: 'A Beamos wakes up. You leave quickly.', effects: [{ kind: 'hp', pct: -0.08 }] } } },
+      { label: 'Repair a robot (Power Generator)', requires: { quest: ['powerGenerator'] }, outcome: { text: 'It beeps happily and follows you.', effects: [{ kind: 'takeQuest', id: 'powerGenerator' }, { kind: 'recruit', pool: ['scrapper', 'skipper', 'technoblin'] }] } },
+    ] },
+  { id: 'lifeTreePlanting', title: 'The Ancient Past', art: 'lanayruDragon', regions: ['lanayruDesert'],
+    text: 'Inside a Timeshift field, the dry ground is green again. A good place to plant something.',
+    choices: [
+      { label: 'Plant the Life Tree Seedling', requires: { quest: ['lifeTreeSeedling'] }, outcome: { text: 'In the present, a great tree has grown here. It bears a single fruit.', effects: [{ kind: 'takeQuest', id: 'lifeTreeSeedling' }, { kind: 'quest', id: 'lifeTreeFruit' }] } },
+      { label: 'Cure the Thunder Dragon (Life Tree Fruit)', requires: { quest: ['lifeTreeFruit'] }, outcome: { text: 'Lanayru eats the fruit and roars back to health. He teaches you his part of the song — and offers his help.', effects: [{ kind: 'takeQuest', id: 'lifeTreeFruit' }, { kind: 'quest', id: 'songPartLanayru' }, { kind: 'recruit', pool: ['lanayruDragon'] }] } },
+      { label: 'Rest in the shade', outcome: { text: 'The past is peaceful.', effects: [{ kind: 'hp', pct: 0.2 }] } },
+    ] },
+  // ── The Dragons and Levias: the Song of the Hero ──
+  { id: 'dragonFaron', title: 'Lake Floria', art: 'faronDragon', regions: ['faronWoodsSS', 'ancientCistern'],
+    text: 'The Water Dragon rises from the lake, dripping and irritable. "So the goddess\'s hero wants my song. Prove you have the patience for it."',
+    choices: [
+      { label: "Play the Goddess's Harp", requires: { gear: ['goddessHarp'], noQuest: ['songPartFaron'] }, outcome: { text: 'Faron hums along, grudgingly. You learn her part of the Song of the Hero.', effects: [{ kind: 'quest', id: 'songPartFaron' }, { kind: 'quest', id: 'tadtone' }] } },
+      { label: 'Collect Tadtones for her', gamble: { chance: 50,
+        win: { text: 'Every Tadtone found. Faron is impressed enough to join you.', effects: [{ kind: 'quest', id: 'tadtone' }, { kind: 'recruit', pool: ['faronDragon'] }] },
+        lose: { text: 'The Tadtones escape. Faron sighs like a waterfall.', effects: [{ kind: 'quest', id: 'tadtone' }] } } },
+      { label: 'Bow and leave', outcome: { text: '"Hmph."', effects: [] } },
+    ] },
+  { id: 'dragonEldin', title: 'The Volcano Summit', art: 'eldinDragon', regions: ['eldinVolcano', 'fireSanctuary'],
+    text: 'The Fire Dragon bursts out of the lava, laughing. "HA HA! Little hero! Survive my volcano and I\'ll teach you a song!"',
+    choices: [
+      { label: "Play the Goddess's Harp", requires: { gear: ['goddessHarp'], noQuest: ['songPartEldin'] }, outcome: { text: 'Eldin roars the melody. You learn his part of the Song of the Hero.', effects: [{ kind: 'quest', id: 'songPartEldin' }] } },
+      { label: 'Climb through the eruption', gamble: { chance: 50,
+        win: { text: '"HA! Good! I\'m coming with you!"', effects: [{ kind: 'recruit', pool: ['eldinDragon'] }, { kind: 'quest', id: 'eldinOre' }] },
+        lose: { text: 'Singed eyebrows all round.', effects: [{ kind: 'hp', pct: -0.1 }, { kind: 'quest', id: 'eldinOre' }] } } },
+      { label: 'Back away slowly', outcome: { text: '"Coward! HA HA!"', effects: [] } },
+    ] },
+  { id: 'leviasSkies', title: 'The Thunderhead', art: 'levias', regions: ['theSky', 'skyloft'],
+    text: 'A whale the size of an island swims through the clouds. "Hero... I have watched over the sky since the goddess raised it."',
+    choices: [
+      { label: "Play the Goddess's Harp", requires: { gear: ['goddessHarp'], noQuest: ['songPartLevias'] }, outcome: { text: 'Levias sings the last part of the Song of the Hero.', effects: [{ kind: 'quest', id: 'songPartLevias' }] } },
+      { label: 'Ask for his protection', gamble: { chance: 35,
+        win: { text: '"I will fly with you a while."', effects: [{ kind: 'recruit', pool: ['levias'] }] },
+        lose: { text: '"The sky needs me here. Take this."', effects: [{ kind: 'quest', id: 'blueBirdFeather' }, { kind: 'quest', id: 'birdFeather' }] } } },
+    ] },
+  // ── Sacred flames (in case the bosses kept them) ──
+  { id: 'goddessFlame', title: 'A Sacred Flame', art: 'fi', regions: ['ancientCistern', 'lanayruSandSea', 'fireSanctuary'],
+    text: '"Master, I detect a sacred flame. There is a 96% probability it is meant for the goddess\'s sword."',
+    choices: [
+      { label: "Take Farore's Flame", requires: { noQuest: ['faroresFlame'] }, outcome: { text: 'Green fire that doesn\'t burn.', effects: [{ kind: 'quest', id: 'faroresFlame' }] } },
+      { label: "Take Nayru's Flame", requires: { quest: ['faroresFlame'], noQuest: ['nayrusFlame'] }, outcome: { text: 'Blue fire, cold and calm.', effects: [{ kind: 'quest', id: 'nayrusFlame' }] } },
+      { label: "Take Din's Flame", requires: { quest: ['nayrusFlame'], noQuest: ['dinsFlame'] }, outcome: { text: 'Red fire that roars.', effects: [{ kind: 'quest', id: 'dinsFlame' }] } },
+      { label: 'Leave it', outcome: { text: '"Understood."', effects: [] } },
+    ] },
+  { id: 'sealedTemple', title: 'The Sealed Temple', art: 'impaSS', regions: ['sealedGrounds'],
+    text: 'An old woman sits by the sealing spike, watching the pit. "It will rise again. It always does."',
+    choices: [
+      { label: 'Help reinforce the seal', outcome: { text: 'The spike is driven deeper. The old woman nods.', effects: [{ kind: 'supplies', amount: 4 }, { kind: 'quest', id: 'gratitudeCrystal' }] } },
+      { label: 'Ask about the Gate of Time', requires: { noQuest: ['hyliasBlessing'] }, gamble: { chance: 40,
+        win: { text: '"Take this. The goddess left it for her hero." Hylia\'s Blessing glows in your hand.', effects: [{ kind: 'quest', id: 'hyliasBlessing' }] },
+        lose: { text: '"You are not ready yet."', effects: [{ kind: 'xp', amount: 10 }] } } },
+      { label: 'Ask her to come', outcome: { text: 'A younger Impa, from another age, steps through the Gate of Time.', effects: [{ kind: 'recruit', pool: ['impaSS'] }] } },
+    ] },
+  { id: 'sandSeaHarbor', title: 'Skipper\'s Dock', art: 'skipper', regions: ['lanayruSandSea'],
+    text: 'An old robot captain stands on a jetty over the sand. "My ship, the Sandship, was stolen. Help me find it."',
+    choices: [
+      { label: 'Sail with Skipper', outcome: { text: 'A chart and a captain.', effects: [{ kind: 'quest', id: 'ancientSeaChart' }, { kind: 'recruit', pool: ['skipper'] }] } },
+      { label: 'Scavenge the docks', outcome: { text: 'Robot parts everywhere.', effects: [{ kind: 'quest', id: 'ancientFlower' }, { kind: 'quest', id: 'amberRelic' }, { kind: 'quest', id: 'amberRelic' }] } },
+    ] },
+];

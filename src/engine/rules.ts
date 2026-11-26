@@ -17,6 +17,10 @@ const SPECIAL = (open: number, water = INF, rough = 2, gap = INF) => ({
   twilightFog: open, twilightBarrier: INF, sacredLight: open, spinnerRail: rough, spinnerGear: INF, clawshotGrate: INF, hangingPeahat: gap,
   magneticSurface: INF, magneticCrane: INF, dominionStatue: INF, sinkingSand: rough, iceWall: INF, iceBlock: INF, buriedPassage: open,
   howlingStone: INF, windVent: open, cannonTransport: open, flames: rough,
+  // Skyward Sword (per-unit exceptions live in skyward.ts ssTileCost)
+  timeshiftField: open, timeshiftStone: INF, timeshiftOrb: open, ancientRail: rough, minecart: open, sandPile: rough, burrowingTunnel: open,
+  waterFruitPlant: INF, solidifiedLava: open, windPinwheel: INF, skyIslandEdge: open, goddessCube: INF, trialGate: open, wakingWater: open,
+  lightFruit: open, sealingSpike: INF, powerSocket: INF, sacredTear: open, driedWaterway: rough,
 });
 export const MOVE_COSTS: Record<MoveType, Record<Terrain, number>> = {
   foot:    { plain: 1, forest: 2, mountain: 3, water: INF, wall: INF, fort: 1, lava: 2, ...SPECIAL(1) },
@@ -84,6 +88,25 @@ export const TERRAIN_BONUS: Record<Terrain, { avoid: number; def: number; heal: 
   windVent: { avoid: 10, def: 0, heal: 0 },
   cannonTransport: { avoid: 0, def: 0, heal: 0 },
   flames: { avoid: 0, def: 0, heal: 0 },
+  timeshiftField: { avoid: 0, def: 0, heal: 0 },
+  timeshiftStone: { avoid: 0, def: 0, heal: 0 },
+  timeshiftOrb: { avoid: 0, def: 0, heal: 0 },
+  ancientRail: { avoid: 0, def: 0, heal: 0 },
+  minecart: { avoid: 0, def: 1, heal: 0 },
+  sandPile: { avoid: 10, def: 0, heal: 0 },
+  burrowingTunnel: { avoid: 10, def: 0, heal: 0 },
+  waterFruitPlant: { avoid: 0, def: 0, heal: 0 },
+  solidifiedLava: { avoid: 0, def: 0, heal: 0 },
+  windPinwheel: { avoid: 0, def: 0, heal: 0 },
+  skyIslandEdge: { avoid: 10, def: 0, heal: 0 },
+  goddessCube: { avoid: 0, def: 0, heal: 0 },
+  trialGate: { avoid: 0, def: 0, heal: 10 },
+  wakingWater: { avoid: 0, def: 0, heal: 0 },
+  lightFruit: { avoid: 0, def: 0, heal: 0 },
+  sealingSpike: { avoid: 0, def: 0, heal: 0 },
+  powerSocket: { avoid: 0, def: 0, heal: 0 },
+  sacredTear: { avoid: 0, def: 0, heal: 0 },
+  driedWaterway: { avoid: 0, def: 0, heal: 0 },
 };
 
 /** Water-like spaces: swimmers move through them, others can't. */
@@ -141,6 +164,25 @@ export const SPECIAL_TERRAIN: Record<Exclude<Terrain, BaseTerrain>, { name: stri
   windVent: { name: 'Wind Vent', color: '#d8f0f8' },
   cannonTransport: { name: 'Cannon Transport', color: '#6a5040' },
   flames: { name: 'Burning Ground', color: '#d06030' },
+  timeshiftField: { name: 'Timeshift Field', color: '#7ac0a0' },
+  timeshiftStone: { name: 'Timeshift Stone', color: '#4ab0d0' },
+  timeshiftOrb: { name: 'Timeshift Orb', color: '#6ad0e0' },
+  ancientRail: { name: 'Ancient Rail', color: '#8a7a60' },
+  minecart: { name: 'Minecart', color: '#6a5a4a' },
+  sandPile: { name: 'Sand Pile', color: '#d8c080' },
+  burrowingTunnel: { name: 'Burrowing Tunnel', color: '#6a4a30' },
+  waterFruitPlant: { name: 'Water Fruit Plant', color: '#4a8a9a' },
+  solidifiedLava: { name: 'Solidified Lava', color: '#5a4a48' },
+  windPinwheel: { name: 'Wind Pinwheel', color: '#c0c8e0' },
+  skyIslandEdge: { name: 'Sky Island Edge', color: '#c8e8f8' },
+  goddessCube: { name: 'Goddess Cube', color: '#e8d070' },
+  trialGate: { name: 'Trial Gate', color: '#d8c060' },
+  wakingWater: { name: 'Waking Water', color: '#8ad0f0' },
+  lightFruit: { name: 'Light Fruit', color: '#f0f0a0' },
+  sealingSpike: { name: 'Sealing Spike', color: '#c0b8a0' },
+  powerSocket: { name: 'Ancient Power Socket', color: '#5a7a8a' },
+  sacredTear: { name: 'Sacred Tear', color: '#f8f0c0' },
+  driedWaterway: { name: 'Dried Waterway', color: '#b8a070' },
 };
 
 /** Lava damage at the start of a unit's turn (as % of max HP). */

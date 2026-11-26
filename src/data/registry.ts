@@ -6,6 +6,7 @@ import { OCARINA } from '../content/ocarina';
 import { MAJORA, QUEST_ITEMS as MM_QUEST } from '../content/majora';
 import { WIND_WAKER, QUEST_ITEMS as WW_QUEST } from '../content/windwaker';
 import { TWILIGHT_PRINCESS, QUEST_ITEMS as TP_QUEST } from '../content/twilight';
+import { SKYWARD_SWORD, QUEST_ITEMS as SS_QUEST } from '../content/skyward';
 import { SPECIAL_TERRAIN } from '../engine/rules';
 import type { ContentPack } from '../content/types';
 import type {
@@ -59,6 +60,11 @@ export function installPack(p: ContentPack): void {
   index(SKILLS, p.skills);
   index(WORLDS, p.regions);
   for (const r of p.regions) if (!REGION_IDS.includes(r.id)) REGION_IDS.push(r.id);
+  // A later pack can give an existing unit a full template (Skyward Sword's Beamos): it replaces the old one.
+  for (const t of p.templates) {
+    const i = TEMPLATE_LIST.findIndex((x) => x.id === t.id);
+    if (i >= 0) TEMPLATE_LIST.splice(i, 1);
+  }
   index(TEMPLATES, p.templates);
   TEMPLATE_LIST.push(...p.templates);
   index(ENEMIES, p.enemies);
@@ -68,7 +74,11 @@ export function installPack(p: ContentPack): void {
   COMMANDERS.push(...p.commanders);
   for (const id of p.artIds) ART_IDS.add(id);
   Object.assign(ART_ALIASES, p.artAliases);
-  Object.assign(ART_VARIANTS, p.artVariants ?? {});
+  // Variant lists from several packs are merged: later packs append their alternates.
+  for (const [k, v] of Object.entries(p.artVariants ?? {})) {
+    const cur = (ART_VARIANTS[k] ??= []);
+    for (const id of v) if (!cur.includes(id)) cur.push(id);
+  }
   Object.assign(BOSS_AS_TEMPLATE, p.bossAsTemplate ?? {});
 
   // Every unit is recruitable: bosses, villains and enemy creatures become templates too.
@@ -108,11 +118,12 @@ installPack(OCARINA);
 installPack(MAJORA);
 installPack(WIND_WAKER);
 installPack(TWILIGHT_PRINCESS);
+installPack(SKYWARD_SWORD);
 // Phantom Ganon keeps his entry; his Wind Waker sword joins his drops.
 if (BOSSES.phantomGanon) BOSSES.phantomGanon.drops = [...(BOSSES.phantomGanon.drops ?? []), 'phantomGanonsSword'];
 
 /** Quest items (shared quest inventory). */
-export const QUEST_ITEMS: Record<string, { id: string; name: string; desc: string }> = Object.fromEntries([...MM_QUEST, ...WW_QUEST, ...TP_QUEST].map((q) => [q.id, q]));
+export const QUEST_ITEMS: Record<string, { id: string; name: string; desc: string }> = Object.fromEntries([...MM_QUEST, ...WW_QUEST, ...TP_QUEST, ...SS_QUEST].map((q) => [q.id, q]));
 
 // ───────── Safe lookups ─────────
 
