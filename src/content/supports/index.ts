@@ -3,12 +3,14 @@
 
 import { SUPPORT_REGISTRY as BASE_REGISTRY, type SupportPairDef } from './registry';
 import { SUPPORT_REGISTRY_SS } from './registrySS';
+import { SUPPORT_REGISTRY_WILD } from './registryWild';
+import { SUPPORT_REGISTRY_ORIGINAL } from './registryOriginal';
 import { CONVOS as EXAMPLES } from './convos/examples';
 import { WRITTEN } from './written';
 
 export type { SupportPairDef };
 /** Every registered pairing, all packs. */
-export const SUPPORT_REGISTRY: SupportPairDef[] = [...BASE_REGISTRY, ...SUPPORT_REGISTRY_SS];
+export const SUPPORT_REGISTRY: SupportPairDef[] = [...BASE_REGISTRY, ...SUPPORT_REGISTRY_SS, ...SUPPORT_REGISTRY_WILD, ...SUPPORT_REGISTRY_ORIGINAL];
 
 export type SupportLine = ['a' | 'b' | 'n', string];
 export type SupportRankKey = 'C' | 'B' | 'A' | 'S';
@@ -25,6 +27,8 @@ export const SUPPORT_CANON: Record<string, string> = {
   darkBeastGanon: 'ganondorfTP',
   // Skyward Sword forms
   ghirahimTrue: 'ghirahim', imprisonedArmed: 'imprisoned', imprisonedFlying: 'imprisoned',
+  // Era of the Wild forms
+  lightDragon: 'zeldaWild', demonDragon: 'ganondorfWild', darkBeastGanonWild: 'calamityGanon', mineruConstruct: 'mineru',
 };
 export const canonOf = (id: string) => SUPPORT_CANON[id] ?? id;
 export const pairKey = (a: string, b: string) => { const x = canonOf(a), y = canonOf(b); return x < y ? `${x}|${y}` : `${y}|${x}`; };

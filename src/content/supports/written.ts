@@ -12,5 +12,10 @@ import { CONVOS as SS1 } from './convos/ss1';
 import { CONVOS as SS2 } from './convos/ss2';
 import { CONVOS as SS3 } from './convos/ss3';
 import { CONVOS as SS4 } from './convos/ss4';
+import { CONVOS as WILD1 } from './convos/wild1';
+import { CONVOS as WILD2 } from './convos/wild2';
+import { CONVOS as WILD3 } from './convos/wild3';
+import { CONVOS as WILD4 } from './convos/wild4';
+import { CONVOS as ORIGINAL } from './convos/original';
 
-export const WRITTEN: Record<string, ConvoSet> = { ...OOT, ...MM, ...WW, ...TP1, ...TP2, ...CROSS1, ...CROSS2, ...MONSTERS, ...SS1, ...SS2, ...SS3, ...SS4 };
+export const WRITTEN: Record<string, ConvoSet> = { ...OOT, ...MM, ...WW, ...TP1, ...TP2, ...CROSS1, ...CROSS2, ...MONSTERS, ...SS1, ...SS2, ...SS3, ...SS4, ...WILD1, ...WILD2, ...WILD3, ...WILD4, ...ORIGINAL };
