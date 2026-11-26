@@ -259,3 +259,5 @@ Batch 4 (15): captainConstructBlade (teal/orange, blade crest — Captain I–II
 Batch 5 (16): gleeokFlame, gleeokFrost, gleeokThunder_patternbg, kingGleeok_patternbg, colgera, mazKoshia, queenGibdo_patternbg, mucktorok_patternbg, marbledGohma, seizedConstruct, moragia, fluxConstruct1 (plain teal), fluxConstruct2 (teal with gold trim), fluxConstruct3 (gold), phantomGanondorf, vahRuta. Note: the Gleeok/Colgera/Gohma/Moragia images use near-transparent navy backgrounds like the patterned ones.
 
 Batch 6 (8): vahRudania, vahMedoh, vahNaboris, frox, waterblight_whiteblocks (spear; has opaque white/black rectangles in the background to strip), thunderblight (scimitar + shield), windblight (arm cannon + drones), fireblight (arm blade).
+
+Batch 7 (4): guardianScout1 (no weapons), guardianScout3 (two blades), guardianScout4 (three weapons), decayedGuardian. The batch-3 scout is renamed guardianScout2.
