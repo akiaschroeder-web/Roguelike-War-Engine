@@ -1,3 +1,4 @@
 ooksParasite -> shadowInsect (shared art, per user)
 postmanMM -> alt art for postman; kargarocTP -> alt for kargaroc; bullboTP -> alt for bullbo
 freezardTP -> alt for freezard (no base Freezard unit exists yet); whiteWolfosOoT -> alt; skullfishMM -> alt; lizalfosTP/dinolfosTP -> alts
+darknutTP, bokoblinTP -> alts
