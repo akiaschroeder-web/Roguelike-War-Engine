@@ -64,3 +64,5 @@ Hero of Hyrule: Link, Old Man, Merchant → hidden treasure rewards +25% · Prin
 ## Art received
 Saved in `art_sources/original_hyrule/`. Batch 1 (15): link1, zelda1 (JPEG on white — needs background removal), ganon1, oldMan, oldWoman, merchant1, goriya, zol (round slime), gel (pointed slime), rope, vire, polsVoice, ghini, lanmola, patra.
 Still needed: Aquamentus, Manhandla, Digdogger, Lesser Digdogger.
+
+Batch 2 (10): aquamentus, digdogger (also used for Lesser Digdogger unless separate art arrives), and Zelda 1 alt arts: dodongo1 (Dodongo), gohma1 (alt for Queen Gohma — the doc maps Gohma to it), octorok1, moldorm1, gleeok1 (alt for the Flame Gleeok, the classic Gleeok), darknut1, lynel1 (alt for the Era of the Wild Lynel), tektite1. User says the art is done; Manhandla has no image (asked).
