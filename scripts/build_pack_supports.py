@@ -89,6 +89,20 @@ PACKS = {
         'Wrecker Phantom': 'wreckerPhantom', 'Goron Roller': 'goronRoller', 'Big Blin': 'bigBlin', 'Miniblin': 'miniblin', 'Moblin': 'moblin',
         'Bulblin': 'bulblin', 'King Bulblin': 'kingBulblin', 'Boss Bokoblin': 'bossBokoblin',
     }),
+    'minish': dict(doc='docs/minish-cap-pack.md', start='## 13. Supports', end='### Groups', suffix='Minish', game='minish', names={
+        'Link': 'heroOfMinish', 'Hero of the Minish': 'heroOfMinish', 'Zelda': 'zeldaMC', 'Minish Cap Zelda': 'zeldaMC', 'Ezlo': 'ezloMinish', 'Smith': 'smith',
+        'Melari': 'melari', 'Swiftblade': 'swiftblade', 'Festari': 'festari', 'King Daltus': 'kingDaltus', 'Vaati': 'vaatiHylian', 'Gentari': 'gentari',
+        'Librari': 'librari', 'Greatblade': 'greatblade', 'Grimblade': 'grimblade', 'Swiftblade the First': 'swiftbladeFirst', 'Potho': 'potho', 'Gregal': 'gregal',
+        'Female Gyorg': 'gyorgFemale', 'Male Gyorg': 'gyorgMale', 'Hero of Time': 'link', 'Hero of Legend': 'heroOfLegend', 'Hero of Winds': 'heroOfWinds',
+        'Hero of Spirits': 'heroOfSpirits', 'Hero of the Wild': 'heroOfTheWild', "Hero's Shade": 'herosShade', 'Skyward Sword Zelda': 'zeldaSS',
+        'Spirit Tracks Zelda': 'zeldaST', 'Tetra': 'tetra', 'Navi': 'navi', 'Tatl': 'tatl', 'Ciela': 'ciela', 'Fi': 'fi', 'King of Red Lions': 'kingOfRedLions',
+        'Midna': 'midnaImp', 'Anjean': 'anjean', 'Ghirahim': 'ghirahim', 'Zant': 'zant', 'Ganondorf': 'ganondorf', 'Majora': 'majorasMask', 'Bellum': 'bellum',
+        'Malladus': 'malladus', 'Biggoron': 'biggoron', 'Zauz': 'zauz', 'Gondo': 'gondo', 'Subrosian Blacksmith': 'subrosianBlacksmith', 'Alfonzo': 'alfonzo',
+        'Rusl': 'rusl', 'Great Deku Tree': 'dekuTree', 'Makar': 'makar', 'Saria': 'saria', 'Shad': 'shad', 'Robbie': 'robbie', 'Orca': 'orca', 'Darunia': 'darunia',
+        'Dark Link': 'darkLink', 'King Daphnes': 'kingDaphnes', 'King Rhoam': 'kingRhoam', 'Zephos': 'zephos', 'Cyclos': 'cyclos', 'Mazaal': 'mazaal',
+        'Gohdan': 'gohdan', 'Eox': 'eox', 'Koloktos': 'koloktos', 'Gyorg (MM)': 'gyorg', 'Mountain Minish Blacksmith': 'mountainMinishBlacksmith',
+        'Goron Warrior': 'goronWarrior', 'Town Minish Tinkerer': 'townMinishTinkerer', 'Steward Construct': 'stewardConstruct',
+    }),
 }
 SKIP = {'Epona', 'Four Giants', 'OOT Potion Shopkeeper', 'OoT Potion Shopkeeper', 'Cubus Sisters'}
 CANON = {'ghirahimTrue': 'ghirahim', 'imprisonedArmed': 'imprisoned', 'imprisonedFlying': 'imprisoned', 'ganon': 'ganondorf', 'sheik': 'zelda',
@@ -119,6 +133,7 @@ for line in body.splitlines():
         section = line.split(':')[0]
         line = line.split(':', 1)[1]
     line = re.sub(r'\. S ranks can be.*$', '', line)
+    line = re.sub(r'^\s*-\s+', '', line)  # bulleted lists (one pair per line)
     for entry in [e.strip().rstrip('.') for e in line.split(' · ') if '×' in e and '`' not in e]:
         m = re.match(r'^(.*?)×(.+?) ([ABS])(?: \((.*)\))?$', entry)
         if not m:

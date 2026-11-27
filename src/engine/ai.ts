@@ -64,6 +64,8 @@ export function planAction(b: Battle, unit: Unit): AIPlan {
         const dealt = expectedDamage(fc.attacker);
         const taken = expectedDamage(fc.defender);
         const lethal = fc.attacker.dmg * fc.attacker.attacks >= foe.hp;
+        // Micro targets: a normal-sized attacker doesn't waste its turn on a near-hopeless swing (−60 Hit).
+        if (foe.micro && !unit.micro && fc.attacker.hit < 20 && !lethal) continue;
         const terrain = TERRAIN_BONUS[b.tiles[k]];
         let score = dealt * 2 - taken + (lethal ? 30 : 0) + terrain.avoid / 10 + terrain.def - lavaPenalty(k);
         if (foe.isCommander) score += 8;

@@ -93,10 +93,10 @@ export function minishBattleSetup(run: Run, b: Battle, rng: RNG) {
   const main = b.units.find((u) => u.isBoss && u.team === 'enemy');
   if (!main) return;
   // Bosses bring their retinue.
-  for (const id of ESCORTS[main.bossId ?? ''] ?? []) spawnNear(b, id, main, Math.max(1, main.level - 1), rng);
+  for (const id of ESCORTS[main.bossId ?? ''] ?? []) spawnNear(b, id, main, main.level, rng);
   // The Madderpillar comes in segments: every one of them must fall.
   if (main.bossId === 'madderpillar') {
-    for (let i = 0; i < SEGMENTS; i++) { const s = spawnNear(b, 'madderpillar', main, main.level, rng); if (s) { s.isBoss = true; s.name = `${s.name} (segment)`; s.ai = 'aggressive'; } }
+    for (let i = 0; i < SEGMENTS; i++) { const s = spawnNear(b, 'madderpillar', main, main.level + 4, rng); if (s) { s.isBoss = true; s.name = `${s.name} (segment)`; s.ai = 'aggressive'; s.stats.res += 10; s.stats.def += 3; } }
     mnState(b).allBosses = true;
   }
   if (!PAIRED_MC_REGIONS.includes(b.world)) return;
@@ -114,10 +114,10 @@ export function minishBattleSetup(run: Run, b: Battle, rng: RNG) {
 
 /** Each boss's retinue (returning monsters and the pack's own). */
 const ESCORTS: Record<string, string[]> = {
-  spinyChuchu: ['chuchuGreen'], madderpillar: ['spinyBeetle', 'spinyBeetle', 'octorok', 'octorok', 'puffstool'], bigGreenChuchu: ['chuchuGreen', 'puffstool'],
+  spinyChuchu: ['chuchuGreen'], madderpillar: ['darknut', 'moblin', 'moblin', 'spinyBeetle', 'spinyBeetle', 'pesto', 'puffstool'], bigGreenChuchu: ['chuchuGreen', 'puffstool'],
   gleerok: ['rollobite', 'spinyBeetle'], silverDarknut: ['eyegoreStatue'], mazaal: ['eyegoreStatue'], redDarknut: ['gibdo'], vaatiReborn: ['ballChainSoldier', 'blackKnight'],
 };
-const SEGMENTS = 3;
+const SEGMENTS = 4;
 function spawnNear(b: Battle, id: string, near: Unit, level: number, rng: RNG): Unit | undefined {
   const a = ENEMIES[id] ?? BOSSES[id];
   if (!a) return undefined;
