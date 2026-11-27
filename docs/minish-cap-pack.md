@@ -583,3 +583,23 @@ Small pixel sprites with provisional names, waiting on the user to confirm:
   - Madderpillar uses existing Moldorm art.
   - Percy and Gregal use existing generic Hylian or sage art.
 - The provisional sprite names (p06–p13, q_*) are unconfirmed. Build with them as named; the user can correct them later.
+
+### Correction from the user: images were sent in the order of the named list (file order)
+This supersedes all the provisional p*/q_* names above. Final files:
+- potho.webp: bald, white side hair, red.
+- smith.webp: green hat, white beard.
+- melari.png: blond, teal, hammer.
+- festari.webp: tall red and white hat.
+- Gentari uses forestMinish.webp (the clover Minish), which is also the generic Minish art.
+- librari.webp: blue hat, book.
+- percy.webp: bald, red gem, rainbow scarf.
+- gregal.webp: blond, green.
+- swiftblade.webp: silver hair, red.
+- swiftbladeFirst.webp: the ghost.
+- Greatblade and Grimblade have no art; they fall back to swiftblade.webp.
+- Monsters were also in list order: spinyBeetle.webp, rollobite.webp, eyegoreStatue.webp.
+- New:
+  - spinyChuchu.jpg: grey, on a beige background that needs removing.
+  - madderpillar.png: blue caterpillar.
+  - blackKnight.png: dark knight with a gold shield.
+- The fallbacks for Spiny ChuChu, Madderpillar and Black Knight no longer apply. The Silver and Red Darknuts still use the existing Darknut art.
