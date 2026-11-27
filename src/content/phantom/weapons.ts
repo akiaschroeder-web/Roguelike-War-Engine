@@ -56,7 +56,7 @@ export const WEAPONS: WeaponDef[] = [
   w('phantomBlade', "Phantom's Blade", 'sword', 'epic', 9, 80, 0, 10, 1, 1, { uses: 0, unique: true, desc: 'The great sword of a Temple Phantom.' }),
   nat('warpFlame', 'Warp Flame', 10, 85, 0, 1, 2, { magicContact: true, element: 'dark' }),
   nat('phantomEyeGaze', "Phantom Eye's Gaze", 4, 90, 0, 1, 2, { magicContact: true }),
-  nat('geozardSpear', 'Geozard Spear', 7, 80, 0, 1, 1, { type: 'sword' }),
+  nat('geozardSpear', 'Shield Bash', 3, 80, 0, 1, 1),
   nat('geozardFire', 'Fire Breath', 10, 85, 0, 1, 2, { element: 'fire', magicContact: true, inflict: { status: 'burn', chance: 25, turns: 2 } }),
   // ── Bosses ──
   nat('demonClaw', 'Demon Claw', 12, 85, 5, 1, 1),
