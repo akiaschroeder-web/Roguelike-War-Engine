@@ -366,3 +366,4 @@ Batch 2:
 - Alt arts for existing units: arrghusFSA.webp (Stone Arrghus) goes to Arrghus, and phantomGanonFSA.webp goes to Phantom Ganon.
 
 Still missing: Dera Zol, plus the Spearman, Bombardier and Captain. The generics can use the existing Hyrule soldier art, and Dera Zol can use Delu Zol's art tinted as a fallback.
+- The user decided: Dera Zol shares Delu Zol's art as is (an art alias, no tint). All Four Swords art is in.
