@@ -11,7 +11,7 @@ export const ENEMIES: EnemyArchetype[] = [
   e('swiftPhantom', 'Swift Phantom', 'swiftPhantomClass', 'phantom', ['phantomBlade'], st(45, 19, 0, 15, 17, 22, 13, 3, 22, 9, 45, 0), { skill: 'relentlessChase', glyph: 'SP', ai: 'guard' }),
   e('warpPhantom', 'Warp Phantom', 'warpPhantomClass', 'phantom', ['phantomBlade', 'warpFlame'], st(48, 20, 18, 16, 12, 24, 20, 4, 23, 6, 35, 40), { skill: 'spectralWarp', glyph: 'WP', ai: 'guard' }),
   e('phantomEye', 'Phantom Eye', 'phantomEyeClass', 'monster', ['phantomEyeGaze'], st(12, 2, 8, 15, 16, 2, 8, 5, 2, 8, 10, 20), { skill: 'phantomAlarmSkill', glyph: 'PE' }),
-  e('geozard', 'Geozard', 'geozardClass', 'monster', ['geozardBlade', 'geozardFire'], st(38, 17, 8, 14, 10, 17, 9, 5, 16, 5, 30, 18), { skill: 'shieldedAssault', glyph: 'GZ' }),
+  e('geozard', 'Geozard', 'geozardClass', 'monster', ['geozardSpear', 'geozardFire'], st(38, 17, 8, 14, 10, 17, 9, 5, 16, 5, 30, 18), { skill: 'shieldedAssault', glyph: 'GZ' }),
   e('yookWarrior', 'Yook Warrior', 'yookWarriorClass', 'yook', ['yookIceClub', 'yookClaws'], st(38, 18, 0, 10, 7, 13, 9, 5, 18, 5, 32, 0), { size: 2, skill: 'heavyBlow', glyph: 'YW' }),
   e('yookIceBreather', 'Yook Ice Breather', 'yookBreatherClass', 'yook', ['frozenBreathWeapon', 'yookClaws'], st(36, 12, 17, 11, 7, 12, 15, 5, 17, 5, 26, 35), { size: 2, skill: 'frozenBreathSkill', glyph: 'YB' }),
   e('yookBerserker', 'Yook Berserker', 'yookBerserkerClass', 'yook', ['yookIceClub', 'yookClaws'], st(42, 22, 0, 9, 10, 10, 7, 4, 20, 6, 38, 0), { size: 2, skill: 'frozenRage', glyph: 'YR' }),
