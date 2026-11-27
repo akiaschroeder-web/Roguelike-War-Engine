@@ -258,3 +258,17 @@ Batch 1, matched in the list's order by filename:
 Still missing:
 - The Lady's Pets, Stalchampion, Prismantus
 - Electric Blob King, Electric Blob Queen, Freezlord, Vulture Vizier, Grim Repoe, Gigaleon
+
+Batch 2 (final), matched in list order by filename:
+- Margoma and Blizzagia were resent, identical to batch 1.
+- ladysPets.webp: pink spiked crown-disc.
+- stalchampion.webp
+- prismantus.webp: tri-colour eye construct.
+- electricBlobKing.webp: yellow, crowned.
+- electricBlobQueen.webp: purple, with lashes.
+- freezlord.png
+- vultureVizier.webp
+- grimRepoe.webp: it has a grey ground-shadow disc to remove.
+- gigaleon.webp: orange spiked crown on a gold base.
+
+All Tri Force Heroes art is in.
