@@ -36,6 +36,7 @@ export const SUPPORT_REGISTRY_ORIGINAL: SupportPairDef[] = [
   { key: 'oldMan|rauru', a: 'oldMan', b: 'rauru', max: 'A', game: 'original', theme: '' },
   { key: 'kingRhoam|oldMan', a: 'oldMan', b: 'kingRhoam', max: 'A', game: 'original', theme: '' },
   { key: 'grandma|oldWoman', a: 'oldWoman', b: 'grandma', max: 'S', game: 'original', theme: 'healing recipes' },
+  { key: 'oldWoman|syrup', a: 'oldWoman', b: 'syrup', max: 'S', game: 'original', theme: 'potion-making techniques' },
   { key: 'oldWoman|yona', a: 'oldWoman', b: 'yona', max: 'A', game: 'original', theme: '' },
   { key: 'beedle|merchantHyrule', a: 'merchantHyrule', b: 'beedle', max: 'S', game: 'original', theme: '' },
   { key: 'maskSalesman|merchantHyrule', a: 'merchantHyrule', b: 'maskSalesman', max: 'A', game: 'original', theme: '' },

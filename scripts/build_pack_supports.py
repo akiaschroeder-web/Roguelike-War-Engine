@@ -31,7 +31,7 @@ PACKS = {
         'Kohga': 'kohga', 'Maz Koshia': 'mazKoshia', 'Purah': 'purah', 'Robbie': 'robbie', 'Impa': 'impaWild', 'Paya': 'paya', 'Teba': 'teba',
         'Kass': 'kass', 'Yona': 'yona', 'Dorephan': 'dorephan', 'Muzu': 'muzu', 'Bludo': 'bludo', 'Buliara': 'buliara', 'Hudson': 'hudson',
         'Grantéson': 'granteson', 'Tauro': 'tauro', 'Penn': 'penn', 'Kilton': 'kilton', 'Koltin': 'koltin', 'Satori': 'satori', 'Malanya': 'malanya',
-        'Yiga Engineer': 'yigaEngineer', 'Dinraal': 'dinraal', 'Naydra': 'naydra', 'Farosh': 'farosh', 'Light Dragon': 'lightDragon',
+        'Yiga Engineer': 'yigaEngineer', 'Dinraal': 'dinraal', 'Naydra': 'naydra', 'Farosh': 'farosh', 'Light Dragon': 'lightDragon', 'Hero of the Wild': 'heroOfTheWild',
         'Calamity Ganon': 'calamityGanon', 'Phantom Ganondorf': 'phantomGanondorf', 'Boss Bokoblin': 'bossBokoblin', 'Stalnox': 'stalnox',
         'Igneo Talus': 'igneoTalus', 'Frost Talus': 'frostTalus', 'Molduga': 'molduga', 'Frox': 'frox', 'Flame Gleeok': 'gleeokFlame',
         'Frost Gleeok': 'gleeokFrost', 'Thunder Gleeok': 'gleeokThunder', 'Queen Gibdo': 'queenGibdo', 'Flux Construct': 'fluxConstruct3',
@@ -42,17 +42,29 @@ PACKS = {
         'Original Ganon': 'ganonHyrule', 'Old Man': 'oldMan', 'Old Woman': 'oldWoman', 'Merchant': 'merchantHyrule', 'Goriya': 'goriya',
         'Ghini': 'ghini', 'Vire': 'vire', 'Zol': 'zol', 'Gel': 'gel', 'Lanmola': 'lanmola', 'Aquamentus': 'aquamentus', 'Manhandla': 'manhandla',
         'Patra': 'patra', 'Digdogger': 'digdogger', 'Wild Zelda': 'zeldaWild', 'Hero of the Wild': 'heroOfTheWild', 'Wild Ganondorf': 'ganondorfWild',
-        'Calamity Ganon': 'calamityGanon', 'King Rhoam': 'kingRhoam', 'Yona': 'yona', 'Flame Gleeok': 'gleeokFlame', 'Meg': 'meg',
+        'Calamity Ganon': 'calamityGanon', 'King Rhoam': 'kingRhoam', 'Yona': 'yona', 'Flame Gleeok': 'gleeokFlame', 'Meg': 'meg', 'Syrup': 'syrup',
     }),
     'aol': dict(doc='docs/adventure-of-link-pack.md', start='## 11. Supports', end='## 12. New Commander', suffix='Aol', game='aol', names={
         'Sleeping Zelda': 'sleepingZelda', 'Hero of Hyrule': 'heroOfHyrule', 'Original Zelda': 'zeldaHyrule', 'Original Ganon': 'ganonHyrule',
         'Wild Zelda': 'zeldaWild', 'Sonia': 'sonia', 'King Rhoam': 'kingRhoam', 'Old Man': 'oldMan', 'Old Woman': 'oldWoman',
         'Rebonack': 'rebonack', 'Horsehead': 'horsehead', 'Gooma': 'gooma', 'Helmethead': 'helmethead', 'Carock': 'carock', 'Wizzrobe': 'wizzrobe',
         'Thunderbird': 'thunderbird', 'Fokka': 'fokka', 'Revali': 'revali', 'Moa': 'moa', 'Ghini': 'ghini', 'Bot': 'bot', 'Zol': 'zol',
-        'Daira': 'daira', 'Doomknocker': 'doomknocker', 'Goriya': 'goriya', 'Lynel': 'lynel',
+        'Daira': 'daira', 'Doomknocker': 'doomknocker', 'Goriya': 'goriya', 'Lynel': 'lynel', 'Agahnim': 'agahnim',
+    }),
+    'legend': dict(doc='docs/era-of-legend-pack.md', start='## 14. Supports', end='## 15. Commanders', suffix='Legend', game='legend', names={
+        'Link': 'heroOfLegend', 'Hero of Legend': 'heroOfLegend', 'Zelda': 'zeldaLegend', 'Ganon': 'ganonLegend', "Link's Uncle": 'linksUncle',
+        'Sahasrahla': 'sahasrahla', 'Aginah': 'aginah', 'Syrup': 'syrup', 'Flute Boy': 'fluteBoy', 'Agahnim': 'agahnim', 'Marin': 'marin',
+        'Tarin': 'tarin', 'BowWow': 'bowwow', 'Wind Fish': 'windFish', 'Din': 'din', 'Nayru': 'nayru', 'Farore': 'farore', 'Ralph': 'ralph',
+        'Impa': 'impaOracle', 'Queen Ambi': 'queenAmbi', 'Ricky': 'ricky', 'Dimitri': 'dimitri', 'Moosh': 'moosh', 'Onox': 'onox', 'Veran': 'veran',
+        'Shadow Nightmare': 'shadowNightmare', 'Holodrum Maku Tree': 'makuTreeHolodrum', 'Labrynna Maku Tree': 'makuTreeLabrynna',
+        'Hero of Time': 'link', 'Hero of Winds': 'heroOfWinds', 'Hero of Twilight': 'heroOfTwilight', 'Hero of Hyrule': 'heroOfHyrule',
+        'Sleeping Zelda': 'sleepingZelda', 'Sonia': 'sonia', 'Malon': 'malon', 'Lulu': 'lulu', 'Medli': 'medli', 'Kass': 'kass', 'Talon': 'talon',
+        'Dinraal': 'dinraal', 'Eldin': 'eldinDragon', 'Purah': 'purah', 'Robbie': 'robbie', 'Sidon': 'sidon', 'Prince Ralis': 'ralis',
+        'Light Dragon': 'lightDragon', 'Wild Ganondorf': 'ganondorfWild', 'Rauru (OOT)': 'rauru', 'Zelda (OOT)': 'zelda', 'OOT Ganondorf': 'ganondorf',
+        'OOT Zelda': 'zelda', 'Iron Knuckle': 'ironKnuckle', 'Twinrova': 'twinrova', 'Darmani': 'darmani',
     }),
 }
-SKIP = {'Epona', 'Four Giants', 'Syrup', 'Agahnim', 'Wizzrobe'}
+SKIP = {'Epona', 'Four Giants', 'Ciela', 'OOT Potion Shopkeeper'}
 CANON = {'ghirahimTrue': 'ghirahim', 'imprisonedArmed': 'imprisoned', 'imprisonedFlying': 'imprisoned', 'ganon': 'ganondorf', 'sheik': 'zelda',
          'lightDragon': 'zeldaWild', 'demonDragon': 'ganondorfWild', 'darkBeastGanonWild': 'calamityGanon', 'mineruConstruct': 'mineru'}
 FORMS = {'kingOfRedLions': 'kingDaphnes', 'lightDragon': 'zeldaWild'}

@@ -20,6 +20,8 @@ export const SUPPORT_REGISTRY_AOL: SupportPairDef[] = [
   { key: 'horsehead|lynel', a: 'horsehead', b: 'lynel', max: 'A', game: 'aol', theme: 'strength and prowess' },
   { key: 'helmethead|stallord', a: 'helmethead', b: 'stallord', max: 'A', game: 'aol', theme: 'undead guardianship' },
   { key: 'captainKeeta|helmethead', a: 'helmethead', b: 'captainKeeta', max: 'A', game: 'aol', theme: 'loyalty beyond death' },
+  { key: 'carock|wizzrobe', a: 'carock', b: 'wizzrobe', max: 'A', game: 'aol', theme: 'advanced magic' },
+  { key: 'agahnim|carock', a: 'carock', b: 'agahnim', max: 'A', game: 'aol', theme: 'magical manipulation and ambition' },
   { key: 'thunderbird|valoo', a: 'thunderbird', b: 'valoo', max: 'A', game: 'aol', theme: 'sacred guardians' },
   { key: 'helmarocKing|thunderbird', a: 'thunderbird', b: 'helmarocKing', max: 'A', game: 'aol', theme: 'aerial rivalry' },
   { key: 'argorok|thunderbird', a: 'thunderbird', b: 'argorok', max: 'A', game: 'aol', theme: 'armored opponents' },

@@ -18,5 +18,7 @@ import { CONVOS as WILD3 } from './convos/wild3';
 import { CONVOS as WILD4 } from './convos/wild4';
 import { CONVOS as ORIGINAL } from './convos/original';
 import { CONVOS as AOL } from './convos/aol';
+import { CONVOS as LEGEND1 } from './convos/legend1';
+import { CONVOS as LEGEND2 } from './convos/legend2';
 
-export const WRITTEN: Record<string, ConvoSet> = { ...OOT, ...MM, ...WW, ...TP1, ...TP2, ...CROSS1, ...CROSS2, ...MONSTERS, ...SS1, ...SS2, ...SS3, ...SS4, ...WILD1, ...WILD2, ...WILD3, ...WILD4, ...ORIGINAL, ...AOL };
+export const WRITTEN: Record<string, ConvoSet> = { ...OOT, ...MM, ...WW, ...TP1, ...TP2, ...CROSS1, ...CROSS2, ...MONSTERS, ...SS1, ...SS2, ...SS3, ...SS4, ...WILD1, ...WILD2, ...WILD3, ...WILD4, ...ORIGINAL, ...AOL, ...LEGEND1, ...LEGEND2 };
