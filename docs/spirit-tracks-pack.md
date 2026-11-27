@@ -91,3 +91,33 @@ Batch 1 (14): heroOfSpirits_logo (JPEG; has the Spirit Tracks logo and a waterma
 - armoredTrain.webp — blue train with fire eyes and smoke (provisional).
 - darkTrain.webp — grey 3D model with purple eyes (provisional).
 - Still missing: Malladus (true form). Open questions from batch 2: the green PH Phantom art, the purple eye-hand, and the duplicate Rael image.
+
+## Additions (batch 4)
+
+### Big Blin (recruitable, Spirit Tracks)
+- Race: Blin. Size 2. Rare. Class: Heavy Bruiser. Role: melee assault and monster leadership.
+- Personal skill, Blin Brute: +2 STR and +2 DEF for each allied Miniblin within 3 spaces, up to +6 each.
+- Abilities:
+  - Heavy Club (5 STA): 150% physical damage, knockback 2.
+  - Sweeping Smash (8 STA): hits everything in a frontal arc, allies included.
+  - Pirate Rally (6 STA): nearby Miniblins and Bulblins get +3 STR and +3 SPD for 3 turns.
+  - Capture (10 STA): traps an adjacent size-1 enemy below 25% HP in the basket, temporarily removing it.
+  - Boarding Assault (6 STA): +50% damage in ship and train boarding encounters.
+- Base stats: HP 48, STR 23, MAG 0, SKL 11, SPD 6, DEF 17, RES 6, LCK 5, CON 24, MOV 5, STA 40, MP 0.
+- Unique equipment:
+  - Big Blin Club: rare, two-handed, 22 Might, heavy, extra knockback.
+  - Capture Basket: rare pack tool that enables Capture.
+  - Pirate Necklace: uncommon accessory, +2 STR and more boarding damage.
+- Supports: Miniblin S, Moblin A, Bulblin A, King Bulblin S, Boss Bokoblin A, Jolene A.
+- Art: bigBlin.webp. The Spirit Tracks roster is now 37 recruitable units.
+
+### New ChuChus
+- Basic ChuChu (chuchuBasic.webp, blue), Electric ChuChu (chuchuElectric.png, yellow), Frost ChuChu (chuchuFrost.webp, white) and Flame ChuChu (chuchuFlame.png, orange).
+- The Skyward Sword alt arts are copied onto the new units: chuchuBlueSS to Basic, chuchuRedSS to Flame. The existing coloured units keep theirs.
+- The user said one image is a "frost ChuChu alt art". Assumed to be chuchuFrost.webp until confirmed.
+
+### Spirit Tracks alt arts
+- bubbleST.webp goes to Bubble (bubbleMM), skulltulaST.png to Skulltula, bullboST.png to Bullbo (wildBullbo) and bulblinST.png to Bulblin.
+
+### Unassigned (ask the user)
+- unassigned_whiteGhostCloud, unassigned_greySpiked, unassigned_blueHorned, unassigned_greyRockRed.
