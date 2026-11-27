@@ -12,6 +12,7 @@ import { decorateWild, wildBattleStart, wildEnvironment } from './wild';
 import { decorateOriginal, originalBattleStart } from './original';
 import { decorateLegend, legendBattleStart } from './legend';
 import { decoratePhantom, phantomBattleStart } from './phantom';
+import { decorateSpirit, spiritBattleStart } from './spirit';
 import { GEAR, ITEMS } from '../data/registry';
 import type { Battle, Pos, Terrain, Unit, WorldId } from './types';
 
@@ -47,8 +48,11 @@ export function decorateField(b: Battle, rng: RNG, nodeType: string) {
   originalBattleStart(b, rng);
   decorateLegend(b, rng);
   legendBattleStart(b);
+  // Spirit Tracks first: the Tower of Spirits turns on the Phantom patrols (without the Temple's life drain).
+  decorateSpirit(b, rng);
   decoratePhantom(b, rng);
   phantomBattleStart(b);
+  spiritBattleStart(b);
   // Fog of war
   b.fog = rng.chance(FOGGY[world] ?? 6);
   // Buried treasure

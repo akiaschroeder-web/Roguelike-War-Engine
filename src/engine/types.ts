@@ -162,7 +162,10 @@ export type Terrain = BaseTerrain | 'cracked' | 'timeBlock' | 'timeGap' | 'bridg
   | 'seasonalFlower' | 'seasonalSnowbank' | 'seasonalMushroom'
   // Phantom Hourglass battlefield spaces (Submerged Treasure is the Great Sea's; switches, doors and blocks are reused)
   | 'sacredSafeZone' | 'phantomPatrol' | 'phantomAlarm' | 'tightropePost' | 'tightrope' | 'whirlwind' | 'spiritPedestal' | 'bombchuTunnel'
-  | 'hammerPad' | 'sunCrest' | 'cycloneWarp';
+  | 'hammerPad' | 'sunCrest' | 'cycloneWarp'
+  // Spirit Tracks battlefield spaces (the Phantom Safe Zone is the Sacred Safe Zone)
+  | 'railTrack' | 'railJunction' | 'railSwitch' | 'trainStation' | 'railCrossing' | 'brokenTrack' | 'spiritTrack' | 'sandPillar' | 'sandBridge'
+  | 'whipPost' | 'lightStatue' | 'tearOfLight' | 'floorSpikes' | 'rollingBoulder';
 
 export type Team = 'player' | 'enemy';
 
@@ -377,6 +380,8 @@ export interface WeaponDef {
   lg?: string[];
   /** Phantom Hourglass effects handled by engine/phantom.ts. */
   ph?: string[];
+  /** Spirit Tracks effects handled by engine/spirit.ts. */
+  st?: string[];
 }
 
 /** Era of the Wild weapon effects (section 13). */
@@ -395,12 +400,14 @@ export type GearSlotKind = 'shield' | 'head' | 'body' | 'hands' | 'feet' | 'acce
 /** Ship equipment slots (vessels only). */
 export type VesselSlot = 'hull' | 'sail' | 'utility' | 'flag'
   /** Phantom Hourglass steamship parts (with the hull: the eight ship component slots). */
-  | 'cannonMount' | 'prow' | 'anchor' | 'handrail' | 'bridge' | 'chimney' | 'wheel';
+  | 'cannonMount' | 'prow' | 'anchor' | 'handrail' | 'bridge' | 'chimney' | 'wheel'
+  /** Spirit Tracks train parts. */
+  | 'trainEngine' | 'trainCannon' | 'passengerCar' | 'freightCar';
 /** Equipment slots on a unit. Accessories have two slots. */
 export type GearSlot = 'shield' | 'head' | 'body' | 'hands' | 'feet' | 'acc1' | 'acc2' | 'tool' | 'mount' | VesselSlot;
 export const GEAR_SLOTS: GearSlot[] = ['shield', 'head', 'body', 'hands', 'feet', 'acc1', 'acc2', 'tool', 'mount', 'hull', 'sail', 'utility', 'flag',
-  'cannonMount', 'prow', 'anchor', 'handrail', 'bridge', 'chimney', 'wheel'];
-export const VESSEL_SLOTS: VesselSlot[] = ['hull', 'sail', 'utility', 'flag', 'cannonMount', 'prow', 'anchor', 'handrail', 'bridge', 'chimney', 'wheel'];
+  'cannonMount', 'prow', 'anchor', 'handrail', 'bridge', 'chimney', 'wheel', 'trainEngine', 'trainCannon', 'passengerCar', 'freightCar'];
+export const VESSEL_SLOTS: VesselSlot[] = ['hull', 'sail', 'utility', 'flag', 'cannonMount', 'prow', 'anchor', 'handrail', 'bridge', 'chimney', 'wheel', 'trainEngine', 'trainCannon', 'passengerCar', 'freightCar'];
 
 export interface GearDef {
   id: string;
@@ -437,6 +444,8 @@ export interface GearDef {
   lg?: string[];
   /** Phantom Hourglass effects (ship-part sets, Phantom armor, Spirit Gems…) handled by engine/phantom.ts. */
   ph?: string[];
+  /** Spirit Tracks effects (train-part sets, Lokomo gear…) handled by engine/spirit.ts. */
+  st?: string[];
 }
 
 export type GearEffect =
@@ -622,7 +631,7 @@ export interface WorldDef {
   terrainNames: Record<BaseTerrain, string>;
   terrainColors: Record<BaseTerrain, string>;
   /** Regions of the Termina campaign (with the three-day cycle). */
-  campaign?: 'termina' | 'greatSea' | 'twilight' | 'skyward' | 'wild' | 'original' | 'legend' | 'phantom';
+  campaign?: 'termina' | 'greatSea' | 'twilight' | 'skyward' | 'wild' | 'original' | 'legend' | 'phantom' | 'spirit';
   /** Era of the Wild: which layer of the three-layer map. */
   layer?: 'surface' | 'sky' | 'depths';
   /** Battles here are fought at sea (vessels, wind, islands). */
@@ -742,7 +751,7 @@ export interface CommanderDef {
   bonus: CommanderBonus;
   bonusText: string;
   /** Campaign this commander starts in by default. */
-  campaign?: 'termina' | 'greatSea' | 'twilight' | 'skyward' | 'wild' | 'original' | 'legend' | 'phantom';
+  campaign?: 'termina' | 'greatSea' | 'twilight' | 'skyward' | 'wild' | 'original' | 'legend' | 'phantom' | 'spirit';
   /** Weapons, gear and items handed out to the army at the start (commander first). */
   startingItems?: string[];
 }
@@ -760,7 +769,9 @@ export type CommanderBonus = 'extraTreasure' | 'healing' | 'forging' | 'postBatt
   | 'legendaryTools' | 'sacredMaiden' | 'balladOfTheWindFish' | 'seasonalBlessing' | 'timeHarmony' | 'secretsOfFarore' | 'falseMagic'
   | 'generalOfDarkness' | 'sorceressOfShadows' | 'kingOfDarkness'
   // Phantom Hourglass
-  | 'fortuneSeeker' | 'spiritOfCourage' | 'boardingFury' | 'cobbleLegacy' | 'phantomFeast';
+  | 'fortuneSeeker' | 'spiritOfCourage' | 'boardingFury' | 'cobbleLegacy' | 'phantomFeast'
+  // Spirit Tracks
+  | 'royalEngineers' | 'unboundSpirit' | 'sacredSymphony' | 'ironGauntlet' | 'demonicInfluence' | 'demonKingsRail';
 
 export type SkillId = string;
 
@@ -1034,7 +1045,7 @@ export interface RunMap {
 }
 
 /** A campaign the World Tour can visit. */
-export type TourCampaign = 'hyrule' | 'termina' | 'greatSea' | 'twilight' | 'skyward' | 'wild' | 'original' | 'legend' | 'phantom';
+export type TourCampaign = 'hyrule' | 'termina' | 'greatSea' | 'twilight' | 'skyward' | 'wild' | 'original' | 'legend' | 'phantom' | 'spirit';
 
 export interface Run {
   seed: number;
@@ -1067,7 +1078,7 @@ export interface Run {
   /** Army-wide stats and resources. */
   army?: Army;
   /** Which campaign: the endless Hyrule war, Termina with its three-day cycle, or the Great Sea. */
-  campaign?: 'hyrule' | 'termina' | 'greatSea' | 'twilight' | 'skyward' | 'wild' | 'original' | 'legend' | 'phantom' | 'random' | 'worldTour';
+  campaign?: 'hyrule' | 'termina' | 'greatSea' | 'twilight' | 'skyward' | 'wild' | 'original' | 'legend' | 'phantom' | 'spirit' | 'random' | 'worldTour';
   /** Great Sea: the naval campaign's state. */
   sea?: SeaState;
   /** Termina: hours passed in the current three-day cycle (0-71) and resets so far. */
@@ -1153,7 +1164,9 @@ export type EventEffect =
   /** Era of Legend (engine/legendRun.ts): rings, Gasha trees, seeds, trading sequences, Essences. */
   | { kind: 'legend'; op: string; id?: string; amount?: number }
   /** Phantom Hourglass (engine/phantomRun.ts): ship parts, treasures, salvage, Sands of Hours, Spirit Gems, the Phantom Sword. */
-  | { kind: 'phantom'; op: string; id?: string; amount?: number };
+  | { kind: 'phantom'; op: string; id?: string; amount?: number }
+  /** Spirit Tracks (engine/spiritRun.ts): train parts, stamps, Force Gems, passengers and freight, Lokomo duets. */
+  | { kind: 'spirit'; op: string; id?: string; amount?: number };
 
 /** Conditions for an event or a single choice. */
 export interface EventRequires {

@@ -11,6 +11,7 @@ import { wildAfterMove } from '../engine/wild';
 import { ogAfterMove } from '../engine/original';
 import { lgAfterMove } from '../engine/legend';
 import { hourglassLabel, phAfterMove } from '../engine/phantom';
+import { spAfterMove } from '../engine/spirit';
 import { enemyUnload, windLabel } from '../engine/naval';
 import { sideQuestText } from '../engine/run';
 import { adjacentCaptives, checkResult, freeCaptive, mountToggleBlocked, moveUnit, toggleMount, objectiveText, spawnReinforcements, startPhase, type TurnStartEvent } from '../engine/battle';
@@ -61,6 +62,9 @@ const TERRAIN_GLYPH: Record<string, string> = {
   // Phantom Hourglass
   sacredSafeZone: '✚', phantomPatrol: '⋯', phantomAlarm: '🚨', tightropePost: '╥', tightrope: '┅', whirlwind: '🌪', spiritPedestal: '🔷', bombchuTunnel: '◔',
   hammerPad: '🔨', sunCrest: '☀', cycloneWarp: '🌀',
+  // Spirit Tracks
+  railTrack: '═', railJunction: '╬', railSwitch: '🔀', trainStation: '🚉', railCrossing: '✕', brokenTrack: '╳', spiritTrack: '≡', sandPillar: '▮', sandBridge: '▭',
+  whipPost: '┃', lightStatue: '🗿', tearOfLight: '💧', floorSpikes: '⩚', rollingBoulder: '●',
 };
 
 export class BattleView {
@@ -203,6 +207,8 @@ export class BattleView {
       ${b.night && b.naval ? '<div class="weather"><span class="dim small">Time</span><b>☾ Night</b></div>' : ''}
       ${b.wild ? `<div class="weather" title="The army's shared Energy Cell powers Zonai Devices and vehicles."><span class="dim small">Energy</span><b>⚡${b.wild.energy}/${b.wild.energyMax}</b></div>${b.wild.bloodMoon ? '<div class="weather"><span class="dim small">Sky</span><b class="bad">🌕 Blood Moon</b></div>' : ''}` : ''}
       ${b.ph?.hourglass ? `<div class="weather" title="The Phantom Hourglass: the army's shared time energy (Time Freeze 5, Frozen Battlefield 15, Temporal Escape 8, Sacred Opening 5). It refills between battles.${b.ph.temple ? ' In the Temple it drains each turn anyone stands outside a Sacred Safe Zone; once empty, the Temple drains your life.' : ''}"><span class="dim small">Hourglass</span><b>${hourglassLabel(b)}</b></div>` : ''}
+      ${b.sp?.rail ? `<div class="weather" title="Trains run only on rail spaces. Throw a Railway Switch to open or close the junction; repair Broken Track; stations repair trains and let passengers on and off."><span class="dim small">Line</span><b>🚂 Junction ${b.sp.junctionsOpen ? 'open' : 'closed'}</b></div>` : ''}
+      ${b.sp?.tower ? '<div class="weather" title="The Tower of Spirits: Phantoms patrol and can\'t enter Safe Zones; Tears of Light make weapons sacred. No life drain here."><span class="dim small">Tower</span><b>🗼 Floor ' + (b.sp.towerFloor ?? 1) + '</b></div>' : ''}
       ${b.ph && b.ph.alarm > 0 ? '<div class="weather"><span class="dim small">Phantoms</span><b class="bad">🚨 Alarm</b></div>' : ''}
       ${b.lg?.world ? `<div class="weather" title="Portals (and the Magic Mirror) move the whole field between the worlds. Without a Moon Pearl, the Dark World makes you a rabbit."><span class="dim small">World</span><b>${b.lg.world === 'dark' ? '☾ Dark World' : '☀ Light World'}</b></div>` : ''}
       ${b.lg?.season ? `<div class="weather" title="The Rod of Seasons (from a Tree Stump) and Din change the season for both armies."><span class="dim small">Season</span><b>${({ spring: '🌸 Spring', summer: '☀ Summer', autumn: '🍂 Autumn', winter: '❄ Winter' } as const)[b.lg.season]}</b></div>` : ''}
@@ -981,6 +987,8 @@ export class BattleView {
     if (lg) { sfx('secret'); this.addLog(`🍃 ${esc(lg)}`); }
     const ph = phAfterMove(this.b, u); // Phantom Hourglass spaces: Whirlwinds, Phantom Alarms; facing
     if (ph) { sfx('secret'); this.addLog(`⌛ ${esc(ph)}`); }
+    const sp = spAfterMove(this.b, u); // Spirit Tracks spaces: Tears of Light, floor spikes
+    if (sp) { sfx('secret'); this.addLog(`🚂 ${esc(sp)}`); }
     if (pressInversion(this.b, u)) { sfx('secret'); this.addLog('🔄 The Inversion Switch flips the walls and floors!'); }
     const dmg = triggerTraps(this.b, u);
     if (dmg) { sfx('hit'); this.float(u, `TRAP −${dmg}`, 'dmg'); this.addLog(`⚠ <b class="player">${esc(u.name)}</b> stepped on a spike trap (−${dmg} HP, rooted)!`); }
@@ -1402,6 +1410,7 @@ export class BattleView {
         ogAfterMove(b, e);
         lgAfterMove(b, e);
         phAfterMove(b, e);
+        spAfterMove(b, e);
         const trap = triggerTraps(b, e);
         if (trap) { sfx('bomb'); this.float(e, `TRAP −${trap}`, 'dmg'); this.addLog(`💥 ${esc(e.name)} sets off your Death Armos Core (−${trap})!`); }
       }
@@ -1529,6 +1538,20 @@ const WW_TERRAIN_NOTES: Record<string, string> = {
   hammerPad: 'A Hammer Launch Pad: with a hammer (yours or an adjacent ally\'s), launch 2–4 spaces',
   sunCrest: 'A Sun Crest (obstacle): strike it from next to it to open sealed doors and walls nearby',
   cycloneWarp: 'A Cyclone Warp Point: with the Cyclone Slate, ships warp between them',
+  railTrack: 'Railway Track: trains run on it; anyone can walk it (−5 Avoid)',
+  railJunction: 'Railway Junction: the line across the middle; a Railway Switch opens and closes it',
+  railSwitch: 'A Railway Switch (obstacle): throw it from next to it to open or close the junction and retract the floor spikes',
+  trainStation: 'A Train Station: trains and units here are repaired 10% a turn; passengers board and land quickly',
+  railCrossing: 'A Railway Crossing: whoever stands here when a train rams takes double collision damage',
+  brokenTrack: 'Broken Track: no trains until it is repaired (Repair the Track; engineers do it for free)',
+  spiritTrack: 'A Spirit Track: the Spirit Train gains +3 STR and DEF here',
+  sandPillar: 'A Sand Pillar (obstacle): raised by the Sand Wand, it crumbles in 3 turns',
+  sandBridge: 'A Sand Bridge: walkable sand over water or a pit, for a few turns',
+  whipPost: 'A Whip Post (obstacle): with a Whip, swing from it over pits, water and spikes',
+  lightStatue: 'A Light Statue (obstacle): the Song of Light lights it, exposing nearby enemies (Phantoms lose their armor)',
+  tearOfLight: 'A Tear of Light: step on it and your weapon is sacred for 3 turns (it beats Phantom armor)',
+  floorSpikes: 'A Floor Spike Trap: cuts anyone who steps on or stands on it (8% HP); a Railway Switch retracts it',
+  rollingBoulder: 'A Rolling Boulder (obstacle): it rolls 2 spaces every round, crushing whoever is in the way',
 };
 
 /** Abilities shown in the Abilities menu (forecast-only modifiers are excluded). */

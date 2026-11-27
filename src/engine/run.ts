@@ -13,6 +13,8 @@ import { applyLegendEffect, inLegendRoutes, legendAfterBattle, legendBattleSetup
 import { legendBeforeFinish } from './legend';
 import { applyPhantomEffect, inPhantomRoute, phantomAfterBattle, phantomBattleSetup, phantomBossFor, phantomDecorateMap, phantomEnterDungeon, phantomRegionOptions, phantomStart, phantomStartRegion, phantomTreasure } from './phantomRun';
 import { phantomBeforeFinish } from './phantom';
+import { applySpiritEffect, inSpiritRoute, spiritAfterBattle, spiritBattleSetup, spiritBossFor, spiritDecorateMap, spiritEnterDungeon, spiritRegionOptions, spiritStart, spiritStartRegion, spiritTreasure } from './spiritRun';
+import { spiritBeforeFinish } from './spirit';
 import { applyWildEffect, colossalCap, returnBoss, wildAfterBattle, wildBattleSetup, wildCampVisit, wildDecorateMap, wildOnRecruit, wildRecruitWeight, wildRegionOptions, wildRestBonus, wildStart } from './wildRun';
 import { canWield, type LevelUp } from './combat';
 import { RNG } from './rng';
@@ -27,6 +29,7 @@ import { VESSEL_SLOTS } from './types';
 import { appStorage } from '../storage';
 import { VESSEL_SLOTS_BY_SIZE } from '../content/windwaker';
 import { SHIP_SLOTS } from '../content/phantom';
+import { TRAIN_SLOTS } from '../content/spirit';
 /** A steamship's slots: the eight ship component slots and a utility slot (Salvage Arm). */
 const STEAMSHIP_SLOTS = [...SHIP_SLOTS, 'utility'];
 import type { TourCampaign, Battle, BossDef, CommanderDef, EventDef, EventEffect, EventOutcome, EventRequires, EnemyForce, FactionDef, GearSlot, MapNode, NodeType, Rarity, Run, RunMap, Unit, UnitTemplate, WorldId } from './types';
@@ -51,13 +54,13 @@ export function commanderOf(run: Run): CommanderDef {
 
 /** Where each campaign begins (Hyrule: the commander's home region). */
 function startRegionFor(camp: string, home: WorldId, run: { commanderId: string; regionsVisited: string[] }): WorldId {
-  return camp === 'termina' ? 'clockTown' : camp === 'greatSea' ? 'outsetIsland' : camp === 'twilight' ? 'ordonProvince' : camp === 'skyward' ? 'skyloft' : camp === 'wild' ? 'greatPlateau' : camp === 'original' ? originalStartRegion(run) : camp === 'legend' ? legendStartRegion(run) : camp === 'phantom' ? phantomStartRegion() : WORLDS[home]?.campaign || home === 'hyruleCastle' || !WORLDS[home] ? 'hyruleField' : home;
+  return camp === 'termina' ? 'clockTown' : camp === 'greatSea' ? 'outsetIsland' : camp === 'twilight' ? 'ordonProvince' : camp === 'skyward' ? 'skyloft' : camp === 'wild' ? 'greatPlateau' : camp === 'original' ? originalStartRegion(run) : camp === 'legend' ? legendStartRegion(run) : camp === 'phantom' ? phantomStartRegion() : camp === 'spirit' ? spiritStartRegion() : WORLDS[home]?.campaign || home === 'hyruleCastle' || !WORLDS[home] ? 'hyruleField' : home;
 }
 
 /** World Tour order: the commander's home campaign first, then the others in release order. */
-export const TOUR_ORDER: TourCampaign[] = ['hyrule', 'termina', 'greatSea', 'twilight', 'skyward', 'wild', 'original', 'legend', 'phantom'];
+export const TOUR_ORDER: TourCampaign[] = ['hyrule', 'termina', 'greatSea', 'twilight', 'skyward', 'wild', 'original', 'legend', 'phantom', 'spirit'];
 
-export function newRun(seed: number, commanderId: string, campaign?: 'hyrule' | 'termina' | 'greatSea' | 'twilight' | 'skyward' | 'wild' | 'original' | 'legend' | 'phantom' | 'random' | 'worldTour', tourActs = 2): RunWithEvent {
+export function newRun(seed: number, commanderId: string, campaign?: 'hyrule' | 'termina' | 'greatSea' | 'twilight' | 'skyward' | 'wild' | 'original' | 'legend' | 'phantom' | 'spirit' | 'random' | 'worldTour', tourActs = 2): RunWithEvent {
   const rng = new RNG(seed);
   const cmd = COMMANDERS.find((c) => c.heroId === commanderId) ?? COMMANDERS[0];
   const first: TourCampaign = (cmd.campaign as TourCampaign | undefined) ?? 'hyrule';
@@ -96,6 +99,7 @@ export function newRun(seed: number, commanderId: string, campaign?: 'hyrule' | 
   if (camp === 'original') originalStart(run);
   if (camp === 'legend') legendStart(run);
   if (camp === 'phantom') withRng(run, (r2) => { phantomStart(run, r2); phantomDecorateMap(run, run.map, r2); });
+  if (camp === 'spirit') withRng(run, (r2) => { spiritStart(run, r2); spiritDecorateMap(run, run.map, r2); });
   if (camp === 'greatSea') {
     run.sea = newSea();
     run.questItems = [];
@@ -243,7 +247,7 @@ function bossPower(b: BossDef): number {
 
 function bossFor(run: Run, rng: RNG, node: MapNode): BossDef {
   // Original Hyrule: every Level has its own boss (the Second Quest moves them around).
-  const level = originalBossFor(run, node) ?? legendBossFor(run, node) ?? phantomBossFor(run, node);
+  const level = originalBossFor(run, node) ?? legendBossFor(run, node) ?? phantomBossFor(run, node) ?? spiritBossFor(run, node);
   if (level) return level;
   // Not canon: anyone can be a boss, even someone already in your army.
   // After the free-for-all point, bosses come from every region.
@@ -282,7 +286,7 @@ export function enterNode(run: RunWithEvent, nodeId: string): void {
   }
   if (advanceClock(run, hoursFor(node.type))) { run.event = { type: 'moonfall' }; return; }
   if (BATTLE_NODES.includes(node.type)) {
-    if (node.type === 'dungeon' && !phantomEnterDungeon(run, node)) run.dungeon = { floor: 1, of: DUNGEON_FLOORS };
+    if (node.type === 'dungeon' && !phantomEnterDungeon(run, node) && !spiritEnterDungeon(run, node)) run.dungeon = { floor: 1, of: DUNGEON_FLOORS };
     marchToBattle(run);
     return;
   }
@@ -324,6 +328,8 @@ export function enterNode(run: RunWithEvent, nodeId: string): void {
         run.event = { type: 'treasure', rewards: treasureRewards(run, rng, oldMap), rupees: Math.round((100 + run.act * 60) * salvage * (oldMap ? 2 : 1)) };
         const phLines = phantomTreasure(run, rng, run.event);
         if (run.campaign === 'phantom') (run as RunWithEvent).lastSail = phLines;
+        const spLines = spiritTreasure(run, rng, run.event);
+        if (run.campaign === 'spirit') (run as RunWithEvent).lastSail = spLines;
         const q = (run.questItems ??= []);
         const shards = q.filter((x) => x.startsWith('triforceShard')).length;
         if (shards < 8 && (q.includes('incredibleChart') || q.includes('triforceChart'))) {
@@ -368,6 +374,8 @@ export function battleKind(run: Run, node: MapNode): NodeType {
 /** Is the battle at this node fought at sea? */
 export function isNavalNode(run: Run, node: MapNode): boolean {
   if (run.campaign === 'greatSea' || run.campaign === 'phantom') return node.naval ?? !!WORLDS[node.world]?.naval;
+  // Spirit Tracks: train battles on the rails.
+  if (run.campaign === 'spirit') return !!node.naval && WORLDS[node.world]?.campaign === 'spirit';
   return !!WORLDS[node.world]?.naval;
 }
 
@@ -407,6 +415,7 @@ export function startBattle(run: RunWithEvent, uids: string[]): void {
     wildBattleSetup(run, run.battle);
     legendBattleSetup(run, run.battle, rng);
     phantomBattleSetup(run, run.battle, rng);
+    spiritBattleSetup(run, run.battle, rng);
     if (run.questItems?.includes('piratesCharm') && run.battle.cp !== undefined) { run.battle.cp++; run.battle.cpMax = (run.battle.cpMax ?? 0) + 1; }
   });
 }
@@ -421,7 +430,7 @@ export const FREE_FOR_ALL_REGION = 4;
 
 export function isFreeForAll(run: Run): boolean {
   // The World Tour keeps each campaign's own enemies.
-  return !run.tour && run.act >= FREE_FOR_ALL_REGION && !inOriginalLevels(run) && !inLegendRoutes(run) && !inPhantomRoute(run);
+  return !run.tour && run.act >= FREE_FOR_ALL_REGION && !inOriginalLevels(run) && !inLegendRoutes(run) && !inPhantomRoute(run) && !inSpiritRoute(run);
 }
 
 /** A force drawn from the entire cast: any monster, soldier, hero, villain or boss. */
@@ -572,6 +581,8 @@ export interface BattleSummary {
   legend?: string[];
   /** Phantom Hourglass: the Temple's floors, Spirit Gems, Sands of Hours, metals, salvage. */
   phantom?: string[];
+  /** Spirit Tracks: the Tower's floors, stamps, Force Gems, rail maps and the cast's work. */
+  spirit?: string[];
   /** Support ranks reached this battle. */
   supportUps: { a: string; b: string; aUid: string; bUid: string; rank: SupportRank }[];
 }
@@ -583,6 +594,7 @@ export function finishBattle(run: RunWithEvent): BattleSummary {
   const b = run.battle!;
   legendBeforeFinish(b);
   phantomBeforeFinish(b);
+  spiritBeforeFinish(b);
   const won = b.result === 'won';
   const kills = b.fallen.filter((u) => u.team === 'enemy').length;
   // Undo transformations: Ganon becomes Ganondorf again; Twinrova splits back
@@ -761,7 +773,8 @@ export function finishBattle(run: RunWithEvent): BattleSummary {
   const originalLines = withRng(run, (rng) => originalAfterBattle(run, b, won, rng));
   const legendLines = withRng(run, (rng) => legendAfterBattle(run, b, won, rng));
   const phantomLines = withRng(run, (rng) => phantomAfterBattle(run, b, won, rng));
-  return { won, rupees, fallen, kills, drops, supportUps, sideQuest, retreated: !won && !!b.retreat, dungeon, found, joined, army, twilight: twilightLines, skyward: skywardLines, wild: wildLines, original: originalLines, legend: legendLines, phantom: phantomLines };
+  const spiritLines = withRng(run, (rng) => spiritAfterBattle(run, b, won, rng));
+  return { won, rupees, fallen, kills, drops, supportUps, sideQuest, retreated: !won && !!b.retreat, dungeon, found, joined, army, twilight: twilightLines, skyward: skywardLines, wild: wildLines, original: originalLines, legend: legendLines, phantom: phantomLines, spirit: spiritLines };
 }
 
 export interface ArmyReport {
@@ -976,6 +989,8 @@ function applyEffect(run: Run, e: EventEffect, rng: RNG): string | null {
       return applyLegendEffect(run, e, rng);
     case 'phantom':
       return applyPhantomEffect(run, e, rng);
+    case 'spirit':
+      return applySpiritEffect(run, e, rng);
     case 'support': {
       const s = (run.supports ??= {});
       for (let i = 0; i < run.roster.length; i++)
@@ -1016,6 +1031,7 @@ export const TOUR_NAMES: Record<TourCampaign, string> = {
   skyward: 'The Sky (Skyward Sword)', wild: 'Hyrule Reborn (Era of the Wild)', original: 'Original Hyrule (The Legend of Zelda)',
   legend: 'Era of Legend (Hyrule, Koholint, Holodrum, Labrynna)',
   phantom: 'The World of the Ocean King (Phantom Hourglass)',
+  spirit: 'New Hyrule (Spirit Tracks)',
 };
 
 export function offerRegions(run: RunWithEvent): void {
@@ -1046,6 +1062,10 @@ export function offerRegions(run: RunWithEvent): void {
     }
     if (run.campaign === 'phantom') {
       const t = phantomRegionOptions(run, rng);
+      if (t.length) { run.event = { type: 'region', options: t }; return; }
+    }
+    if (run.campaign === 'spirit') {
+      const t = spiritRegionOptions(run, rng);
       if (t.length) { run.event = { type: 'region', options: t }; return; }
     }
     if (run.campaign === 'wild' && legAct(run) + 1 < FREE_FOR_ALL_REGION + 5) {
@@ -1185,6 +1205,7 @@ function enterTourCampaign(run: RunWithEvent, camp: TourCampaign): void {
     if (camp === 'original') originalStart(run);
     if (camp === 'legend') legendStart(run);
     if (camp === 'phantom') phantomStart(run, rng);
+    if (camp === 'spirit') spiritStart(run, rng);
     if (camp === 'greatSea') {
       const sea = (run.sea ??= newSea());
       run.questItems ??= [];
@@ -1203,6 +1224,7 @@ function enterTourCampaign(run: RunWithEvent, camp: TourCampaign): void {
     run.map = generateRegionMap(rng, run.act, region);
     wildDecorateMap(run, run.map, rng);
     phantomDecorateMap(run, run.map, rng);
+    spiritDecorateMap(run, run.map, rng);
   });
 }
 
@@ -1230,7 +1252,7 @@ export function advanceRegion(run: RunWithEvent, region: WorldId): void {
   run.regionsVisited.push(region);
   run.currentNodeId = null;
   run.event = undefined;
-  withRng(run, (rng) => { run.map = generateRegionMap(rng, run.act, region); randomizeWorlds(run, rng); wildDecorateMap(run, run.map, rng); phantomDecorateMap(run, run.map, rng); });
+  withRng(run, (rng) => { run.map = generateRegionMap(rng, run.act, region); randomizeWorlds(run, rng); wildDecorateMap(run, run.map, rng); phantomDecorateMap(run, run.map, rng); spiritDecorateMap(run, run.map, rng); });
   run.rupees += 150;
 }
 
@@ -1744,6 +1766,8 @@ export function forgeWeapon(run: RunWithEvent, weaponId: string, uid: string): b
 /** Smaller vessels have fewer equipment slots. */
 export function vesselHasSlot(u: Unit, slot: string): boolean {
   if (RACES[u.race]?.tags?.includes('steamship')) return (STEAMSHIP_SLOTS as string[]).includes(slot);
+  // Trains: Engine, Cannon, Passenger Car and Freight Car.
+  if (RACES[u.race]?.tags?.includes('train')) return (TRAIN_SLOTS as readonly string[]).includes(slot);
   return (VESSEL_SLOTS_BY_SIZE[Math.min(5, Math.max(2, u.baseSize ?? u.size))] ?? []).includes(slot as never);
 }
 

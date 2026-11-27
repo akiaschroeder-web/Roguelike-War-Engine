@@ -40,6 +40,9 @@ const SPECIAL = (open: number, water = INF, rough = 2, gap = INF) => ({
   // Phantom Hourglass (per-unit exceptions live in phantom.ts phTileCost: Phantoms can't enter Safe Zones, tightropes take size 1)
   sacredSafeZone: open, phantomPatrol: open, phantomAlarm: open, tightropePost: INF, tightrope: gap === INF ? 1 : gap, whirlwind: open, spiritPedestal: INF,
   bombchuTunnel: rough, hammerPad: open, sunCrest: INF, cycloneWarp: water,
+  // Spirit Tracks (per-unit exceptions live in spirit.ts spTileCost: trains only run on rails)
+  railTrack: open, railJunction: open, railSwitch: INF, trainStation: open, railCrossing: open, brokenTrack: open, spiritTrack: open,
+  sandPillar: INF, sandBridge: open, whipPost: INF, lightStatue: INF, tearOfLight: open, floorSpikes: open, rollingBoulder: INF,
 });
 export const MOVE_COSTS: Record<MoveType, Record<Terrain, number>> = {
   foot:    { plain: 1, forest: 2, mountain: 3, water: INF, wall: INF, fort: 1, lava: 2, ...SPECIAL(1) },
@@ -216,6 +219,20 @@ export const TERRAIN_BONUS: Record<Terrain, { avoid: number; def: number; heal: 
   hammerPad: { avoid: 0, def: 0, heal: 0 },
   sunCrest: { avoid: 0, def: 0, heal: 0 },
   cycloneWarp: { avoid: 0, def: 0, heal: 0 },
+  railTrack: { avoid: -5, def: 0, heal: 0 },
+  railJunction: { avoid: -5, def: 0, heal: 0 },
+  railSwitch: { avoid: 0, def: 0, heal: 0 },
+  trainStation: { avoid: 10, def: 1, heal: 10 },
+  railCrossing: { avoid: -10, def: 0, heal: 0 },
+  brokenTrack: { avoid: 0, def: 0, heal: 0 },
+  spiritTrack: { avoid: 0, def: 0, heal: 0 },
+  sandPillar: { avoid: 0, def: 0, heal: 0 },
+  sandBridge: { avoid: -5, def: 0, heal: 0 },
+  whipPost: { avoid: 0, def: 0, heal: 0 },
+  lightStatue: { avoid: 0, def: 0, heal: 0 },
+  tearOfLight: { avoid: 0, def: 0, heal: 0 },
+  floorSpikes: { avoid: -10, def: 0, heal: 0 },
+  rollingBoulder: { avoid: 0, def: 0, heal: 0 },
 };
 
 /** Water-like spaces: swimmers move through them, others can't. */
@@ -382,6 +399,20 @@ export const SPECIAL_TERRAIN: Record<Exclude<Terrain, BaseTerrain>, { name: stri
   hammerPad: { name: 'Hammer Launch Pad', color: '#a08a5a' },
   sunCrest: { name: 'Sun Crest', color: '#f0c040' },
   cycloneWarp: { name: 'Cyclone Warp Point', color: '#5ac0d0' },
+  railTrack: { name: 'Railway Track', color: '#8a7a6a' },
+  railJunction: { name: 'Railway Junction', color: '#9a8a5a' },
+  railSwitch: { name: 'Railway Switch', color: '#c0a040' },
+  trainStation: { name: 'Train Station', color: '#b08a6a' },
+  railCrossing: { name: 'Railway Crossing', color: '#c86a4a' },
+  brokenTrack: { name: 'Broken Track', color: '#5a4a3a' },
+  spiritTrack: { name: 'Spirit Track', color: '#7ad0c0' },
+  sandPillar: { name: 'Sand Pillar', color: '#d8b870' },
+  sandBridge: { name: 'Sand Bridge', color: '#e0c890' },
+  whipPost: { name: 'Whip Post', color: '#8a6a4a' },
+  lightStatue: { name: 'Light Statue', color: '#f0e0a0' },
+  tearOfLight: { name: 'Tear of Light', color: '#fff0a0' },
+  floorSpikes: { name: 'Floor Spike Trap', color: '#7a7a8a' },
+  rollingBoulder: { name: 'Rolling Boulder', color: '#6a5a4a' },
 };
 
 /** Lava damage at the start of a unit's turn (as % of max HP). */

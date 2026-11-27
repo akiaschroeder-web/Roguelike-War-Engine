@@ -154,6 +154,11 @@ export function specialSupportMods(b: Battle, u: Unit, pos: Pos, foe?: Unit): Gr
       case 'zoraRoyalFamily': if ((mine || near(g, 2)) && (u.race === 'zora' || hasEffect(u, 'swim'))) add({ def: 3 }); break;
       case 'goronChampions': if (mine) add({ str: 5, def: 5 }); break;
       case 'ancientWarMachines': if (mine) add({ def: 4, ...(near(g, 3) ? { hit: 10 } : {}) }); break;
+      // ── Spirit Tracks ──
+      case 'royalEngineersGroup': if (mine || u.race === 'train') add({ str: 2, def: 2, ...(u.race === 'train' ? { hit: 10 } : {}) }); break;
+      case 'spiritsOfCourageST': if (mine) add({ skl: 3, mag: 3 }); break;
+      case 'generationsOfAdventure': if (mine) add({ skl: 2, spd: 2 }); break;
+      case 'brokenSeal': if (mine && (w?.element === 'dark' || u.race === 'demon')) add({ str: 3, mag: 3, res: 3 }); break;
     }
   }
   return m;
@@ -172,6 +177,8 @@ export function supportCostMult(b: Battle | undefined, u: Unit, kind: 'song' | '
   // Skyward Sword: the Goddess's Servants (sacred magic −30% MP) and the Spirits of the Sword (sword stamina).
   if (groups.includes('goddessServants') && memberOf(u, 'goddessServants') && (element === 'light' || SACRED_ABILITIES.has(abilityId ?? ''))) m *= 0.7;
   if (kind === 'technique' && groups.includes('spiritsOfTheSword') && memberOf(u, 'spiritsOfTheSword')) m *= 0.8;
+  // Spirit Tracks: the Sacred Symphony (Anjean and the five sages: songs −30% MP).
+  if (kind === 'song' && groups.includes('sacredSymphonyGroup') && memberOf(u, 'sacredSymphonyGroup')) m *= 0.7;
   return m;
 }
 

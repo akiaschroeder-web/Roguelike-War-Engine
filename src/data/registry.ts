@@ -11,6 +11,7 @@ import { ERA_OF_THE_WILD, QUEST_ITEMS as WILD_QUEST } from '../content/wild';
 import { ORIGINAL_HYRULE, QUEST_ITEMS as OH_QUEST } from '../content/original';
 import { ERA_OF_LEGEND, QUEST_ITEMS as LG_QUEST } from '../content/legend';
 import { PHANTOM_HOURGLASS, QUEST_ITEMS as PH_QUEST } from '../content/phantom';
+import { SPIRIT_TRACKS, QUEST_ITEMS as ST_QUEST } from '../content/spirit';
 import { SPECIAL_TERRAIN } from '../engine/rules';
 import type { ContentPack } from '../content/types';
 import type {
@@ -127,11 +128,12 @@ installPack(ERA_OF_THE_WILD);
 installPack(ORIGINAL_HYRULE);
 installPack(ERA_OF_LEGEND);
 installPack(PHANTOM_HOURGLASS);
+installPack(SPIRIT_TRACKS);
 // Phantom Ganon keeps his entry; his Wind Waker sword joins his drops.
 if (BOSSES.phantomGanon) BOSSES.phantomGanon.drops = [...(BOSSES.phantomGanon.drops ?? []), 'phantomGanonsSword'];
 
 /** Quest items (shared quest inventory). */
-export const QUEST_ITEMS: Record<string, { id: string; name: string; desc: string }> = Object.fromEntries([...MM_QUEST, ...WW_QUEST, ...TP_QUEST, ...SS_QUEST, ...WILD_QUEST, ...OH_QUEST, ...LG_QUEST, ...PH_QUEST].map((q) => [q.id, q]));
+export const QUEST_ITEMS: Record<string, { id: string; name: string; desc: string }> = Object.fromEntries([...MM_QUEST, ...WW_QUEST, ...TP_QUEST, ...SS_QUEST, ...WILD_QUEST, ...OH_QUEST, ...LG_QUEST, ...PH_QUEST, ...ST_QUEST].map((q) => [q.id, q]));
 
 // ───────── Safe lookups ─────────
 

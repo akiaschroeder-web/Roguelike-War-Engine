@@ -198,7 +198,7 @@ export function awardMedals(p: MetaProgress, n: number) {
 // ───────────────────────── Applying to a new campaign ─────────────────────────
 
 export interface RunChoices {
-  campaign?: 'hyrule' | 'termina' | 'greatSea' | 'twilight' | 'skyward' | 'wild' | 'original' | 'legend' | 'phantom' | 'random' | 'worldTour';
+  campaign?: 'hyrule' | 'termina' | 'greatSea' | 'twilight' | 'skyward' | 'wild' | 'original' | 'legend' | 'phantom' | 'spirit' | 'random' | 'worldTour';
   hero?: string;
   kit?: string;
   formation?: string;

@@ -41,7 +41,7 @@ export const ABILITIES: AbilityDef[] = [
     desc: 'Instead of walking: pull yourself in a straight line (3 spaces, Longshot 5) to a tree, wall, fort, mountain or unit, across water and gaps. You can still act afterwards.' }),
   ab({ id: 'digHere', name: 'Dig', kind: 'personal', mp: 0, grantedBy: { skill: 'graveyardShift' }, desc: 'Dig where you stand for buried treasure (better finds than a shovel).' }),
   ab({ id: 'buildHere', name: 'Build', kind: 'personal', mp: 0, grantedBy: { skill: 'masterBuilder' }, desc: 'Bridge adjacent water, clear an adjacent wall or obstacle, or raise a barricade on open ground.' }),
-  ab({ id: 'transportAlly', name: 'Transport', kind: 'personal', mp: 0, cooldown: 2, grantedBy: { skill: 'ancientGuidance' }, desc: 'Send an adjacent ally on foot (who hasn’t acted) to any open space within 5. 2-turn cooldown.' }),
+  ab({ id: 'transportAlly', name: 'Transport', kind: 'personal', mp: 0, cooldown: 2, grantedBy: { skill: 'ancientGuidance', skills: ['royalGuardianST'] }, desc: 'Send an adjacent ally on foot (who hasn’t acted) to any open space within 5. 2-turn cooldown.' }),
   ab({ id: 'masterCraftsman', name: 'Master Craftsman', kind: 'personal', mp: 0, oncePerBattle: true, desc: 'Once per battle: restore 5 uses to an adjacent ally’s weapon (or your own).' }),
   ab({ id: 'greatFairysBlessing', name: "Great Fairy's Blessing", kind: 'personal', mp: 0, oncePerBattle: true, desc: 'Once per battle: fully restore the HP and MP of an ally within 2 spaces (or yourself).' }),
 ];
