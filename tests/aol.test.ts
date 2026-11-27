@@ -185,8 +185,10 @@ describe('spells and sword techniques', () => {
     expect(ogMultiplier(b, link, hh, false, WEAPONS.kokiriSword, 1)).toBe(0.5);
     expect(ogMultiplier(b, link, hh, false, WEAPONS.kokiriSword, 1, ABILITIES.downwardThrust)).toBe(1);
     expect(attackMods(link, WEAPONS.kokiriSword).map((a) => a.id)).toEqual(expect.arrayContaining(['downwardThrust', 'upwardThrust']));
-    // Flanked, he can't keep his armor facing everyone.
+    // Surrounded, he can't keep his armor facing everyone.
     place(b, hero('hyruleKnight'), 6, 4);
+    expect(ogMultiplier(b, link, hh, false, WEAPONS.kokiriSword, 1)).toBe(0.5);
+    place(b, hero('oldMan'), 4, 6);
     expect(ogMultiplier(b, link, hh, false, WEAPONS.kokiriSword, 1)).toBe(1);
     const moby = place(b, foe('moby'), 2, 2, 'enemy');
     expect(ogMultiplier(b, link, moby, false, WEAPONS.kokiriSword, 1, ABILITIES.upwardThrust)).toBe(1.5);

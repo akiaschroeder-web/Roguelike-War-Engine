@@ -54,7 +54,7 @@ const gs = (slot: GearSlotKind) => (id: string, name: string, rarity: Rarity, st
 const head = gs('head'), body = gs('body'), feet = gs('feet'), acc = gs('accessory');
 
 export const Z2_GEAR: GearDef[] = [
-  body('horseheadsArmor', "Horsehead's Armor", 'epic', { def: 8 }, '+8 DEF. Ordinary physical blows from the front deal 15% less (jumping and flanking attacks still land in full).', { effects: ['frontalArmor'] }),
+  body('horseheadsArmor', "Horsehead's Armor", 'epic', { def: 8 }, '+8 DEF. Ordinary physical blows from the front deal 15% less (jumping attacks, and attacks on a surrounded wearer, still land in full).', { effects: ['frontalArmor'] }),
   head('helmetheadsHelm', "Helmethead's Helm", 'legendary', { def: 4, res: 4 }, '+4 DEF, +4 RES. Once per battle, release a Spectral Helmet that fights on its own (Spectral Helmet).', { effects: ['spectralHelmet'] }),
   body('rebonacksArmor', "Rebonack's Armor", 'legendary', { def: 7, skl: 3 }, '+7 DEF, +3 SKL.'),
   head('fokkaHelmet', 'Fokka Helmet', 'rare', { def: 3 }, '+3 DEF. +15 Hit against flying and leaping enemies.', { effects: ['aerialAim'] }),

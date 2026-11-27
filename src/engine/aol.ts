@@ -74,7 +74,8 @@ export function isJumping(atk: Unit, arrow?: AbilityDef, w?: WeaponDef): boolean
   return arrow?.id === 'downwardThrust' || hasBuff(atk, 'spellJump') || hasBuff(atk, 'fokkaFeather') || has(atk, 'suddenLeap') || has(atk, 'bouncingAssault')
     || (has(atk, 'leapingSwordsmanship') && w?.type === 'sword') || (w?.id === 'fokkaSword' && (atk.movedDist ?? 0) >= 1);
 }
-const flanked = (b: Battle, u: Unit) => foesOf(b, u).filter((e) => unitDist(e, u) <= 1).length >= 2;
+/** Surrounded: 2 enemies adjacent (3 for a big unit) — the armor can't face them all. */
+const flanked = (b: Battle, u: Unit) => foesOf(b, u).filter((e) => unitDist(e, u) <= 1).length >= (u.size >= 2 ? 3 : 2);
 
 // ───────────────────────── Movement ─────────────────────────
 

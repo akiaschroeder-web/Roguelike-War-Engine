@@ -106,7 +106,7 @@ export const Z2_SKILLS: SkillDef[] = [
   k('mindDrain', 'Mind Drain', 'Contact attacks drain 3 MP from the target.'),
   k('magicalRelocation', 'Magical Relocation', 'After attacking with magic, teleports up to 4 spaces away from its target.'),
   k('spectralHelm', 'Spectral Helm', 'A floating, haunted helmet: it flies and shoots spectral fire. It fades when the battle ends.'),
-  k('armoredBody', 'Armored Body', 'Ordinary physical damage −50% — unless the attack is a jumping attack, comes from the air, or he is flanked (2+ enemies adjacent).'),
+  k('armoredBody', 'Armored Body', 'Ordinary physical damage −50% — unless the attack is a jumping attack, comes from the air, or he is surrounded (3+ enemies adjacent).'),
   k('detachedHelmets', 'Detached Helmets', 'At 75% and at 50% HP a helmet breaks off and floats away as a Floating Helmet that shoots magic on its own.'),
   k('unyieldingKnight', 'Unyielding Knight', 'Below 40% HP he dismounts: size 2 → 1, +4 SPD and SKL for the rest of the battle.'),
   k('magicalIntangibility', 'Magical Intangibility', 'Physical damage −90%. Magic reflected back at him (the Reflect spell) deals double damage.'),
