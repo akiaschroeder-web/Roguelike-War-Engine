@@ -615,3 +615,6 @@ This supersedes all the provisional p*/q_* names above. Final files:
 - greatblade.webp: silver hair, red.
 - Monsters: spinyBeetle.webp, eyegoreStatue.webp, rollobite.webp.
 - Librari, Festari and Melari use the generic Minish art (forestMinish.webp). The user said Librari is a generic Minish; Festari and Melari have no separate art.
+- Update from the user:
+  - #7 (blond, green) is Swiftblade, now swiftblade.webp, and Grimblade shares that art.
+  - #3 (blond, teal, with a hammer) is therefore Melari, now melari.png, matching the file-order reading. Melari no longer uses the generic Minish art.
