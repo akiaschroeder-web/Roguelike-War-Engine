@@ -129,3 +129,12 @@ Batch 1 (14): heroOfSpirits_logo (JPEG; has the Spirit Tracks logo and a waterma
 - The purple hand with the eye is the Key Master, now keyMaster.webp.
 - The dark bat-eared imp I had called the Key Master is unassigned, now unassigned_darkBatImp.webp.
 - The bat-eared imp is Fraaz (the user confirmed it; the blue and orange eyes match his ice and fire sides), now fraaz.webp. All Spirit Tracks art is in. Still unassigned: 4 extras (ghost cloud, grey spiked, blue horned, grey rock).
+- The user identified the extras:
+  - chuchuFrostAlt.webp is a Frost ChuChu alt art.
+  - chuchuMetal.webp is a new Metal ChuChu unit.
+  - chuchuSpikedHelmet.webp is a new Spiked Helmet ChuChu unit.
+  - chuchuHelmet.webp is a new Helmet ChuChu unit.
+- Proposed kits for the new ChuChus, designed by me and not yet confirmed:
+  - Metal ChuChu: high DEF, immune to physical knockback, weak to magic.
+  - Helmet ChuChu: frontal armour; the helmet blocks the first frontal hit each battle and can be knocked off.
+  - Spiked Helmet ChuChu: as Helmet, plus counter damage when struck in melee from the front.

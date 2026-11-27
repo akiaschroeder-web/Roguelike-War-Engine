@@ -41,6 +41,8 @@ const SHIP_PARTS: GearDef[] = SHIP_SETS.flatMap((set) => SHIP_SLOTS.map((slot) =
   stats: { ...SLOT_STATS[slot], ...(set.id === 'golden' && slot === 'hull' ? { hp: 8, def: 1 } : {}) },
   desc: `Steamship part (${SHIP_SLOT_NAMES[slot]}: ${SLOT_DESC[slot]}). ${set.name} set — 4 parts: ${set.partial}; all 8: ${set.full}.`,
   ph: [`set:${set.id}`],
+  // Found, salvaged and traded for in the World of the Ocean King (not sold in ordinary shops).
+  unique: true,
 } as GearDef)));
 
 /** Spirit Gem accessories (the gems themselves are collectibles that upgrade Leaf, Neri and Ciela). */
