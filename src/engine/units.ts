@@ -68,7 +68,7 @@ export function makeHero(template: UnitTemplate | string, uid: string, level: nu
   }
   const unit = blank({
     uid, templateId: t.id, name: t.name, title: t.title, race: t.race, home: t.home, classId: t.classId,
-    team: 'player', size: t.size, stats, growths: growthsFor(t.classId, t.race, t.growths),
+    team: 'player', size: t.size === 0 ? 1 : t.size, ...(t.size === 0 ? { micro: true } : {}), stats, growths: growthsFor(t.classId, t.race, t.growths),
     weapons: [...t.weapons], skills: [...(t.skill ? [t.skill] : []), ...(t.extraSkills ?? [])], glyph: t.glyph,
     abilities: [...(t.abilities ?? []), ...(t.skill && ABILITIES[t.skill] ? [t.skill] : [])],
   });
@@ -94,7 +94,7 @@ export function makeEnemy(arch: EnemyArchetype | BossDef, world: WorldId, level:
   const lvl = Math.min(MAX_LEVEL, Math.max(1, level));
   const unit = blank({
     uid, name: arch.name, title: isBossDef ? (arch as BossDef).title : cls.name, race: arch.race,
-    home: isBossDef ? (arch as BossDef).home : world, classId: arch.classId, team: 'enemy', size: arch.size ?? 1,
+    home: isBossDef ? (arch as BossDef).home : world, classId: arch.classId, team: 'enemy', size: arch.size === 0 ? 1 : arch.size ?? 1, ...(arch.size === 0 ? { micro: true } : {}),
     stats, growths: growthsFor(arch.classId, arch.race, undefined, 0.85), weapons: [...arch.weapons],
     skills: arch.skill ? [arch.skill] : [], glyph: arch.glyph ?? arch.name.slice(0, 2).toUpperCase(),
     abilities: [...(('abilities' in arch && (arch as BossDef).abilities) || []), ...(arch.skill && ABILITIES[arch.skill] ? [arch.skill] : [])],
@@ -146,7 +146,7 @@ export function sizeWhen(u: Unit, mounted: boolean): number {
 
 /** Tags used for weapon effectiveness: race/class tags, move type, and 'large'. */
 export function unitTags(u: Unit): string[] {
-  return [...(RACES[u.race]?.tags ?? []), ...(CLASSES[u.classId]?.tags ?? []), moveTypeOf(u), ...(u.size >= 2 ? ['large'] : [])];
+  return [...(RACES[u.race]?.tags ?? []), ...(CLASSES[u.classId]?.tags ?? []), moveTypeOf(u), ...(u.size >= 2 ? ['large'] : []), ...(u.micro ? ['micro'] : [])];
 }
 
 /** Gear that is currently active (a shield does nothing with a two-handed weapon). */

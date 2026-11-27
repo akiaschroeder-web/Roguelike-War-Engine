@@ -43,6 +43,10 @@ const SPECIAL = (open: number, water = INF, rough = 2, gap = INF) => ({
   // Spirit Tracks (per-unit exceptions live in spirit.ts spTileCost: trains only run on rails)
   railTrack: open, railJunction: open, railSwitch: INF, trainStation: open, railCrossing: open, brokenTrack: open, spiritTrack: open,
   sandPillar: INF, sandBridge: open, whipPost: INF, lightStatue: INF, tearOfLight: open, floorSpikes: open, rollingBoulder: INF,
+  // The Minish Cap: costs for normal-sized units (Micro units use engine/micro.ts mcTileCost: a separate network)
+  minishPortal: open, microPassage: INF, microBridge: water, microTunnel: open, minishDoor: INF, giantGrass: open, waterDroplet: open, floatingLeaf: water,
+  internalWeakPoint: open, softEarthWall: INF, pacciHole: open, duplicationTile: open, windCrest: open, giantMushroom: open, minishVine: rough, spiderweb: open,
+  gustCurrent: open, puddle: open, giantFlower: open, fallenTwig: open, bookshelf: INF, minishTable: INF, tallGrass: open, raindrop: open, ordinaryHouse: INF,
 });
 export const MOVE_COSTS: Record<MoveType, Record<Terrain, number>> = {
   foot:    { plain: 1, forest: 2, mountain: 3, water: INF, wall: INF, fort: 1, lava: 2, ...SPECIAL(1) },
@@ -233,6 +237,16 @@ export const TERRAIN_BONUS: Record<Terrain, { avoid: number; def: number; heal: 
   tearOfLight: { avoid: 0, def: 0, heal: 0 },
   floorSpikes: { avoid: -10, def: 0, heal: 0 },
   rollingBoulder: { avoid: 0, def: 0, heal: 0 },
+  // The Minish Cap (Micro units get their own bonuses in engine/micro.ts mcMods)
+  minishPortal: { avoid: 0, def: 0, heal: 0 }, microPassage: { avoid: 0, def: 0, heal: 0 }, microBridge: { avoid: 0, def: 0, heal: 0 },
+  microTunnel: { avoid: 0, def: 0, heal: 0 }, minishDoor: { avoid: 0, def: 0, heal: 0 }, giantGrass: { avoid: 5, def: 0, heal: 0 },
+  waterDroplet: { avoid: 0, def: 0, heal: 0 }, floatingLeaf: { avoid: 0, def: 0, heal: 0 }, internalWeakPoint: { avoid: -10, def: 0, heal: 0 },
+  softEarthWall: { avoid: 0, def: 0, heal: 0 }, pacciHole: { avoid: 0, def: 0, heal: 0 }, duplicationTile: { avoid: 0, def: 0, heal: 0 },
+  windCrest: { avoid: 0, def: 0, heal: 5 }, giantMushroom: { avoid: 0, def: 0, heal: 0 }, minishVine: { avoid: 10, def: 1, heal: 0 },
+  spiderweb: { avoid: 0, def: 0, heal: 0 }, gustCurrent: { avoid: 0, def: 0, heal: 0 }, puddle: { avoid: 0, def: 0, heal: 0 },
+  giantFlower: { avoid: 0, def: 0, heal: 0 }, fallenTwig: { avoid: 0, def: 0, heal: 0 }, bookshelf: { avoid: 0, def: 0, heal: 0 },
+  minishTable: { avoid: 0, def: 0, heal: 0 }, tallGrass: { avoid: 15, def: 0, heal: 0 }, raindrop: { avoid: 0, def: 0, heal: 0 },
+  ordinaryHouse: { avoid: 0, def: 0, heal: 0 },
 };
 
 /** Water-like spaces: swimmers move through them, others can't. */
@@ -413,6 +427,31 @@ export const SPECIAL_TERRAIN: Record<Exclude<Terrain, BaseTerrain>, { name: stri
   tearOfLight: { name: 'Tear of Light', color: '#fff0a0' },
   floorSpikes: { name: 'Floor Spike Trap', color: '#7a7a8a' },
   rollingBoulder: { name: 'Rolling Boulder', color: '#6a5a4a' },
+  minishPortal: { name: 'Minish Portal', color: '#8ad06a' },
+  microPassage: { name: 'Micro Passage', color: '#7a6a5a' },
+  microBridge: { name: 'Micro Bridge', color: '#9a8a5a' },
+  microTunnel: { name: 'Micro Tunnel', color: '#5a4a3a' },
+  minishDoor: { name: 'Minish Door', color: '#a07040' },
+  giantGrass: { name: 'Giant Grass', color: '#5aa040' },
+  waterDroplet: { name: 'Water Droplet', color: '#8ac0e8' },
+  floatingLeaf: { name: 'Floating Leaf', color: '#6ab04a' },
+  internalWeakPoint: { name: 'Internal Weak Point', color: '#d04a6a' },
+  softEarthWall: { name: 'Soft Earth Wall', color: '#8a6a4a' },
+  pacciHole: { name: 'Pacci Hole', color: '#4a3a5a' },
+  duplicationTile: { name: 'Duplication Tile', color: '#6ac0d0' },
+  windCrest: { name: 'Wind Crest', color: '#c0d0e0' },
+  giantMushroom: { name: 'Giant Mushroom', color: '#d0604a' },
+  minishVine: { name: 'Minish Vine', color: '#4a8a3a' },
+  spiderweb: { name: 'Spiderweb', color: '#d8d8e0' },
+  gustCurrent: { name: 'Gust Current', color: '#b0d8e8' },
+  puddle: { name: 'Puddle', color: '#7aa8c8' },
+  giantFlower: { name: 'Flower', color: '#e08ab0' },
+  fallenTwig: { name: 'Fallen Twig', color: '#8a6a3a' },
+  bookshelf: { name: 'Bookshelf', color: '#7a5030' },
+  minishTable: { name: 'Table', color: '#a0784a' },
+  tallGrass: { name: 'Tall Grass', color: '#6ab04a' },
+  raindrop: { name: 'Raindrop', color: '#a0c8e8' },
+  ordinaryHouse: { name: 'House', color: '#b0906a' },
 };
 
 /** Lava damage at the start of a unit's turn (as % of max HP). */

@@ -6,6 +6,7 @@ import { ogLeaps, ogTileCost } from './original';
 import { lgTileCost } from './legend';
 import { phTileCost } from './phantom';
 import { spTileCost } from './spirit';
+import { mcTileCost, microRoom } from './micro';
 import { INF, MOVE_COSTS } from './rules';
 import { canSwim, effectiveStats, hasEffect, isMounted, moveTypeOf, unitTags } from './units';
 import { windFactor } from './naval';
@@ -31,8 +32,10 @@ export function footprint(x: number, y: number, size: number): Pos[] {
   return out;
 }
 
+/** The normal-sized unit on a tile. Micro units (engine/micro.ts) share tiles and never block, so they are not
+ *  returned: use micro.ts unitsAt / microAt for them. */
 export function unitAt(b: Battle, x: number, y: number): Unit | undefined {
-  return b.units.find((u) => x >= u.x && y >= u.y && x < u.x + u.size && y < u.y + u.size);
+  return b.units.find((u) => !u.micro && x >= u.x && y >= u.y && x < u.x + u.size && y < u.y + u.size);
 }
 
 /** Gap distance between two footprints (1 = adjacent, 0 = overlapping). */
@@ -44,7 +47,9 @@ export function footDist(ax: number, ay: number, as: number, bx: number, by: num
 
 /** Distance between two units, optionally with `a` standing at `aPos`. */
 export function unitDist(a: Unit, b: Unit, aPos: Pos = a): number {
-  return footDist(aPos.x, aPos.y, a.size, b.x, b.y, b.size);
+  const d = footDist(aPos.x, aPos.y, a.size, b.x, b.y, b.size);
+  // A Micro unit sharing a space with another unit is next to it (it can strike, be struck, ride or infiltrate).
+  return d === 0 && (a.micro || b.micro) && a.uid !== b.uid ? 1 : d;
 }
 
 /** Movement cost of a single tile for a unit, including racial traits. */
@@ -86,6 +91,8 @@ export function tileCost(b: Battle, unit: Unit, t: Terrain): number {
   c = phTileCost(b, unit, t, c);
   // Spirit Tracks spaces (trains stay on the rails; the Lokomo melodies)
   c = spTileCost(b, unit, t, c);
+  // Micro units have their own movement network on size-dependent terrain
+  if (unit.micro) c = mcTileCost(b, unit, t, c);
   if (unit.buffs?.some((x) => x.id === 'spectralStep') && c >= INF && t !== 'water') c = 2;
   return c;
 }
@@ -129,11 +136,13 @@ export function computeMoves(b: Battle, unit: Unit, budget?: number): Moves {
   const mov = unit.statuses?.some((s) => s.kind === 'root') ? 0 : budget ?? effectiveStats(unit).mov;
   const ghost = unit.skills.includes('spectralPassage') || hasEffect(unit, 'phantomRide') || hasEffect(unit, 'phaseThrough')
     || hasEffect(unit, 'spectralHull') || unit.skills.includes('phantomVoyage') || unit.skills.includes('suspendedHorror') || unit.skills.includes('burrowingAmbush') || ogLeaps(unit);
+  // Micro units never block, and pass through every space (up to four of them stop on one tile).
+  const micro = !!unit.micro;
   const occ = new Map<number, Unit>();
-  for (const u of b.units) for (const p of footprint(u.x, u.y, u.size)) occ.set(keyOf(b, p.x, p.y), u);
+  for (const u of b.units) if (!u.micro) for (const p of footprint(u.x, u.y, u.size)) occ.set(keyOf(b, p.x, p.y), u);
 
   const blockedByFoe = (x: number, y: number) => {
-    if (ghost) return false;
+    if (ghost || micro) return false;
     for (const p of footprint(x, y, unit.size)) {
       const o = occ.get(keyOf(b, p.x, p.y));
       if (o && o.team !== unit.team) return true;
@@ -141,6 +150,7 @@ export function computeMoves(b: Battle, unit: Unit, budget?: number): Moves {
     return false;
   };
   const freeToStop = (x: number, y: number) => {
+    if (micro) return microRoom(b, x, y, unit) > 0;
     for (const p of footprint(x, y, unit.size)) {
       const o = occ.get(keyOf(b, p.x, p.y));
       if (o && o !== unit) return false;

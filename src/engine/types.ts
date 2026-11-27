@@ -165,7 +165,12 @@ export type Terrain = BaseTerrain | 'cracked' | 'timeBlock' | 'timeGap' | 'bridg
   | 'hammerPad' | 'sunCrest' | 'cycloneWarp'
   // Spirit Tracks battlefield spaces (the Phantom Safe Zone is the Sacred Safe Zone)
   | 'railTrack' | 'railJunction' | 'railSwitch' | 'trainStation' | 'railCrossing' | 'brokenTrack' | 'spiritTrack' | 'sandPillar' | 'sandBridge'
-  | 'whipPost' | 'lightStatue' | 'tearOfLight' | 'floorSpikes' | 'rollingBoulder';
+  | 'whipPost' | 'lightStatue' | 'tearOfLight' | 'floorSpikes' | 'rollingBoulder'
+  // The Minish Cap battlefield spaces (engine/micro.ts: separate movement networks for normal and Micro units)
+  | 'minishPortal' | 'microPassage' | 'microBridge' | 'microTunnel' | 'minishDoor' | 'giantGrass' | 'waterDroplet' | 'floatingLeaf'
+  | 'internalWeakPoint' | 'softEarthWall' | 'pacciHole' | 'duplicationTile' | 'windCrest' | 'giantMushroom' | 'minishVine' | 'spiderweb' | 'gustCurrent'
+  // Size-dependent terrain (normal / Micro)
+  | 'puddle' | 'giantFlower' | 'fallenTwig' | 'bookshelf' | 'minishTable' | 'tallGrass' | 'raindrop' | 'ordinaryHouse';
 
 export type Team = 'player' | 'enemy';
 
@@ -382,6 +387,8 @@ export interface WeaponDef {
   ph?: string[];
   /** Spirit Tracks effects handled by engine/spirit.ts. */
   st?: string[];
+  /** The Minish Cap effects handled by engine/minish.ts (and Micro gear for engine/micro.ts). */
+  mc?: string[];
 }
 
 /** Era of the Wild weapon effects (section 13). */
@@ -446,6 +453,8 @@ export interface GearDef {
   ph?: string[];
   /** Spirit Tracks effects (train-part sets, Lokomo gear…) handled by engine/spirit.ts. */
   st?: string[];
+  /** The Minish Cap effects (Micro gear, Mole Mitts, Grip Ring…) handled by engine/minish.ts and engine/micro.ts. */
+  mc?: string[];
 }
 
 export type GearEffect =
@@ -631,7 +640,7 @@ export interface WorldDef {
   terrainNames: Record<BaseTerrain, string>;
   terrainColors: Record<BaseTerrain, string>;
   /** Regions of the Termina campaign (with the three-day cycle). */
-  campaign?: 'termina' | 'greatSea' | 'twilight' | 'skyward' | 'wild' | 'original' | 'legend' | 'phantom' | 'spirit';
+  campaign?: 'termina' | 'greatSea' | 'twilight' | 'skyward' | 'wild' | 'original' | 'legend' | 'phantom' | 'spirit' | 'minish';
   /** Era of the Wild: which layer of the three-layer map. */
   layer?: 'surface' | 'sky' | 'depths';
   /** Battles here are fought at sea (vessels, wind, islands). */
@@ -751,7 +760,7 @@ export interface CommanderDef {
   bonus: CommanderBonus;
   bonusText: string;
   /** Campaign this commander starts in by default. */
-  campaign?: 'termina' | 'greatSea' | 'twilight' | 'skyward' | 'wild' | 'original' | 'legend' | 'phantom' | 'spirit';
+  campaign?: 'termina' | 'greatSea' | 'twilight' | 'skyward' | 'wild' | 'original' | 'legend' | 'phantom' | 'spirit' | 'minish';
   /** Weapons, gear and items handed out to the army at the start (commander first). */
   startingItems?: string[];
 }
@@ -771,7 +780,9 @@ export type CommanderBonus = 'extraTreasure' | 'healing' | 'forging' | 'postBatt
   // Phantom Hourglass
   | 'fortuneSeeker' | 'spiritOfCourage' | 'boardingFury' | 'cobbleLegacy' | 'phantomFeast'
   // Spirit Tracks
-  | 'royalEngineers' | 'unboundSpirit' | 'sacredSymphony' | 'ironGauntlet' | 'demonicInfluence' | 'demonKingsRail';
+  | 'royalEngineers' | 'unboundSpirit' | 'sacredSymphony' | 'ironGauntlet' | 'demonicInfluence' | 'demonKingsRail'
+  // The Minish Cap
+  | 'fourSwordHero' | 'minishSage' | 'lightForceBonus' | 'masterForging' | 'royalAuthority' | 'bladeBrothers' | 'windSorcery';
 
 export type SkillId = string;
 
@@ -879,6 +890,8 @@ export interface Unit {
   artPick?: string;
   /** Battle-only art (a temporary form: Link's rabbit form, the Shadow Nightmare's shadows). Wins over everything. */
   artOverride?: string;
+  /** Micro unit (size 0): shares tiles (up to 4 per tile), never blocks; geometry treats it as one tile (engine/micro.ts). */
+  micro?: boolean;
 }
 
 export type ObjectiveType = 'rout' | 'boss' | 'survive' | 'seize' | 'defend' | 'escape' | 'capture' | 'escort' | 'rescue'
@@ -1045,7 +1058,7 @@ export interface RunMap {
 }
 
 /** A campaign the World Tour can visit. */
-export type TourCampaign = 'hyrule' | 'termina' | 'greatSea' | 'twilight' | 'skyward' | 'wild' | 'original' | 'legend' | 'phantom' | 'spirit';
+export type TourCampaign = 'hyrule' | 'termina' | 'greatSea' | 'twilight' | 'skyward' | 'wild' | 'original' | 'legend' | 'phantom' | 'spirit' | 'minish';
 
 export interface Run {
   seed: number;
@@ -1078,7 +1091,7 @@ export interface Run {
   /** Army-wide stats and resources. */
   army?: Army;
   /** Which campaign: the endless Hyrule war, Termina with its three-day cycle, or the Great Sea. */
-  campaign?: 'hyrule' | 'termina' | 'greatSea' | 'twilight' | 'skyward' | 'wild' | 'original' | 'legend' | 'phantom' | 'spirit' | 'random' | 'worldTour';
+  campaign?: 'hyrule' | 'termina' | 'greatSea' | 'twilight' | 'skyward' | 'wild' | 'original' | 'legend' | 'phantom' | 'spirit' | 'minish' | 'random' | 'worldTour';
   /** Great Sea: the naval campaign's state. */
   sea?: SeaState;
   /** Termina: hours passed in the current three-day cycle (0-71) and resets so far. */
@@ -1168,7 +1181,9 @@ export type EventEffect =
   /** Phantom Hourglass (engine/phantomRun.ts): ship parts, treasures, salvage, Sands of Hours, Spirit Gems, the Phantom Sword. */
   | { kind: 'phantom'; op: string; id?: string; amount?: number }
   /** Spirit Tracks (engine/spiritRun.ts): train parts, stamps, Force Gems, passengers and freight, Lokomo duets. */
-  | { kind: 'spirit'; op: string; id?: string; amount?: number };
+  | { kind: 'spirit'; op: string; id?: string; amount?: number }
+  /** The Minish Cap (engine/minishRun.ts): Kinstone fusions, Mysterious Shells, figurines, Picolytes, the Elements. */
+  | { kind: 'minish'; op: string; id?: string; amount?: number };
 
 /** Conditions for an event or a single choice. */
 export interface EventRequires {
