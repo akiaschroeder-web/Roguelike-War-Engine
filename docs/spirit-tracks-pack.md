@@ -82,3 +82,12 @@ Batch 1 (14): heroOfSpirits_logo (JPEG; has the Spirit Tracks logo and a waterma
 - keyMaster.webp — dark bat-eared imp (provisional).
 - stagnox.png, skeldritch.png, cragma.webp, phytops.webp — temple bosses.
 - Still missing: Fraaz, Malladus, Possessed Zelda as Malladus, Spirit Train, Armored Train, Dark Train, Demon Train.
+
+## Art batch 3 notes
+- possessedZeldaMalladus.webp — Zelda with green hair and red eyes.
+- fraaz.png — blue-green horned beast with flaming fur.
+- spiritTrain.webp — green-funnel train with passenger and cargo cars.
+- demonTrain.webp — black train with a face and blue flames.
+- armoredTrain.webp — blue train with fire eyes and smoke (provisional).
+- darkTrain.webp — grey 3D model with purple eyes (provisional).
+- Still missing: Malladus (true form). Open questions from batch 2: the green PH Phantom art, the purple eye-hand, and the duplicate Rael image.
