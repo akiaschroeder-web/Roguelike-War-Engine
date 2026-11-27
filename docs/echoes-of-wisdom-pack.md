@@ -549,3 +549,19 @@ Still missing:
 - Crawltula
 - Mogryph, Vocavor, Skorchill, Bori, Null
 - the 6 Automatons
+
+Batch 3 (final; the user said this is the last batch), matched in list order by filename:
+- mogryph.png
+- vocavor.png
+- skorchill.webp
+- bori.webp: rainbow-headed jellyfish.
+- biriEOW_alt.png: small pink and blue jellyfish, an alt art for the ALBW Biri.
+- null.png: has opaque black rectangles behind the arms that need removing.
+- techtite.png
+- tocktorok.png
+- gizmol.png
+- highTekuBaba.png
+- roboblin.png
+- goldfinch.png
+
+Crawltula never arrived, so it uses Strandtula's art. Everything else is in, and the pack is ready to build.
