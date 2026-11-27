@@ -1475,7 +1475,7 @@ const WW_TERRAIN_NOTES: Record<string, string> = {
   collapsingFloor: 'Crumbles once someone has stood on it: it falls away into a pit at the start of the next turn',
   fallingBlock: 'Marked floor: a block crashes down every other turn (8 damage to whoever is there)',
   elevator: 'High ground (+10 Avoid). Ride the Elevator to another one without using your action',
-  narrowPassage: 'Only small units (size 1, CON 6 or less) or a Fairy can squeeze through',
+  narrowPassage: 'Only small units (size 1, CON 10 or less) or a Fairy can squeeze through',
   fallingBoulderZone: 'Boulders fall here on odd turns (6 damage)',
   riverDevil: 'The River Devil blocks the way until someone plays the Recorder',
 };

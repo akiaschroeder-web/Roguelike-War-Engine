@@ -85,7 +85,7 @@ export function aolLeaps(u: Unit): boolean {
 
 export function aolTileCost(_b: Battle, u: Unit, t: Terrain, c: number): number {
   switch (t) {
-    case 'narrowPassage': if (hasBuff(u, 'spellFairy') || (u.size === 1 && effectiveStats(u).con <= 6)) c = 1; break;
+    case 'narrowPassage': if (hasBuff(u, 'spellFairy') || (u.size === 1 && effectiveStats(u).con <= 10)) c = 1; break;
     case 'ladderGap': if (hasBuff(u, 'spellJump') || hasBuff(u, 'fokkaFeather')) c = 1; break;
     case 'water': if (hasEffect(u, 'waterWalk') || has(u, 'leapingBones')) c = 1; break;
     case 'lava': if (has(u, 'leapingBones') || has(u, 'fireSpit')) c = 1; break;
