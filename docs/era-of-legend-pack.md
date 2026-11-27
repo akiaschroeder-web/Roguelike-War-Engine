@@ -120,3 +120,5 @@ Campaign id: 'legend'. Pack folder: src/content/legend/. Source art: art_sources
 - Monsters: antiFairy, buzzBlob, cukeman, subterror, smasher, wizzrobe (variants [wizzrobe, wizzrobeWW]), bossWizzrobe (variants [bossWizzrobe, bossWizzrobeWW]; stronger than wizzrobe, weaker than agahnim), meteoWizzrobe, thunderWizzrobe, blizzrobe (elemental Wizzrobes: fire, lightning, ice).
 - Bosses: helmasaurKing, arrghus, blind, kholdstare, vitreous, trinexx, genie, slimeEye, anglerFish, slimeEel, facade, evilEagle, hotHead, shadowNightmare (art shadowNightmareAll; form art nightmareGel, nightmareAgahnim, nightmareGanon, nightmareDethI, plus existing moldorm and lanmola art), medusaHead, onox, onoxDragon (form of onox), pumpkinHead, headThwomp, shadowHag, eyesoar, smog (source file smog_patternbg), octogon, ramrock, veran, veranFairy, veranTurtle, veranSpider, veranBee (forms of veran).
 - Alt art (appended): octorok += octorokALTTP, octorokWW, octorokSS, octorokBotW.
+
+User sent art for the OoT potion shop lady (the old woman in the wheelchair, Kakariko) → potionShopLady.png, for the reserved Syrup × OoT Potion Shopkeeper support once she has a unit.
