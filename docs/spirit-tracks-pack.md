@@ -134,7 +134,7 @@ Batch 1 (14): heroOfSpirits_logo (JPEG; has the Spirit Tracks logo and a waterma
   - chuchuMetal.webp is a new Metal ChuChu unit.
   - chuchuSpikedHelmet.webp is a new Spiked Helmet ChuChu unit.
   - chuchuHelmet.webp is a new Helmet ChuChu unit.
-- Proposed kits for the new ChuChus, designed by me and not yet confirmed:
+- The ChuChu kits are in docs/chuchu-expansion.md (from the user). The earlier proposed kits are superseded.
   - Metal ChuChu: high DEF, immune to physical knockback, weak to magic.
   - Helmet ChuChu: frontal armour; the helmet blocks the first frontal hit each battle and can be knocked off.
   - Spiked Helmet ChuChu: as Helmet, plus counter damage when struck in melee from the front.
