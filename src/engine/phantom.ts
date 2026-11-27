@@ -135,7 +135,7 @@ export function face(u: Unit, toward: Unit | (Pos & { size: number })) { u.phFac
 // ───────────────────────── Temporary units ─────────────────────────
 
 const TEMP: Record<string, EnemyArchetype> = {
-  blaazFlame: { id: 'blaazFlame', name: 'Flame of Blaaz', race: 'demon', classId: 'fireDemon', weapons: ['blaazsFlame'], stats: { hp: 10, str: 6, mag: 14, skl: 12, spd: 12, def: 4, res: 10, mov: 6 }, glyph: 'BF' },
+  blaazFlame: { id: 'blaazFlame', name: 'Flame of Blaaz', race: 'demon', classId: 'fireDemon', weapons: ['blaazFireball'], stats: { hp: 10, str: 6, mag: 14, skl: 12, spd: 12, def: 4, res: 10, mov: 6 }, glyph: 'BF' },
   crayklet: { id: 'crayklet', name: 'Crayklet', race: 'aquatic', classId: 'invisibleCrustacean', weapons: ['craykPincers'], stats: { hp: 14, str: 8, skl: 8, spd: 10, def: 6, res: 2, mov: 5 }, glyph: 'Ck' },
   cobbleConstruct: { id: 'cobbleConstruct', name: 'Cobble Construct', race: 'construct', classId: 'cobbleKnight', weapons: ['cobbleLance'], stats: { hp: 30, str: 12, skl: 10, spd: 6, def: 14, res: 6, mov: 4 }, glyph: 'CC' },
 };
@@ -611,7 +611,7 @@ export function phAfterCombat(b: Battle, attacker: Unit, defender: Unit, landed:
   if (has(attacker, 'invisibleHunter')) attacker.hidden = false;
   const w = WEAPONS[attacker.weapons[0]];
   if (landed.atk > 0 && defender.hp > 0) {
-    if (has(attacker, 'deadMansVolley') && w?.type === 'magic') {
+    if (has(attacker, 'deadMansVolley') && (w?.type === 'magic' || w?.magicContact)) {
       const sisters = b.units.filter((x) => x !== attacker && x.team === attacker.team && has(x, 'deadMansVolley') && unitDist(x, defender) <= 4).length;
       if (sisters) { zap(attacker, defender, 3 * sisters); b.log.push(`The orb rebounds between the sisters (${sisters}×)!`); }
     } else if (w?.ph?.includes('reflect')) {
