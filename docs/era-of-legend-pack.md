@@ -91,3 +91,5 @@ Hero of Legend (Link, Link's Uncle, Flute Boy: utility gear −20% STA/MP) · Pr
 ## Art received
 Saved in `art_sources/era_of_legend/`.
 Batch 1 (15): heroOfLegend (sword + Hylian-crest shield — default), heroOfLegendJump (leaping sword pose — Roc's Feather / Koholint Sword), heroOfLegendRod (Rod of Seasons), heroOfLegendHarp (JPEG; Harp of Ages), zeldaLegend (blue dress), zeldaLegend2 (pink royal robes), sahasrahla, linksUncle, ganonLegend, syrup, aginah (pixel sprite), arrghus, helmasaurKing, agahnim, unidentified_pixelLink (pixel Link riding a brown spiked shell — asked the user).
+
+Batch 2 (14 new; Helmasaur King and Arrghus re-sent as identical files): blind (pixel sprite, white robe and red head), shadowNightmare (black tendril mass with one blue eye — the true form), vitreous (pixel, green with many eyes), trinexx (pixel, red and blue heads), marin, tarin, bowwow, flyingRooster, windFish, genie, slimeEye, anglerFish, slimeEel, facade.
