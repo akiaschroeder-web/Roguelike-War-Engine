@@ -412,3 +412,23 @@ Still missing:
 - Lorule Spearman and Knight (both can share loruleSoldier)
 - Pengator, Devalant
 - all eight bosses and the three minibosses
+
+Batch 3, matched in list order by filename:
+- pengator.webp: open mouth.
+- devalant.webp
+- margomill.webp
+- gemesaurKing.webp
+- knucklemaster.webp
+- stalblind.webp
+- zaganaga.webp
+- dharkstare.webp
+- grinexx.webp
+- yugaGanon.webp
+- heedle_x2.webp: the image holds two identical Heedles; crop one.
+- gigabari.webp: yellow dome.
+- bigPengator.png
+- Alt arts:
+  - link2D_alt_brickbg.jpg: the 2D wall-merged Link, an alt art for ALBW Link. It sits on a brick wall backdrop, which can stay or be cropped.
+  - moldormALBW_alt.webp: goes to Moldorm.
+
+All ALBW art is in. Lorule Spearman and Lorule Knight share loruleSoldier.png.
