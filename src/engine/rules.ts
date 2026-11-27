@@ -47,6 +47,9 @@ const SPECIAL = (open: number, water = INF, rough = 2, gap = INF) => ({
   minishPortal: open, microPassage: INF, microBridge: water, microTunnel: open, minishDoor: INF, giantGrass: open, waterDroplet: open, floatingLeaf: water,
   internalWeakPoint: open, softEarthWall: INF, pacciHole: open, duplicationTile: open, windCrest: open, giantMushroom: open, minishVine: rough, spiderweb: open,
   gustCurrent: open, puddle: open, giantFlower: open, fallenTwig: open, bookshelf: INF, minishTable: INF, tallGrass: open, raindrop: open, ordinaryHouse: INF,
+  // Four Swords (per-unit exceptions live in fourswords.ts fsTileCost)
+  forceGemDeposit: open, forceBarrier: INF, fourPersonSwitch: open, formationSwitch: open, cooperativeBlock: INF, itemPedestal: open, fairyPedestal: open,
+  magneticPillar: INF, fsDarkPortal: open, shadowMirrorGate: INF, giantBombZone: open, royalJewelPedestal: open, sanctuarySeal: INF,
 });
 export const MOVE_COSTS: Record<MoveType, Record<Terrain, number>> = {
   foot:    { plain: 1, forest: 2, mountain: 3, water: INF, wall: INF, fort: 1, lava: 2, ...SPECIAL(1) },
@@ -247,6 +250,10 @@ export const TERRAIN_BONUS: Record<Terrain, { avoid: number; def: number; heal: 
   giantFlower: { avoid: 0, def: 0, heal: 0 }, fallenTwig: { avoid: 0, def: 0, heal: 0 }, bookshelf: { avoid: 0, def: 0, heal: 0 },
   minishTable: { avoid: 0, def: 0, heal: 0 }, tallGrass: { avoid: 15, def: 0, heal: 0 }, raindrop: { avoid: 0, def: 0, heal: 0 },
   ordinaryHouse: { avoid: 0, def: 0, heal: 0 },
+  // Four Swords
+  forceGemDeposit: { avoid: 0, def: 0, heal: 0 }, forceBarrier: { avoid: 0, def: 0, heal: 0 }, fourPersonSwitch: { avoid: 0, def: 0, heal: 0 }, formationSwitch: { avoid: 0, def: 0, heal: 0 }, cooperativeBlock: { avoid: 0, def: 0, heal: 0 },
+  itemPedestal: { avoid: 0, def: 0, heal: 0 }, fairyPedestal: { avoid: 0, def: 0, heal: 10 }, magneticPillar: { avoid: 0, def: 0, heal: 0 }, fsDarkPortal: { avoid: 10, def: 0, heal: 0 },
+  shadowMirrorGate: { avoid: 0, def: 0, heal: 0 }, giantBombZone: { avoid: -10, def: 0, heal: 0 }, royalJewelPedestal: { avoid: 0, def: 0, heal: 0 }, sanctuarySeal: { avoid: 0, def: 0, heal: 0 },
 };
 
 /** Water-like spaces: swimmers move through them, others can't. */
@@ -452,6 +459,19 @@ export const SPECIAL_TERRAIN: Record<Exclude<Terrain, BaseTerrain>, { name: stri
   tallGrass: { name: 'Tall Grass', color: '#6ab04a' },
   raindrop: { name: 'Raindrop', color: '#a0c8e8' },
   ordinaryHouse: { name: 'House', color: '#b0906a' },
+  forceGemDeposit: { name: 'Force Gem Deposit', color: '#6ad08a' },
+  forceBarrier: { name: 'Force Barrier', color: '#8a6ad0' },
+  fourPersonSwitch: { name: 'Four-Person Switch', color: '#d0b04a' },
+  formationSwitch: { name: 'Formation Switch', color: '#c0a0e0' },
+  cooperativeBlock: { name: 'Cooperative Block', color: '#8a7a6a' },
+  itemPedestal: { name: 'Item Pedestal', color: '#c8b080' },
+  fairyPedestal: { name: 'Great Fairy Upgrade Pedestal', color: '#f0a0d0' },
+  magneticPillar: { name: 'Magnetic Pillar', color: '#6a6a8a' },
+  fsDarkPortal: { name: 'Dark World Portal', color: '#5a2a7a' },
+  shadowMirrorGate: { name: 'Shadow Mirror Gate', color: '#3a2a4a' },
+  giantBombZone: { name: 'Giant Bomb Zone', color: '#d0603a' },
+  royalJewelPedestal: { name: 'Royal Jewel Pedestal', color: '#e0c060' },
+  sanctuarySeal: { name: 'Sanctuary Seal', color: '#f0e8b0' },
 };
 
 /** Lava damage at the start of a unit's turn (as % of max HP). */

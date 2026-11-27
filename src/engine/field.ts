@@ -14,6 +14,7 @@ import { decorateLegend, legendBattleStart } from './legend';
 import { decoratePhantom, phantomBattleStart } from './phantom';
 import { decorateSpirit, spiritBattleStart } from './spirit';
 import { decorateMinish, minishBattleStart } from './minish';
+import { decorateFourSwords, fourSwordsBattleStart } from './fourswords';
 import { GEAR, ITEMS } from '../data/registry';
 import type { Battle, Pos, Terrain, Unit, WorldId } from './types';
 
@@ -57,6 +58,9 @@ export function decorateField(b: Battle, rng: RNG, nodeType: string) {
   // The Minish Cap: its battlefield spaces, Micro dungeons, boss defences.
   decorateMinish(b, rng);
   minishBattleStart(b);
+  // Four Swords: Force Gem Deposits, switches, portals, mirrors and seals; Big Bomb fuses.
+  decorateFourSwords(b, rng);
+  fourSwordsBattleStart(b);
   // Fog of war
   b.fog = rng.chance(FOGGY[world] ?? 6);
   // Buried treasure

@@ -8,6 +8,7 @@ import { lgCanUseItem, lgHealItemMult, lgItemTiles, lgOnBlast, useLegendItem } f
 import { phHealItemMult, phItemTiles, phOnBlast, usePhantomItem } from './phantom';
 import { spOnBlast, useSpiritItem } from './spirit';
 import { MN_FREE_ITEMS, mnOnBlast, useMinishItem } from './minish';
+import { fsAdjustItem, fsCanUseItem, fsOnBlast, useFourSwordsItem } from './fourswords';
 import { ITEMS, TEMPLATES } from '../data/registry';
 import { useFairy, type LevelUp } from './combat';
 import { footDist, inBounds, tilesInRange } from './grid';
@@ -79,6 +80,8 @@ export function canUseHere(b: Battle, u: Unit, index: number): boolean {
   if (lgu !== undefined) return lgu;
   const og = ogCanUseItem(b, u, def.id);
   if (og !== undefined) return og;
+  const fsu = fsCanUseItem(b, u, def.id);
+  if (fsu !== undefined) return fsu;
   if (isTargeted(def)) return targetTiles(b, u, def).length > 0;
   return true;
 }
@@ -135,7 +138,8 @@ function consume(u: Unit, index: number) {
 /** Use the item in `index` (targeted items need `at`). Mutates the battle. */
 export function useItem(b: Battle, u: Unit, index: number, rng: RNG, at?: Pos): ItemResult | null {
   const slot = u.pack[index];
-  const def = slot && ITEMS[slot.id];
+  // The Bombardier's Military Explosives: bigger, wider bombs.
+  const def = slot && fsAdjustItem(u, ITEMS[slot.id]);
   if (!def || !canUseHere(b, u, index)) return null;
   if (isTargeted(def) && (!at || !inBounds(b, at.x, at.y) || !targetTiles(b, u, def).some((t) => t.x === at.x && t.y === at.y))) return null;
 
@@ -169,6 +173,7 @@ export function useItem(b: Battle, u: Unit, index: number, rng: RNG, at?: Pos): 
     if (def.kind === 'bomb') res.lines.push(...phOnBlast(b, u, at!, def.radius ?? 0, def.power));
     if (def.kind === 'bomb') res.lines.push(...spOnBlast(b, u, at!, def.radius ?? 0));
     if (def.kind === 'bomb') res.lines.push(...mnOnBlast(b, u, at!, def.radius ?? 0));
+    if (def.kind === 'bomb') res.lines.push(...fsOnBlast(b, u, at!, def.radius ?? 0, def.power));
     if (def.element === 'fire') {
       const tiles: Pos[] = [];
       const r = def.radius ?? 0;
@@ -269,6 +274,8 @@ function useSpecial(b: Battle, u: Unit, def: ItemDef, rng: RNG, res: ItemResult,
   if (wildLine !== null) { res.lines.push(wildLine); return; }
   const spLine = useSpiritItem(b, u, def.id, at);
   if (spLine !== null) { res.lines.push(spLine); return; }
+  const fsLine = useFourSwordsItem(b, u, def.id, at);
+  if (fsLine !== null) { res.lines.push(fsLine); return; }
   const mnLine = useMinishItem(b, u, def.id, at);
   if (mnLine !== null) { res.lines.push(mnLine); if (MN_FREE_ITEMS.has(def.id)) res.free = true; return; }
   const phLine = usePhantomItem(b, def.id);

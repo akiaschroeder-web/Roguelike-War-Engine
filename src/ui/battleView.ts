@@ -13,6 +13,7 @@ import { lgAfterMove } from '../engine/legend';
 import { hourglassLabel, phAfterMove } from '../engine/phantom';
 import { spAfterMove } from '../engine/spirit';
 import { isMicro, mcAfterMove, microSlot, unitsAt } from '../engine/micro';
+import { fsAfterMove, fsStatus } from '../engine/fourswords';
 import { enemyUnload, windLabel } from '../engine/naval';
 import { sideQuestText } from '../engine/run';
 import { adjacentCaptives, checkResult, freeCaptive, mountToggleBlocked, moveUnit, toggleMount, objectiveText, spawnReinforcements, startPhase, type TurnStartEvent } from '../engine/battle';
@@ -70,6 +71,9 @@ const TERRAIN_GLYPH: Record<string, string> = {
   minishPortal: '🍄', microPassage: '·', microBridge: '⌒', microTunnel: '◌', minishDoor: '🚪', giantGrass: '⺾', waterDroplet: '💧', floatingLeaf: '🍃',
   internalWeakPoint: '◎', softEarthWall: '▦', pacciHole: '⊚', duplicationTile: '✦', windCrest: '🌬', giantMushroom: '🍄', minishVine: '⌇', spiderweb: '🕸', gustCurrent: '≋',
   puddle: '∽', giantFlower: '🌸', fallenTwig: '⟋', bookshelf: '📚', minishTable: '⊤', tallGrass: '″', raindrop: '💧', ordinaryHouse: '🏠',
+  // Four Swords
+  forceGemDeposit: '💎', forceBarrier: '▩', fourPersonSwitch: '⊞', formationSwitch: '⌘', cooperativeBlock: '▣', itemPedestal: '🎁', fairyPedestal: '🧚',
+  magneticPillar: '🧲', fsDarkPortal: '🌗', shadowMirrorGate: '🪞', giantBombZone: '✹', royalJewelPedestal: '💍', sanctuarySeal: '🔆',
 };
 
 export class BattleView {
@@ -514,6 +518,7 @@ export class BattleView {
       const ready = this.b.units.filter((u) => u.team === 'player' && !u.npc && !u.acted).length;
       html = `<button class="btn primary" data-act="end">End Turn <span class="dim">(${ready} ready)</span></button>
         ${this.b.orders?.length ? `<button class="btn" data-act="orders">⚑ Orders <span class="dim">${this.b.cp ?? 0}/${this.b.cpMax ?? 0} CP</span></button>` : ''}
+        ${(() => { const f = fsStatus(this.b); return f ? `<span class="fs-force small" title="Force Power (shared by the army, reset every battle). Next: ${esc(f.next)}">💎 Force <b>${f.force}</b>${f.formation ? ` · ${esc(f.formation)}` : ''} <span class="dim">${this.b.cp ?? 0} CP</span></span>` : ''; })()}
         <button class="btn ${this.showDanger ? 'on' : ''}" data-act="danger">Danger Zone</button>
         <button class="btn small" data-act="anims" title="Battle animations">🎬 ${animationsEnabled() ? 'On' : 'Off'}</button>
         <button class="btn small" data-act="mute" title="Sound">${audioSettings().muted ? '🔇' : '🔊'}</button>`;
@@ -1040,6 +1045,8 @@ export class BattleView {
     if (this.b.units.some((x) => x.mcRide)) this.renderUnits();
     const sp = spAfterMove(this.b, u); // Spirit Tracks spaces: Tears of Light, floor spikes
     if (sp) { sfx('secret'); this.addLog(`🚂 ${esc(sp)}`); }
+    const fsm = fsAfterMove(this.b, u); // Four Swords spaces: Force Gem Deposits, switches, Royal Jewel Pedestals
+    if (fsm) { sfx('secret'); this.addLog(`💎 ${esc(fsm)}`); }
     if (pressInversion(this.b, u)) { sfx('secret'); this.addLog('🔄 The Inversion Switch flips the walls and floors!'); }
     const dmg = triggerTraps(this.b, u);
     if (dmg) { sfx('hit'); this.float(u, `TRAP −${dmg}`, 'dmg'); this.addLog(`⚠ <b class="player">${esc(u.name)}</b> stepped on a spike trap (−${dmg} HP, rooted)!`); }
@@ -1631,6 +1638,20 @@ const WW_TERRAIN_NOTES: Record<string, string> = {
   tallGrass: 'Tall Grass: concealment (+15 Avoid); a dense forest at Micro size (cost 2, +20 Avoid)',
   raindrop: 'A Raindrop: harmless; a falling hazard to Micro units (10% HP)',
   ordinaryHouse: 'A House: a building; a whole dungeon to Micro units (heal 10%, +20 Avoid)',
+  // Four Swords
+  forceGemDeposit: 'A Force Gem Deposit: an ally who ends a move here collects its Force Gems (Force Power)',
+  forceBarrier: 'A Force Barrier (obstacle): it opens once the army has 500 Force Power',
+  fourPersonSwitch: 'A Four-Person Switch: four allies on or next to it at the start of your turn press it (Force Gems; barriers and seals open)',
+  formationSwitch: 'A Formation Switch: stand on it while the Links hold a formation (Force Gems; hidden enemies revealed)',
+  cooperativeBlock: 'A Cooperative Block (obstacle): two allies next to it can push it away (Push Block)',
+  itemPedestal: 'An Item Pedestal: take the battlefield tool on it (Take Item)',
+  fairyPedestal: 'A Great Fairy Upgrade Pedestal: your equipped tool becomes Level 2 for the battle (heals 10%)',
+  magneticPillar: 'A Magnetic Pillar (obstacle): with Magnetic Gloves, swing to it from up to 4 away',
+  fsDarkPortal: 'A Dark World Portal: step through to the matching portal (Cross to the other World)',
+  shadowMirrorGate: 'A Shadow Mirror Gate (obstacle): spawns hostile shadow duplicates until it is shattered (Shatter Mirror, bombs)',
+  giantBombZone: 'A Giant Bomb Zone: an active Giant Bomb\'s blast radius — stand clear!',
+  royalJewelPedestal: 'A Royal Jewel Pedestal: an ally with a Royal Jewel in the army opens the way (Force Gems; barriers and seals open)',
+  sanctuarySeal: 'A Sanctuary Seal (obstacle): sacred power or a coordinated formation breaks it (Break the Seal)',
 };
 
 /** Abilities shown in the Abilities menu (forecast-only modifiers are excluded). */

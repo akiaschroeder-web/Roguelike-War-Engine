@@ -8,6 +8,7 @@ import { phTileCost } from './phantom';
 import { spTileCost } from './spirit';
 import { mcTileCost, microRoom } from './micro';
 import { mnTileCost } from './minish';
+import { fsTileCost } from './fourswords';
 import { INF, MOVE_COSTS } from './rules';
 import { canSwim, effectiveStats, hasEffect, isMounted, moveTypeOf, unitTags } from './units';
 import { windFactor } from './naval';
@@ -96,6 +97,8 @@ export function tileCost(b: Battle, unit: Unit, t: Terrain): number {
   if (unit.micro) c = mcTileCost(b, unit, t, c);
   // The Minish Cap's gear and skills (Grip Ring, Hidden Trails, Climbing Gloves, Leaf Glider)
   c = mnTileCost(b, unit, t, c);
+  // Four Swords: Shadow Link walks through dark terrain
+  c = fsTileCost(b, unit, t, c);
   if (unit.buffs?.some((x) => x.id === 'spectralStep') && c >= INF && t !== 'water') c = 2;
   return c;
 }
