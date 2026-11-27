@@ -618,3 +618,11 @@ This supersedes all the provisional p*/q_* names above. Final files:
 - Update from the user:
   - #7 (blond, green) is Swiftblade, now swiftblade.webp, and Grimblade shares that art.
   - #3 (blond, teal, with a hammer) is therefore Melari, now melari.png, matching the file-order reading. Melari no longer uses the generic Minish art.
+
+## User decisions after the build
+"All five are fine", meaning everything stays as built:
+1. Miniboss placements: Spiny ChuChu in Hyrule Town, Madderpillar in Minish Woods, the Silver Darknut in Wind Ruins, the Red Darknut in Royal Valley, and the Black Knight in mixed pools.
+2. The segmented Madderpillar is OK.
+3. Gold Kinstones keep their current rewards: a Great Fairy, a treasure and +1 army capacity. No hidden region.
+4. Duplicates can't carry or trade items.
+5. No further tuning for Hero of the Minish or Swiftblade.
