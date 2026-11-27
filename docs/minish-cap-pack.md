@@ -572,3 +572,14 @@ Small pixel sprites with provisional names, waiting on the user to confirm:
   - Vaati Reborn, Vaati Transfigured, Vaati's Wrath
   - Big Green ChuChu, Big Blue ChuChu, Big Octorok
   - Madderpillar, Spiny ChuChu, Silver Darknut, Red Darknut, Black Knight
+
+### Batch 3 (final)
+- vaatiReborn.webp, vaatiTransfigured.webp, vaatisWrath.webp, bigOctorok.webp, bigBlueChuchu.webp, bigGreenChuchu.webp.
+- The user called this the final batch, so these have no art of their own. Fallbacks:
+  - Micro Link uses linkMinish.
+  - Festari uses forestMinish.
+  - Silver Darknut, Red Darknut and Black Knight use the existing Darknut art.
+  - Spiny ChuChu uses an existing green ChuChu image.
+  - Madderpillar uses existing Moldorm art.
+  - Percy and Gregal use existing generic Hylian or sage art.
+- The provisional sprite names (p06–p13, q_*) are unconfirmed. Build with them as named; the user can correct them later.
