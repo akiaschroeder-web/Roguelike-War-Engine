@@ -393,3 +393,22 @@ Still missing:
 - Lorule Soldier, Spearman and Knight
 - Rupee Like, Bari, Biri, Gimos, Pengator, Devalant
 - all eight bosses and the three minibosses
+
+Batch 2, matched in list order by filename:
+- The Gulley and Osfala images were resent; they're identical to batch 1.
+- seres.webp
+- oren.webp
+- rosso.webp
+- irene.webp
+- impaALBW.webp
+- loruleSoldier.png: armoured, horned.
+- rupeeLike.webp: a yellow pot with a Rupee lure.
+- bari.webp: green dome.
+- biri.webp: red dome.
+- gimos.webp: gargoyle with a trident.
+- Ocarina of Time alt arts: bariOOT_alt.png (jellyfish with arms) goes to Bari, and biriOOT_alt.webp (jellyfish with long tentacles) goes to Biri.
+
+Still missing:
+- Lorule Spearman and Knight (both can share loruleSoldier)
+- Pengator, Devalant
+- all eight bosses and the three minibosses
