@@ -603,3 +603,15 @@ This supersedes all the provisional p*/q_* names above. Final files:
   - madderpillar.png: blue caterpillar.
   - blackKnight.png: dark knight with a gold shield.
 - The fallbacks for Spiny ChuChu, Madderpillar and Black Knight no longer apply. The Silver and Red Darknuts still use the existing Darknut art.
+
+### FINAL art identities (the user confirmed from the numbered sheet; this supersedes the previous section)
+- smith.webp: bald, white side hair, red.
+- potho.webp: tall red and white hat.
+- swiftblade.png: blond, teal and red.
+- gentari.webp: green leaf hat, white beard.
+- gregal.webp: bald, red gem, rainbow scarf.
+- percy.webp: blue hat, book.
+- grimblade.webp: blond, green. Inferred: the user named #8 as Greatblade and didn't correct #7.
+- greatblade.webp: silver hair, red.
+- Monsters: spinyBeetle.webp, eyegoreStatue.webp, rollobite.webp.
+- Librari, Festari and Melari use the generic Minish art (forestMinish.webp). The user said Librari is a generic Minish; Festari and Melari have no separate art.
