@@ -8,7 +8,7 @@ import { BOSSES, GEAR, ITEMS, TEMPLATES, WEAPONS } from '../data/registry';
 import {
   CHART_FOR, OCEAN_KING_TEMPLE, PAIRED_PH_REGIONS, PH_ROUTE_BOSSES, PH_TREASURES, PHANTOM_METALS, PHANTOM_ROUTE, SEA_CHARTS, SHIP_PART_IDS, SHIP_SETS, SPIRIT_GEMS,
 } from '../content/phantom';
-import { addPhantomPartner, phState, setLevel, spawnEnemyTemplate } from './phantom';
+import { addPhantomPartner, isPhantom, phState, setLevel, spawnEnemyTemplate } from './phantom';
 import { isVessel } from './naval';
 import type { RNG } from './rng';
 import { gainXp, makeHero } from './units';
@@ -69,7 +69,10 @@ export function inPhantomRoute(run: Run): boolean {
 
 /** The fixed boss of a route region: the first of its bosses not yet beaten. */
 export function phantomBossFor(run: Run, node: MapNode): BossDef | null {
-  if (run.campaign !== 'phantom' || node.type !== 'boss') return null;
+  if (run.campaign !== 'phantom') return null;
+  // The bottom of a Temple visit is guarded by a Phantom Vanguard (Bellum waits for the Final Temple).
+  if (node.type === 'dungeon' && node.world === OCEAN_KING_TEMPLE) return BOSSES.phantomVanguard ?? null;
+  if (node.type !== 'boss') return null;
   const list = (PH_ROUTE_BOSSES[node.world] ?? []).filter((id) => BOSSES[id]);
   if (!list.length) return null;
   const ph = phantomOf(run);
@@ -108,6 +111,12 @@ export function phantomBattleSetup(run: Run, b: Battle, rng: RNG) {
   if ((run.questItems ?? []).includes('phantomHourglass')) { st.hourglass = true; st.max = hourglassMax(run); st.energy = st.max; }
   st.levels = { leaf: spiritLevel(run, 'leaf'), neri: spiritLevel(run, 'neri'), ciela: spiritLevel(run, 'ciela') };
   if (b.world === OCEAN_KING_TEMPLE && run.dungeon) st.templeFloor = run.dungeon.floor;
+  // The Temple's Phantoms: few on the first floors, more the deeper you go.
+  if (b.world === OCEAN_KING_TEMPLE) {
+    const cap = run.act <= 1 ? 0 : Math.min(4, 1 + Math.floor((st.templeFloor ?? run.act) / 3));
+    let n = 0;
+    b.units = b.units.filter((u) => u.team !== 'enemy' || u.isBoss || !isPhantom(u) || ++n <= cap);
+  }
   // Ciela's level: the army's swords fire beams.
   if (st.levels.ciela && b.units.some((u) => u.team === 'player' && u.templateId === 'ciela')) for (const u of b.units) if (u.team === 'player') u.phCielaBeam = st.levels.ciela;
   // Neri at level 2: a barrier on everyone next to her at the start.

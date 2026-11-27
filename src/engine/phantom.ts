@@ -411,7 +411,7 @@ function phantomPatrol(b: Battle, u: Unit, events: PHEvent[]) {
   const st = b.ph;
   const spotted = foesOf(b, u).filter((e) => !e.hidden && unitDist(u, e) <= (has(u, 'relentlessChase') ? 6 : 3));
   const alarmed = (st?.alarm ?? 0) > 0;
-  if (alarmed || spotted.length) {
+  if (alarmed || spotted.length || !st?.temple) {
     u.ai = 'aggressive';
     if (has(u, 'relentlessChase')) buff(u, 'relentlessChase', 'Relentless Chase', 1, { mov: 4 });
     if (has(u, 'spectralWarp')) {
@@ -425,7 +425,8 @@ function phantomPatrol(b: Battle, u: Unit, events: PHEvent[]) {
     if (nearest) face(u, nearest);
     return;
   }
-  // Walk the route (two steps), facing the way it goes.
+  // Unaware: it keeps to its route and only strikes whoever is right next to it.
+  u.ai = 'stationary';
   if (!u.phRoute?.length) return;
   for (let step = 0; step < 2; step++) {
     const i = ((u.phRouteAt ?? 0) + 1) % u.phRoute.length;
@@ -721,6 +722,12 @@ function endPossession(u: Unit) {
   u.team = p.team;
   delete u.phPossessed;
   if (u.originalForm && u.templateId === 'bellumbeck') { const r = restoreForm(u); Object.assign(u, r); delete u.originalForm; delete u.artId; }
+}
+
+/** Rout maps: only Phantoms are left, and nobody in the army carries the Phantom Sword (they can't be beaten). */
+export function phOnlyPhantomsLeft(b: Battle, enemies: Unit[]): boolean {
+  if (!enemies.length || !enemies.every((e) => isPhantom(e) && !e.isBoss)) return false;
+  return !b.units.some((u) => u.team === 'player' && u.weapons.includes('phantomSword'));
 }
 
 /** True while a paired boss fight still has a boss standing. */

@@ -12,7 +12,7 @@ import { ssStartPhase, trialResult } from './skyward';
 import { wildStartPhase } from './wild';
 import { ogStartPhase } from './original';
 import { lgBossesRemain, lgStartPhase } from './legend';
-import { decoratePhantom, phantomBattleStart, phBossesRemain, phStartPhase } from './phantom';
+import { decoratePhantom, phantomBattleStart, phBossesRemain, phOnlyPhantomsLeft, phStartPhase } from './phantom';
 import { resolveSinking } from './naval';
 import { revertMask } from './terminaAbilities';
 import { roomFor } from './transform';
@@ -509,6 +509,8 @@ export function checkResult(b: Battle): Battle['result'] {
   if (b.objective.type === 'trial') return undefined;
   if (b.objective.type === 'escort' && b.fallen.some((u) => u.vip)) { b.retreat = true; return (b.result = 'lost'); }
   if (!enemies.length) return (b.result = 'won');
+  // Without the Phantom Sword the Phantoms can't be beaten: once only they are left, the floor is cleared.
+  if (b.objective.type === 'rout' && phOnlyPhantomsLeft(b, enemies)) return (b.result = 'won');
   if (b.objective.type === 'boss' && b.fallen.some((u) => u.isBoss) && !lgBossesRemain(b) && !phBossesRemain(b)) return (b.result = 'won');
   const o = b.objective;
   if (o.type === 'survive' && b.turn > (o.turns ?? 6)) return (b.result = 'won');

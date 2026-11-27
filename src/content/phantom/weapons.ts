@@ -53,7 +53,7 @@ export const WEAPONS: WeaponDef[] = [
   w('frostSpell', 'Frost', 'magic', 'uncommon', 8, 90, 0, 2, 1, 2, { uses: 45, element: 'ice', inflict: { status: 'freeze', chance: 15, turns: 1 }, desc: 'Freezing magic.' }),
   nat('yookClaws', 'Yook Claws', 10, 80, 5, 1, 1),
   nat('frozenBreathWeapon', 'Frozen Breath', 11, 85, 0, 1, 2, { element: 'ice', magicContact: true, inflict: { status: 'freeze', chance: 20, turns: 1 } }),
-  w('phantomBlade', "Phantom's Blade", 'sword', 'epic', 14, 80, 0, 10, 1, 1, { uses: 0, unique: true, desc: 'The great sword of a Temple Phantom.' }),
+  w('phantomBlade', "Phantom's Blade", 'sword', 'epic', 9, 80, 0, 10, 1, 1, { uses: 0, unique: true, desc: 'The great sword of a Temple Phantom.' }),
   nat('warpFlame', 'Warp Flame', 10, 85, 0, 1, 2, { magicContact: true, element: 'dark' }),
   nat('phantomEyeGaze', "Phantom Eye's Gaze", 4, 90, 0, 1, 2, { magicContact: true }),
   nat('geozardFire', 'Fire Breath', 10, 85, 0, 1, 2, { element: 'fire', magicContact: true, inflict: { status: 'burn', chance: 25, turns: 2 } }),

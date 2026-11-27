@@ -71,7 +71,7 @@ export const BOSSES: BossDef[] = [
     weapons: ['mutohsSceptre', 'cobbleRoyalSword'], skill: 'royalEngineering', abilities: ['cobbleConstruct'], stats: st(32, 7, 25, 18, 6, 10, 25, 15, 7, 4, 18, 60),
     quote: '"Who disturbs my rest? Prove yourself to my knights — and to me."', drops: ['cobbleRoyalSword'] }),
   b({ id: 'phantomVanguard', name: 'Phantom Vanguard', title: 'Temple Sentinel', home: 'mercayIsland', race: 'phantom', classId: 'phantomGuard', size: 1, glyph: 'PV',
-    weapons: ['phantomBlade'], skill: 'phantomArmorSkill', stats: st(56, 22, 0, 15, 7, 26, 15, 3, 25, 5, 40, 0),
+    weapons: ['phantomBlade'], skill: 'phantomArmorSkill', stats: st(42, 15, 0, 12, 7, 12, 10, 3, 20, 5, 40, 0),
     quote: '(A Phantom stops its patrol. Its eye slit turns toward you — and its shield comes up.)', drops: ['phantomHelmet'] }),
 ];
 
