@@ -412,6 +412,8 @@ const CRAFTS: { id: string; mat: string; n: number; rupees: number }[] = [
   { id: 'gleerokShellArmor', mat: 'gleerokScale', n: 1, rupees: 400 }, { id: 'mazaalsSacredCore', mat: 'mazaalMechanism', n: 1, rupees: 400 },
   { id: 'gyorgEyeCharm', mat: 'gyorgWingFragment', n: 1, rupees: 300 }, { id: 'vaatisEye', mat: 'vaatisDarkEssence', n: 2, rupees: 600 },
 ];
+/** Master Forgers (Smith, Melari, Biggoron and Zauz in the army): crafting 30% cheaper. */
+const craftCost = (run: Run, rupees: number) => Math.round(rupees * (['smith', 'melari', 'biggoron', 'zauz'].every((id) => run.roster.some((u) => u.templateId === id)) ? 0.7 : 1));
 const priceOf = (id: string) => WEAPONS[id]?.price ?? GEAR[id]?.price ?? 200;
 
 export function minishCampOptions(run: Run, where: 'camp' | 'shop' | 'smith'): MinishCampOption[] {
@@ -429,7 +431,7 @@ export function minishCampOptions(run: Run, where: 'camp' | 'shop' | 'smith'): M
   add('forge', { key: 'resize', label: 'Resize a weapon for a Micro unit — ₹200', desc: 'Magical resizing: the unit\'s equipped ordinary weapon becomes usable at Micro size.', ok: run.rupees >= 200,
     pick: (u) => !!u.micro && !!u.weapons[0] && !WEAPONS[u.weapons[0]]?.mc?.includes('micro') });
   if (q(run).includes('brokenPicoriBlade') || owns(run, 'picoriBlade')) add('forge', { key: 'reforge', label: 'Reforge the Picori Blade', desc: 'Melari\'s craft (he or a Mountain Minish Blacksmith must be in the army).', ok: run.roster.some((u) => ['melari', 'mountainMinishBlacksmith'].includes(u.templateId ?? '')) && !st.reforged });
-  for (const c of CRAFTS) add('forge', { key: `craft:${c.id}`, label: `Craft ${nameOf(c.id)} — ${c.n}× ${nameOf(c.mat)}, ₹${c.rupees}`, desc: 'Monster materials into gear.', ok: count(run, c.mat) >= c.n && run.rupees >= c.rupees });
+  for (const c of CRAFTS) add('forge', { key: `craft:${c.id}`, label: `Craft ${nameOf(c.id)} — ${c.n}× ${nameOf(c.mat)}, ₹${craftCost(run, c.rupees)}`, desc: 'Monster materials into gear.', ok: count(run, c.mat) >= c.n && run.rupees >= craftCost(run, c.rupees) });
   // ── Kinstone Exchange ──
   for (const k of KINSTONES) add('exchange', { key: `fuse:${k}`, label: `Fuse two ${nameOf(k)}s (${count(run, k)})`, desc: 'Find a fusion partner: treasure, hidden caves, rare monsters, recruits or a Great Fairy.', ok: count(run, k) >= 2 });
   add('exchange', { key: 'tradeKinstone', label: 'Trade 3 Mysterious Shells for a Kinstone piece', desc: 'Random colour.', ok: count(run, 'mysteriousShell') >= 3 });
@@ -454,7 +456,7 @@ export function doMinishCamp(run: Run, key: string, rng: RNG, uid?: string, arg?
   if (key.startsWith('fuse:')) return fuseKinstones(run, key.slice(5 + 'kinstone'.length).toLowerCase(), rng);
   if (key.startsWith('craft:')) {
     const c = CRAFTS.find((x) => x.id === key.slice(6))!;
-    take(run, c.mat, c.n); run.rupees -= c.rupees; run.convoy.push(c.id);
+    take(run, c.mat, c.n); run.rupees -= craftCost(run, c.rupees); run.convoy.push(c.id);
     return `Crafted: ${nameOf(c.id)}.`;
   }
   switch (key) {
