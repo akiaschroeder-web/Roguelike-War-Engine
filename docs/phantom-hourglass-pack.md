@@ -84,3 +84,6 @@ Bosses (11): Blaaz, Cyclok, Crayk, Cubus Sisters I–IV, Dongorongo, Eox, Bellum
 ## Art received
 Saved in `art_sources/phantom_hourglass/`.
 Batch 1 (15): linebeck, ciela (yellow fairy), oshus, oceanKing (white whale), leaf (red fairy), neri (blue fairy), jolene, joanne (mermaid), astrid, gongoron, zauz (hammer and tongs), eddo (goggles), kingMutoh (caped, gold crown), biggoronGoronIsland (bearded Goron), unidentified_cobbleKnight (tan, yellow helmet with a plume — one of Bremeur/Doylan/Max? asked).
+
+Batch 2 (15 new; King Mutoh re-sent as the same file): three Cobble knights by helmet colour — bremeur (yellow), doylan (green), max (red) — assignment provisional, asked the user; anouki (generic Anouki art, shared by all four Anouki units and provisionally the Anouki Chief); yook (shared by the three Yook units); phantom (blue), swiftPhantom (red), warpPhantom (green); phantomEye; geozard; blaaz (dark red robe); cyclok (octopus in a tornado); dongorongo; cubusSisters_group (all four sisters in one image — crop each into cubusSister1-4: red, blue, gold, green); crayk.
+Still needed: Eox, Bellum, Bellumbeck, S.S. Linebeck, Jolene's Ship, Bellum's Ghost Ship; optionally a separate Anouki Chief.
