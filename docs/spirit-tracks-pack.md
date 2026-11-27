@@ -114,7 +114,7 @@ Batch 1 (14): heroOfSpirits_logo (JPEG; has the Spirit Tracks logo and a waterma
 ### New ChuChus
 - Basic ChuChu (chuchuBasic.webp, blue), Electric ChuChu (chuchuElectric.png, yellow), Frost ChuChu (chuchuFrost.webp, white) and Flame ChuChu (chuchuFlame.png, orange).
 - The Skyward Sword alt arts are copied onto the new units: chuchuBlueSS to Basic, chuchuRedSS to Flame. The existing coloured units keep theirs.
-- The user said one image is a "frost ChuChu alt art". Assumed to be chuchuFrost.webp until confirmed.
+- Frost alt art confirmed: chuchuFrostAlt.webp (main art: chuchuFrost.webp).
 
 ### Spirit Tracks alt arts
 - bubbleST.webp goes to Bubble (bubbleMM), skulltulaST.png to Skulltula, bullboST.png to Bullbo (wildBullbo) and bulblinST.png to Bulblin.
