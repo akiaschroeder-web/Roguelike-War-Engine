@@ -25,5 +25,8 @@ import { CONVOS as PHANTOM2 } from './convos/phantom2';
 import { CONVOS as SPIRIT1 } from './convos/spirit1';
 import { CONVOS as SPIRIT2 } from './convos/spirit2';
 import { CONVOS as SPIRIT3 } from './convos/spirit3';
+import { CONVOS as MINISH1 } from './convos/minish1';
+import { CONVOS as MINISH2 } from './convos/minish2';
+import { CONVOS as MINISH3 } from './convos/minish3';
 
-export const WRITTEN: Record<string, ConvoSet> = { ...OOT, ...MM, ...WW, ...TP1, ...TP2, ...CROSS1, ...CROSS2, ...MONSTERS, ...SS1, ...SS2, ...SS3, ...SS4, ...WILD1, ...WILD2, ...WILD3, ...WILD4, ...ORIGINAL, ...AOL, ...LEGEND1, ...LEGEND2, ...PHANTOM1, ...PHANTOM2, ...SPIRIT1, ...SPIRIT2, ...SPIRIT3 };
+export const WRITTEN: Record<string, ConvoSet> = { ...OOT, ...MM, ...WW, ...TP1, ...TP2, ...CROSS1, ...CROSS2, ...MONSTERS, ...SS1, ...SS2, ...SS3, ...SS4, ...WILD1, ...WILD2, ...WILD3, ...WILD4, ...ORIGINAL, ...AOL, ...LEGEND1, ...LEGEND2, ...PHANTOM1, ...PHANTOM2, ...SPIRIT1, ...SPIRIT2, ...SPIRIT3, ...MINISH1, ...MINISH2, ...MINISH3 };
