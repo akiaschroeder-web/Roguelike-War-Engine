@@ -12,7 +12,7 @@ import { ssStartPhase, trialResult } from './skyward';
 import { wildStartPhase } from './wild';
 import { ogStartPhase } from './original';
 import { lgBossesRemain, lgStartPhase } from './legend';
-import { phBossesRemain, phStartPhase } from './phantom';
+import { decoratePhantom, phantomBattleStart, phBossesRemain, phStartPhase } from './phantom';
 import { resolveSinking } from './naval';
 import { revertMask } from './terminaAbilities';
 import { roomFor } from './transform';
@@ -306,6 +306,9 @@ function createNavalBattle(setup: BattleSetup): Battle {
   if (battle.bossTier === 0) for (const u of units) if (u.isBoss) u.ai = u.skills.includes('armoredBody') ? 'guard' : 'stationary';
   battle.night = setup.night;
   if (battle.tiles.includes('current')) battle.currentDir = battle.wind;
+  // Phantom Hourglass: sea spaces (Cyclone Warp Points, salvage) and steamship part sets.
+  decoratePhantom(battle, rng);
+  phantomBattleStart(battle);
   windWakerUpkeepAtStart(battle, rng);
   battle.rngState = rng.state;
   return battle;

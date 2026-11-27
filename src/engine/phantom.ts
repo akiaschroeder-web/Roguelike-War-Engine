@@ -57,8 +57,9 @@ export interface PHState {
   max: number;
   /** Fought inside the Temple of the Ocean King (life drain, Safe Zones, patrols). */
   temple: boolean;
-  /** Turn the Temple last drained the Hourglass. */
+  /** Turn the Temple last drained the Hourglass, and whether it was already empty then. */
   drainTurn?: number;
+  empty?: boolean;
   /** Phantom alarm: turns left. */
   alarm: number;
   /** Quest items found in battle (Phantom Essence, treasures, gems). */
@@ -341,9 +342,10 @@ export function phStartPhase(b: Battle, u: Unit, events: PHEvent[]) {
     const outside = (x: Unit) => !tilesOf(b, x).includes('sacredSafeZone');
     if (st.drainTurn !== b.turn) {
       st.drainTurn = b.turn;
-      if (st.hourglass && st.energy > 0 && b.units.some((x) => x.team === 'player' && !x.npc && outside(x))) st.energy--;
+      st.empty = !st.hourglass || st.energy <= 0;
+      if (!st.empty && b.units.some((x) => x.team === 'player' && !x.npc && outside(x))) st.energy--;
     }
-    if (outside(u) && (!st.hourglass || st.energy <= 0)) hurt(u, Math.ceil(u.stats.hp * 0.08), 'The Temple drains your life');
+    if (outside(u) && st.empty) hurt(u, Math.ceil(u.stats.hp * 0.08), 'The Temple drains your life');
   } else if (st && u.team === 'player' && st.drainTurn !== b.turn) st.drainTurn = b.turn;
   const tags = phTags(u);
   if (tags.has('regen10')) heal(0.1, "Ocean King's Blessing");
