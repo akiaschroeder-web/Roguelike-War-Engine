@@ -550,3 +550,25 @@ Small pixel sprites with provisional names, waiting on the user to confirm:
 - Bosses: Gleerok, Mazaal, both Gyorgs, the three Vaati forms, Big Green ChuChu, Big Blue ChuChu, Big Octorok.
 - Minibosses: Madderpillar, Spiny ChuChu, Silver Darknut, Red Darknut, Black Knight.
 - Fallback until art arrives: the Darknut variants can share existing Darknut art.
+
+### Batch 2
+- Sure:
+  - swiftbladeFirst.webp (the pale ghost)
+  - puffstool.webp (red mushroom)
+  - pesto.webp (flying bug)
+  - ballChainSoldier.png
+  - gyorgPair.webp: both Gyorgs in one image; crop the female (big, red) and the male (small, blue) apart.
+  - mazaal.webp
+  - gleerok.webp
+- Provisional, waiting on the user:
+  - q_greatblade: blond, green.
+  - q_grimblade: silver hair, red.
+  - q_spinyBeetle: blue and gold with white spikes.
+  - q_eyegore: grey, one eye.
+  - q_rollobite: brown and gold segmented shell.
+- The user resent the Librari and Melari guesses (identical to p13 and p12); the copies were dropped.
+- Still missing:
+  - Micro Link, Percy, Gregal
+  - Vaati Reborn, Vaati Transfigured, Vaati's Wrath
+  - Big Green ChuChu, Big Blue ChuChu, Big Octorok
+  - Madderpillar, Spiny ChuChu, Silver Darknut, Red Darknut, Black Knight
