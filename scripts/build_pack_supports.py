@@ -103,8 +103,23 @@ PACKS = {
         'Gohdan': 'gohdan', 'Eox': 'eox', 'Koloktos': 'koloktos', 'Gyorg (MM)': 'gyorg', 'Mountain Minish Blacksmith': 'mountainMinishBlacksmith',
         'Goron Warrior': 'goronWarrior', 'Town Minish Tinkerer': 'townMinishTinkerer', 'Steward Construct': 'stewardConstruct',
     }),
+    'fourswords': dict(doc='docs/four-swords-pack.md', start='## 12. Supports', end='### Groups', suffix='FourSwords', game='fourswords',
+        # The doc's "Zelda × each Maiden", "each Maiden × every other Maiden" and "Maidens × their Sages" rows, expanded
+        # (Forest → Saria, Fire → Darunia, Water → Ruto, Shadow → Impa, Light → Rauru, Spirit/Protection → Nabooru).
+        extra='Internal: Zelda×Green Maiden S · Zelda×Red Maiden S · Zelda×Blue Maiden S · Zelda×Purple Maiden S · Zelda×Yellow Maiden S · Zelda×White Maiden S · Green Maiden×Red Maiden A · Green Maiden×Blue Maiden A · Green Maiden×Purple Maiden A · Green Maiden×Yellow Maiden A · Green Maiden×White Maiden A · Red Maiden×Blue Maiden A · Red Maiden×Purple Maiden A · Red Maiden×Yellow Maiden A · Red Maiden×White Maiden A · Blue Maiden×Purple Maiden A · Blue Maiden×Yellow Maiden A · Blue Maiden×White Maiden A · Purple Maiden×Yellow Maiden A · Purple Maiden×White Maiden A · Yellow Maiden×White Maiden A\nCross-pack: Green Maiden×Saria S · Red Maiden×Darunia S · Blue Maiden×Ruto S · Purple Maiden×Impa S · Yellow Maiden×Rauru S · White Maiden×Nabooru S', names={
+        'Green Link': 'greenLink', 'Red Link': 'redLink', 'Blue Link': 'blueLink', 'Purple Link': 'purpleLink', 'Zelda': 'zeldaFS', 'Shadow Link': 'shadowLink',
+        'Vaati': 'vaatiHylian', 'Ganon': 'ganonFSA', 'Green Maiden': 'greenMaiden', 'Red Maiden': 'redMaiden', 'Blue Maiden': 'blueMaiden',
+        'Purple Maiden': 'purpleMaiden', 'Yellow Maiden': 'yellowMaiden', 'White Maiden': 'whiteMaiden', 'Hero of the Minish': 'heroOfMinish',
+        'Hero of Time': 'link', 'Hero of Twilight': 'heroOfTwilight', 'Darunia': 'darunia', 'Hero of the Wild': 'heroOfTheWild', 'Greatblade': 'greatblade',
+        'Hero of Winds': 'heroOfWinds', 'Tetra': 'tetra', 'Revali': 'revali', 'Ezlo': 'ezloMinish', 'Fi': 'fi', 'Nayru': 'nayru', 'Dark Link': 'darkLink',
+        'Midna': 'midnaImp', 'Skull Kid': 'skullKid', 'Zant': 'zant', 'Phantom Ganon': 'phantomGanon', 'Ganondorf (OoT)': 'ganondorf',
+        'Ganon (ALttP)': 'ganonLegend', 'Demise': 'demise', 'Cyclos': 'cyclos', 'Ghirahim': 'ghirahim', 'Saria': 'saria', 'Ruto': 'ruto', 'Impa': 'impa',
+        'Rauru': 'rauru', 'Nabooru': 'nabooru',
+    }),
 }
-SKIP = {'Epona', 'Four Giants', 'OOT Potion Shopkeeper', 'OoT Potion Shopkeeper', 'Cubus Sisters'}
+SKIP = {'Epona', 'Four Giants', 'OOT Potion Shopkeeper', 'OoT Potion Shopkeeper', 'Cubus Sisters',
+        # Four Swords: rows the pack entry expands into concrete pairs
+        'each Shrine Maiden', 'Each Maiden', 'every other Maiden', 'Shrine Maidens', 'their corresponding Sages'}
 CANON = {'ghirahimTrue': 'ghirahim', 'imprisonedArmed': 'imprisoned', 'imprisonedFlying': 'imprisoned', 'ganon': 'ganondorf', 'sheik': 'zelda',
          'lightDragon': 'zeldaWild', 'demonDragon': 'ganondorfWild', 'darkBeastGanonWild': 'calamityGanon', 'mineruConstruct': 'mineru'}
 FORMS = {'kingOfRedLions': 'kingDaphnes', 'lightDragon': 'zeldaWild'}

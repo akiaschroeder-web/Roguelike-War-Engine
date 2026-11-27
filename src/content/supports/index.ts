@@ -10,12 +10,13 @@ import { SUPPORT_REGISTRY_LEGEND } from './registryLegend';
 import { SUPPORT_REGISTRY_PHANTOM } from './registryPhantom';
 import { SUPPORT_REGISTRY_SPIRIT } from './registrySpirit';
 import { SUPPORT_REGISTRY_MINISH } from './registryMinish';
+import { SUPPORT_REGISTRY_FOURSWORDS } from './registryFourSwords';
 import { CONVOS as EXAMPLES } from './convos/examples';
 import { WRITTEN } from './written';
 
 export type { SupportPairDef };
 /** Every registered pairing, all packs. */
-export const SUPPORT_REGISTRY: SupportPairDef[] = [...BASE_REGISTRY, ...SUPPORT_REGISTRY_SS, ...SUPPORT_REGISTRY_WILD, ...SUPPORT_REGISTRY_ORIGINAL, ...SUPPORT_REGISTRY_AOL, ...SUPPORT_REGISTRY_LEGEND, ...SUPPORT_REGISTRY_PHANTOM, ...SUPPORT_REGISTRY_SPIRIT, ...SUPPORT_REGISTRY_MINISH];
+export const SUPPORT_REGISTRY: SupportPairDef[] = [...BASE_REGISTRY, ...SUPPORT_REGISTRY_SS, ...SUPPORT_REGISTRY_WILD, ...SUPPORT_REGISTRY_ORIGINAL, ...SUPPORT_REGISTRY_AOL, ...SUPPORT_REGISTRY_LEGEND, ...SUPPORT_REGISTRY_PHANTOM, ...SUPPORT_REGISTRY_SPIRIT, ...SUPPORT_REGISTRY_MINISH, ...SUPPORT_REGISTRY_FOURSWORDS];
 
 export type SupportLine = ['a' | 'b' | 'n', string];
 export type SupportRankKey = 'C' | 'B' | 'A' | 'S';
@@ -39,6 +40,8 @@ export const SUPPORT_CANON: Record<string, string> = {
   malladusZelda: 'malladus', coleBoss: 'cole', byrneBoss: 'byrne', bigBlinBoss: 'bigBlin',
   // The Minish Cap forms: Micro Link, Ezlo's cap, and Vaati's Minish and demonic shapes
   microLink: 'heroOfMinish', ezloCap: 'ezloMinish', vaatiMinish: 'vaatiHylian', vaatiReborn: 'vaatiHylian', vaatiTransfigured: 'vaatiHylian', vaatisWrath: 'vaatiHylian',
+  // Four Swords: the Wind Mage is Vaati too
+  vaatiWindMage: 'vaatiHylian',
   nayruPossessed: 'nayru', onoxDragon: 'onox', veranFairy: 'veran', veranTurtle: 'veran', veranSpider: 'veran', veranBee: 'veran',
   lightDragon: 'zeldaWild', demonDragon: 'ganondorfWild', darkBeastGanonWild: 'calamityGanon', mineruConstruct: 'mineru',
 };
@@ -160,6 +163,13 @@ export const GROUP_SUPPORTS: GroupSupport[] = [
   { id: 'herosCompanions', name: "Hero's Companions", members: ['ezloMinish', 'navi', 'tatl', 'ciela', 'fi'], text: 'Longer support-ability range and better MP recovery: members recover 3 MP a turn and gain +10 Hit and Avoid within 3 of a hero.' },
   { id: 'forbiddenAmbitionGroup', name: 'Forbidden Ambition', members: ['vaatiHylian', 'ghirahim', 'zant'], text: 'More dark magic damage (+20%).' },
   { id: 'ancientGuardians', name: 'Ancient Guardians', members: ['mazaal', 'gohdan', 'eox'], text: 'More construct defence (allied constructs take 15% less damage) and resistance to disabling effects (no Stun, Root or Freeze).' },
+  // Four Swords & Four Swords Adventures (docs/four-swords-pack.md section 12)
+  { id: 'fourfoldCourage', name: 'Fourfold Courage', members: ['greenLink', 'redLink', 'blueLink', 'purpleLink'], text: '+3 to all combat stats (STR, MAG, SKL, SPD, DEF, RES) within 4 of another Link.' },
+  { id: 'sacredFellowship', name: 'Sacred Fellowship', members: ['greenLink', 'redLink', 'blueLink', 'purpleLink', 'zeldaFS'], text: 'More healing (+15%) and sacred damage (+15% for the Links and Zelda).' },
+  { id: 'fivefoldReflection', name: 'Fivefold Reflection', members: ['greenLink', 'redLink', 'blueLink', 'purpleLink', 'shadowLink'], text: 'Stronger shadow duplicates (60% HP, 75% of STR, MAG and SKL) and Four Sword copies.' },
+  { id: 'sacredSealGroup', name: 'Sacred Seal', members: ['zeldaFS', 'greenMaiden', 'redMaiden', 'blueMaiden', 'purpleMaiden', 'yellowMaiden', 'whiteMaiden'], text: 'Much more resistance to dark magic: members take half dark damage.' },
+  { id: 'darkConspiracy', name: 'Dark Conspiracy', members: ['vaatiHylian', 'ganonFSA', 'shadowLink'], text: 'More dark damage (+15%) and concealment (members are Veiled at the start of each turn while no enemy is next to them).' },
+  { id: 'legacyOfFourSword', name: 'Legacy of the Four Sword', members: ['heroOfMinish', 'ezloMinish', 'greenLink', 'redLink', 'blueLink', 'purpleLink'], text: 'Four Sword abilities (Four Sword Split, the Links\' techniques and formation commands) cost 30% less.' },
   { id: 'demonKings', name: 'The Demon Kings', members: ['demise', 'ganondorf', 'ganondorfWW', 'ganondorfTP', 'ganondorfWild'], text: 'Dark damage +25%.' },
 ];
 
