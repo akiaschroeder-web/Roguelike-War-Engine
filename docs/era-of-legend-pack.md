@@ -110,3 +110,13 @@ User answers: the green figure with eye-discs (batch 4) is Fairy Veran → veran
 Batch 6 — Octorok alt arts (appended to octorok's variants): octorokALTTP, octorokWW, octorokSS, octorokBotW.
 Still needed: Kholdstare, Cukeman.
 Correction from the user: the batch-4 green figure with eye-discs is Cukeman (cukeman.webp); the batch-5 green winged pixel is Fairy Veran (veranFairy.webp). Only Kholdstare is still missing.
+Correction from the user: the black tendril mass with one blue eye (batch 2) is **Kholdstare** (kholdstare.png). Shadow Nightmare's main art is the shadows collage (shadowNightmareAll). All art received.
+
+## Implementation IDs (fixed; supports and content both use these)
+Campaign id: 'legend'. Pack folder: src/content/legend/. Source art: art_sources/era_of_legend/ (file stem = art id).
+- Link: heroOfLegend. Art switches with the equipped weapon: default heroOfLegend (sword + shield); heroOfLegendJump while wielding the Koholint Sword or wearing Roc's Feather/Roc's Cape; heroOfLegendRod with the Rod of Seasons; heroOfLegendHarp with the Harp of Ages. Rabbit status form art: bunnyLink.
+- Zelda: zeldaLegend, ART_VARIANTS [zeldaLegend, zeldaLegend2] (freely usable).
+- ganonLegend; linksUncle, sahasrahla, aginah, syrup, fluteBoy, agahnim; marin, tarin, bowwow, flyingRooster, windFish; din, nayru, nayruPossessed (form of nayru; Veran's possession), farore, ralph, impaOracle, queenAmbi, makuTreeHolodrum, makuTreeLabrynna, ricky, dimitri, moosh.
+- Monsters: antiFairy, buzzBlob, cukeman, subterror, smasher, wizzrobe (variants [wizzrobe, wizzrobeWW]), bossWizzrobe (variants [bossWizzrobe, bossWizzrobeWW]; stronger than wizzrobe, weaker than agahnim), meteoWizzrobe, thunderWizzrobe, blizzrobe (elemental Wizzrobes: fire, lightning, ice).
+- Bosses: helmasaurKing, arrghus, blind, kholdstare, vitreous, trinexx, genie, slimeEye, anglerFish, slimeEel, facade, evilEagle, hotHead, shadowNightmare (art shadowNightmareAll; form art nightmareGel, nightmareAgahnim, nightmareGanon, nightmareDethI, plus existing moldorm and lanmola art), medusaHead, onox, onoxDragon (form of onox), pumpkinHead, headThwomp, shadowHag, eyesoar, smog (source file smog_patternbg), octogon, ramrock, veran, veranFairy, veranTurtle, veranSpider, veranBee (forms of veran).
+- Alt art (appended): octorok += octorokALTTP, octorokWW, octorokSS, octorokBotW.
