@@ -276,6 +276,12 @@ p { margin: 8px 0; }
   transition: transform 0.07s linear; display: flex; flex-direction: column; align-items: center; justify-content: center;
 }
 .unit .hpbar { width: 70%; height: 4px; margin: 1px 0 0; }
+/* Micro units (size 0): small tokens in the corners of a shared tile, above normal units. */
+.unit.micro { z-index: 2; }
+.unit.micro .hpbar { width: 80%; height: 3px; }
+.unit.micro .token { box-shadow: 0 0 0 1px #fff8, 0 1px 3px #000a; }
+.unit.micro.riding .token { box-shadow: 0 0 0 2px var(--gold), 0 1px 3px #000a; }
+.unit.micro .stun-mark, .unit.micro .vip-mark, .unit.micro .mount-mark { transform: scale(0.6); }
 .unit.big .hpbar { height: 6px; width: 60%; }
 .unit.big .token { border-radius: 18%; }
 .unit.acted .token { filter: grayscale(0.85) brightness(0.65); }

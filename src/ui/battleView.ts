@@ -12,6 +12,7 @@ import { ogAfterMove } from '../engine/original';
 import { lgAfterMove } from '../engine/legend';
 import { hourglassLabel, phAfterMove } from '../engine/phantom';
 import { spAfterMove } from '../engine/spirit';
+import { isMicro, mcAfterMove, microSlot, unitsAt } from '../engine/micro';
 import { enemyUnload, windLabel } from '../engine/naval';
 import { sideQuestText } from '../engine/run';
 import { adjacentCaptives, checkResult, freeCaptive, mountToggleBlocked, moveUnit, toggleMount, objectiveText, spawnReinforcements, startPhase, type TurnStartEvent } from '../engine/battle';
@@ -65,6 +66,10 @@ const TERRAIN_GLYPH: Record<string, string> = {
   // Spirit Tracks
   railTrack: '═', railJunction: '╬', railSwitch: '🔀', trainStation: '🚉', railCrossing: '✕', brokenTrack: '╳', spiritTrack: '≡', sandPillar: '▮', sandBridge: '▭',
   whipPost: '┃', lightStatue: '🗿', tearOfLight: '💧', floorSpikes: '⩚', rollingBoulder: '●',
+  // The Minish Cap
+  minishPortal: '🍄', microPassage: '·', microBridge: '⌒', microTunnel: '◌', minishDoor: '🚪', giantGrass: '⺾', waterDroplet: '💧', floatingLeaf: '🍃',
+  internalWeakPoint: '◎', softEarthWall: '▦', pacciHole: '⊚', duplicationTile: '✦', windCrest: '🌬', giantMushroom: '🍄', minishVine: '⌇', spiderweb: '🕸', gustCurrent: '≋',
+  puddle: '∽', giantFlower: '🌸', fallenTwig: '⟋', bookshelf: '📚', minishTable: '⊤', tallGrass: '″', raindrop: '💧', ordinaryHouse: '🏠',
 };
 
 export class BattleView {
@@ -93,6 +98,8 @@ export class BattleView {
   private dungeon?: { floor: number; of: number };
   private tileSig = '';
   private suppressClick = false;
+  /** The unit last picked on a shared tile (Micro units cycle). */
+  private lastPick: string | null = null;
   private orderId: OrderId | null = null;
   private subPhase: 'allied' | 'environment' | null = null;
   private get phaseLabel(): string {
@@ -234,8 +241,13 @@ export class BattleView {
         this.els.units.appendChild(el);
         this.unitEls.set(u.uid, el);
       }
-      this.posStyle(el, u.x, u.y);
-      el.style.setProperty('--s', String(u.size));
+      // Micro units share tiles: small tokens in the tile's corners.
+      const micro = isMicro(u);
+      const slot = micro ? microSlot(this.b, u) : 0;
+      this.posStyle(el, u.x + (micro ? (slot % 2) * 0.5 : 0), u.y + (micro ? Math.floor(slot / 2) * 0.5 : 0));
+      el.style.setProperty('--s', micro ? '0.5' : String(u.size));
+      el.classList.toggle('micro', micro);
+      el.classList.toggle('riding', !!u.mcRide);
       el.classList.toggle('acted', u.team === 'player' && u.acted && this.b.phase === 'player');
       el.classList.toggle('selected', this.sel === u);
       el.classList.toggle('enemy', u.team === 'enemy');
@@ -243,7 +255,7 @@ export class BattleView {
       el.classList.toggle('captive', !!u.captive);
       el.classList.toggle('unseen', !isSeen(this.b, u));
       el.classList.toggle('big', u.size > 1);
-      el.innerHTML = `<div class="u-body">${token(u, Math.round(this.tile * u.size * (u.size > 1 ? 0.86 : 0.78)))}</div>${hpBar(u.hp, u.stats.hp)}${u.statuses.length ? `<i class="stun-mark">${u.statuses.map((st) => STATUS_INFO[st.kind].icon).join('')}</i>` : ''}${isMounted(u) && !CLASSES_MOUNTED(u) ? '<i class="mount-mark">🐎</i>' : ''}${u.vip ? '<i class="vip-mark">VIP</i>' : u.captive ? '<i class="vip-mark">⛓</i>' : ''}${u.cargo?.length ? `<i class="vip-mark" title="${esc(u.cargo.map((p) => p.name).join(', '))}">⛵${u.cargo.length}</i>` : ''}${u.damaged && Object.keys(u.damaged).length ? '<i class="mount-mark" title="Damaged">🔧</i>' : ''}`;
+      el.innerHTML = `<div class="u-body">${token(u, Math.round(this.tile * (micro ? 0.42 : u.size * (u.size > 1 ? 0.86 : 0.78))))}</div>${hpBar(u.hp, u.stats.hp)}${u.statuses.length ? `<i class="stun-mark">${u.statuses.map((st) => STATUS_INFO[st.kind].icon).join('')}</i>` : ''}${isMounted(u) && !CLASSES_MOUNTED(u) ? '<i class="mount-mark">🐎</i>' : ''}${u.vip ? '<i class="vip-mark">VIP</i>' : u.captive ? '<i class="vip-mark">⛓</i>' : ''}${u.cargo?.length ? `<i class="vip-mark" title="${esc(u.cargo.map((p) => p.name).join(', '))}">⛵${u.cargo.length}</i>` : ''}${u.damaged && Object.keys(u.damaged).length ? '<i class="mount-mark" title="Damaged">🔧</i>' : ''}`;
       el.classList.toggle('barrier', u.buffs.some((x) => x.barrier));
     }
   }
@@ -379,8 +391,10 @@ export class BattleView {
     } else if ((this.mode === 'magic' || this.mode === 'abilityTarget' || this.mode === 'abilityTile') && this.sel) {
       html = this.magicHtml(this.sel);
     } else {
-      const u = (this.hover ? unitAt(b, this.hover.x, this.hover.y) : undefined) ?? this.sel ?? undefined;
-      html = u ? unitDetails(u) : `<div class="dim small help">
+      const here = this.hover ? unitsAt(b, this.hover.x, this.hover.y) : [];
+      const u = (this.hover ? unitAt(b, this.hover.x, this.hover.y) ?? here[0] : undefined) ?? this.sel ?? undefined;
+      const micros = here.filter((x) => isMicro(x) && x !== u && isSeen(b, x));
+      html = u ? unitDetails(u) + (micros.length ? `<div class="dim small">🍀 Micro units here: ${micros.map((x) => `<b class="${x.team}">${esc(x.name)}</b>${x.mcRide ? ' (riding)' : ''}`).join(', ')} — tap again to cycle</div>` : '') : `<div class="dim small help">
         <p><b>Tap a unit</b> to select it. Blue shows where it can move; red shows what it can hit.</p>
         <p>Tap an <b>enemy</b> to see its threat range. Swords beat axes, axes beat lances, lances beat swords.</p>
         <p>Large units fill several squares. Lava burns anyone but Gorons and fliers.</p>
@@ -678,9 +692,40 @@ export class BattleView {
     this.mode = 'select';
   }
 
+  /** The unit a tap on this tile means: Micro units share tiles, so prefer the one the current mode can use. */
+  private pickAt(p: Pos): Unit | undefined {
+    const all = unitsAt(this.b, p.x, p.y);
+    if (all.length <= 1) return all[0];
+    const normal = all.find((x) => !isMicro(x));
+    const micros = all.filter(isMicro);
+    if (this.mode === 'attack' || this.mode === 'heal') {
+      const ok = this.validTargets();
+      const cands = all.filter((x) => ok.includes(x));
+      if (this.pending && cands.includes(this.pending)) return this.pending;
+      return cands[0] ?? normal;
+    }
+    if (this.mode === 'abilityTarget' && this.sel && this.abilityId) {
+      const ok = abilityTargets(this.b, this.sel, ABILITIES[this.abilityId]);
+      return all.find((x) => ok.includes(x)) ?? normal;
+    }
+    if (this.mode === 'orderTarget' && this.orderId) return all.find((x) => orderTargets(this.b, this.orderId!).includes(x)) ?? normal;
+    // The selected unit's own tile means "stay here"; otherwise tapping a shared tile again (after
+    // cancelling) cycles through the player's ready units on it.
+    if ((this.mode === 'select' || this.mode === 'canto') && this.sel && all.includes(this.sel)) return this.sel;
+    const ready = all.filter((x) => x.team === 'player' && !x.acted && !x.npc);
+    if (ready.length && this.mode === 'idle') {
+      const i = ready.findIndex((x) => x.uid === this.lastPick);
+      const pick = ready[(i + 1) % ready.length];
+      this.lastPick = pick.uid;
+      return pick;
+    }
+    if (ready.length) return ready[0];
+    return normal ?? micros[0];
+  }
+
   private async clickTile(p: Pos) {
     const { b } = this;
-    const u = unitAt(b, p.x, p.y);
+    const u = this.pickAt(p);
     this.hover = p;
 
     if (this.mode === 'idle') {
@@ -695,7 +740,10 @@ export class BattleView {
 
     if ((this.mode === 'select' || this.mode === 'canto') && this.sel && this.moves) {
       const a = this.anchorFor(p);
-      if (a !== null && (!u || u === this.sel || this.mode === 'canto')) {
+      // A Micro unit can stop on occupied tiles (up to four Micro units share a space); normal units can
+      // stop on tiles that hold only Micro units.
+      const blocker = isMicro(this.sel) ? undefined : unitAt(b, p.x, p.y);
+      if (a !== null && (!blocker || blocker === this.sel || this.mode === 'canto') && (!u || u === this.sel || isMicro(this.sel) || isMicro(u) || this.mode === 'canto')) {
         await this.walk(this.sel, this.moves.path(a));
         this.afterMove(this.sel);
         if (this.mode === 'canto') { await this.finishUnit(this.sel); return; }
@@ -987,6 +1035,9 @@ export class BattleView {
     if (lg) { sfx('secret'); this.addLog(`🍃 ${esc(lg)}`); }
     const ph = phAfterMove(this.b, u); // Phantom Hourglass spaces: Whirlwinds, Phantom Alarms; facing
     if (ph) { sfx('secret'); this.addLog(`⌛ ${esc(ph)}`); }
+    const mc = mcAfterMove(this.b, u); // Micro units: riders follow their host; Giant Grass, droplets
+    if (mc) this.addLog(`🍀 ${esc(mc)}`);
+    if (this.b.units.some((x) => x.mcRide)) this.renderUnits();
     const sp = spAfterMove(this.b, u); // Spirit Tracks spaces: Tears of Light, floor spikes
     if (sp) { sfx('secret'); this.addLog(`🚂 ${esc(sp)}`); }
     if (pressInversion(this.b, u)) { sfx('secret'); this.addLog('🔄 The Inversion Switch flips the walls and floors!'); }
@@ -1337,6 +1388,7 @@ export class BattleView {
       if (plan.path.length > 1) await this.walk(a, plan.path);
       else moveUnit(a, plan.dest.x, plan.dest.y);
       syncPosition(b, a);
+      mcAfterMove(b, a);
       const target = plan.action ? b.units.find((u) => u.uid === plan.action!.target) : undefined;
       if (target && plan.action!.type === 'attack') {
         const weapon = attackWeapons(a, unitDist(a, target)).find((w) => w.id === plan.action!.weaponId)?.id ?? attackWeapons(a, unitDist(a, target))[0]?.id;
@@ -1411,6 +1463,7 @@ export class BattleView {
         lgAfterMove(b, e);
         phAfterMove(b, e);
         spAfterMove(b, e);
+        mcAfterMove(b, e);
         const trap = triggerTraps(b, e);
         if (trap) { sfx('bomb'); this.float(e, `TRAP −${trap}`, 'dmg'); this.addLog(`💥 ${esc(e.name)} sets off your Death Armos Core (−${trap})!`); }
       }
@@ -1552,6 +1605,32 @@ const WW_TERRAIN_NOTES: Record<string, string> = {
   tearOfLight: 'A Tear of Light: step on it and your weapon is sacred for 3 turns (it beats Phantom armor)',
   floorSpikes: 'A Floor Spike Trap: cuts anyone who steps on or stands on it (8% HP); a Railway Switch retracts it',
   rollingBoulder: 'A Rolling Boulder (obstacle): it rolls 2 spaces every round, crushing whoever is in the way',
+  // The Minish Cap (normal units / Micro units)
+  minishPortal: 'A Minish Portal: shrink to Micro size or grow back here',
+  microPassage: 'A Micro Passage: Micro units only',
+  microBridge: 'A Micro Bridge: a tiny crossing over water that can\'t hold ordinary units',
+  microTunnel: 'A Micro Tunnel: Micro units crawl under the terrain to any other tunnel (free)',
+  minishDoor: 'A Minish Door: Micro units enter the hidden chamber (heal 10%, +20 Avoid, +2 DEF); a wall to everyone else',
+  giantGrass: 'Giant Grass: hides Micro units (Veiled, +20 Avoid); doesn\'t block ordinary units',
+  waterDroplet: 'A Water Droplet: a hazard to Micro units (10% HP), harmless to normal ones',
+  floatingLeaf: 'A Floating Leaf: a raft for Micro units',
+  internalWeakPoint: 'An Internal Weak Point: Micro units here strike larger enemies in full',
+  softEarthWall: 'A Soft Earth Wall: dig through it with Mole Mitts',
+  pacciHole: 'A Pacci Hole: with the Cane of Pacci, launch 2–4 spaces',
+  duplicationTile: 'A Duplication Tile: Four Sword Split costs nothing here',
+  windCrest: 'A Wind Crest: with the Ocarina of Wind, travel to any other crest',
+  giantMushroom: 'A Giant Mushroom: launches Micro units 2–4 spaces',
+  minishVine: 'A Minish Vine: Micro units climb the high ground (cost 1); a cliff to everyone else',
+  spiderweb: 'A Spiderweb: Micro units are stuck (cost 4); fire burns it away',
+  gustCurrent: 'A Gust Current: Micro units here are carried 2 spaces by the wind each turn',
+  puddle: 'A Puddle: harmless to normal units; deep water at Micro size',
+  giantFlower: 'A Flower: decoration; an elevated platform for Micro units (+15 Avoid, +10 Hit)',
+  fallenTwig: 'A Fallen Twig: harmless; an obstacle at Micro size',
+  bookshelf: 'A Bookshelf: a wall; a climbable structure for Micro units (+20 Avoid)',
+  minishTable: 'A Table: an obstacle; an elevated battlefield for Micro units (+15 Avoid, +10 Hit)',
+  tallGrass: 'Tall Grass: concealment (+15 Avoid); a dense forest at Micro size (cost 2, +20 Avoid)',
+  raindrop: 'A Raindrop: harmless; a falling hazard to Micro units (10% HP)',
+  ordinaryHouse: 'A House: a building; a whole dungeon to Micro units (heal 10%, +20 Avoid)',
 };
 
 /** Abilities shown in the Abilities menu (forecast-only modifiers are excluded). */

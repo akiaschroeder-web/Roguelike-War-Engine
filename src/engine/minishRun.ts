@@ -4,12 +4,13 @@
 // Blade Brothers' dojo, Micro dungeons, and the camp facilities (Minish Settlement, Minish Forge,
 // Kinstone Exchange, Swordmaster Dojo, Figurine Gallery, Picolyte Garden).
 
-import { ABILITIES, BOSSES, GEAR, ITEMS, QUEST_ITEMS, TEMPLATE_LIST, TEMPLATES, WEAPONS } from '../data/registry';
+import { ABILITIES, BOSSES, ENEMIES, GEAR, ITEMS, QUEST_ITEMS, TEMPLATE_LIST, TEMPLATES, WEAPONS } from '../data/registry';
 import {
   DOJO_TECHNIQUES, ELEMENT_OF, ELEMENTS, KINSTONES, MC_ROUTE_BOSSES, MELARI_FORGE, MICRO_DUNGEON_REGIONS, MINISH_ROUTE, PAIRED_MC_REGIONS, PICOLYTES,
 } from '../content/minish';
 import { anchorCost, footprint, tilesInRange, unitAt } from './grid';
 import { mnState, startMicroDungeon } from './minish';
+import { microFits } from './micro';
 import type { RNG } from './rng';
 import { INF } from './rules';
 import { armyOf } from './army';
@@ -90,7 +91,15 @@ export function minishBattleSetup(run: Run, b: Battle, rng: RNG) {
   if (b.nodeType === 'dungeon' && MICRO_DUNGEON_REGIONS.includes(b.world) && !b.naval) startMicroDungeon(b, rng);
   if (b.nodeType !== 'boss') return;
   const main = b.units.find((u) => u.isBoss && u.team === 'enemy');
-  if (!main || !PAIRED_MC_REGIONS.includes(b.world)) return;
+  if (!main) return;
+  // Bosses bring their retinue.
+  for (const id of ESCORTS[main.bossId ?? ''] ?? []) spawnNear(b, id, main, Math.max(1, main.level - 1), rng);
+  // The Madderpillar comes in segments: every one of them must fall.
+  if (main.bossId === 'madderpillar') {
+    for (let i = 0; i < SEGMENTS; i++) { const s = spawnNear(b, 'madderpillar', main, main.level, rng); if (s) { s.isBoss = true; s.name = `${s.name} (segment)`; s.ai = 'aggressive'; } }
+    mnState(b).allBosses = true;
+  }
+  if (!PAIRED_MC_REGIONS.includes(b.world)) return;
   for (const id of (MC_ROUTE_BOSSES[b.world] ?? []).filter((x) => x !== main.bossId)) {
     const def = BOSSES[id];
     if (!def) continue;
@@ -101,6 +110,24 @@ export function minishBattleSetup(run: Run, b: Battle, rng: RNG) {
       if (spot) { Object.assign(e, { x: spot.x, y: spot.y, ai: main.ai }); b.units.push(e); mnState(b).allBosses = true; break; }
     }
   }
+}
+
+/** Each boss's retinue (returning monsters and the pack's own). */
+const ESCORTS: Record<string, string[]> = {
+  spinyChuchu: ['chuchuGreen'], madderpillar: ['pesto', 'pesto', 'puffstool', 'rollobite'], bigGreenChuchu: ['chuchuGreen', 'puffstool'],
+  gleerok: ['rollobite', 'spinyBeetle'], silverDarknut: ['eyegoreStatue'], mazaal: ['eyegoreStatue'], redDarknut: ['gibdo'], vaatiReborn: ['ballChainSoldier', 'blackKnight'],
+};
+const SEGMENTS = 3;
+function spawnNear(b: Battle, id: string, near: Unit, level: number, rng: RNG): Unit | undefined {
+  const a = ENEMIES[id] ?? BOSSES[id];
+  if (!a) return undefined;
+  const e = makeEnemy(a, b.world, level, `mn${b.uidCounter++}`, rng);
+  if (BOSSES[id]) e.isBoss = false;
+  for (let d = 1; d <= 6; d++) {
+    const spot = tilesInRange(b, near, d, d, near.size).find((p) => anchorCost(b, e, p.x, p.y) < INF && (e.micro ? microFits(b, e, p.x, p.y) : footprint(p.x, p.y, e.size).every((f) => !unitAt(b, f.x, f.y))));
+    if (spot) { Object.assign(e, { x: spot.x, y: spot.y, team: 'enemy', ai: 'aggressive' }); b.units.push(e); return e; }
+  }
+  return undefined;
 }
 
 // ───────────────────────── The Picori Blade ─────────────────────────
