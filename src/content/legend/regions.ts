@@ -32,7 +32,7 @@ export const KOHOLINT = new Set(DREAM_OF_KOHOLINT);
 
 /** Battlefield spaces placed in each region. */
 export const LEGEND_FEATURES: Record<string, Partial<Record<Terrain, number>>> = {
-  hyruleCastleLttP: { crystalSwitch: 1, crystalBarrier: 3, woodenStake: 1, lightPortal: 1 },
+  hyruleCastleLttP: { crystalSwitch: 1, crystalBarrier: 3, woodenStake: 1, darkPortal: 1 },
   easternPalace: { crystalSwitch: 1, crystalBarrier: 2, woodenStake: 2, invisibleFloor: 1 },
   desertPalace: { woodenStake: 2, invisibleFloor: 2, crystalSwitch: 1, crystalBarrier: 2 },
   deathMountainLttP: { darkPortal: 1, crystalSwitch: 1, crystalBarrier: 3, woodenStake: 1 },

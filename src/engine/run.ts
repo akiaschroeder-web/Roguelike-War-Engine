@@ -393,7 +393,7 @@ export function startBattle(run: RunWithEvent, uids: string[]): void {
     });
     run.battle.bonus = run.bonus;
     run.battle.night = run.clock ? clockLabel(run).night : run.campaign === 'greatSea' ? !!node.night : run.campaign === 'skyward' ? !!run.battle.ss?.night : true;
-    run.battle.statusBonus = run.bonus === 'lingeringStatus' ? 1 : 0;
+    run.battle.statusBonus = run.bonus === 'lingeringStatus' || run.bonus === 'sorceressOfShadows' ? 1 : 0;
     run.battle.reserves = run.roster.filter((u) => !chosen.includes(u)).map((u) => ({ ...prepareForBattle(u), x: -1, y: -1 }));
     applyArmyBuffs(run, run.battle);
     wildBattleSetup(run, run.battle);

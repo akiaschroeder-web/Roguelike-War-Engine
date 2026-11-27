@@ -51,7 +51,7 @@ export const WEAPONS: WeaponDef[] = [
   w('unclesSword', "Uncle's Sword", 'sword', 'rare', 9, 90, 5, 5, 1, 1, sig({ uses: 0, lg: ['guardian'], desc: '+3 damage while an ally stands next to the wielder.' })),
   w('sahasrahlasStaff', "Sahasrahla's Staff", 'magic', 'legendary', 12, 90, 0, 3, 1, 3, sig({ uses: 0, lg: ['spellThrift', 'spellRange'], desc: 'Spells cost 20% less MP; magic reaches 1 space further.' })),
   w('syrupsBrewingStaff', "Syrup's Brewing Staff", 'staff', 'epic', 0, 100, 0, 3, 1, 2, sig({ uses: 0, healBonus: 1.3, lg: ['potionBoost'], desc: 'Potions brewed or used by the holder are 30% stronger.' })),
-  w('agahnimsScepter', "Agahnim's Scepter", 'magic', 'legendary', 15, 90, 5, 3, 1, 3, sig({ uses: 0, element: 'lightning', lg: ['copyShot'], desc: 'Its bolts can split: 30% chance a secondary copy strikes another enemy near the target for half damage.' })),
+  w('agahnimsScepter', "Agahnim's Scepter", 'magic', 'legendary', 13, 90, 5, 3, 1, 3, sig({ uses: 0, element: 'lightning', lg: ['copyShot'], desc: 'Its bolts can split: 30% chance a secondary copy strikes another enemy near the target for half damage.' })),
   w('marinsHarp', "Marin's Harp", 'instrument', 'epic', 0, 100, 0, 2, 1, 1, sig({ uses: 0, songDiscount: 2, lg: ['musicHeal'], desc: 'Musical healing +50%.' })),
   w('ralphsSword', "Ralph's Sword", 'sword', 'epic', 13, 90, 10, 5, 1, 1, sig({ uses: 0, lg: ['giantKiller'], desc: '+25% damage against higher-level enemies.' })),
   w('onoxsFlail', "Onox's Flail", 'hammer', 'mythic', 28, 80, 5, 12, 1, 2, sig({ uses: 0, splash: 'adjacent', armorBreaker: 1.5, lg: ['heavy'], pierce: 0.3, desc: 'A wide, armor-breaking swing (half damage to the target\'s neighbours); ignores 30% DEF.' })),

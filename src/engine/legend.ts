@@ -162,7 +162,7 @@ export function lgTileCost(b: Battle, u: Unit, t: Terrain, c: number): number {
   }
   if (WATERY.includes(t) && has(u, 'riverTraveler')) c = 1;
   if (SAND.includes(t) && (tag(u, 'quicksand') || has(u, 'desertWisdom') || b.units.some((a) => a.team === u.team && has(a, 'desertWisdom') && unitDist(u, a) <= 2))) c = 1;
-  if (t === 'mountain' && tag(u, 'ricky')) c = Math.min(c, 2);
+  if (t === 'mountain' && u.gear?.mount === 'rickysFlute' && u.mounted !== false) c = Math.min(c, 2);
   return c;
 }
 
@@ -372,14 +372,15 @@ export function legendBattleStart(b: Battle) {
     if (has(u, 'protectiveArrgi')) u.lgGuards = 6;
     if (has(u, 'watchingEyes') || has(u, 'orbitingEyes')) u.lgGuards = 4;
     if (has(u, 'frozenPrison') || has(u, 'magicBottle') || has(u, 'headlessSpiritSkill')) { u.lgShell = true; u.lgShellHits = 0; }
-    if (has(u, 'nightmareTransformation')) setNightmareForm(u, 0);
+    if (has(u, 'nightmareTransformation') && u.team === 'enemy') setNightmareForm(u, 0);
     if (has(u, 'undergroundAmbush') && u.team === 'enemy') { u.hidden = true; u.lgUnder = true; }
     if (has(u, 'shadowDivision')) for (let i = 0; i < 2; i++) spawnTemp(b, 'hagShadow', u, u.team, u.level, { illusionOf: u.uid });
   }
   // Agahnim's illusions: copies of him at a third of his strength (they vanish when he falls).
   for (const a of b.units.filter((x) => has(x, 'falseMagicSkill') && !x.summoned && !x.illusionOf)) {
     let n = 0;
-    for (let i = 0; i < 2; i++) {
+    // Early on (the first region) only one illusion stands beside him.
+    for (let i = 0; i < (b.bossTier === 0 && a.team === 'enemy' ? 1 : 2); i++) {
       const src = ENEMIES.wizzrobe ?? TEMP.hagShadow;
       const c = spawnTemp(b, src.id, a, a.team, a.level, { illusionOf: a.uid });
       if (!c) continue;
@@ -411,7 +412,7 @@ export function addPartnerBoss(b: Battle, bossId: string, rng: RNG): Unit | null
   const e = makeEnemy(def, b.world, main.level, `lg${b.uidCounter++}`, rng, { boss: true });
   for (let d = 1; d <= 5; d++) {
     const spot = tilesInRange(b, main, d, d, main.size).find((p) => free(b, e, p.x, p.y));
-    if (spot) { Object.assign(e, { x: spot.x, y: spot.y, team: 'enemy' }); b.units.push(e); lgState(b).allBosses = true; legendBattleStartUnit(b, e); return e; }
+    if (spot) { Object.assign(e, { x: spot.x, y: spot.y, team: 'enemy', ai: main.ai }); b.units.push(e); lgState(b).allBosses = true; legendBattleStartUnit(b, e); return e; }
   }
   return null;
 }
@@ -421,7 +422,7 @@ function legendBattleStartUnit(b: Battle, u: Unit) {
   if (has(u, 'protectiveArrgi')) u.lgGuards = 6;
   if (has(u, 'watchingEyes') || has(u, 'orbitingEyes')) u.lgGuards = 4;
   if (has(u, 'frozenPrison') || has(u, 'magicBottle') || has(u, 'headlessSpiritSkill')) { u.lgShell = true; u.lgShellHits = 0; }
-  if (has(u, 'nightmareTransformation')) setNightmareForm(u, 0);
+  if (has(u, 'nightmareTransformation') && u.team === 'enemy') setNightmareForm(u, 0);
   void b;
 }
 
@@ -722,7 +723,7 @@ export function lgAfterHit(b: Battle, by: Unit, target: Unit, dmg: number, w: We
   }
   if ((has(target, 'magicBottle') || has(target, 'headlessSpiritSkill')) && target.lgShell) {
     target.lgShellHits = (target.lgShellHits ?? 0) + 1;
-    if (heavy || lifts(by) || target.lgShellHits >= 3) { target.lgShell = false; lines.push(has(target, 'magicBottle') ? `${target.name}'s bottle shatters!` : `${target.name}'s pumpkin head flies off!`); }
+    if (heavy || lifts(by) || target.lgShellHits >= 2) { target.lgShell = false; lines.push(has(target, 'magicBottle') ? `${target.name}'s bottle shatters!` : `${target.name}'s pumpkin head flies off!`); }
   }
   if (has(target, 'detachedHeads') && target.hp > 0) {
     const want = target.hp < target.stats.hp / 3 ? 2 : target.hp < (target.stats.hp * 2) / 3 ? 1 : 0;
@@ -767,7 +768,7 @@ export function lgAfterHit(b: Battle, by: Unit, target: Unit, dmg: number, w: We
 
 /** Instead of falling: the next form rises (Shadow Nightmare, Veran, Possessed Nayru, Onox). */
 export function lgSaveFromDeath(b: Battle, u: Unit): { line: string; heal: number } | null {
-  if (has(u, 'nightmareTransformation') && (u.lgForm ?? 0) < NIGHTMARE_FORMS.length - 1) {
+  if (has(u, 'nightmareTransformation') && u.team === 'enemy' && (u.lgForm ?? 0) < NIGHTMARE_FORMS.length - 1) {
     const i = (u.lgForm ?? 0) + 1;
     setNightmareForm(u, i);
     return { line: `The shadow reforms: ${NIGHTMARE_FORMS[i].name}!`, heal: Math.ceil(u.stats.hp * 0.45) };
@@ -864,6 +865,7 @@ const MUSICAL = new Set(['balladOfTheWindFish', 'forestSong', 'songOfAges', 'bal
 
 /** Cost multiplier: Legendary Adaptability and the Hero of Legend's army; Sahasrahla's knowledge and staff; the Book of Mudora. */
 export function lgCostMult(b: Battle | undefined, u: Unit, def: AbilityDef): number {
+  if (!b) return 1; // abilityCost calls itself without a battle for the base cost
   let m = 1;
   const toolGranted = !!(def.grantedBy?.gear?.some((g) => Object.values(u.gear ?? {}).includes(g)) || def.grantedBy?.weapons?.some((w) => u.weapons.includes(w)));
   if (toolGranted && (has(u, 'legendaryAdaptability') || (u.team === 'player' && b?.bonus === 'legendaryTools'))) m *= 0.8;

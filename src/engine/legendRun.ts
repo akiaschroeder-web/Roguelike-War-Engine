@@ -102,7 +102,8 @@ export function legendBattleSetup(run: Run, b: Battle, rng: RNG) {
   st.nature = Math.min(8, count(run, 'essenceOfNature'));
   st.time = Math.min(8, count(run, 'essenceOfTime'));
   for (const u of b.units) if (u.team === 'player' && st.victory && Object.values(u.gear ?? {}).includes('victoryRing')) u.buffs.push({ id: 'victoryRing', name: 'Victory Ring', turns: 99, stats: { str: 3, skl: 3 } });
-  if (run.campaign !== 'legend' || b.nodeType !== 'boss' || !PAIRED_BOSS_REGIONS.includes(b.world)) return;
+  // The first region's boss fights alone; later ones bring their partner (the Room of Rites always does).
+  if (run.campaign !== 'legend' || b.nodeType !== 'boss' || !PAIRED_BOSS_REGIONS.includes(b.world) || ((b.bossTier ?? 0) === 0 && b.world !== ROOM_OF_RITES)) return;
   const main = b.units.find((u) => u.isBoss && u.team === 'enemy');
   const list = (ROUTE_BOSSES[b.world] ?? []).filter((id) => BOSSES[id] && id !== main?.bossId);
   const partners = b.world === ROOM_OF_RITES ? list : [list.find((id) => !lg.beaten.includes(id)) ?? list[0]].filter(Boolean);

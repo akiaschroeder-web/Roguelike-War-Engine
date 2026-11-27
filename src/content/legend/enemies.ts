@@ -103,7 +103,7 @@ export const BOSSES: BossDef[] = [
     weapons: ['veransShadowBolt'], skill: 'possessedVessel', abilities: ['timeWarpCurse'], stats: st(30, 4, 30, 16, 10, 6, 26, 6, 5, 5, 16, 70),
     quote: '(Nayru smiles, and it isn\'t her smile.) "Strike me, hero. You\'ll only hurt your precious Oracle."', drops: ['oraclesJewelry'] }),
   b({ id: 'agahnimBoss', name: 'Agahnim', title: 'Dark Wizard', home: 'hyruleCastleLttP', race: 'hylian', classId: 'darkWizard', size: 1, glyph: 'AH',
-    weapons: ['agahnimsScepter', 'energyBall'], skill: 'falseMagicSkill', abilities: ['energyBallVolley', 'lightningSpread', 'illusoryTeleport'], stats: st(48, 6, 30, 19, 13, 9, 24, 7, 7, 6, 22, 70),
+    weapons: ['agahnimsScepter', 'energyBall'], skill: 'falseMagicSkill', abilities: ['energyBallVolley', 'lightningSpread', 'illusoryTeleport'], stats: st(44, 6, 26, 18, 12, 8, 22, 7, 7, 6, 22, 65),
     quote: '"The Seven Maidens are gone. Only the princess remains — and you, boy, are too late."', drops: ['agahnimsRobes', 'agahnimsScepter'] }),
   b({ id: 'ganonLegendBoss', name: 'Ganon', title: 'King of Darkness', home: 'ganonsTowerLttP', race: 'demon', classId: 'tridentWarlord', size: 3, glyph: 'GK',
     weapons: ['ganonsTridentLegend', 'blazingBats'], skill: 'powerOfTheTriforce', abilities: ['darkTeleportation', 'darknessShroud', 'demonicRestoration'], stats: st(95, 29, 29, 18, 12, 24, 25, 5, 33, 6, 48, 70),
