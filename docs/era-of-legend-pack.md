@@ -105,3 +105,7 @@ Still needed: Kholdstare, Cukeman, Subterror, Smasher, Wizzrobe (Boss Wizzrobe c
 
 Batch 5 (15): bunnyLink (pixel Dark World rabbit — art for Link's rabbit status form), veranFairy (green pixel), veranTurtle, veranBee, veranSpider (purple pixels), onoxDragon (Dark Dragon Onox), wizzrobe (ALttP — main art), wizzrobeWW (alt for Wizzrobe), bossWizzrobe (MM — main art), bossWizzrobeWW (alt for Boss Wizzrobe), meteoWizzrobe, thunderWizzrobe, blizzrobe (planned as three elemental Wizzrobe units: fire, lightning, ice), unidentified_bluePixel (blue hunched pixel creature — Smasher?), unidentified_blackShellPixel (black dome with an antenna and an eye — Subterror?). Asked the user to confirm the two.
 Still needed: Kholdstare, Cukeman (unless the earlier unidentified_greenPixel is one of these).
+
+User answers: the green figure with eye-discs (batch 4) is Fairy Veran → veranFairy.webp. The black dome with an antenna is Smasher → smasher.webp. The blue hunched creature is Subterror → subterror.webp. The batch-5 green winged pixel is now unidentified_greenWingedPixel (asked).
+Batch 6 — Octorok alt arts (appended to octorok's variants): octorokALTTP, octorokWW, octorokSS, octorokBotW.
+Still needed: Kholdstare, Cukeman.
