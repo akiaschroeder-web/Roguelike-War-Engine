@@ -68,3 +68,17 @@ Named (16): Link, Zelda, Phantom Zelda, Alfonzo, Elder Niko, Cole, Byrne, Anjean
 ## Art received
 Saved in `art_sources/spirit_tracks/`.
 Batch 1 (14): heroOfSpirits_logo (JPEG; has the Spirit Tracks logo and a watermark beside him — crop both out), zeldaST, spiritZelda (pale spirit form), alfonzo, elderNiko, anjean, byrne, cole (top hat), teacher (glasses, moustache), linebeck3, ferrus (camera), carben (light-blue Lokomo with a flute — provisional), steem (white Lokomo with a stringed instrument — provisional), gage (green Lokomo with a cello).
+
+## Art batch 2 notes (provisional ids)
+- embrose.webp — red-haired Lokomo with drums (Fire).
+- rael.webp — tan Lokomo with horn (Sand). The user sent this image twice.
+- wreckerPhantom.webp — dark armour, green blade (provisional).
+- torchPhantom.webp — pink armour, flame (provisional).
+- phantomZelda.webp — brown horned Phantom, official ST art (shared by all Zelda Phantoms; provisional).
+- phantomGreenOfficial_unassigned.webp — green Phantom with hourglass shield, official PH art. Ask the user.
+- purpleEyeHand_unassigned.webp — purple hand with an eye. Ask the user.
+- sandworm.webp — segmented tower worm with a red crown (provisional).
+- geozardChief.webp — red beaked warrior with a shield.
+- keyMaster.webp — dark bat-eared imp (provisional).
+- stagnox.png, skeldritch.png, cragma.webp, phytops.webp — temple bosses.
+- Still missing: Fraaz, Malladus, Possessed Zelda as Malladus, Spirit Train, Armored Train, Dark Train, Demon Train.
