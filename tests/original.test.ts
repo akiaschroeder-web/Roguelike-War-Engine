@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { ABILITIES, ART_VARIANTS, BOSSES, CLASSES, COMMANDERS, ENEMIES, GEAR, ITEMS, QUEST_ITEMS, RACES, REGION_BOSSES, ROSTERS, SKILLS, TEMPLATES, WEAPONS, WORLDS, artFor } from '../src/data/registry';
+import { ABILITIES, ART_VARIANTS, BOSSES, CLASSES, COMMANDERS, ENEMIES, GEAR, ITEMS, PERMANENT_ITEMS, QUEST_ITEMS, RACES, REGION_BOSSES, ROSTERS, SKILLS, TEMPLATES, WEAPONS, WORLDS, artFor } from '../src/data/registry';
 import { LEVELS, ORIGINAL_HYRULE } from '../src/content/original';
 import { castAbility, enemyAutoTransform, unusableReason } from '../src/engine/abilities';
 import { createBattle, startPhase } from '../src/engine/battle';
@@ -38,8 +38,8 @@ const DOC_IDS = ['heroOfHyrule', 'zeldaHyrule', 'ganonHyrule', 'oldMan', 'oldWom
 
 describe('Original Hyrule content', () => {
   it('registers the pack: 3 commanders, the nine Levels and every unit in the doc (all recruitable, all with art)', () => {
-    expect(COMMANDERS.filter((c) => c.campaign === 'original').map((c) => c.heroId)).toEqual(['heroOfHyrule', 'zeldaHyrule', 'ganonHyrule']);
-    expect(Object.values(WORLDS).filter((w) => w.campaign === 'original').map((w) => w.id)).toEqual(LEVELS);
+    expect(COMMANDERS.filter((c) => c.campaign === 'original').map((c) => c.heroId)).toEqual(['heroOfHyrule', 'zeldaHyrule', 'ganonHyrule', 'sleepingZelda']);
+    expect(Object.values(WORLDS).filter((w) => w.campaign === 'original').map((w) => w.id).slice(0, 9)).toEqual(LEVELS);
     for (const id of DOC_IDS) { expect(TEMPLATES[id], id).toBeDefined(); expect(artFor(id), id).not.toBeNull(); }
     expect(TEMPLATES.ganonBoss).toBeUndefined();
     expect(TEMPLATES.dodongoBoss).toBeUndefined();
@@ -84,7 +84,7 @@ describe('Original Hyrule content', () => {
     for (const ev of ORIGINAL_HYRULE.events ?? []) {
       if (ev.art && !artFor(ev.art)) missing.push(`event art ${ev.art}`);
       for (const ch of ev.choices) for (const o of [ch.outcome, ch.gamble?.win, ch.gamble?.lose]) for (const e of o?.effects ?? []) {
-        if (e.kind === 'loot') for (const i of e.ids) if (!known(i)) missing.push(`event ${ev.id} loot ${i}`);
+        if (e.kind === 'loot') for (const i of e.ids) if (!known(i) && !PERMANENT_ITEMS[i]) missing.push(`event ${ev.id} loot ${i}`);
         if (e.kind === 'recruit') for (const i of e.pool) if (!TEMPLATES[i]) missing.push(`event ${ev.id} recruit ${i}`);
       }
     }
@@ -332,7 +332,7 @@ describe('Original Hyrule campaign', () => {
     for (const c of COMMANDERS.filter((x) => x.campaign === 'original')) {
       const run = newRun(21, c.heroId) as RunWithEvent;
       expect(run.campaign).toBe('original');
-      expect(run.region).toBe('level1Eagle');
+      expect(run.region).toBe(c.heroId === 'sleepingZelda' ? 'northCastle' : 'level1Eagle');
       expect(run.roster.map((u) => u.templateId)).toEqual([c.heroId, ...c.units]);
     }
     const run = newRun(22, 'zeldaHyrule') as RunWithEvent;
