@@ -3,7 +3,7 @@
 // three overworld leaders (forms of recruitable monsters) and the Floating Helmets that
 // Helmethead sheds in battle. Returning monsters (Iron Knuckles, Stalfos, Goriyas, Moblins,
 // Octoroks, Leevers, Tektites, Keese, Bubbles) keep their units; Barba is Volvagia and
-// Link's Shadow is Dark Link. There is no Wizzrobe unit, so palace rosters skip it.
+// Link's Shadow is Dark Link. Wizzrobes come from the Era of Legend pack (it adds them to the later palaces).
 
 import type { BossDef, ClassDef, EnemyArchetype, Growths, MoveType, Stats, UnitTemplate, WeaponType } from '../../engine/types';
 import { st } from './units';
@@ -121,7 +121,7 @@ export const Z2_BOSSES: BossDef[] = [
 /** Overworld leaders are forms of recruitable monsters. */
 export const Z2_BOSS_AS_TEMPLATE: Record<string, string> = { geruBoss: 'geru', dairaBoss: 'daira', gumaBoss: 'guma', geldarmBoss: 'geldarm' };
 
-/** Enemy rosters (no Wizzrobe unit exists, so it is skipped). */
+/** Enemy rosters (the Era of Legend pack adds Wizzrobes to the later palaces). */
 export const Z2_ROSTERS: Record<string, string[]> = {
   northCastle: ['bit', 'bit', 'bot', 'moby', 'deeler', 'octorok', 'tektite', 'geru'],
   parapaPalace: ['bot', 'bot', 'bit', 'myu', 'myu', 'stalfos', 'ironKnuckle', 'keese'],

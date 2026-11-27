@@ -6,7 +6,8 @@ import { availableRecipes, craft, materialBag, questCount, recipeCost, recipeHol
 import { packSize } from '../engine/units';
 import { shieldDurability } from '../engine/skyward';
 import { doWildCamp, FACILITIES, wildCampOptions, wildOf, wildStatus } from '../engine/wildRun';
-import { ABILITIES, artFor, BOSSES, ENEMIES, GEAR, QUEST_ITEMS, ITEMS, CLASSES, COMMANDERS, PERMANENT_ITEMS, REGION_IDS, TEMPLATE_LIST, TEMPLATES, WEAPONS, worldDef, WORLDS, ART_VARIANTS } from '../data/registry';
+import { ABILITIES, artFor, BOSSES, ENEMIES, GEAR, gearArt, QUEST_ITEMS, ITEMS, CLASSES, COMMANDERS, PERMANENT_ITEMS, REGION_IDS, TEMPLATE_LIST, TEMPLATES, WEAPONS, worldDef, WORLDS, ART_VARIANTS } from '../data/registry';
+import { legendStatus } from '../engine/legendRun';
 import { canWield, type LevelUp } from '../engine/combat';
 import { randomSeed } from '../engine/rng';
 import {
@@ -290,7 +291,7 @@ export class App {
         <div class="page">
           <div class="page-head"><button class="btn" data-nav="back">← Back</button><h1>Choose your Commander</h1><span></span></div>
           <p class="dim center-text">Each commander brings their own army and a special bonus. If the commander falls, the campaign is over.</p>
-          ${(['hyrule', 'termina', 'greatSea', 'twilight', 'skyward', 'wild', 'original'] as const).map((pack) => `<h2 class="pack-head">${pack === 'hyrule' ? 'Ocarina of Time · Hyrule' : pack === 'termina' ? "Majora's Mask · Termina" : pack === 'greatSea' ? 'The Wind Waker · The Great Sea' : pack === 'twilight' ? 'Twilight Princess · Twilight Hyrule' : pack === 'skyward' ? 'Skyward Sword · The Sky' : pack === 'wild' ? 'Era of the Wild · Hyrule Reborn' : 'The Legend of Zelda & Zelda II · Original Hyrule'}</h2>
+          ${(['hyrule', 'termina', 'greatSea', 'twilight', 'skyward', 'wild', 'original', 'legend'] as const).map((pack) => `<h2 class="pack-head">${pack === 'hyrule' ? 'Ocarina of Time · Hyrule' : pack === 'termina' ? "Majora's Mask · Termina" : pack === 'greatSea' ? 'The Wind Waker · The Great Sea' : pack === 'twilight' ? 'Twilight Princess · Twilight Hyrule' : pack === 'skyward' ? 'Skyward Sword · The Sky' : pack === 'wild' ? 'Era of the Wild · Hyrule Reborn' : pack === 'legend' ? 'Era of Legend · Hyrule, Koholint, Holodrum and Labrynna' : 'The Legend of Zelda & Zelda II · Original Hyrule'}</h2>
           <div class="card-grid">${COMMANDERS.filter((c) => (c.campaign ?? 'hyrule') === pack).map((c) => {
             const t = TEMPLATES[c.heroId];
             const army = c.units.map((id) => TEMPLATES[id]);
@@ -307,7 +308,7 @@ export class App {
           <div class="run-options">
             <h3>Campaign options</h3>
             <div class="opt-row"><span class="dim small">Campaign</span><select data-opt="campaign">
-              <option value="">Commander's home${chosen ? ` (${({ hyrule: 'Hyrule', termina: 'Termina', greatSea: 'the Great Sea', twilight: 'Twilight Hyrule', skyward: 'the Sky', wild: 'Hyrule Reborn', original: 'Original Hyrule' } as const)[COMMANDERS.find((c) => c.heroId === chosen)?.campaign ?? 'hyrule']})` : ''}</option>
+              <option value="">Commander's home${chosen ? ` (${({ hyrule: 'Hyrule', termina: 'Termina', greatSea: 'the Great Sea', twilight: 'Twilight Hyrule', skyward: 'the Sky', wild: 'Hyrule Reborn', original: 'Original Hyrule', legend: 'the Era of Legend' } as const)[COMMANDERS.find((c) => c.heroId === chosen)?.campaign ?? 'hyrule']})` : ''}</option>
               <option value="hyrule" ${choices.campaign === 'hyrule' ? 'selected' : ''}>Hyrule: the endless war</option>
               <option value="termina" ${choices.campaign === 'termina' ? 'selected' : ''}>Termina: three days until the Moon falls</option>
               <option value="greatSea" ${choices.campaign === 'greatSea' ? 'selected' : ''}>The Great Sea: sail a 7×7 chart of islands and fleets</option>
@@ -315,6 +316,7 @@ export class App {
               <option value="skyward" ${choices.campaign === 'skyward' ? 'selected' : ''}>The Sky: from Skyloft to the Demon's Realm</option>
               <option value="wild" ${choices.campaign === 'wild' ? 'selected' : ''}>Hyrule Reborn: surface, sky and Depths, under the Blood Moon</option>
               <option value="original" ${choices.campaign === 'original' ? 'selected' : ''}>Original Hyrule: the nine Levels, then Zelda II's palaces</option>
+              <option value="legend" ${choices.campaign === 'legend' ? 'selected' : ''}>Era of Legend: Light and Dark, Koholint's dream, the seasons and the ages</option>
               <option value="random" ${choices.campaign === 'random' ? 'selected' : ''}>Random: any region, any enemy, any event</option>
               <option value="worldTour" ${choices.campaign === 'worldTour' ? 'selected' : ''}>World Tour: every campaign in turn, a few regions in each</option></select></div>
             ${choices.campaign === 'worldTour' ? `<div class="opt-row"><span class="dim small">World Tour: regions per campaign</span><select data-opt="tourActs">${[1, 2, 3, 4, 5].map((n) => `<option value="${n}" ${(choices.tourActs ?? '2') === String(n) ? 'selected' : ''}>${n}</option>`).join('')}</select></div>` : ''}
@@ -396,6 +398,8 @@ export class App {
         ${run.campaign === 'original' ? (() => { const qi = run.questItems ?? []; const n = qi.includes('fullTriforce') ? 8 : Math.min(8, questCount(run, 'wisdomFragment'));
           return `<div class="tb-res" title="Fragments of the Triforce of Wisdom (one from each Level's boss). All eight open Death Mountain.${run.trials?.includes('secondQuest') ? ' · Second Quest' : ''}"><span class="dim small">Triforce</span> <b>${n >= 8 ? '🔺 whole' : `🔺${n}/8`}</b>${run.trials?.includes('secondQuest') ? ' <span class="dim small">2nd Quest</span>' : ''}</div>`
             + (WORLDS[run.region]?.campaign === 'original' && !LEVELS_OH.includes(run.region) || questCount(run, 'palaceCrystal') ? `<div class="tb-res" title="Palace Crystals placed in the palace statues (Zelda II). All six open the Great Palace."><span class="dim small">Crystals</span> <b>💎${questCount(run, 'palaceCrystal')}/6</b></div>` : ''); })() : ''}
+        ${run.campaign === 'legend' ? (() => { const s = legendStatus(run);
+          return `<div class="tb-res" title="${esc(s.route)} · Pendants of Virtue · Crystal Maidens (7 open Ganon's Tower) · Instruments of the Sirens (8 open the Wind Fish's Egg) · Essences of Nature and of Time (8 open each Oracle's finale) · seeds in the satchel · Gasha trees · Mystery Rings for Vasu"><span class="dim small">${esc(s.route)}</span> <span class="dim small">Pendants</span> <b>${s.pendants}/3</b> <span class="dim small">Crystals</span> <b>${s.crystals}/7</b> <span class="dim small">Instruments</span> <b>${s.instruments}/8</b> <span class="dim small">Essences</span> <b>🍂${s.nature} ⌛${s.time}</b> <span class="dim small">Seeds</span> <b>${s.seeds}</b> <span class="dim small">Gasha</span> <b>${s.gasha}</b>${s.rings ? ` <span class="dim small">Rings</span> <b>💍${s.rings}</b>` : ''}</div>`; })() : ''}
         ${run.clock ? (() => { const c = clockLabel(run); return `<div class="tb-clock ${c.hoursLeft <= 12 ? 'bad' : c.day === 3 ? 'warn' : ''}" title="The Moon falls when the third day ends."><span class="dim small">Day ${c.day} ${c.night ? '☾' : '☀'}</span> <b>${c.time}</b> <span class="dim small">${c.hoursLeft}h left</span></div>
           <button class="btn small" data-nav="songoftime" title="Return to the dawn of the first day">🎵 Song of Time</button>`; })() : ''}
         <div class="spacer"></div>
@@ -520,7 +524,7 @@ export class App {
         return `<div class="equip-row"><span>${esc(def?.name ?? p.id)}${p.uses > 1 ? ` ×${p.uses}` : ''} <span class="dim small">${esc(def?.desc ?? '')}</span></span>
           <span>${usable ? `<button class="btn small" data-k="use" data-i="${i}">${label}</button>` : ''}<button class="btn small" data-k="unpack" data-i="${i}">To convoy</button></span></div>`;
       }).join('') : '<div class="dim small">Empty. Buy potions, bombs and Deku Nuts from merchants.</div>'}</div>
-      ${(() => { const vs = (ART_VARIANTS[portraitIdOf(u) ?? ''] ?? []).filter((v) => artFor(v)); return vs.length > 1 ? `<div class="equip-row"><span>🎨 Art <span class="dim small">${vs.indexOf(artFor(portraitIdOf(u), u.uid, u.artPick) ?? '') + 1}/${vs.length}</span></span><button class="btn small" data-k="art">Change art</button></div>` : ''; })()}
+      ${(() => { const vs = (ART_VARIANTS[portraitIdOf(u) ?? ''] ?? []).filter((v) => artFor(v)); const ga = gearArt(u); if (ga) return `<div class="equip-row"><span>🎨 Art <span class="dim small">follows the equipped gear</span></span></div>`; return vs.length > 1 ? `<div class="equip-row"><span>🎨 Art <span class="dim small">${vs.indexOf(artFor(portraitIdOf(u), u.uid, u.artPick) ?? '') + 1}/${vs.length}</span></span><button class="btn small" data-k="art">Change art</button></div>` : ''; })()}
       ${this.supportsHtml(u)}
       ${t ? `<p class="bio">${esc(t.bio)}</p>` : ''}
       <button class="btn primary" data-close>Close</button>`, { dismissable: true });
@@ -790,6 +794,7 @@ export class App {
         ${summary.skyward?.length ? `<div class="res-drops"><div class="dim small">Skyward</div>${summary.skyward.map((l) => `<div>${esc(l)}</div>`).join('')}</div>` : ''}
         ${summary.wild?.length ? `<div class="res-drops"><div class="dim small">The Wild</div>${summary.wild.map((l) => `<div>${esc(l)}</div>`).join('')}</div>` : ''}
         ${summary.original?.length ? `<div class="res-drops"><div class="dim small">Hyrule</div>${summary.original.map((l) => `<div>${esc(l)}</div>`).join('')}</div>` : ''}
+        ${summary.legend?.length ? `<div class="res-drops"><div class="dim small">Era of Legend</div>${summary.legend.map((l) => `<div>${esc(l)}</div>`).join('')}</div>` : ''}
         <div class="res-army-stats">${armyReportHtml(summary.army)}</div>
         ${summary.fallen.length ? `<div class="res-fallen"><span class="dim">Fallen:</span> ${summary.fallen.map((u) => `${token(u, 28)} ${esc(u.name)}`).join(' ')}</div>` : '<div class="dim">No losses.</div>'}
         <div class="res-army">${run.roster.map((u) => `<div class="res-unit">${token(u, 36)}<div><b>${esc(u.name)}</b><div class="dim small">Lv ${u.level} · HP ${u.hp}/${u.stats.hp}</div></div></div>`).join('')}</div>

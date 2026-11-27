@@ -6,7 +6,7 @@ const e = (id: string, name: string, classId: string, race: string, weapons: str
 
 // New monsters (section 3; all recruitable). Octoroks, Moblins, Darknuts, Stalfos, Like Likes,
 // Wallmasters, Keese, Leevers, Tektites, Peahats, Armos (the Armos Knight), Bubbles, Dodongos,
-// Moldorms and Gibdos are the existing entries. There is no Wizzrobe unit yet.
+// Moldorms and Gibdos are the existing entries. Wizzrobes come from the Era of Legend pack.
 export const ENEMIES: EnemyArchetype[] = [
   e('goriya', 'Goriya', 'boomerangFighter', 'monster', ['goriyaBoomerang'], st(24, 9, 0, 13, 10, 6, 4, 5, 7, 5, 22, 0), { skill: 'returningStrike', glyph: 'GO' }),
   e('rope', 'Rope', 'serpent', 'monster', ['ropeFangs'], st(15, 7, 0, 8, 14, 2, 3, 4, 3, 7, 18, 0), { skill: 'suddenCharge', glyph: 'RP' }),

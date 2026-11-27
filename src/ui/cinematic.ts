@@ -6,11 +6,11 @@ import { STATUS_INFO } from '../engine/status';
 // classic tactics games: enemy on the left, player on the right, HP bars,
 // lunges, hit flashes, damage numbers and a KO. Click to skip.
 
-import { artFor, worldDef } from '../data/registry';
+import { artFor, unitArt, worldDef } from '../data/registry';
 import { isMounted, mountOf } from '../engine/units';
 import type { Strike } from '../engine/combat';
 import type { Unit } from '../engine/types';
-import { esc, portraitIdOf, token } from './components';
+import { esc, token } from './components';
 
 export interface SideInfo {
   weapon: string;
@@ -51,7 +51,7 @@ export function playCinematic(opts: CinematicOptions): Promise<void> {
   const w = worldDef(opts.world);
 
   const fighter = (u: Unit, side: 'left' | 'right') => {
-    const art = artFor(portraitIdOf(u), u.uid, u.artPick);
+    const art = unitArt(u);
     const rider = art
       ? `<img class="cine-art" src="${imgUrl('art', art)}" alt="" draggable="false">`
       : `<div class="cine-token">${token(u, 170)}</div>`;

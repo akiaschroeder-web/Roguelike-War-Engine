@@ -1,4 +1,4 @@
-import { ABILITIES, BOSSES, CLASSES, ITEMS, terrainLook, worldDef } from '../data/registry';
+import { ABILITIES, BOSSES, CLASSES, ITEMS, terrainLook, WEAPONS, worldDef } from '../data/registry';
 import { canRide, effectiveStats, hasEffect, isMounted, mountOf } from '../engine/units';
 import { enemyAutoTransform, abilityRadius, abilityTargets, castAbility, castableAbilities, costLabel, knownAbilities, needsTarget, needsTile, unusableReason, abilityTiles } from '../engine/abilities';
 import { STATUS_INFO } from '../engine/status';
@@ -9,6 +9,7 @@ import { syncPosition } from '../engine/windwaker';
 import { ssAfterMove } from '../engine/skyward';
 import { wildAfterMove } from '../engine/wild';
 import { ogAfterMove } from '../engine/original';
+import { lgAfterMove } from '../engine/legend';
 import { enemyUnload, windLabel } from '../engine/naval';
 import { sideQuestText } from '../engine/run';
 import { adjacentCaptives, checkResult, freeCaptive, mountToggleBlocked, moveUnit, toggleMount, objectiveText, spawnReinforcements, startPhase, type TurnStartEvent } from '../engine/battle';
@@ -52,6 +53,10 @@ const TERRAIN_GLYPH: Record<string, string> = {
   burnableBush: '❦', boulder: '●', hiddenStairs: '▤', raftDock: '⛵', ladderGap: '╪', pushBlock: '▣', shutterDoor: '▥', bladeTrap: '✦',
   goriyaCheckpoint: '🍖', secretCave: '◖', gravestone: '✝', lockedDoor: '🔒',
   palaceStatue: '🗿', collapsingFloor: '▦', fallingBlock: '⬛', elevator: '⇕', narrowPassage: '⋮', fallingBoulderZone: '☄', riverDevil: '👹',
+  // Era of Legend
+  crystalSwitch: '💠', crystalBarrier: '▮', loweredBarrier: '▁', woodenStake: '┃', lightPortal: '☀', darkPortal: '☾', somariaBlock: '🟨', invisibleFloor: '░',
+  magneticOrb: '🧲', magneticRail: '═', softSoil: '∴', seedTree: '🌰', treeStump: '🪵', timePortal: '⌛', switchHookTarget: '◈', underwaterFloor: '≋',
+  seasonalFlower: '🌸', seasonalSnowbank: '❄', seasonalMushroom: '🍄',
 };
 
 export class BattleView {
@@ -192,7 +197,11 @@ export class BattleView {
       ${b.fog ? '<div class="weather"><span class="dim small">Visibility</span><b>🌫 Fog</b></div>' : ''}
       ${b.wind ? `<div class="weather" title="Ships sail faster with the wind (+2 MOV) and slower against it (−2)."><span class="dim small">Wind</span><b>${esc(windLabel(b.wind))}</b></div>` : ''}
       ${b.night && b.naval ? '<div class="weather"><span class="dim small">Time</span><b>☾ Night</b></div>' : ''}
-      ${b.wild ? `<div class="weather" title="The army's shared Energy Cell powers Zonai Devices and vehicles."><span class="dim small">Energy</span><b>⚡${b.wild.energy}/${b.wild.energyMax}</b></div>${b.wild.bloodMoon ? '<div class="weather"><span class="dim small">Sky</span><b class="bad">🌕 Blood Moon</b></div>' : ''}` : ''}`;
+      ${b.wild ? `<div class="weather" title="The army's shared Energy Cell powers Zonai Devices and vehicles."><span class="dim small">Energy</span><b>⚡${b.wild.energy}/${b.wild.energyMax}</b></div>${b.wild.bloodMoon ? '<div class="weather"><span class="dim small">Sky</span><b class="bad">🌕 Blood Moon</b></div>' : ''}` : ''}
+      ${b.lg?.world ? `<div class="weather" title="Portals (and the Magic Mirror) move the whole field between the worlds. Without a Moon Pearl, the Dark World makes you a rabbit."><span class="dim small">World</span><b>${b.lg.world === 'dark' ? '☾ Dark World' : '☀ Light World'}</b></div>` : ''}
+      ${b.lg?.season ? `<div class="weather" title="The Rod of Seasons (from a Tree Stump) and Din change the season for both armies."><span class="dim small">Season</span><b>${({ spring: '🌸 Spring', summer: '☀ Summer', autumn: '🍂 Autumn', winter: '❄ Winter' } as const)[b.lg.season]}</b></div>` : ''}
+      ${b.lg?.era ? `<div class="weather" title="The Harp of Ages and the Time Portals move the field between past and present. What you change in the past stays changed."><span class="dim small">Era</span><b>${b.lg.era === 'past' ? '⌛ The Past' : '⏳ The Present'}${b.lg.echoes ? ' · portals awake' : ''}</b></div>` : ''}
+      ${b.lg && Object.values(b.lg.seeds).some((n) => n > 0) && b.units.some((u) => u.team === 'player' && u.weapons.some((w) => WEAPONS[w]?.type === 'sling')) ? `<div class="weather" title="Mystical seeds in the satchel (ammunition): Ember · Scent · Pegasus · Gale · Mystery"><span class="dim small">Seeds</span><b>${b.lg.seeds.ember}·${b.lg.seeds.scent}·${b.lg.seeds.pegasus}·${b.lg.seeds.gale}·${b.lg.seeds.mystery}</b></div>` : ''}`;
   }
 
   private posStyle(el: HTMLElement, x: number, y: number) {
@@ -398,7 +407,7 @@ export class BattleView {
         : '<div class="fc-none">Cannot counter</div>'}
       </div>`;
     };
-    const arrows = attackMods(a, weaponDef(fc.attacker.weaponId));
+    const arrows = attackMods(a, weaponDef(fc.attacker.weaponId), this.b);
     const switcher = (options.length > 1
       ? `<div class="weapon-switch">${options.map((w) => `<button class="btn small ${w.id === fc.attacker.weaponId ? 'on' : ''}" data-act="weapon" data-w="${w.id}">${esc(w.name)}</button>`).join('')}</div>` : '')
       + (arrows.length
@@ -962,6 +971,8 @@ export class BattleView {
     if (wl) { sfx('secret'); this.addLog(`✨ ${esc(wl)}`); }
     const og = ogAfterMove(this.b, u); // Original Hyrule spaces: hidden staircases, secret caves, blade traps
     if (og) { sfx('secret'); this.addLog(`🗝 ${esc(og)}`); }
+    const lg = lgAfterMove(this.b, u); // Era of Legend spaces: Seasonal Flowers, Secret Discovery
+    if (lg) { sfx('secret'); this.addLog(`🍃 ${esc(lg)}`); }
     if (pressInversion(this.b, u)) { sfx('secret'); this.addLog('🔄 The Inversion Switch flips the walls and floors!'); }
     const dmg = triggerTraps(this.b, u);
     if (dmg) { sfx('hit'); this.float(u, `TRAP −${dmg}`, 'dmg'); this.addLog(`⚠ <b class="player">${esc(u.name)}</b> stepped on a spike trap (−${dmg} HP, rooted)!`); }
@@ -1381,6 +1392,7 @@ export class BattleView {
         ssAfterMove(b, e);
         wildAfterMove(b, e);
         ogAfterMove(b, e);
+        lgAfterMove(b, e);
         const trap = triggerTraps(b, e);
         if (trap) { sfx('bomb'); this.float(e, `TRAP −${trap}`, 'dmg'); this.addLog(`💥 ${esc(e.name)} sets off your Death Armos Core (−${trap})!`); }
       }
@@ -1478,6 +1490,25 @@ const WW_TERRAIN_NOTES: Record<string, string> = {
   narrowPassage: 'Only small units (size 1, CON 10 or less) or a Fairy can squeeze through',
   fallingBoulderZone: 'Boulders fall here on odd turns (6 damage)',
   riverDevil: 'The River Devil blocks the way until someone plays the Recorder',
+  crystalSwitch: 'Strike it (from next to it) to raise or lower every Crystal Barrier',
+  crystalBarrier: 'A raised Crystal Barrier (obstacle) — a Crystal Switch lowers it',
+  loweredBarrier: 'A lowered Crystal Barrier: walk over it while it stays down',
+  woodenStake: 'An obstacle: pound it down with the Magic Hammer (or lift it with a Power Glove or Bracelet)',
+  lightPortal: 'A portal back to the Light World (Enter the Portal): the whole field changes',
+  darkPortal: 'A portal into the Dark World (Enter the Portal): the whole field changes — without a Moon Pearl you become a rabbit',
+  somariaBlock: 'A Somaria Block (obstacle): the Cane of Somaria bursts it into four projectiles',
+  invisibleFloor: 'A pit... or an Invisible Floor. Ether, Secret Discovery or a Maku Seed reveals the way',
+  magneticOrb: 'A metal orb (obstacle): the Magnetic Gloves can move it',
+  magneticRail: 'A metal rail: rough going, but the Magnetic Gloves ride it (1 movement)',
+  softSoil: 'Soft soil: plant a Gasha Seed here (in the past, it grows into a tree in the present)',
+  seedTree: 'A Mystical Seed Tree (obstacle): Harvest Seeds from next to it',
+  treeStump: 'A Tree Stump: the Rod of Seasons changes the season from here (+10 Avoid, +1 Def)',
+  timePortal: 'A Time Portal: awaken it with the Tune of Echoes, then step through between past and present',
+  switchHookTarget: 'A Switch Hook target (obstacle): the Switch Hook swaps places with it',
+  underwaterFloor: 'Fully submerged: only swimmers (Zora\'s Flippers, the Mermaid Suit, a Zora Ring) fight down here',
+  seasonalFlower: 'In spring, it launches whoever steps on it over the obstacles ahead',
+  seasonalSnowbank: 'In winter, a snowy pathway (1 movement); otherwise a sheer bank',
+  seasonalMushroom: 'In autumn, soft enough to cross; otherwise it blocks the way',
 };
 
 /** Abilities shown in the Abilities menu (forecast-only modifiers are excluded). */

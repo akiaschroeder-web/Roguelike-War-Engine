@@ -56,8 +56,8 @@ describe('Zelda II content', () => {
     expect(ART_VARIANTS.heroOfHyrule).toEqual(['link1', 'heroOfHyruleZ2']);
     expect(ART_VARIANTS.darkLink).toContain('darkLinkZ2');
     expect(ART_VARIANTS.volvagia).toContain('barba');
-    // No Wizzrobe unit: rosters skip it.
-    expect(Object.values(ROSTERS).flat()).not.toContain('wizzrobe');
+    // The Era of Legend pack adds the Wizzrobe: it returns to Zelda II's later palaces.
+    expect(ROSTERS.greatPalace).toContain('wizzrobe');
     for (const r of Z2_REGION_IDS) { expect(WORLDS[r]?.campaign).toBe('original'); expect(ROSTERS[r]?.length, r).toBeGreaterThan(0); expect(REGION_BOSSES[r]?.length, r).toBeGreaterThan(0); }
     for (const id of [...Z2_SPELLS, 'downwardThrust', 'upwardThrust', 'sleepingCurse', 'ancientBlessing', 'dreamProtection', 'couragesAwakening']) expect(ABILITIES[id], id).toBeDefined();
     for (const id of ['dairaAxe', 'doomknockerHammer', 'horseheadsMace', 'rebonacksLance', 'fokkaSword', 'carocksStaff']) expect(WEAPONS[id], id).toBeDefined();

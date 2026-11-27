@@ -9,6 +9,7 @@ import { TWILIGHT_PRINCESS, QUEST_ITEMS as TP_QUEST } from '../content/twilight'
 import { SKYWARD_SWORD, QUEST_ITEMS as SS_QUEST } from '../content/skyward';
 import { ERA_OF_THE_WILD, QUEST_ITEMS as WILD_QUEST } from '../content/wild';
 import { ORIGINAL_HYRULE, QUEST_ITEMS as OH_QUEST } from '../content/original';
+import { ERA_OF_LEGEND, QUEST_ITEMS as LG_QUEST } from '../content/legend';
 import { SPECIAL_TERRAIN } from '../engine/rules';
 import type { ContentPack } from '../content/types';
 import type {
@@ -123,11 +124,12 @@ installPack(TWILIGHT_PRINCESS);
 installPack(SKYWARD_SWORD);
 installPack(ERA_OF_THE_WILD);
 installPack(ORIGINAL_HYRULE);
+installPack(ERA_OF_LEGEND);
 // Phantom Ganon keeps his entry; his Wind Waker sword joins his drops.
 if (BOSSES.phantomGanon) BOSSES.phantomGanon.drops = [...(BOSSES.phantomGanon.drops ?? []), 'phantomGanonsSword'];
 
 /** Quest items (shared quest inventory). */
-export const QUEST_ITEMS: Record<string, { id: string; name: string; desc: string }> = Object.fromEntries([...MM_QUEST, ...WW_QUEST, ...TP_QUEST, ...SS_QUEST, ...WILD_QUEST, ...OH_QUEST].map((q) => [q.id, q]));
+export const QUEST_ITEMS: Record<string, { id: string; name: string; desc: string }> = Object.fromEntries([...MM_QUEST, ...WW_QUEST, ...TP_QUEST, ...SS_QUEST, ...WILD_QUEST, ...OH_QUEST, ...LG_QUEST].map((q) => [q.id, q]));
 
 // ───────── Safe lookups ─────────
 
@@ -175,6 +177,26 @@ export function artFor(id: string | undefined, seed = '', pick?: string): string
   if (ART_IDS.has(id)) return id;
   const alias = ART_ALIASES[id];
   return alias && ART_IDS.has(alias) ? alias : null;
+}
+
+/**
+ * Art that follows a unit's equipment (the template's artByGear): the first entry whose ids include
+ * the equipped weapon or a worn gear piece. Null when none applies (the ordinary art is used).
+ */
+export function gearArt(u: { templateId?: string; weapons?: string[]; gear?: Partial<Record<string, string>> }): string | null {
+  const t = u.templateId ? TEMPLATES[u.templateId] : undefined;
+  if (!t?.artByGear) return null;
+  const worn = new Set(Object.values(u.gear ?? {}).filter(Boolean));
+  const w = u.weapons?.[0];
+  for (const e of t.artByGear) if (e.ids.some((id) => id === w || worn.has(id))) return ART_IDS.has(e.art) ? e.art : null;
+  return null;
+}
+
+/** The art a unit shows: a temporary battle form first, then equipment-dependent art (it wins over the
+ *  random or chosen variant), then its variant or ordinary art. */
+export function unitArt(u: { uid: string; templateId?: string; bossId?: string; artId?: string; artPick?: string; artOverride?: string; weapons?: string[]; gear?: Partial<Record<string, string>> }): string | null {
+  if (u.artOverride) { const o = artFor(u.artOverride); if (o) return o; }
+  return gearArt(u) ?? artFor(u.bossId ?? u.templateId ?? u.artId, u.uid, u.artPick);
 }
 
 /** Name and colour of a terrain type in a region (special terrain shares one look). */

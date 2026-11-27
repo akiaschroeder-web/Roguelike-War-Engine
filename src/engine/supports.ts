@@ -84,6 +84,7 @@ export function gainSupport(b: Battle, u: Unit, amount = 1, partner?: Unit) {
   for (const a of friends) {
     const k = supportKey(u.uid, a.uid);
     let gain = amount * (hasEffect(u, 'couple') || hasEffect(a, 'couple') ? 2 : 1); // Couple's Mask
+    if ([u, a].some((x) => Object.values(x.gear ?? {}).includes('friendshipRing'))) gain *= 1.5; // Friendship Ring
     // The Crimson Loftwing's Chosen Companion: bonds twice as fast with the Hero of the Sky.
     if ((u.skills.includes('chosenCompanion') && tid(a) === 'heroOfTheSky') || (a.skills.includes('chosenCompanion') && tid(u) === 'heroOfTheSky')) gain *= 2;
     // Colin's Growing Courage: double support with stronger allies.

@@ -9,6 +9,8 @@ import { HIDDEN_SKILLS } from '../content/twilight';
 import { canUsePouch, queueTrial, skywardAfterBattle, skywardQuestCheck, skywardRegionOptions, skywardRupeeMult, skywardStart, usePouch } from './skywardRun';
 import { applyAolEffect, inOriginalLevels, originalAfterBattle, originalBossFor, originalRegionOptions, originalStart, originalStartRegion } from './originalRun';
 import { restoreForm } from './transform';
+import { applyLegendEffect, inLegendRoutes, legendAfterBattle, legendBattleSetup, legendBossFor, legendExtraRecruit, legendRegionOptions, legendStart, legendStartRegion } from './legendRun';
+import { legendBeforeFinish } from './legend';
 import { applyWildEffect, colossalCap, returnBoss, wildAfterBattle, wildBattleSetup, wildCampVisit, wildDecorateMap, wildOnRecruit, wildRecruitWeight, wildRegionOptions, wildRestBonus, wildStart } from './wildRun';
 import { canWield, type LevelUp } from './combat';
 import { RNG } from './rng';
@@ -44,13 +46,13 @@ export function commanderOf(run: Run): CommanderDef {
 
 /** Where each campaign begins (Hyrule: the commander's home region). */
 function startRegionFor(camp: string, home: WorldId, run: { commanderId: string; regionsVisited: string[] }): WorldId {
-  return camp === 'termina' ? 'clockTown' : camp === 'greatSea' ? 'outsetIsland' : camp === 'twilight' ? 'ordonProvince' : camp === 'skyward' ? 'skyloft' : camp === 'wild' ? 'greatPlateau' : camp === 'original' ? originalStartRegion(run) : WORLDS[home]?.campaign || home === 'hyruleCastle' || !WORLDS[home] ? 'hyruleField' : home;
+  return camp === 'termina' ? 'clockTown' : camp === 'greatSea' ? 'outsetIsland' : camp === 'twilight' ? 'ordonProvince' : camp === 'skyward' ? 'skyloft' : camp === 'wild' ? 'greatPlateau' : camp === 'original' ? originalStartRegion(run) : camp === 'legend' ? legendStartRegion(run) : WORLDS[home]?.campaign || home === 'hyruleCastle' || !WORLDS[home] ? 'hyruleField' : home;
 }
 
 /** World Tour order: the commander's home campaign first, then the others in release order. */
-export const TOUR_ORDER: TourCampaign[] = ['hyrule', 'termina', 'greatSea', 'twilight', 'skyward', 'wild', 'original'];
+export const TOUR_ORDER: TourCampaign[] = ['hyrule', 'termina', 'greatSea', 'twilight', 'skyward', 'wild', 'original', 'legend'];
 
-export function newRun(seed: number, commanderId: string, campaign?: 'hyrule' | 'termina' | 'greatSea' | 'twilight' | 'skyward' | 'wild' | 'original' | 'random' | 'worldTour', tourActs = 2): RunWithEvent {
+export function newRun(seed: number, commanderId: string, campaign?: 'hyrule' | 'termina' | 'greatSea' | 'twilight' | 'skyward' | 'wild' | 'original' | 'legend' | 'random' | 'worldTour', tourActs = 2): RunWithEvent {
   const rng = new RNG(seed);
   const cmd = COMMANDERS.find((c) => c.heroId === commanderId) ?? COMMANDERS[0];
   const first: TourCampaign = (cmd.campaign as TourCampaign | undefined) ?? 'hyrule';
@@ -87,6 +89,7 @@ export function newRun(seed: number, commanderId: string, campaign?: 'hyrule' | 
   if (camp === 'skyward') skywardStart(run);
   if (camp === 'wild') { wildStart(run); withRng(run, (r2) => wildDecorateMap(run, run.map, r2)); }
   if (camp === 'original') originalStart(run);
+  if (camp === 'legend') legendStart(run);
   if (camp === 'greatSea') {
     run.sea = newSea();
     run.questItems = [];
@@ -234,7 +237,7 @@ function bossPower(b: BossDef): number {
 
 function bossFor(run: Run, rng: RNG, node: MapNode): BossDef {
   // Original Hyrule: every Level has its own boss (the Second Quest moves them around).
-  const level = originalBossFor(run, node);
+  const level = originalBossFor(run, node) ?? legendBossFor(run, node);
   if (level) return level;
   // Not canon: anyone can be a boss, even someone already in your army.
   // After the free-for-all point, bosses come from every region.
@@ -383,7 +386,7 @@ export function startBattle(run: RunWithEvent, uids: string[]): void {
     if (boss) run.bossesFought.push(boss.id);
     run.battle = createBattle({
       world: node.world, nodeType: node.type === 'dungeon' ? kind : node.type, depth: depthOf(run, node) + floorBonus, roster: chosen,
-      seed: rng.int(0, 2 ** 31), boss: trial ? undefined : boss, healMult: run.bonus === 'healing' || run.bonus === 'wisdomOfHyrule' ? 1.2 : run.bonus === 'sacredMission' ? 1.25 : run.bonus === 'healingWaters' ? 1.3 : 1, force: trial ? undefined : force, supports: run.supports, trials: run.trials,
+      seed: rng.int(0, 2 ** 31), boss: trial ? undefined : boss, healMult: run.bonus === 'healing' || run.bonus === 'wisdomOfHyrule' || run.bonus === 'sacredMaiden' ? 1.2 : run.bonus === 'sacredMission' ? 1.25 : run.bonus === 'healingWaters' ? 1.3 : 1, force: trial ? undefined : force, supports: run.supports, trials: run.trials,
       levelBonus: (run.clock?.resets ?? 0) * 2 + (run.clock && clockLabel(run).day === 3 ? 1 : 0) + (run.wild && run.wild.bloodMoon > 0 && !run.roster.some((u) => u.skills.includes('lunarPrediction')) ? 1 : 0),
       gearOwned: [...ownedGear(run), ...(run.questItems ?? [])],
       naval: trial ? false : naval, night: node.night, fleet: node.fleet, twilit: isTwilit(run, node.world), silentRealm: trial,
@@ -394,6 +397,7 @@ export function startBattle(run: RunWithEvent, uids: string[]): void {
     run.battle.reserves = run.roster.filter((u) => !chosen.includes(u)).map((u) => ({ ...prepareForBattle(u), x: -1, y: -1 }));
     applyArmyBuffs(run, run.battle);
     wildBattleSetup(run, run.battle);
+    legendBattleSetup(run, run.battle, rng);
     if (run.questItems?.includes('piratesCharm') && run.battle.cp !== undefined) { run.battle.cp++; run.battle.cpMax = (run.battle.cpMax ?? 0) + 1; }
   });
 }
@@ -408,7 +412,7 @@ export const FREE_FOR_ALL_REGION = 4;
 
 export function isFreeForAll(run: Run): boolean {
   // The World Tour keeps each campaign's own enemies.
-  return !run.tour && run.act >= FREE_FOR_ALL_REGION && !inOriginalLevels(run);
+  return !run.tour && run.act >= FREE_FOR_ALL_REGION && !inOriginalLevels(run) && !inLegendRoutes(run);
 }
 
 /** A force drawn from the entire cast: any monster, soldier, hero, villain or boss. */
@@ -465,7 +469,7 @@ export function recruitOffers(run: Run, rng: RNG, world: WorldId): string[] {
   const sea = run.campaign === 'greatSea';
   const fleetRoom = sea && run.roster.filter(isVessel).length < fleetCap(run);
   const shipOk = (t: UnitTemplate) => !RACES[t.race]?.tags?.includes('vessel') || fleetRoom;
-  const available = TEMPLATE_LIST.filter((t) => !t.generic && !have.has(t.id) && shipOk(t)
+  const available = TEMPLATE_LIST.filter((t) => !t.generic && !t.formOf && !have.has(t.id) && shipOk(t)
     && !run.fallen.some((f) => f.templateId === t.id) && !conflicts(run, t)
     && (!day || !TERMINA_SCHEDULE[t.id] || TERMINA_SCHEDULE[t.id].includes(day)));
   const fresh = available.filter((t) => !run.seenHeroes.includes(t.id));
@@ -510,7 +514,7 @@ export function recruitOffers(run: Run, rng: RNG, world: WorldId): string[] {
   };
   const network = (run.roster.some((u) => u.skills.includes('resistanceNetwork')) ? 1 : 0)
     + (['telma', 'rusl', 'ashei', 'auru', 'shad'].every((t) => run.roster.some((u) => u.templateId === t)) ? 1 : 0);
-  while (offers.length < 3 + network + (holding('joyPendant') >= 3 ? 1 : 0) && generics.length) {
+  while (offers.length < 3 + network + (holding('joyPendant') >= 3 ? 1 : 0) + (legendExtraRecruit(run) ? 1 : 0) && generics.length) {
     const pick = rng.weighted(generics.map((t) => [t, weightOf(t)] as [UnitTemplate, number]));
     if (!offers.includes(pick.id)) offers.push(pick.id);
   }
@@ -555,6 +559,8 @@ export interface BattleSummary {
   wild?: string[];
   /** Original Hyrule: Triforce fragments, secrets, the Merchant's finds. */
   original?: string[];
+  /** Era of Legend: Pendants, Crystals, Instruments, Essences, Gasha trees, rings. */
+  legend?: string[];
   /** Support ranks reached this battle. */
   supportUps: { a: string; b: string; aUid: string; bUid: string; rank: SupportRank }[];
 }
@@ -564,6 +570,7 @@ export const POST_BATTLE_HEAL = 0.2;
 
 export function finishBattle(run: RunWithEvent): BattleSummary {
   const b = run.battle!;
+  legendBeforeFinish(b);
   const won = b.result === 'won';
   const kills = b.fallen.filter((u) => u.team === 'enemy').length;
   // Undo transformations: Ganon becomes Ganondorf again; Twinrova splits back
@@ -740,7 +747,8 @@ export function finishBattle(run: RunWithEvent): BattleSummary {
   const skywardLines = withRng(run, (rng) => skywardAfterBattle(run, b, won, !!sideQuest?.done, rng));
   const wildLines = withRng(run, (rng) => wildAfterBattle(run, b, won, rng));
   const originalLines = withRng(run, (rng) => originalAfterBattle(run, b, won, rng));
-  return { won, rupees, fallen, kills, drops, supportUps, sideQuest, retreated: !won && !!b.retreat, dungeon, found, joined, army, twilight: twilightLines, skyward: skywardLines, wild: wildLines, original: originalLines };
+  const legendLines = withRng(run, (rng) => legendAfterBattle(run, b, won, rng));
+  return { won, rupees, fallen, kills, drops, supportUps, sideQuest, retreated: !won && !!b.retreat, dungeon, found, joined, army, twilight: twilightLines, skyward: skywardLines, wild: wildLines, original: originalLines, legend: legendLines };
 }
 
 export interface ArmyReport {
@@ -950,6 +958,8 @@ function applyEffect(run: Run, e: EventEffect, rng: RNG): string | null {
       return applyWildEffect(run, e, rng);
     case 'aol':
       return applyAolEffect(run, e, rng);
+    case 'legend':
+      return applyLegendEffect(run, e, rng);
     case 'support': {
       const s = (run.supports ??= {});
       for (let i = 0; i < run.roster.length; i++)
@@ -988,6 +998,7 @@ export function tourNext(run: Run, rng?: RNG): TourCampaign | undefined {
 export const TOUR_NAMES: Record<TourCampaign, string> = {
   hyrule: 'Hyrule (Ocarina of Time)', termina: "Termina (Majora's Mask)", greatSea: 'The Great Sea (The Wind Waker)', twilight: 'Twilight Hyrule (Twilight Princess)',
   skyward: 'The Sky (Skyward Sword)', wild: 'Hyrule Reborn (Era of the Wild)', original: 'Original Hyrule (The Legend of Zelda)',
+  legend: 'Era of Legend (Hyrule, Koholint, Holodrum, Labrynna)',
 };
 
 export function offerRegions(run: RunWithEvent): void {
@@ -1010,6 +1021,10 @@ export function offerRegions(run: RunWithEvent): void {
     }
     if (run.campaign === 'original') {
       const t = originalRegionOptions(run);
+      if (t.length) { run.event = { type: 'region', options: t }; return; }
+    }
+    if (run.campaign === 'legend') {
+      const t = legendRegionOptions(run);
       if (t.length) { run.event = { type: 'region', options: t }; return; }
     }
     if (run.campaign === 'wild' && legAct(run) + 1 < FREE_FOR_ALL_REGION + 5) {
@@ -1147,6 +1162,7 @@ function enterTourCampaign(run: RunWithEvent, camp: TourCampaign): void {
     if (camp === 'skyward') skywardStart(run);
     if (camp === 'wild') wildStart(run);
     if (camp === 'original') originalStart(run);
+    if (camp === 'legend') legendStart(run);
     if (camp === 'greatSea') {
       const sea = (run.sea ??= newSea());
       run.questItems ??= [];

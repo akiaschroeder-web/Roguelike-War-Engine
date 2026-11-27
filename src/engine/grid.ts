@@ -3,6 +3,7 @@ import { tpTileCost } from './twilight';
 import { ssTileCost } from './skyward';
 import { wildTileCost } from './wild';
 import { ogLeaps, ogTileCost } from './original';
+import { lgTileCost } from './legend';
 import { INF, MOVE_COSTS } from './rules';
 import { canSwim, effectiveStats, hasEffect, isMounted, moveTypeOf, unitTags } from './units';
 import { windFactor } from './naval';
@@ -77,6 +78,8 @@ export function tileCost(b: Battle, unit: Unit, t: Terrain): number {
   c = wildTileCost(b, unit, t, c)
   // Original Hyrule spaces
   c = ogTileCost(b, unit, t, c);
+  // Era of Legend spaces (seasons, snowbanks, Invisible Floors, rings)
+  c = lgTileCost(b, unit, t, c);
   if (unit.buffs?.some((x) => x.id === 'spectralStep') && c >= INF && t !== 'water') c = 2;
   return c;
 }

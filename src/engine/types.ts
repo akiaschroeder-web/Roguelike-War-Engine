@@ -155,7 +155,11 @@ export type Terrain = BaseTerrain | 'cracked' | 'timeBlock' | 'timeGap' | 'bridg
   | 'burnableBush' | 'boulder' | 'hiddenStairs' | 'raftDock' | 'ladderGap' | 'pushBlock' | 'shutterDoor' | 'bladeTrap' | 'goriyaCheckpoint'
   | 'secretCave' | 'gravestone' | 'lockedDoor'
   // Zelda II battlefield spaces
-  | 'palaceStatue' | 'collapsingFloor' | 'fallingBlock' | 'elevator' | 'narrowPassage' | 'fallingBoulderZone' | 'riverDevil';
+  | 'palaceStatue' | 'collapsingFloor' | 'fallingBlock' | 'elevator' | 'narrowPassage' | 'fallingBoulderZone' | 'riverDevil'
+  // Era of Legend battlefield spaces (the Koholint Owl Statue is the existing owlStatue)
+  | 'crystalSwitch' | 'crystalBarrier' | 'loweredBarrier' | 'woodenStake' | 'lightPortal' | 'darkPortal' | 'somariaBlock' | 'invisibleFloor'
+  | 'magneticOrb' | 'magneticRail' | 'softSoil' | 'seedTree' | 'treeStump' | 'timePortal' | 'switchHookTarget' | 'underwaterFloor'
+  | 'seasonalFlower' | 'seasonalSnowbank' | 'seasonalMushroom';
 
 export type Team = 'player' | 'enemy';
 
@@ -366,6 +370,8 @@ export interface WeaponDef {
   shots?: number;
   /** Fused materials give this multiple of their Might bonus (Gerudo weapons, Scimitar of the Seven). */
   fuseMult?: number;
+  /** Era of Legend effects handled by engine/legend.ts. */
+  lg?: string[];
 }
 
 /** Era of the Wild weapon effects (section 13). */
@@ -419,6 +425,8 @@ export interface GearDef {
   wildSet?: string;
   /** Wild traits (resistances, disguises, runes…) handled by engine/wildGear.ts. */
   wildFx?: string[];
+  /** Era of Legend effects (rings, medallions, pendants…) handled by engine/legend.ts. */
+  lg?: string[];
 }
 
 export type GearEffect =
@@ -604,7 +612,7 @@ export interface WorldDef {
   terrainNames: Record<BaseTerrain, string>;
   terrainColors: Record<BaseTerrain, string>;
   /** Regions of the Termina campaign (with the three-day cycle). */
-  campaign?: 'termina' | 'greatSea' | 'twilight' | 'skyward' | 'wild' | 'original';
+  campaign?: 'termina' | 'greatSea' | 'twilight' | 'skyward' | 'wild' | 'original' | 'legend';
   /** Era of the Wild: which layer of the three-layer map. */
   layer?: 'surface' | 'sky' | 'depths';
   /** Battles here are fought at sea (vessels, wind, islands). */
@@ -653,6 +661,11 @@ export interface UnitTemplate {
   rare?: boolean;
   /** Cannot be in the same army as these template ids. */
   exclusiveWith?: string[];
+  /** A transformation of another template (shares its progression): never offered at recruitment. */
+  formOf?: string;
+  /** Art that follows the equipment: the first entry whose ids include the equipped weapon or a worn gear piece wins
+   *  (over the random art variant). */
+  artByGear?: { ids: string[]; art: string }[];
 }
 
 export interface EnemyArchetype {
@@ -719,7 +732,7 @@ export interface CommanderDef {
   bonus: CommanderBonus;
   bonusText: string;
   /** Campaign this commander starts in by default. */
-  campaign?: 'termina' | 'greatSea' | 'twilight' | 'skyward' | 'wild' | 'original';
+  campaign?: 'termina' | 'greatSea' | 'twilight' | 'skyward' | 'wild' | 'original' | 'legend';
   /** Weapons, gear and items handed out to the army at the start (commander first). */
   startingItems?: string[];
 }
@@ -732,7 +745,10 @@ export type CommanderBonus = 'extraTreasure' | 'healing' | 'forging' | 'postBatt
   // Era of the Wild
   | 'fusionMastery' | 'sacredResearch' | 'healingWaters' | 'goronGuard' | 'ritoGale' | 'gerudoLightning' | 'waterBarriers' | 'goronMining' | 'windRiders'
   | 'lightningFields' | 'zonaiEngineering' | 'kingOfLight' | 'yigaAmbush' | 'demonKingsGloom' | 'calamityCorruption'
-  | 'hiddenTreasure' | 'wisdomOfHyrule' | 'concealedDarkness' | 'ancientMagic';
+  | 'hiddenTreasure' | 'wisdomOfHyrule' | 'concealedDarkness' | 'ancientMagic'
+  // Era of Legend
+  | 'legendaryTools' | 'sacredMaiden' | 'balladOfTheWindFish' | 'seasonalBlessing' | 'timeHarmony' | 'secretsOfFarore' | 'falseMagic'
+  | 'generalOfDarkness' | 'sorceressOfShadows' | 'kingOfDarkness';
 
 export type SkillId = string;
 
@@ -838,6 +854,8 @@ export interface Unit {
   survivedOnce?: boolean;
   /** Art variant the player picked for this unit. */
   artPick?: string;
+  /** Battle-only art (a temporary form: Link's rabbit form, the Shadow Nightmare's shadows). Wins over everything. */
+  artOverride?: string;
 }
 
 export type ObjectiveType = 'rout' | 'boss' | 'survive' | 'seize' | 'defend' | 'escape' | 'capture' | 'escort' | 'rescue'
@@ -1004,7 +1022,7 @@ export interface RunMap {
 }
 
 /** A campaign the World Tour can visit. */
-export type TourCampaign = 'hyrule' | 'termina' | 'greatSea' | 'twilight' | 'skyward' | 'wild' | 'original';
+export type TourCampaign = 'hyrule' | 'termina' | 'greatSea' | 'twilight' | 'skyward' | 'wild' | 'original' | 'legend';
 
 export interface Run {
   seed: number;
@@ -1037,7 +1055,7 @@ export interface Run {
   /** Army-wide stats and resources. */
   army?: Army;
   /** Which campaign: the endless Hyrule war, Termina with its three-day cycle, or the Great Sea. */
-  campaign?: 'hyrule' | 'termina' | 'greatSea' | 'twilight' | 'skyward' | 'wild' | 'original' | 'random' | 'worldTour';
+  campaign?: 'hyrule' | 'termina' | 'greatSea' | 'twilight' | 'skyward' | 'wild' | 'original' | 'legend' | 'random' | 'worldTour';
   /** Great Sea: the naval campaign's state. */
   sea?: SeaState;
   /** Termina: hours passed in the current three-day cycle (0-71) and resets so far. */
@@ -1119,7 +1137,9 @@ export type EventEffect =
   /** Era of the Wild: campaign effects (engine/wildRun.ts). */
   | { kind: 'wild'; op: string; amount?: number; id?: string }
   /** Zelda II (engine/originalRun.ts): teach a spell or sword technique, hand over a pack item. */
-  | { kind: 'aol'; op: string; id?: string };
+  | { kind: 'aol'; op: string; id?: string }
+  /** Era of Legend (engine/legendRun.ts): rings, Gasha trees, seeds, trading sequences, Essences. */
+  | { kind: 'legend'; op: string; id?: string; amount?: number };
 
 /** Conditions for an event or a single choice. */
 export interface EventRequires {

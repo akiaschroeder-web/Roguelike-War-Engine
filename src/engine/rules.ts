@@ -33,6 +33,10 @@ const SPECIAL = (open: number, water = INF, rough = 2, gap = INF) => ({
   goriyaCheckpoint: INF, secretCave: open, gravestone: INF, lockedDoor: INF,
   // Zelda II (per-unit exceptions live in aol.ts aolTileCost)
   palaceStatue: INF, collapsingFloor: open, fallingBlock: open, elevator: open, narrowPassage: INF, fallingBoulderZone: open, riverDevil: INF,
+  // Era of Legend (per-unit and seasonal exceptions live in legend.ts lgTileCost)
+  crystalSwitch: INF, crystalBarrier: INF, loweredBarrier: open, woodenStake: INF, lightPortal: open, darkPortal: open, somariaBlock: INF,
+  invisibleFloor: open, magneticOrb: INF, magneticRail: rough, softSoil: open, seedTree: INF, treeStump: open, timePortal: open,
+  switchHookTarget: INF, underwaterFloor: water, seasonalFlower: open, seasonalSnowbank: INF, seasonalMushroom: INF,
 });
 export const MOVE_COSTS: Record<MoveType, Record<Terrain, number>> = {
   foot:    { plain: 1, forest: 2, mountain: 3, water: INF, wall: INF, fort: 1, lava: 2, ...SPECIAL(1) },
@@ -179,10 +183,29 @@ export const TERRAIN_BONUS: Record<Terrain, { avoid: number; def: number; heal: 
   narrowPassage: { avoid: 20, def: 1, heal: 0 },
   fallingBoulderZone: { avoid: 0, def: 0, heal: 0 },
   riverDevil: { avoid: 0, def: 0, heal: 0 },
+  crystalSwitch: { avoid: 0, def: 0, heal: 0 },
+  crystalBarrier: { avoid: 0, def: 0, heal: 0 },
+  loweredBarrier: { avoid: 0, def: 0, heal: 0 },
+  woodenStake: { avoid: 0, def: 0, heal: 0 },
+  lightPortal: { avoid: 0, def: 0, heal: 0 },
+  darkPortal: { avoid: 0, def: 0, heal: 0 },
+  somariaBlock: { avoid: 0, def: 0, heal: 0 },
+  invisibleFloor: { avoid: 0, def: 0, heal: 0 },
+  magneticOrb: { avoid: 0, def: 0, heal: 0 },
+  magneticRail: { avoid: 0, def: 1, heal: 0 },
+  softSoil: { avoid: 0, def: 0, heal: 0 },
+  seedTree: { avoid: 0, def: 0, heal: 0 },
+  treeStump: { avoid: 10, def: 1, heal: 0 },
+  timePortal: { avoid: 0, def: 0, heal: 0 },
+  switchHookTarget: { avoid: 0, def: 0, heal: 0 },
+  underwaterFloor: { avoid: 10, def: 0, heal: 0 },
+  seasonalFlower: { avoid: 10, def: 0, heal: 0 },
+  seasonalSnowbank: { avoid: 10, def: 1, heal: 0 },
+  seasonalMushroom: { avoid: 0, def: 0, heal: 0 },
 };
 
 /** Water-like spaces: swimmers move through them, others can't. */
-export const WATERY: Terrain[] = ['water', 'poisonWater', 'current', 'whirlpool', 'submergedTreasure'];
+export const WATERY: Terrain[] = ['water', 'poisonWater', 'current', 'whirlpool', 'submergedTreasure', 'underwaterFloor'];
 
 /** Display names and colours for special terrain (regions name the basic ones). */
 export const SPECIAL_TERRAIN: Record<Exclude<Terrain, BaseTerrain>, { name: string; color: string }> = {
@@ -315,6 +338,25 @@ export const SPECIAL_TERRAIN: Record<Exclude<Terrain, BaseTerrain>, { name: stri
   narrowPassage: { name: 'Narrow Passage', color: '#3a3040' },
   fallingBoulderZone: { name: 'Falling Boulder Zone', color: '#8a5a4a' },
   riverDevil: { name: 'River Devil', color: '#4a6a5a' },
+  crystalSwitch: { name: 'Crystal Switch', color: '#c060c0' },
+  crystalBarrier: { name: 'Crystal Barrier', color: '#d07a2a' },
+  loweredBarrier: { name: 'Lowered Barrier', color: '#5a7ab0' },
+  woodenStake: { name: 'Wooden Stake', color: '#8a5a2a' },
+  lightPortal: { name: 'Light World Portal', color: '#e8e0a8' },
+  darkPortal: { name: 'Dark World Portal', color: '#6a3a8a' },
+  somariaBlock: { name: 'Somaria Block', color: '#d0a040' },
+  invisibleFloor: { name: 'Invisible Floor', color: '#2a2a38' },
+  magneticOrb: { name: 'Magnetic Orb', color: '#a03a3a' },
+  magneticRail: { name: 'Magnetic Rail', color: '#7a7a8a' },
+  softSoil: { name: 'Soft Soil', color: '#8a6038' },
+  seedTree: { name: 'Mystical Seed Tree', color: '#4a8a3a' },
+  treeStump: { name: 'Tree Stump', color: '#8a6a3a' },
+  timePortal: { name: 'Time Portal', color: '#7ad0d8' },
+  switchHookTarget: { name: 'Switch Hook Target', color: '#9a8aa8' },
+  underwaterFloor: { name: 'Underwater Floor', color: '#1a5a8a' },
+  seasonalFlower: { name: 'Seasonal Flower', color: '#e8a0c0' },
+  seasonalSnowbank: { name: 'Seasonal Snowbank', color: '#e8f0f8' },
+  seasonalMushroom: { name: 'Seasonal Mushroom', color: '#c07a3a' },
 };
 
 /** Lava damage at the start of a unit's turn (as % of max HP). */

@@ -160,6 +160,8 @@ export function activeGear(unit: Unit): GearDef[] {
     if (!id || !GEAR[id]) continue;
     if (slot === 'shield' && (twoHanded || cursed)) continue;
     if (slot === 'mount' && !isMounted(unit)) continue;
+    // Identical Magic Rings don't stack: the second copy does nothing.
+    if (slot === 'acc2' && unit.gear.acc1 === id && GEAR[id].lg?.includes('ring')) continue;
     out.push(GEAR[id]);
   }
   return out;

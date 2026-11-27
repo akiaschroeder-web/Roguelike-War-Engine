@@ -11,6 +11,7 @@ import { tpStartPhase } from './twilight';
 import { ssStartPhase, trialResult } from './skyward';
 import { wildStartPhase } from './wild';
 import { ogStartPhase } from './original';
+import { lgBossesRemain, lgStartPhase } from './legend';
 import { resolveSinking } from './naval';
 import { revertMask } from './terminaAbilities';
 import { roomFor } from './transform';
@@ -437,6 +438,7 @@ export function startPhase(b: Battle, team: Team): TurnStartEvent[] {
     ssStartPhase(b, u, events);
     wildStartPhase(b, u, events);
     ogStartPhase(b, u, events);
+    lgStartPhase(b, u, events);
     const max = u.stats.hp;
     const tiles = footprint(u.x, u.y, u.size).map((p) => b.tiles[keyOf(b, p.x, p.y)]);
     const anchor = tiles[0];
@@ -502,7 +504,7 @@ export function checkResult(b: Battle): Battle['result'] {
   if (b.objective.type === 'trial') return undefined;
   if (b.objective.type === 'escort' && b.fallen.some((u) => u.vip)) { b.retreat = true; return (b.result = 'lost'); }
   if (!enemies.length) return (b.result = 'won');
-  if (b.objective.type === 'boss' && b.fallen.some((u) => u.isBoss)) return (b.result = 'won');
+  if (b.objective.type === 'boss' && b.fallen.some((u) => u.isBoss) && !lgBossesRemain(b)) return (b.result = 'won');
   const o = b.objective;
   if (o.type === 'survive' && b.turn > (o.turns ?? 6)) return (b.result = 'won');
   if (o.type === 'seize' && onTiles(b, 'player', o.tiles)) return (b.result = 'won');

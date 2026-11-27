@@ -18,6 +18,7 @@ import { canSwim, effectiveStats, hasEffect, isMounted, makeEnemy, makeHero, mov
 import { disarm, pullToward, pushAway } from './windwaker';
 import { activeGroups } from './supports';
 import { hasTrait, traitCount, wildTraits } from './wildGear';
+import { lgSaveFromDeath } from './legend';
 import type { AbilityDef, Battle, Element, Pos, StatusKind, Terrain, Unit, WeaponDef } from './types';
 
 declare module './types' {
@@ -1350,7 +1351,7 @@ export function castWild(b: Battle, u: Unit, def: AbilityDef, rng: RNG, target?:
     dmg = Math.min(e.hp, Math.max(0, Math.floor(dmg)));
     if (e.buffs.some((x) => x.barrier)) dmg = 0;
     if (dmg > 0) { const os = wildOnStrike(b, u, e, dmg, w, rng); dmg = os.dmg; if (os.line) out.lines.push(os.line); }
-    if (dmg >= e.hp && e.hp > 0) { const sv = wildSaveFromDeath(b, e, u); if (sv) { dmg = e.hp - 1; out.lines.push(sv.line); e.hp -= dmg; e.hp = Math.min(e.stats.hp, e.hp + sv.heal); dmg = -1; } }
+    if (dmg >= e.hp && e.hp > 0) { const sv = wildSaveFromDeath(b, e, u) ?? lgSaveFromDeath(b, e); if (sv) { dmg = e.hp - 1; out.lines.push(sv.line); e.hp -= dmg; e.hp = Math.min(e.stats.hp, e.hp + sv.heal); dmg = -1; } }
     if (dmg >= 0) e.hp -= dmg;
     const killed = e.hp <= 0;
     const statuses: StatusKind[] = [];
