@@ -20,13 +20,20 @@ def uri(path: Path, q: int) -> str:
     im.save(buf, 'WEBP', quality=q, method=6)
     return 'data:image/webp;base64,' + base64.b64encode(buf.getvalue()).decode()
 
-packs = {'portraits-1': {}}
-for i in ids:
-    packs['portraits-1'][i] = uri(ROOT / 'public' / 'portraits' / f'{i}.png', 82)
+def job(a):
+    kind, i, q = a
+    return kind, i, uri(ROOT / 'public' / kind / f'{i}.png', q)
+
+import multiprocessing as mp
+with mp.get_context('fork').Pool() as pool:
+    done = pool.map(job, [('portraits', i, 82) for i in ids] + [('art', i, 80) for i in ids], chunksize=4)
+por = {i: d for k, i, d in done if k == 'portraits'}
+artd = {i: d for k, i, d in done if k == 'art'}
+packs = {'portraits-1': {i: por[i] for i in ids}}
 art = [i for i in ids]
 per = (len(art) + 2) // 3
 for n in range(3):
-    packs[f'art-{n + 1}'] = {i: uri(ROOT / 'public' / 'art' / f'{i}.png', 80) for i in art[n * per:(n + 1) * per]}
+    packs[f'art-{n + 1}'] = {i: artd[i] for i in art[n * per:(n + 1) * per]}
 for name, data in packs.items():
     p = out / f'{name}.json'
     p.write_text(json.dumps(data))
