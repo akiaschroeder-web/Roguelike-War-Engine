@@ -9,12 +9,13 @@ import { SUPPORT_REGISTRY_AOL } from './registryAol';
 import { SUPPORT_REGISTRY_LEGEND } from './registryLegend';
 import { SUPPORT_REGISTRY_PHANTOM } from './registryPhantom';
 import { SUPPORT_REGISTRY_SPIRIT } from './registrySpirit';
+import { SUPPORT_REGISTRY_MINISH } from './registryMinish';
 import { CONVOS as EXAMPLES } from './convos/examples';
 import { WRITTEN } from './written';
 
 export type { SupportPairDef };
 /** Every registered pairing, all packs. */
-export const SUPPORT_REGISTRY: SupportPairDef[] = [...BASE_REGISTRY, ...SUPPORT_REGISTRY_SS, ...SUPPORT_REGISTRY_WILD, ...SUPPORT_REGISTRY_ORIGINAL, ...SUPPORT_REGISTRY_AOL, ...SUPPORT_REGISTRY_LEGEND, ...SUPPORT_REGISTRY_PHANTOM, ...SUPPORT_REGISTRY_SPIRIT];
+export const SUPPORT_REGISTRY: SupportPairDef[] = [...BASE_REGISTRY, ...SUPPORT_REGISTRY_SS, ...SUPPORT_REGISTRY_WILD, ...SUPPORT_REGISTRY_ORIGINAL, ...SUPPORT_REGISTRY_AOL, ...SUPPORT_REGISTRY_LEGEND, ...SUPPORT_REGISTRY_PHANTOM, ...SUPPORT_REGISTRY_SPIRIT, ...SUPPORT_REGISTRY_MINISH];
 
 export type SupportLine = ['a' | 'b' | 'n', string];
 export type SupportRankKey = 'C' | 'B' | 'A' | 'S';
@@ -36,6 +37,8 @@ export const SUPPORT_CANON: Record<string, string> = {
   // Spirit Tracks forms: Zelda's spirit and her Phantom armors, the Demon King in her body, boss forms
   spiritZelda: 'zeldaST', phantomZelda: 'zeldaST', phantomZeldaTorch: 'zeldaST', phantomZeldaWarp: 'zeldaST', phantomZeldaWrecker: 'zeldaST',
   malladusZelda: 'malladus', coleBoss: 'cole', byrneBoss: 'byrne', bigBlinBoss: 'bigBlin',
+  // The Minish Cap forms: Micro Link, Ezlo's cap, and Vaati's Minish and demonic shapes
+  microLink: 'heroOfMinish', ezloCap: 'ezloMinish', vaatiMinish: 'vaatiHylian', vaatiReborn: 'vaatiHylian', vaatiTransfigured: 'vaatiHylian', vaatisWrath: 'vaatiHylian',
   nayruPossessed: 'nayru', onoxDragon: 'onox', veranFairy: 'veran', veranTurtle: 'veran', veranSpider: 'veran', veranBee: 'veran',
   lightDragon: 'zeldaWild', demonDragon: 'ganondorfWild', darkBeastGanonWild: 'calamityGanon', mineruConstruct: 'mineru',
 };
@@ -149,6 +152,14 @@ export const GROUP_SUPPORTS: GroupSupport[] = [
   { id: 'generationsOfAdventure', name: 'Generations of Adventure', members: ['linebeck', 'linebeck3', 'elderNiko'], text: 'More treasure and salvage: +25% battle Rupees; members +2 SKL and SPD.' },
   { id: 'spiritsOfCourageST', name: 'Spirits of Courage', members: ['zeldaST', 'ciela', 'tetra'], text: '+3 SKL and MAG.' },
   { id: 'brokenSeal', name: 'The Broken Seal', members: ['cole', 'byrne', 'malladus'], text: 'Dark magic hits harder and possession is resisted: +3 STR, MAG and RES with dark weapons.' },
+  // The Minish Cap (docs/minish-cap-pack.md section 13)
+  { id: 'picoriLegend', name: 'Picori Legend', members: ['heroOfMinish', 'zeldaMC', 'ezloMinish'], text: 'Stronger sacred damage (+15%) and Micro transformation: members shrink and grow anywhere.' },
+  { id: 'unitedMinish', name: 'United Minish', members: ['gentari', 'melari', 'librari'], text: 'Allied Micro units gain +2 DEF, RES and MOV.' },
+  { id: 'masterForgers', name: 'Master Forgers', members: ['smith', 'melari', 'biggoron', 'zauz'], text: 'Cheaper crafting and better weapon durability: members gain +2 STR, and crafting at the Minish Forge costs 30% less.' },
+  { id: 'bladeBrotherhood', name: 'Blade Brotherhood', members: ['swiftblade', 'greatblade', 'grimblade', 'swiftbladeFirst'], text: 'Their sword techniques cost 25% less STA.' },
+  { id: 'herosCompanions', name: "Hero's Companions", members: ['ezloMinish', 'navi', 'tatl', 'ciela', 'fi'], text: 'Longer support-ability range and better MP recovery: members recover 3 MP a turn and gain +10 Hit and Avoid within 3 of a hero.' },
+  { id: 'forbiddenAmbitionGroup', name: 'Forbidden Ambition', members: ['vaatiHylian', 'ghirahim', 'zant'], text: 'More dark magic damage (+20%).' },
+  { id: 'ancientGuardians', name: 'Ancient Guardians', members: ['mazaal', 'gohdan', 'eox'], text: 'More construct defence (allied constructs take 15% less damage) and resistance to disabling effects (no Stun, Root or Freeze).' },
   { id: 'demonKings', name: 'The Demon Kings', members: ['demise', 'ganondorf', 'ganondorfWW', 'ganondorfTP', 'ganondorfWild'], text: 'Dark damage +25%.' },
 ];
 

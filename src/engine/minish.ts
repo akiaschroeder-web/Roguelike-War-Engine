@@ -175,6 +175,8 @@ export function mnStartPhase(b: Battle, u: Unit, events: MNEvent[]) {
   if (mcTag(u, 'lightForce')) u.mp = Math.min(u.stats.mp, u.mp + 5);
   if (mcTag(u, 'sacredCore') && unitTags(u).includes('construct')) heal(u, 0.1, "Mazaal's Sacred Core repairs");
   if (b.groupSupports?.includes('unitedMinish') && u.team === 'player' && u.micro) buff(u, 'unitedMinish', 'United Minish', 1, { mov: 2 });
+  if (b.groupSupports?.includes('herosCompanions') && u.team === 'player' && ['ezloMinish', 'ezloCap', 'navi', 'tatl', 'ciela', 'fi'].includes(u.templateId ?? '')) u.mp = Math.min(u.stats.mp, u.mp + 3);
+  if (b.groupSupports?.includes('ancientGuardians') && u.team === 'player' && unitTags(u).includes('construct')) u.statuses = u.statuses.filter((x) => !['stun', 'root', 'freeze'].includes(x.kind));
   // Detection.
   const reveal = (r: number) => { for (const e of foesOf(b, u)) if (e.hidden && unitDist(u, e) <= r) e.hidden = false; };
   if (has(u, 'forestPassage')) reveal(5);

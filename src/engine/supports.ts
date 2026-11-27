@@ -159,6 +159,10 @@ export function specialSupportMods(b: Battle, u: Unit, pos: Pos, foe?: Unit): Gr
       case 'spiritsOfCourageST': if (mine) add({ skl: 3, mag: 3 }); break;
       case 'generationsOfAdventure': if (mine) add({ skl: 2, spd: 2 }); break;
       case 'brokenSeal': if (mine && (w?.element === 'dark' || u.race === 'demon')) add({ str: 3, mag: 3, res: 3 }); break;
+      // ── The Minish Cap ──
+      case 'unitedMinish': if (u.micro) add({ def: 2, res: 2 }); break;
+      case 'masterForgers': if (mine) add({ str: 2 }); break;
+      case 'herosCompanions': if (mine && b.units.some((a) => a.team === u.team && /^hero|^link$/.test(a.templateId ?? '') && unitDist(u, a, pos) <= 3)) add({ hit: 10, avoid: 10 }); break;
     }
   }
   return m;

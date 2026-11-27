@@ -251,6 +251,7 @@ export function mcTransform(b: Battle, u: Unit, templateId: string) {
 /** Shrinking is possible on a Minish Portal, beside (or carrying) an Ezlo, or with a magic cap. */
 export function canChangeSize(b: Battle, u: Unit): boolean {
   if (tileAt(b, u.x, u.y) === 'minishPortal' || footprint(u.x, u.y, u.size).some((p) => tileAt(b, p.x, p.y) === 'minishPortal')) return true;
+  if (b.groupSupports?.includes('picoriLegend') && ['heroOfMinish', 'microLink', 'zeldaMC', 'ezloMinish', 'ezloCap'].includes(u.templateId ?? '')) return true;
   if (has(u, 'masterOfMiniaturization') || has(u, 'enchantedCap') || has(u, 'sorcerersCapSkill') || WEAPONS[u.weapons[0]]?.mc?.includes('sizeBoost') || activeGear(u).some((g) => g.mc?.includes('sizeChange'))) return true;
   return b.units.some((a) => a.team === u.team && a !== u && (has(a, 'masterOfMiniaturization') || has(a, 'enchantedCap')) && footDist(a.x, a.y, a.size, u.x, u.y, u.size) <= 1);
 }
