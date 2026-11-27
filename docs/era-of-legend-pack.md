@@ -109,3 +109,4 @@ Still needed: Kholdstare, Cukeman (unless the earlier unidentified_greenPixel is
 User answers: the green figure with eye-discs (batch 4) is Fairy Veran → veranFairy.webp. The black dome with an antenna is Smasher → smasher.webp. The blue hunched creature is Subterror → subterror.webp. The batch-5 green winged pixel is now unidentified_greenWingedPixel (asked).
 Batch 6 — Octorok alt arts (appended to octorok's variants): octorokALTTP, octorokWW, octorokSS, octorokBotW.
 Still needed: Kholdstare, Cukeman.
+Correction from the user: the batch-4 green figure with eye-discs is Cukeman (cukeman.webp); the batch-5 green winged pixel is Fairy Veran (veranFairy.webp). Only Kholdstare is still missing.
