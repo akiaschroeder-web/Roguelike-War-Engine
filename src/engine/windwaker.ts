@@ -14,6 +14,7 @@ import {
 } from './naval';
 import { canSwim, effectiveStats, hasEffect, makeEnemy, makeHero, moveTypeOf, prepareForBattle, unitTags } from './units';
 import type { AbilityDef, Battle, Element, Pos, StatusKind, Terrain, Unit, WeaponDef } from './types';
+import { phSalvageBonus } from './phantom';
 
 const isFlying = (u: Unit) => moveTypeOf(u) === 'flying';
 const free = (b: Battle, u: Unit, x: number, y: number) =>
@@ -750,6 +751,7 @@ export function castWindWaker(b: Battle, u: Unit, def: AbilityDef, rng: RNG, tar
       const item = rng.pick(finds);
       (b.loot ??= []).push(item);
       out.lines.push(`Hauled up a treasure chest: ₹${rupees} and ${ITEMS[item].name}!`);
+      out.lines.push(...phSalvageBonus(b, u, rupees, rng));
       break;
     }
     case 'smashSearchlight':

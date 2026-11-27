@@ -5,6 +5,7 @@ import { useSkywardItem } from './skyward';
 import { useWildItem, wildCanUseItem, wildItemReaction } from './wild';
 import { ogCanUseItem, ogHealItemMult, ogOnBlast, ogQuickItem, useOriginalItem } from './original';
 import { lgCanUseItem, lgHealItemMult, lgItemTiles, lgOnBlast, useLegendItem } from './legend';
+import { phHealItemMult, phItemTiles, phOnBlast, usePhantomItem } from './phantom';
 import { ITEMS, TEMPLATES } from '../data/registry';
 import { useFairy, type LevelUp } from './combat';
 import { footDist, inBounds, tilesInRange } from './grid';
@@ -95,6 +96,8 @@ export function targetTiles(b: Battle, u: Unit, def: ItemDef): Pos[] {
   const tiles = tilesInRange(b, u, def.minRange ?? 1, def.maxRange ?? 1, u.size);
   const lgt = lgItemTiles(b, u, def.id, tiles);
   if (lgt) return lgt;
+  const pht = phItemTiles(b, u, def.id, tiles);
+  if (pht) return pht;
   if (def.tool === 'pictograph') return tiles.filter((p) => b.units.some((e) => e.team !== u.team && footDist(p.x, p.y, 1, e.x, e.y, e.size) === 0));
   if (def.id === 'chainShot') return tiles.filter((p) => b.units.some((e) => e.team !== u.team && isVessel(e) && footDist(p.x, p.y, 1, e.x, e.y, e.size) === 0));
   if (def.id === 'repairPlanks') {
@@ -137,7 +140,7 @@ export function useItem(b: Battle, u: Unit, index: number, rng: RNG, at?: Pos): 
   const res: ItemResult = { item: def, heals: [], hits: [], stunned: [], statuses: [], lines: [], levelUps: [] };
   let xp = 0;
   if (def.kind === 'heal' || def.kind === 'fullHeal') {
-    const amount = Math.min(def.kind === 'fullHeal' ? u.stats.hp : Math.ceil(def.power * ogHealItemMult(b, u) * lgHealItemMult(b, u)), u.stats.hp - u.hp);
+    const amount = Math.min(def.kind === 'fullHeal' ? u.stats.hp : Math.ceil(def.power * ogHealItemMult(b, u) * lgHealItemMult(b, u) * phHealItemMult(b, u)), u.stats.hp - u.hp);
     u.hp += amount;
     if (def.kind === 'fullHeal') u.mp = u.stats.mp;
     res.heals.push({ uid: u.uid, amount });
@@ -161,6 +164,7 @@ export function useItem(b: Battle, u: Unit, index: number, rng: RNG, at?: Pos): 
     }
     if (def.kind === 'bomb') res.lines.push(...ogOnBlast(b, at!, def.radius ?? 0, broken, blastVictims(b, u, def, at!), def.power, rng));
     if (def.kind === 'bomb') res.lines.push(...lgOnBlast(b, u, blastVictims(b, u, def, at!), def.power));
+    if (def.kind === 'bomb') res.lines.push(...phOnBlast(b, u, at!, def.radius ?? 0, def.power));
     if (def.element === 'fire') {
       const tiles: Pos[] = [];
       const r = def.radius ?? 0;
@@ -259,6 +263,8 @@ function useSpecial(b: Battle, u: Unit, def: ItemDef, rng: RNG, res: ItemResult,
   if (ssLine !== null) { res.lines.push(ssLine); return; }
   const wildLine = useWildItem(b, u, def.id, rng, tpTarget, at);
   if (wildLine !== null) { res.lines.push(wildLine); return; }
+  const phLine = usePhantomItem(b, def.id);
+  if (phLine !== null) { res.lines.push(phLine); return; }
   const lgLine = useLegendItem(b, u, def.id, rng, tpTarget, at);
   if (lgLine !== null) { res.lines.push(lgLine); return; }
   const ogLine = useOriginalItem(b, u, def.id, rng, tpTarget, at);

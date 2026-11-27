@@ -37,6 +37,9 @@ const SPECIAL = (open: number, water = INF, rough = 2, gap = INF) => ({
   crystalSwitch: INF, crystalBarrier: INF, loweredBarrier: open, woodenStake: INF, lightPortal: open, darkPortal: open, somariaBlock: INF,
   invisibleFloor: open, magneticOrb: INF, magneticRail: rough, softSoil: open, seedTree: INF, treeStump: open, timePortal: open,
   switchHookTarget: INF, underwaterFloor: water, seasonalFlower: open, seasonalSnowbank: INF, seasonalMushroom: INF,
+  // Phantom Hourglass (per-unit exceptions live in phantom.ts phTileCost: Phantoms can't enter Safe Zones, tightropes take size 1)
+  sacredSafeZone: open, phantomPatrol: open, phantomAlarm: open, tightropePost: INF, tightrope: gap === INF ? 1 : gap, whirlwind: open, spiritPedestal: INF,
+  bombchuTunnel: rough, hammerPad: open, sunCrest: INF, cycloneWarp: water,
 });
 export const MOVE_COSTS: Record<MoveType, Record<Terrain, number>> = {
   foot:    { plain: 1, forest: 2, mountain: 3, water: INF, wall: INF, fort: 1, lava: 2, ...SPECIAL(1) },
@@ -202,10 +205,21 @@ export const TERRAIN_BONUS: Record<Terrain, { avoid: number; def: number; heal: 
   seasonalFlower: { avoid: 10, def: 0, heal: 0 },
   seasonalSnowbank: { avoid: 10, def: 1, heal: 0 },
   seasonalMushroom: { avoid: 0, def: 0, heal: 0 },
+  sacredSafeZone: { avoid: 0, def: 0, heal: 0 },
+  phantomPatrol: { avoid: 0, def: 0, heal: 0 },
+  phantomAlarm: { avoid: 0, def: 0, heal: 0 },
+  tightropePost: { avoid: 0, def: 0, heal: 0 },
+  tightrope: { avoid: -10, def: 0, heal: 0 },
+  whirlwind: { avoid: 0, def: 0, heal: 0 },
+  spiritPedestal: { avoid: 0, def: 0, heal: 0 },
+  bombchuTunnel: { avoid: 10, def: 1, heal: 0 },
+  hammerPad: { avoid: 0, def: 0, heal: 0 },
+  sunCrest: { avoid: 0, def: 0, heal: 0 },
+  cycloneWarp: { avoid: 0, def: 0, heal: 0 },
 };
 
 /** Water-like spaces: swimmers move through them, others can't. */
-export const WATERY: Terrain[] = ['water', 'poisonWater', 'current', 'whirlpool', 'submergedTreasure', 'underwaterFloor'];
+export const WATERY: Terrain[] = ['water', 'poisonWater', 'current', 'whirlpool', 'submergedTreasure', 'underwaterFloor', 'cycloneWarp'];
 
 /** Display names and colours for special terrain (regions name the basic ones). */
 export const SPECIAL_TERRAIN: Record<Exclude<Terrain, BaseTerrain>, { name: string; color: string }> = {
@@ -357,6 +371,17 @@ export const SPECIAL_TERRAIN: Record<Exclude<Terrain, BaseTerrain>, { name: stri
   seasonalFlower: { name: 'Seasonal Flower', color: '#e8a0c0' },
   seasonalSnowbank: { name: 'Seasonal Snowbank', color: '#e8f0f8' },
   seasonalMushroom: { name: 'Seasonal Mushroom', color: '#c07a3a' },
+  sacredSafeZone: { name: 'Sacred Safe Zone', color: '#e8d890' },
+  phantomPatrol: { name: 'Phantom Patrol Route', color: '#7a6a9a' },
+  phantomAlarm: { name: 'Phantom Alarm', color: '#c04a4a' },
+  tightropePost: { name: 'Tightrope Post', color: '#8a6a3a' },
+  tightrope: { name: 'Tightrope', color: '#c8b080' },
+  whirlwind: { name: 'Whirlwind', color: '#c8e0e8' },
+  spiritPedestal: { name: 'Crystal Pedestal', color: '#6ab0e0' },
+  bombchuTunnel: { name: 'Bombchu Tunnel', color: '#6a4a3a' },
+  hammerPad: { name: 'Hammer Launch Pad', color: '#a08a5a' },
+  sunCrest: { name: 'Sun Crest', color: '#f0c040' },
+  cycloneWarp: { name: 'Cyclone Warp Point', color: '#5ac0d0' },
 };
 
 /** Lava damage at the start of a unit's turn (as % of max HP). */

@@ -7,6 +7,7 @@ import { anchorCost, footDist, footprint, inBounds, keyOf, unitAt, unitDist } fr
 import type { RNG } from './rng';
 import { INF, WATERY } from './rules';
 import { hasEffect, unitTags } from './units';
+import { phCapacity } from './phantom';
 import type { Battle, Pos, Terrain, Unit } from './types';
 
 export const isVessel = (u: Pick<Unit, 'race'>): boolean => !!RACES[u.race]?.tags?.includes('vessel');
@@ -14,7 +15,7 @@ export const isVessel = (u: Pick<Unit, 'race'>): boolean => !!RACES[u.race]?.tag
 /** Passenger room (in spaces: a size-2 passenger takes 2). */
 export function capacityOf(v: Unit): number {
   if (!isVessel(v)) return 0;
-  return CAPACITY[v.templateId ?? v.artId ?? ''] ?? Math.max(1, v.size * 2 - 2);
+  return phCapacity(v) ?? CAPACITY[v.templateId ?? v.artId ?? ''] ?? Math.max(1, v.size * 2 - 2);
 }
 
 export function cargoLoad(v: Unit): number {
@@ -76,7 +77,7 @@ export function boardTargets(b: Battle, u: Unit): Unit[] {
 
 /** Boarding doesn't end the turn with a ramp, a boarding point, pirate garb or a boarding party. */
 export function quickBoard(b: Battle, u: Unit, v: Unit): boolean {
-  return hasEffect(v, 'boardingRamp') || hasEffect(u, 'quickBoard') || u.skills.includes('boardingParty') || u.skills.includes('ropeRunner')
+  return hasEffect(v, 'boardingRamp') || v.skills.includes('fastPursuit') || hasEffect(u, 'quickBoard') || u.skills.includes('boardingParty') || u.skills.includes('ropeRunner')
     || footprint(u.x, u.y, u.size).some((p) => b.tiles[keyOf(b, p.x, p.y)] === 'boardingPoint');
 }
 

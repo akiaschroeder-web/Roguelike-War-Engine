@@ -10,6 +10,7 @@ import { ssAfterMove } from '../engine/skyward';
 import { wildAfterMove } from '../engine/wild';
 import { ogAfterMove } from '../engine/original';
 import { lgAfterMove } from '../engine/legend';
+import { hourglassLabel, phAfterMove } from '../engine/phantom';
 import { enemyUnload, windLabel } from '../engine/naval';
 import { sideQuestText } from '../engine/run';
 import { adjacentCaptives, checkResult, freeCaptive, mountToggleBlocked, moveUnit, toggleMount, objectiveText, spawnReinforcements, startPhase, type TurnStartEvent } from '../engine/battle';
@@ -57,6 +58,9 @@ const TERRAIN_GLYPH: Record<string, string> = {
   crystalSwitch: '💠', crystalBarrier: '▮', loweredBarrier: '▁', woodenStake: '┃', lightPortal: '☀', darkPortal: '☾', somariaBlock: '🟨', invisibleFloor: '░',
   magneticOrb: '🧲', magneticRail: '═', softSoil: '∴', seedTree: '🌰', treeStump: '🪵', timePortal: '⌛', switchHookTarget: '◈', underwaterFloor: '≋',
   seasonalFlower: '🌸', seasonalSnowbank: '❄', seasonalMushroom: '🍄',
+  // Phantom Hourglass
+  sacredSafeZone: '✚', phantomPatrol: '⋯', phantomAlarm: '🚨', tightropePost: '╥', tightrope: '┅', whirlwind: '🌪', spiritPedestal: '🔷', bombchuTunnel: '◔',
+  hammerPad: '🔨', sunCrest: '☀', cycloneWarp: '🌀',
 };
 
 export class BattleView {
@@ -198,6 +202,8 @@ export class BattleView {
       ${b.wind ? `<div class="weather" title="Ships sail faster with the wind (+2 MOV) and slower against it (−2)."><span class="dim small">Wind</span><b>${esc(windLabel(b.wind))}</b></div>` : ''}
       ${b.night && b.naval ? '<div class="weather"><span class="dim small">Time</span><b>☾ Night</b></div>' : ''}
       ${b.wild ? `<div class="weather" title="The army's shared Energy Cell powers Zonai Devices and vehicles."><span class="dim small">Energy</span><b>⚡${b.wild.energy}/${b.wild.energyMax}</b></div>${b.wild.bloodMoon ? '<div class="weather"><span class="dim small">Sky</span><b class="bad">🌕 Blood Moon</b></div>' : ''}` : ''}
+      ${b.ph?.hourglass ? `<div class="weather" title="The Phantom Hourglass: the army's shared time energy (Time Freeze 5, Frozen Battlefield 15, Temporal Escape 8, Sacred Opening 5). It refills between battles.${b.ph.temple ? ' In the Temple it drains each turn anyone stands outside a Sacred Safe Zone; once empty, the Temple drains your life.' : ''}"><span class="dim small">Hourglass</span><b>${hourglassLabel(b)}</b></div>` : ''}
+      ${b.ph && b.ph.alarm > 0 ? '<div class="weather"><span class="dim small">Phantoms</span><b class="bad">🚨 Alarm</b></div>' : ''}
       ${b.lg?.world ? `<div class="weather" title="Portals (and the Magic Mirror) move the whole field between the worlds. Without a Moon Pearl, the Dark World makes you a rabbit."><span class="dim small">World</span><b>${b.lg.world === 'dark' ? '☾ Dark World' : '☀ Light World'}</b></div>` : ''}
       ${b.lg?.season ? `<div class="weather" title="The Rod of Seasons (from a Tree Stump) and Din change the season for both armies."><span class="dim small">Season</span><b>${({ spring: '🌸 Spring', summer: '☀ Summer', autumn: '🍂 Autumn', winter: '❄ Winter' } as const)[b.lg.season]}</b></div>` : ''}
       ${b.lg?.era ? `<div class="weather" title="The Harp of Ages and the Time Portals move the field between past and present. What you change in the past stays changed."><span class="dim small">Era</span><b>${b.lg.era === 'past' ? '⌛ The Past' : '⏳ The Present'}${b.lg.echoes ? ' · portals awake' : ''}</b></div>` : ''}
@@ -973,6 +979,8 @@ export class BattleView {
     if (og) { sfx('secret'); this.addLog(`🗝 ${esc(og)}`); }
     const lg = lgAfterMove(this.b, u); // Era of Legend spaces: Seasonal Flowers, Secret Discovery
     if (lg) { sfx('secret'); this.addLog(`🍃 ${esc(lg)}`); }
+    const ph = phAfterMove(this.b, u); // Phantom Hourglass spaces: Whirlwinds, Phantom Alarms; facing
+    if (ph) { sfx('secret'); this.addLog(`⌛ ${esc(ph)}`); }
     if (pressInversion(this.b, u)) { sfx('secret'); this.addLog('🔄 The Inversion Switch flips the walls and floors!'); }
     const dmg = triggerTraps(this.b, u);
     if (dmg) { sfx('hit'); this.float(u, `TRAP −${dmg}`, 'dmg'); this.addLog(`⚠ <b class="player">${esc(u.name)}</b> stepped on a spike trap (−${dmg} HP, rooted)!`); }
@@ -1393,6 +1401,7 @@ export class BattleView {
         wildAfterMove(b, e);
         ogAfterMove(b, e);
         lgAfterMove(b, e);
+        phAfterMove(b, e);
         const trap = triggerTraps(b, e);
         if (trap) { sfx('bomb'); this.float(e, `TRAP −${trap}`, 'dmg'); this.addLog(`💥 ${esc(e.name)} sets off your Death Armos Core (−${trap})!`); }
       }
@@ -1509,6 +1518,17 @@ const WW_TERRAIN_NOTES: Record<string, string> = {
   seasonalFlower: 'In spring, it launches whoever steps on it over the obstacles ahead',
   seasonalSnowbank: 'In winter, a snowy pathway (1 movement); otherwise a sheer bank',
   seasonalMushroom: 'In autumn, soft enough to cross; otherwise it blocks the way',
+  sacredSafeZone: 'A Sacred Safe Zone: the Temple can\'t drain your life here, and Phantoms can\'t enter',
+  phantomPatrol: 'A Phantom Patrol Route: Temple Phantoms walk it until they spot you',
+  phantomAlarm: 'A Phantom Alarm: step on it and every Phantom gives chase',
+  tightropePost: 'A Tightrope Post (obstacle): a Grappling Hook (with the Enhancement) strings a tightrope from here across the gap',
+  tightrope: 'A Tightrope: only size-1 units (and flyers) can cross',
+  whirlwind: 'A Whirlwind: it launches whoever ends a move on it; explosives set off here knock Cyclok out of the air',
+  spiritPedestal: 'A Crystal Pedestal (obstacle): place a crystal from next to it for an army-wide blessing',
+  bombchuTunnel: 'A Bombchu Tunnel: from next to one, a Bombchu can come out next to any other tunnel',
+  hammerPad: 'A Hammer Launch Pad: with a hammer (yours or an adjacent ally\'s), launch 2–4 spaces',
+  sunCrest: 'A Sun Crest (obstacle): strike it from next to it to open sealed doors and walls nearby',
+  cycloneWarp: 'A Cyclone Warp Point: with the Cyclone Slate, ships warp between them',
 };
 
 /** Abilities shown in the Abilities menu (forecast-only modifiers are excluded). */

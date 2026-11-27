@@ -12,8 +12,9 @@ import { sacredDutyCovers, ssAfterCombat, ssAfterHit, ssCannotAttack, ssCanParry
 import { wildAfterCombat, wildAfterHit, wildAfterHeal, wildCannotAttack, wildCanParry, wildElement, wildFlurry, wildHealMult, wildInterceptor, wildMight, wildMods, wildMultiplier, wildOnKill, wildOnStrike, wildRangeBonus, wildSaveFromDeath, wildSideAdjust, wildXpMult } from './wild';
 import { ogAfterCombat, ogAfterHit, ogCannotAttack, ogDefense, ogExtraAttack, ogMods, ogMultiplier, ogNoBlock, ogOnKill, ogOnStrike, ogRangeBonus, ogSaveFromDeath } from './original';
 import { lgAfterCombat, lgAfterHit, lgCannotAttack, lgDefense, lgExtraAttack, lgMods, lgMultiplier, lgOnAttackMod, lgOnKill, lgOnStrike, lgRangeBonus, lgSaveFromDeath, lgSeedReady } from './legend';
+import { phAfterCombat, phAfterHit, phCannotAttack, phMods, phMultiplier, phOnKill, phRangeBonus } from './phantom';
 
-const rangeBonus = (u: Unit, w: WeaponDef) => wwRangeBonus(u, w) + tpRangeBonus(u, w) + ssRangeBonus(u, w) + wildRangeBonus(u, w) + ogRangeBonus(u, w) + lgRangeBonus(u, w);
+const rangeBonus = (u: Unit, w: WeaponDef) => wwRangeBonus(u, w) + tpRangeBonus(u, w) + ssRangeBonus(u, w) + wildRangeBonus(u, w) + ogRangeBonus(u, w) + lgRangeBonus(u, w) + phRangeBonus(u, w);
 import { cannonsDown, isVessel, vesselMods } from './naval';
 import type { RNG } from './rng';
 import { isMagical, TERRAIN_BONUS, TRIANGLE } from './rules';
@@ -215,7 +216,8 @@ export function situational(b: Battle, u: Unit, pos: Pos, foe: Unit, initiating:
   const wd = wildMods(b, u, pos, foe, initiating, WEAPONS[u.weapons[0]]);
   const og = ogMods(b, u, pos, foe, initiating, WEAPONS[u.weapons[0]]);
   const lg = lgMods(b, u, pos, foe, initiating, WEAPONS[u.weapons[0]]);
-  for (const k of ['str', 'mag', 'skl', 'spd', 'def', 'res', 'hit', 'avoid', 'crit', 'dmg'] as const) ww[k] += tp[k] + ss[k] + wd[k] + og[k] + lg[k];
+  const ph = phMods(b, u, pos, foe, initiating, WEAPONS[u.weapons[0]]);
+  for (const k of ['str', 'mag', 'skl', 'spd', 'def', 'res', 'hit', 'avoid', 'crit', 'dmg'] as const) ww[k] += tp[k] + ss[k] + wd[k] + og[k] + lg[k] + ph[k];
   const vm = vesselMods(b, u);
   m.str += ww.str + vm.str; m.mag += ww.mag; m.skl += ww.skl; m.spd += ww.spd; m.def += ww.def + vm.def; m.res += ww.res + vm.res;
   m.hit += ww.hit + vm.hit; m.avoid += ww.avoid + vm.avoid; m.crit += ww.crit; m.dmg += ww.dmg + vm.dmg;
@@ -234,7 +236,7 @@ function sideStats(
   const d = unitDist({ ...atk, ...atkPos }, { ...def, ...defPos });
   const helpless = !initiating && isHelpless(atk);
   const beaming = !!weapon?.beam && d > 1;
-  if (!weapon || weapon.type === 'staff' || weapon.type === 'instrument' || !canReach(weapon, d, atk) || helpless || (beaming && atk.mp < weapon.beam!) || tpCannotAttack(atk, weapon) || ssCannotAttack(b, atk, weapon, initiating) || wildCannotAttack(b, atk, weapon, initiating, def, foeWeapon) || ogCannotAttack(atk) || lgCannotAttack(atk, def, d)) {
+  if (!weapon || weapon.type === 'staff' || weapon.type === 'instrument' || !canReach(weapon, d, atk) || helpless || (beaming && atk.mp < weapon.beam!) || tpCannotAttack(atk, weapon) || ssCannotAttack(b, atk, weapon, initiating) || wildCannotAttack(b, atk, weapon, initiating, def, foeWeapon) || ogCannotAttack(atk) || lgCannotAttack(atk, def, d) || phCannotAttack(b, atk, def, d, initiating)) {
     return { uid: atk.uid, weaponId: weapon?.id ?? null, canAttack: false, dmg: 0, hit: 0, crit: 0, attacks: 0, triangle: 0, effective: false, block: 0, arrowId: null };
   }
   const as = effectiveStats(atk);
@@ -283,6 +285,7 @@ function sideStats(
   dmg = Math.floor(dmg * wildMultiplier(b, atk, def, element, magical, weapon, d, arrow));
   dmg = Math.floor(dmg * ogMultiplier(b, atk, def, magical, weapon, d, arrow));
   dmg = Math.floor(dmg * lgMultiplier(b, atk, def, magical, weapon, d, element, arrow));
+  dmg = Math.floor(dmg * phMultiplier(b, atk, atkPos, def, magical, weapon, d, element));
   if (adj.finish) dmg = Math.max(dmg, def.hp);
   if (atk.isBoss && atk.team === 'enemy' && (b.bossTier ?? 2) < 2) dmg = Math.floor(dmg * (b.bossTier === 0 ? 0.7 : 0.85)); // early bosses hit softer
   if (def.buffs?.some((x) => x.barrier || x.id === 'bubble')) dmg = 0; // Nayru's Love, Wart's bubbles
@@ -536,6 +539,7 @@ export function resolveCombat(b: Battle, attacker: Unit, defender: Unit, rng: RN
     if (hit) b.log.push(...wildAfterHit(b, by, target, dmg, weaponDef(side.weaponId), side.element, rng, side.arrowId ? ABILITIES[side.arrowId] : undefined));
     if (hit) ogAfterHit(b, by, target, dmg, weaponDef(side.weaponId));
     if (hit) lgAfterHit(b, by, target, dmg, weaponDef(side.weaponId), side.element, side.arrowId);
+    if (hit) phAfterHit(b, by, target, dmg, weaponDef(side.weaponId), side.element);
     if (killed) {
       by.kills++;
       deaths.push(target.uid);
@@ -546,6 +550,7 @@ export function resolveCombat(b: Battle, attacker: Unit, defender: Unit, rng: RN
       wildOnKill(b, by, target, rng);
       ogOnKill(b, by, target, rng, dmg, side.element, weaponDef(side.weaponId));
       lgOnKill(b, by, target, rng);
+      phOnKill(b, by, target, rng);
       killUnit(b, target);
       onKillEffects(b, by, weaponDef(side.weaponId));
       break;
@@ -608,7 +613,7 @@ export function resolveCombat(b: Battle, attacker: Unit, defender: Unit, rng: RN
     }
   }
   const landed2 = { atk: strikes.filter((s) => s.by === attacker.uid && !s.splash).reduce((n, s) => n + s.dmg, 0), def: strikes.filter((s) => s.by === defender.uid && !s.splash).reduce((n, s) => n + s.dmg, 0) };
-  for (const x of [...wwAfterCombat(b, attacker, defender), ...tpAfterCombat(b, attacker, defender), ...ssAfterCombat(b, attacker, defender, fc.attacker.arrowId, landed2), ...wildAfterCombat(b, attacker, defender, fc.attacker.arrowId, landed2), ...ogAfterCombat(b, attacker, defender, fc.attacker.arrowId, landed2), ...lgAfterCombat(b, attacker, defender, landed2, rng)]) {
+  for (const x of [...wwAfterCombat(b, attacker, defender), ...tpAfterCombat(b, attacker, defender), ...ssAfterCombat(b, attacker, defender, fc.attacker.arrowId, landed2), ...wildAfterCombat(b, attacker, defender, fc.attacker.arrowId, landed2), ...ogAfterCombat(b, attacker, defender, fc.attacker.arrowId, landed2), ...lgAfterCombat(b, attacker, defender, landed2, rng), ...phAfterCombat(b, attacker, defender, landed2)]) {
     strikes.push({ by: x.by, target: x.uid, hit: true, crit: false, dmg: x.dmg, heal: 0, targetHp: x.hp, byHp: 0, killed: x.killed, blocked: false, splash: true });
     if (x.killed && !deaths.includes(x.uid)) deaths.push(x.uid);
   }

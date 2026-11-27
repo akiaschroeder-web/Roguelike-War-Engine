@@ -4,6 +4,7 @@ import { ssTileCost } from './skyward';
 import { wildTileCost } from './wild';
 import { ogLeaps, ogTileCost } from './original';
 import { lgTileCost } from './legend';
+import { phTileCost } from './phantom';
 import { INF, MOVE_COSTS } from './rules';
 import { canSwim, effectiveStats, hasEffect, isMounted, moveTypeOf, unitTags } from './units';
 import { windFactor } from './naval';
@@ -51,7 +52,7 @@ export function tileCost(b: Battle, unit: Unit, t: Terrain): number {
   let c = MOVE_COSTS[mt][t];
   if (mt === 'fixed') return INF;
   const race = RACES[unit.race];
-  const watery = t === 'water' || t === 'poisonWater' || t === 'current' || t === 'whirlpool' || t === 'submergedTreasure';
+  const watery = t === 'water' || t === 'poisonWater' || t === 'current' || t === 'whirlpool' || t === 'submergedTreasure' || t === 'cycloneWarp';
   if (watery && canSwim(unit)) c = 1;
   else if (watery && unit.skills.includes('leafGlide')) c = 2; // Koroks glide over on leaves
   else if (watery && unit.skills.includes('dekuMobility')) c = 2; // Deku Link bounces across water
@@ -80,6 +81,8 @@ export function tileCost(b: Battle, unit: Unit, t: Terrain): number {
   c = ogTileCost(b, unit, t, c);
   // Era of Legend spaces (seasons, snowbanks, Invisible Floors, rings)
   c = lgTileCost(b, unit, t, c);
+  // Phantom Hourglass spaces (Safe Zones keep Phantoms out, tightropes, the Ocean King's Blessing)
+  c = phTileCost(b, unit, t, c);
   if (unit.buffs?.some((x) => x.id === 'spectralStep') && c >= INF && t !== 'water') c = 2;
   return c;
 }
