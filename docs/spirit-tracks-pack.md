@@ -121,3 +121,10 @@ Batch 1 (14): heroOfSpirits_logo (JPEG; has the Spirit Tracks logo and a waterma
 
 ### Unassigned (ask the user)
 - unassigned_whiteGhostCloud, unassigned_greySpiked, unassigned_blueHorned, unassigned_greyRockRed.
+
+## Corrections from the user (after batch 4)
+- Rael twice was an accident; only one Rael image.
+- The beast I filed as fraaz.png is Malladus, so it is now malladus.png. Fraaz art is still missing.
+- The green official Phantom art (hourglass shield) is a normal Phantom, now phantomOfficial.webp. It becomes an alt art for the existing `phantom` unit.
+- The purple hand with the eye is the Key Master, now keyMaster.webp.
+- The dark bat-eared imp I had called the Key Master is unassigned, now unassigned_darkBatImp.webp.
