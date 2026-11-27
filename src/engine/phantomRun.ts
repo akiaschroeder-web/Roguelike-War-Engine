@@ -53,12 +53,13 @@ function recruitOnce(run: Run, id: string, rng: RNG, lines: string[], why: strin
   lines.push(why);
 }
 
-/** New Phantom Hourglass campaign: the Hourglass, the first sea chart, the Hero of Winds and a ship. */
+/** New Phantom Hourglass campaign: the Hourglass, the first sea chart, the Hero of Winds, Ciela and a ship. */
 export function phantomStart(run: Run, rng: RNG) {
   phantomOf(run);
   for (const id of ['phantomHourglass', 'southwesternSeaChart']) if (!q(run).includes(id)) q(run).push(id);
   const lines: string[] = [];
   recruitOnce(run, 'heroOfWinds', rng, lines, 'The Hero of Winds washes ashore on Mercay Island.');
+  recruitOnce(run, 'ciela', rng, lines, 'Ciela finds him: "Wake up! You can\'t just lie there!"');
   if (!run.roster.some(isVessel)) recruitOnce(run, 'ssLinebeck', rng, lines, 'The S.S. Linebeck waits at the dock.');
 }
 
@@ -232,7 +233,7 @@ function routeRewards(run: Run, b: Battle, rng: RNG): string[] {
     lines.push('Zauz forges Crimsonine, Azurine and Aquanine into the Phantom Sword. The Phantoms can be beaten now.');
   }
   // The story's companions.
-  if (b.world === 'mercayIsland') recruitOnce(run, 'ciela', rng, lines, 'Ciela flutters out of the Temple: "Wake up! You can\'t just lie there!" She joins you.');
+  if (b.world === 'mercayIsland') recruitOnce(run, 'linebeck', rng, lines, 'Linebeck agrees to take you to sea — for a share of the treasure, naturally.');
   if (b.world === 'ghostShipPH') recruitOnce(run, 'tetra', rng, lines, 'Tetra is free of the Ghost Ship — and she joins you.');
   if (b.world === 'isleOfTheDead') recruitOnce(run, 'kingMutoh', rng, lines, 'King Mutoh is satisfied. The ancient king lends you his strength.');
   if (b.world === 'isleOfRuins') recruitOnce(run, 'oshus', rng, lines, 'Oshus has been watching. "It is time I told you who I am."');

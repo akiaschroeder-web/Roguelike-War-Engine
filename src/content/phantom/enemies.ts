@@ -83,7 +83,7 @@ export const BOSS_AS_TEMPLATE: Record<string, string> = { bellumbeckBoss: 'bellu
 export const ROSTERS: Record<string, string[]> = {
   mercayIsland: ['chuchuRed', 'chuchuGreen', 'octorok', 'keese', 'miniblin', 'chuchuBlue', 'phantomEye', 'moldorm'],
   templeOfTheOceanKing: ['phantom', 'phantom', 'swiftPhantom', 'warpPhantom', 'phantomEye', 'phantomEye', 'keese', 'stalfos'],
-  isleOfEmber: ['fireKeese', 'chuchuRed', 'octorok', 'geozard', 'moldorm', 'keese', 'miniblin', 'likeLike'],
+  isleOfEmber: ['fireKeese', 'chuchuRed', 'octorok', 'fireKeese', 'moldorm', 'keese', 'miniblin', 'chuchuRed'],
   cannonIsland: ['miniblin', 'bokoblin', 'octorok', 'chuchuYellow', 'keese', 'moldorm', 'seahat', 'likeLike'],
   isleOfGust: ['keese', 'octorok', 'moldorm', 'wizzrobe', 'seahat', 'chuchuYellow', 'likeLike', 'miniblin'],
   molidaIsland: ['octorok', 'chuchuBlue', 'likeLike', 'geozard', 'keese', 'moldorm', 'stalfos', 'miniblin'],

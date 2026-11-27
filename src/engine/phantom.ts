@@ -534,7 +534,7 @@ export function phMultiplier(b: Battle, atk: Unit, atkPos: Pos, def: Unit, magic
     if (w?.id === 'phantomSword') m *= 2;
     else if (frontal && !sacred && !exposed) return 0;
   }
-  if (has(def, 'shieldedAssault') && frontal && !exposed) m *= 0.3;
+  if (has(def, 'shieldedAssault') && frontal && !exposed) m *= 0.5;
   if (has(def, 'possessedArmor')) { if (hasBuff(def, 'eyeExposed')) m *= 1.5; else if (frontal) m *= 0.25; }
   if (has(def, 'exposedInterior')) { if (def.phKnocked) m *= 1.5; else if (frontal) m *= 0.2; }
   if (has(def, 'flameDivision') && def.phDivided) return 0;
@@ -604,8 +604,8 @@ export function phAfterCombat(b: Battle, attacker: Unit, defender: Unit, landed:
     out.push({ uid: t.uid, dmg, hp: t.hp, killed, by: by.uid });
     if (killed) { b.units = b.units.filter((x) => x !== t); if (!t.summoned) b.fallen.push(t); by.kills++; }
   };
+  // The attacker turns to its target; the defender only turns at its own phase (strike it from behind while you can).
   if (attacker.hp > 0) face(attacker, defender);
-  if (defender.hp > 0) face(defender, attacker);
   if (has(attacker, 'relentlessPursuitPH') && !(attacker.phMarked ??= []).includes(defender.uid)) attacker.phMarked.push(defender.uid);
   if (hasBuff(attacker, 'timeWalk')) attacker.buffs = attacker.buffs.filter((x) => x.id !== 'timeWalk');
   if (has(attacker, 'invisibleHunter')) attacker.hidden = false;
@@ -664,7 +664,7 @@ function divide(b: Battle, u: Unit): number {
   for (let i = 0; i < 3; i++) {
     const f = spawnTemp(b, 'blaazFlame', u, u.team, u.level, { illusionOf: u.uid, summoned: true, moved: false, acted: false });
     if (!f) continue;
-    f.stats = { ...f.stats, hp: Math.max(8, Math.ceil(u.stats.hp * 0.15)), mag: Math.ceil(u.stats.mag * 0.6) };
+    f.stats = { ...f.stats, hp: Math.max(8, Math.ceil(u.stats.hp * 0.12)), mag: Math.ceil(u.stats.mag * 0.35) };
     f.hp = f.stats.hp;
     f.artId = 'blaazFlame';
     n++;

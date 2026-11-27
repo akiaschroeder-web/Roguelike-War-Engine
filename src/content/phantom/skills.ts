@@ -35,7 +35,7 @@ export const SKILLS: SkillDef[] = [
   k('relentlessChase', 'Relentless Chase', 'Phantom Armor, and +4 MOV while pursuing a detected enemy (an alarm is raised or an enemy is in sight within 6).'),
   k('spectralWarp', 'Spectral Warp', 'Phantom Armor, and teleports next to enemies spotted by Phantom Eyes (or an alarm).'),
   k('phantomAlarmSkill', 'Alarm', 'Reveals hidden enemies within 3 and raises the alarm: every Phantom on the field gives chase.'),
-  k('shieldedAssault', 'Shielded Assault', 'Its shield blocks 70% of damage from the front. Breathes fire.'),
+  k('shieldedAssault', 'Shielded Assault', 'Its shield blocks half the damage from the front. Breathes fire.'),
   // ── Bosses ──
   k('flameDivision', 'Flame Division', 'Below 75% HP it splits into three small flames that attack on their own while its body is untouchable. A boomerang (or any hit with a boomerang-type weapon) forces them to recombine, leaving it exposed; each flame destroyed burns away 10% of its HP.'),
   k('tornadoRider', 'Tornado Rider', 'Airborne: out of melee reach, and arrows and magic deal half damage. An explosive set off at or next to a Whirlwind (or thrown by someone standing next to one) knocks it down for 2 turns.'),
