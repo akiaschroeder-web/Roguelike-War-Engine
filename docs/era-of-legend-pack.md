@@ -97,3 +97,8 @@ Batch 2 (14 new; Helmasaur King and Arrghus re-sent as identical files): blind (
 User answers: the pixel Link on the spiked shell is Flute Boy (renamed fluteBoy.png). Add a new Wizzrobe unit (art coming later) — it's in Agahnim's starting army and is referenced as a returning monster in several packs.
 
 Batch 3 (16): evilEagle, hotHead, shadowNightmareAll (collage of all the Nightmare's shadows — alt art for Shadow Nightmare), nightmareDethI (DethI form), nightmareGanon (pixel, Shadow of Ganon form), nightmareAgahnim (pixel, Agahnim's Shadow form), nightmareGel (pixel, Giant Gel form), farore, nayru, din, queenAmbi (tall headdress and veil), impaOracle, ralph, ricky, makuTreeLabrynna (young tree with a pink flower), makuTreeHolodrum (old tree with a bubble — dark maroon background to check). Moldorm's Shadow and Lanmola forms borrow the existing Moldorm and Lanmola art.
+
+User additions (binding): add a **Possessed Nayru** variant (a form of Nayru while Veran possesses her, like TP's Possessed Zelda) and a **Boss Wizzrobe** (stronger than an ordinary Wizzrobe, weaker than Agahnim).
+
+Batch 4 (16): dimitri, moosh, medusaHead (pixel), onox, shadowHag (pixel), headThwomp (first frame of a GIF), pumpkinHead (pixel), octogon (pixel, red), smog_patternbg (navy pattern background), eyesoar (pixel, with four orbiting eyes), nayruPossessed, veran, ramrock (pixel), buzzBlob, antiFairy (skull fairy with red orbs), unidentified_greenPixel (green pixel figure with two eye-discs — asked the user).
+Still needed: Kholdstare, Cukeman, Subterror, Smasher, Wizzrobe (Boss Wizzrobe can share or recolour it). Optional: Dark Dragon Onox and Veran's four forms (otherwise borrow the base art).
