@@ -16,6 +16,7 @@ import { activeGroups, promiseKept } from './supports';
 import { ssHazardImmune, ssStaminaMult } from './skyward';
 import { wildStaminaMult } from './wild';
 import { lgStaminaMult } from './legend';
+import { spChuFusion } from './spirit';
 import type { AbilityDef, Battle, Element, Pos, StatusKind, Terrain, Unit, WeaponDef } from './types';
 
 declare module './types' {
@@ -787,7 +788,7 @@ export function tpTargets(b: Battle, u: Unit, def: AbilityDef): Unit[] {
     case 'phantomAssault': return foesWithin(b, u, 4);
     case 'coldEmbrace': return foesWithin(b, u, 1);
     case 'curseTransfer': return foesWithin(b, u, 4).filter((e) => hasStatus(e, 'weaponCurse'));
-    case 'chuFusion': return alliesWithin(b, u, 1).filter((a) => isChu(a) && !a.fusedPartner && !a.ephemeral);
+    case 'chuFusion': return alliesWithin(b, u, 1).filter((a) => isChu(a) && !a.fusedPartner && !a.ephemeral && spChuFusion(u, a) !== null);
     case 'midnaRide': return alliesWithin(b, u, 1).filter((a) => isBeast(a) && !(a.cargo?.length));
     case 'sumoThrow': return b.units.filter((a) => a !== u && unitDist(u, a) === 1 && a.size <= u.size + (hasEffect(u, 'bigGrapple') ? 1 : 0) && !has(a, 'unmovableElder') && !a.isBoss);
   }
@@ -1091,10 +1092,12 @@ export function castTwilight(b: Battle, u: Unit, def: AbilityDef, rng: RNG, targ
     // ── ChuChus ──
     case 'chuFusion': {
       const other = target!;
-      const mixed = other.templateId !== u.templateId && !['darkChuchu', 'rareChuchu'].includes(other.templateId ?? '');
+      // The Spirit Tracks ChuChus have their own fusion rules (engine/spirit.ts spChuFusion).
+      const into = spChuFusion(u, other);
+      const mixed = into ? into === 'purpleChuchu' : other.templateId !== u.templateId && !['darkChuchu', 'rareChuchu'].includes(other.templateId ?? '');
       const n = 1 + (u.turnUses?.fused ?? 0);
       const total = u.hp + other.hp;
-      transformInto(b, u, mixed && TEMPLATES.purpleChuchu ? 'purpleChuchu' : (u.templateId ?? 'chuchuRed'), other);
+      transformInto(b, u, into ?? (mixed && TEMPLATES.purpleChuchu ? 'purpleChuchu' : (u.templateId ?? 'chuchuRed')), other);
       (u.turnUses ??= {}).fused = n;
       const size = Math.min(5, n + 1);
       const grow = 1 + 0.5 * n;

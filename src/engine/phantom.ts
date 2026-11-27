@@ -57,6 +57,8 @@ export interface PHState {
   max: number;
   /** Fought inside the Temple of the Ocean King (life drain, Safe Zones, patrols). */
   temple: boolean;
+  /** Patrols and Safe Zones without the life drain (Spirit Tracks' Tower of Spirits). */
+  noDrain?: boolean;
   /** Turn the Temple last drained the Hourglass, and whether it was already empty then. */
   drainTurn?: number;
   empty?: boolean;
@@ -105,10 +107,11 @@ export function phTags(u: Unit): Set<string> {
 }
 const tag = (u: Unit, t: string) => phTags(u).has(t);
 const isHeavy = (w: WeaponDef | undefined) => !!w && (w.type === 'hammer' || w.type === 'axe' || !!w.twoHanded || !!w.armorBreaker);
-const PHANTOM_SKILLS = ['phantomArmorSkill', 'relentlessChase', 'spectralWarp'];
+// Spirit Tracks' Torch and Wrecker Phantoms wear the same armor.
+const PHANTOM_SKILLS = ['phantomArmorSkill', 'relentlessChase', 'spectralWarp', 'livingTorch', 'rollingDestruction'];
 export const isPhantom = (u: Unit) => PHANTOM_SKILLS.some((s) => has(u, s));
 const isSacred = (w: WeaponDef | undefined, element?: Element) => !!w?.ph?.includes('sacred') || element === 'light' || !!w?.sacredMult;
-const isExposed = (u: Unit) => hasBuff(u, 'phExposed') || hasBuff(u, 'timeFrozen') || u.statuses.some((s) => s.kind === 'exposed');
+const isExposed = (u: Unit) => hasBuff(u, 'phExposed') || hasBuff(u, 'stExposed') || hasBuff(u, 'timeFrozen') || u.statuses.some((s) => s.kind === 'exposed');
 const snowy = (b: Battle, u: Unit) => b.world === 'isleOfFrost' || b.world === 'snowpeak' || b.world === 'hebra' || tilesOf(b, u).some((t) => t === 'frozenWater' || t === 'iceBlock' || t === 'iceWall');
 const isAquaticUnit = (u: Unit) => isVessel(u) || canSwim(u) || unitTags(u).includes('aquatic');
 const isMonsterish = (u: Unit) => ['monster', 'demon', 'undead', 'phantom', 'chuchu', 'aquatic', 'construct'].includes(u.race) || unitTags(u).includes('demon') || unitTags(u).includes('undead') || unitTags(u).includes('beast');
@@ -338,7 +341,7 @@ export function phStartPhase(b: Battle, u: Unit, events: PHEvent[]) {
     if (st.alarm > 0) st.alarm--;
   }
   // The Temple of the Ocean King drains the life of anyone outside a Sacred Safe Zone — unless the Hourglass has time left.
-  if (st?.temple && u.team === 'player' && !u.npc) {
+  if (st?.temple && !st.noDrain && u.team === 'player' && !u.npc) {
     const outside = (x: Unit) => !tilesOf(b, x).includes('sacredSafeZone');
     if (st.drainTurn !== b.turn) {
       st.drainTurn = b.turn;
@@ -526,7 +529,8 @@ export function phCannotAttack(b: Battle, atk: Unit, def: Unit, d: number, initi
 export function phMultiplier(b: Battle, atk: Unit, atkPos: Pos, def: Unit, magical: boolean, w: WeaponDef | undefined, d: number, element?: Element): number {
   let m = 1;
   const dt = phTags(def);
-  const sacred = isSacred(w, element);
+  // A Tear of Light (Spirit Tracks) makes any weapon sacred.
+  const sacred = isSacred(w, element) || !!w?.st?.includes('sacred') || atk.buffs.some((x) => x.id === 'tearOfLight');
   const exposed = isExposed(def);
   const frontal = isFrontal(def, atkPos, atk.size) && !has(atk, 'rollingCharge');
   // Phantoms: immune to ordinary frontal weapon attacks.
@@ -727,7 +731,7 @@ function endPossession(u: Unit) {
 /** Rout maps: only Phantoms are left, and nobody in the army carries the Phantom Sword (they can't be beaten). */
 export function phOnlyPhantomsLeft(b: Battle, enemies: Unit[]): boolean {
   if (!enemies.length || !enemies.every((e) => isPhantom(e) && !e.isBoss)) return false;
-  return !b.units.some((u) => u.team === 'player' && u.weapons.includes('phantomSword'));
+  return !b.units.some((u) => u.team === 'player' && (u.weapons.includes('phantomSword') || u.weapons.includes('lokomoSword')));
 }
 
 /** True while a paired boss fight still has a boss standing. */

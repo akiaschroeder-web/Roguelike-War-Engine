@@ -5,6 +5,7 @@ import { wildTileCost } from './wild';
 import { ogLeaps, ogTileCost } from './original';
 import { lgTileCost } from './legend';
 import { phTileCost } from './phantom';
+import { spTileCost } from './spirit';
 import { INF, MOVE_COSTS } from './rules';
 import { canSwim, effectiveStats, hasEffect, isMounted, moveTypeOf, unitTags } from './units';
 import { windFactor } from './naval';
@@ -83,6 +84,8 @@ export function tileCost(b: Battle, unit: Unit, t: Terrain): number {
   c = lgTileCost(b, unit, t, c);
   // Phantom Hourglass spaces (Safe Zones keep Phantoms out, tightropes, the Ocean King's Blessing)
   c = phTileCost(b, unit, t, c);
+  // Spirit Tracks spaces (trains stay on the rails; the Lokomo melodies)
+  c = spTileCost(b, unit, t, c);
   if (unit.buffs?.some((x) => x.id === 'spectralStep') && c >= INF && t !== 'water') c = 2;
   return c;
 }

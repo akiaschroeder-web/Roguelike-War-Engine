@@ -13,6 +13,7 @@ import { wildStartPhase } from './wild';
 import { ogStartPhase } from './original';
 import { lgBossesRemain, lgStartPhase } from './legend';
 import { decoratePhantom, phantomBattleStart, phBossesRemain, phOnlyPhantomsLeft, phStartPhase } from './phantom';
+import { decorateSpirit, enemyTrains, isTrain, layoutRail, setupRail, spBossesRemain, spCapturedAll, spiritBattleStart, spStartPhase } from './spirit';
 import { resolveSinking } from './naval';
 import { revertMask } from './terminaAbilities';
 import { roomFor } from './transform';
@@ -221,7 +222,9 @@ function createNavalBattle(setup: BattleSetup): Battle {
   const heroes = rng.shuffle([...(force?.heroes ?? [])]);
   const enemies: Unit[] = [];
   const pirates = !!force?.templates.some((t) => TEMPLATES[t]?.home === 'greatSea');
-  const fleetIds = [...(setup.fleet ?? []), ...enemyFleet(setup.depth, rng, pirates)];
+  // Spirit Tracks: battles 'at sea' in New Hyrule are fought on the rails, against demon trains.
+  const rail = worldDef(setup.world).campaign === 'spirit';
+  const fleetIds = [...(setup.fleet ?? []), ...(rail ? enemyTrains(setup.depth, rng) : enemyFleet(setup.depth, rng, pirates))];
   enemyCount = Math.max(2, enemyCount - fleetIds.length);
   const pool = earlyRoster(setup.world, setup.depth);
   for (let i = 0; i < enemyCount; i++) {
@@ -253,12 +256,17 @@ function createNavalBattle(setup: BattleSetup): Battle {
   }
   const players: Unit[] = setup.roster.map((u) => ({ ...prepareForBattle(u), cargo: [] }));
   // No ship of your own? The locals lend you a raft.
-  if (!players.some(isVessel) && TEMPLATES.smallRaft) {
+  if (rail && !players.some(isTrain) && TEMPLATES.spiritTrain) {
+    // No train of your own? The station lends you one.
+    const loan = prepareForBattle(makeEnemyFromTemplate('spiritTrain', Math.max(1, level - 1), `loan${uid++}`, rng));
+    Object.assign(loan, { team: 'player', isBoss: false, summoned: true, name: 'Borrowed Train', ai: undefined, cargo: [] });
+    players.push(loan);
+  } else if (!rail && !players.some(isVessel) && TEMPLATES.smallRaft) {
     const raft = prepareForBattle(makeEnemyFromTemplate('smallRaft', Math.max(1, level - 1), `loan${uid++}`, rng));
     Object.assign(raft, { team: 'player', isBoss: false, summoned: true, name: 'Borrowed Raft', ai: undefined, cargo: [] });
     players.push(raft);
   }
-  const layout = layoutNaval(rng, players, [...fleet, ...enemies], boss, setup.depth);
+  const layout = rail ? layoutRail(rng, players, [...fleet, ...enemies], boss) : layoutNaval(rng, players, [...fleet, ...enemies], boss, setup.depth);
   // Whoever didn't fit on the beach (or in the water) starts aboard a ship.
   const vessels = players.filter((u) => isVessel(u) && u.x >= 0);
   const stranded = players.filter((u) => u.x < 0 && !isVessel(u));
@@ -306,9 +314,13 @@ function createNavalBattle(setup: BattleSetup): Battle {
   if (battle.bossTier === 0) for (const u of units) if (u.isBoss) u.ai = u.skills.includes('armoredBody') ? 'guard' : 'stationary';
   battle.night = setup.night;
   if (battle.tiles.includes('current')) battle.currentDir = battle.wind;
+  // Spirit Tracks: the rails, junctions and stations; train-part sets.
+  if (rail) setupRail(battle, (layout as { junctions?: number[] }).junctions ?? []);
+  decorateSpirit(battle, rng);
   // Phantom Hourglass: sea spaces (Cyclone Warp Points, salvage) and steamship part sets.
   decoratePhantom(battle, rng);
   phantomBattleStart(battle);
+  spiritBattleStart(battle);
   windWakerUpkeepAtStart(battle, rng);
   battle.rngState = rng.state;
   return battle;
@@ -444,6 +456,7 @@ export function startPhase(b: Battle, team: Team): TurnStartEvent[] {
     ogStartPhase(b, u, events);
     lgStartPhase(b, u, events);
     phStartPhase(b, u, events);
+    spStartPhase(b, u, events);
     const max = u.stats.hp;
     const tiles = footprint(u.x, u.y, u.size).map((p) => b.tiles[keyOf(b, p.x, p.y)]);
     const anchor = tiles[0];
@@ -508,10 +521,10 @@ export function checkResult(b: Battle): Battle['result'] {
   if (trial) return (b.result = trial);
   if (b.objective.type === 'trial') return undefined;
   if (b.objective.type === 'escort' && b.fallen.some((u) => u.vip)) { b.retreat = true; return (b.result = 'lost'); }
-  if (!enemies.length) return (b.result = 'won');
+  if (!enemies.length || spCapturedAll(b)) return (b.result = 'won');
   // Without the Phantom Sword the Phantoms can't be beaten: once only they are left, the floor is cleared.
   if (b.objective.type === 'rout' && phOnlyPhantomsLeft(b, enemies)) return (b.result = 'won');
-  if (b.objective.type === 'boss' && b.fallen.some((u) => u.isBoss) && !lgBossesRemain(b) && !phBossesRemain(b)) return (b.result = 'won');
+  if (b.objective.type === 'boss' && b.fallen.some((u) => u.isBoss) && !lgBossesRemain(b) && !phBossesRemain(b) && !spBossesRemain(b)) return (b.result = 'won');
   const o = b.objective;
   if (o.type === 'survive' && b.turn > (o.turns ?? 6)) return (b.result = 'won');
   if (o.type === 'seize' && onTiles(b, 'player', o.tiles)) return (b.result = 'won');

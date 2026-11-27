@@ -7,6 +7,7 @@ import type { RNG } from './rng';
 import { ogImmune } from './original';
 import { lgImmune } from './legend';
 import { phImmune } from './phantom';
+import { spImmune } from './spirit';
 import type { Battle, Element, StatusKind, Unit } from './types';
 
 export const STATUS_INFO: Record<StatusKind, { name: string; icon: string; desc: string; good?: boolean }> = {
@@ -73,6 +74,7 @@ export function immuneTo(u: Unit, kind: StatusKind): boolean {
   if (ogImmune(u, kind)) return true;
   if (lgImmune(undefined, u, kind)) return true;
   if (phImmune(u, kind)) return true;
+  if (spImmune(u, kind)) return true;
   return false;
 }
 

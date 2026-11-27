@@ -8,6 +8,7 @@ import type { RNG } from './rng';
 import { INF, WATERY } from './rules';
 import { hasEffect, unitTags } from './units';
 import { phCapacity } from './phantom';
+import { spCapacity } from './spirit';
 import type { Battle, Pos, Terrain, Unit } from './types';
 
 export const isVessel = (u: Pick<Unit, 'race'>): boolean => !!RACES[u.race]?.tags?.includes('vessel');
@@ -15,7 +16,7 @@ export const isVessel = (u: Pick<Unit, 'race'>): boolean => !!RACES[u.race]?.tag
 /** Passenger room (in spaces: a size-2 passenger takes 2). */
 export function capacityOf(v: Unit): number {
   if (!isVessel(v)) return 0;
-  return phCapacity(v) ?? CAPACITY[v.templateId ?? v.artId ?? ''] ?? Math.max(1, v.size * 2 - 2);
+  return spCapacity(v) ?? phCapacity(v) ?? CAPACITY[v.templateId ?? v.artId ?? ''] ?? Math.max(1, v.size * 2 - 2);
 }
 
 export function cargoLoad(v: Unit): number {
@@ -221,7 +222,9 @@ export type Component = keyof typeof COMPONENT_NAMES;
 export function damageComponent(v: Unit, rng: RNG, forced?: Component): Component | null {
   if (!isVessel(v)) return null;
   const d = (v.damaged ??= {});
-  const options = (['sail', 'mast', 'rudder', 'cannon'] as Component[]).filter((c) => !d[c] && !(c === 'sail' && hasEffect(v, 'reinforcedSail')));
+  // Trains have no sail or mast: only the engine (the 'rudder') and the cannon can be knocked out.
+  const train = v.race === 'train';
+  const options = (['sail', 'mast', 'rudder', 'cannon'] as Component[]).filter((c) => !d[c] && !(c === 'sail' && hasEffect(v, 'reinforcedSail')) && !(train && (c === 'sail' || c === 'mast')));
   if (forced) {
     if (!options.includes(forced)) return null;
     d[forced] = true;

@@ -125,8 +125,8 @@ describe('Phantom Hourglass content', () => {
   it('has five phantom commanders and brings in the pending units where they belong', () => {
     const cmd = COMMANDERS.filter((c) => c.campaign === 'phantom');
     expect(cmd.map((c) => c.heroId)).toEqual(['linebeck', 'ciela', 'jolene', 'kingMutoh', 'bellum']);
-    expect(cmd[0].units).toEqual(['ssLinebeck', 'eddo', 'senza']);
-    expect(cmd[2].units).toEqual(['jolenesShip', 'nudge', 'zuko']);
+    expect(cmd[0].units).toEqual(['ssLinebeck', 'eddo', 'senza', 'heroOfWinds']);
+    expect(cmd[2].units).toEqual(['jolenesShip', 'nudge', 'zuko', 'gonzo']);
     // Subrosians in Subrosia's roster, a Subrosian faction, the market and Rosa's date.
     expect(ROSTERS.subrosia).toEqual(expect.arrayContaining(['subrosianWarrior', 'subrosianMiner', 'subrosianThief']));
     expect(FACTIONS.subrosianOreGang.regions.subrosia).toBeGreaterThan(0);
