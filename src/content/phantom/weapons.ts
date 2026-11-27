@@ -60,7 +60,7 @@ export const WEAPONS: WeaponDef[] = [
   nat('geozardFire', 'Fire Breath', 10, 85, 0, 1, 2, { element: 'fire', magicContact: true, inflict: { status: 'burn', chance: 25, turns: 2 } }),
   // ── Bosses ──
   // The bosses' own attacks (the doc's signature weapons above are their drops).
-  nat('blaazFireball', 'Fireball', 11, 85, 0, 1, 3, { magicContact: true, element: 'fire', inflict: { status: 'burn', chance: 20, turns: 2 } }),
+  nat('blaazFireball', 'Fireball', 4, 85, 0, 1, 3, { magicContact: true, element: 'fire', inflict: { status: 'burn', chance: 20, turns: 2 } }),
   nat('cyclokGust', 'Gust', 12, 85, 0, 1, 3, { magicContact: true }),
   nat('cubusBolt', 'Dark Orb', 9, 90, 0, 1, 3, { magicContact: true, element: 'dark' }),
   nat('bellumLash', 'Tentacle Lash', 16, 85, 5, 1, 2, { drainsMp: 4, mpToWielder: true, ph: ['drain'] }),
