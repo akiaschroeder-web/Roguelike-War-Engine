@@ -63,8 +63,20 @@ PACKS = {
         'Light Dragon': 'lightDragon', 'Wild Ganondorf': 'ganondorfWild', 'Rauru (OOT)': 'rauru', 'Zelda (OOT)': 'zelda', 'OOT Ganondorf': 'ganondorf',
         'OOT Zelda': 'zelda', 'Iron Knuckle': 'ironKnuckle', 'Twinrova': 'twinrova', 'Darmani': 'darmani',
     }),
+    'phantom': dict(doc='docs/phantom-hourglass-pack.md', start='## 12. Supports', end='## 13. Commanders', suffix='Phantom', game='phantom', names={
+        'Hero of Winds': 'heroOfWinds', 'Tetra': 'tetra', 'Linebeck': 'linebeck', 'Ciela': 'ciela', 'Oshus': 'oshus', 'Jolene': 'jolene', 'Joanne': 'joanne',
+        'Eddo': 'eddo', 'Bellum': 'bellum', 'Leaf': 'leaf', 'Neri': 'neri', 'Astrid': 'astrid', 'Zauz': 'zauz', 'Gongoron': 'gongoron',
+        'Biggoron': 'biggoronGoronIsland', 'King Mutoh': 'kingMutoh', 'Bremeur': 'bremeur', 'Doylan': 'doylan', 'Max': 'max', 'Phantom': 'phantom',
+        'Hero of Legend': 'heroOfLegend', 'Nayru': 'nayru', 'Din': 'din', 'Zelda (OoT)': 'zelda', 'Wind Fish': 'windFish', 'Biggoron (OoT)': 'biggoron',
+        'Robbie': 'robbie', 'Purah': 'purah', 'Yunobo': 'yunobo', 'Anouki Warrior': 'anoukiWarrior', 'Anouki Hunter': 'anoukiHunter',
+        'Anouki Ice Mage': 'anoukiIceMage', 'Anouki Guardian': 'anoukiGuardian', 'Yook Warrior': 'yookWarrior', 'Igos du Ikana': 'igosDuIkana',
+        'Eox': 'eox', 'Shadow Nightmare': 'shadowNightmare', 'Anouki Chief': 'anoukiChief', 'Urbosa': 'urbosa', 'Sonia': 'sonia', 'Gondo': 'gondo',
+        'Groose': 'groose', 'Koloktos': 'koloktos', 'Calamity Ganon': 'calamityGanon', 'Cubus Red': 'cubusSister1', 'Cubus Blue': 'cubusSister2',
+        'Cubus Gold': 'cubusSister3', 'Cubus Green': 'cubusSister4', 'Syrup': 'syrup', 'Potion Shop Lady': 'potionShopLady', 'Old Woman': 'oldWoman',
+        'Grandma': 'grandma', 'OoT Impa': 'impa', 'Rosa': 'rosa', 'Subrosian Chef': 'subrosianChef', 'Subrosian Blacksmith': 'subrosianBlacksmith', 'King of Red Lions': 'kingOfRedLions',
+    }),
 }
-SKIP = {'Epona', 'Four Giants', 'Ciela', 'OOT Potion Shopkeeper'}
+SKIP = {'Epona', 'Four Giants', 'OOT Potion Shopkeeper', 'OoT Potion Shopkeeper', 'Cubus Sisters'}
 CANON = {'ghirahimTrue': 'ghirahim', 'imprisonedArmed': 'imprisoned', 'imprisonedFlying': 'imprisoned', 'ganon': 'ganondorf', 'sheik': 'zelda',
          'lightDragon': 'zeldaWild', 'demonDragon': 'ganondorfWild', 'darkBeastGanonWild': 'calamityGanon', 'mineruConstruct': 'mineru'}
 FORMS = {'kingOfRedLions': 'kingDaphnes', 'lightDragon': 'zeldaWild'}
