@@ -45,7 +45,7 @@ Rosa is the named Subrosian from Oracle of Seasons; the generic classes are the 
 Proposed base stats (HP STR MAG SKL SPD DEF RES LCK CON MOV STA MP) — my balancing call, not in the user's doc:
 Rosa 24 7 6 14 15 5 7 16 5 6 22 12 · Warrior 24 9 0 9 8 8 4 5 7 5 22 0 · Dancer 20 3 10 12 13 4 9 12 4 6 18 22 · Blacksmith 30 12 0 12 6 11 4 6 12 4 28 0 · Miner 24 9 0 10 8 8 3 9 8 5 24 0 · Sorcerer 20 2 15 11 9 3 12 7 4 5 14 32 · Chef 22 4 12 11 8 5 11 11 6 5 18 26 · Thief 20 6 3 13 15 4 5 13 4 7 20 6
 Placement: Subrosia regions of the Seasons of Holodrum route (rosters, a Subrosian faction, recruitment events); Rosa through a Subrosia event (the Ribbon from the trading sequence is a natural trigger).
-Support ideas (to confirm): Rosa × Hero of Legend A (secret dates and Subrosian trade), Rosa × Din A (Subrosia's dancers and Din), Subrosian Chef × Syrup A, Subrosian Blacksmith × Biggoron A.
+Support pairs (approved by the user): Rosa × Hero of Legend A (secret dates and Subrosian trade) · Rosa × Din A (Subrosia's dancers and Din) · Subrosian Chef × Syrup A (lava cooking and potion brewing) · Subrosian Blacksmith × Biggoron A (forging legendary blades).
 
 ## Still waiting on a pack
 - Ciela (Phantom Hourglass) — for Nayru × Ciela (temporal powers).
