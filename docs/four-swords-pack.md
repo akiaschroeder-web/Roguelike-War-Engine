@@ -354,3 +354,15 @@ Still missing:
 - Gouen
 - Dera Zol
 - Frostare
+
+Batch 2:
+- bigBomb.webp
+- terrorpin.webp
+- geldman.png: the desert backdrop needs removing.
+- gouen.webp
+- deluZol.webp: the green slug-like slime with spikes.
+- vaatiWindMage.webp
+- frostare.webp
+- Alt arts for existing units: arrghusFSA.webp (Stone Arrghus) goes to Arrghus, and phantomGanonFSA.webp goes to Phantom Ganon.
+
+Still missing: Dera Zol, plus the Spearman, Bombardier and Captain. The generics can use the existing Hyrule soldier art, and Dera Zol can use Delu Zol's art tinted as a fallback.
