@@ -26,6 +26,8 @@ declare module './types' {
     /** Hitch Ride: the host this Micro unit rides on, and its tile within the host's footprint. */
     mcRide?: { host: string; dx: number; dy: number };
     /** A normal unit shrunk to Micro size: what to restore when it grows. */
+    /** Ordinary weapons magically resized for this native Micro unit (the Minish Forge). */
+    mcResized?: string[];
     mcShrunk?: { hp: number; def: number; con: number; size: number; baseSize?: number; mounted?: boolean };
   }
   interface UnitTemplate {
@@ -69,13 +71,14 @@ export function microSlot(b: Battle, u: Unit): number {
 const microSized = (w: WeaponDef) => !!w.mc?.includes('micro') || ['natural', 'magic', 'staff', 'instrument'].includes(w.type) || !!w.anyClass;
 /** Native Micro units can't use ordinary weapons (no magical resizing); shrunk units' gear shrinks with them. */
 export function mcCannotWield(u: Unit, w: WeaponDef): boolean {
-  return !!u.micro && !u.mcShrunk && !u.originalForm && !microSized(w);
+  return !!u.micro && !u.mcShrunk && !u.originalForm && !microSized(w) && !u.mcResized?.includes(w.id);
 }
 
 // ───────────────────────── Movement: the Micro network ─────────────────────────
 
 /** Movement cost of a tile for a Micro unit (grid.ts tileCost). Normal units use rules.ts MOVE_COSTS. */
 export function mcTileCost(b: Battle, u: Unit, t: Terrain, c: number): number {
+  void b;
   if (!u.micro) return c;
   const fly = moveTypeOf(u) === 'flying';
   switch (t) {
@@ -248,7 +251,7 @@ export function mcTransform(b: Battle, u: Unit, templateId: string) {
 /** Shrinking is possible on a Minish Portal, beside (or carrying) an Ezlo, or with a magic cap. */
 export function canChangeSize(b: Battle, u: Unit): boolean {
   if (tileAt(b, u.x, u.y) === 'minishPortal' || footprint(u.x, u.y, u.size).some((p) => tileAt(b, p.x, p.y) === 'minishPortal')) return true;
-  if (has(u, 'masterOfMiniaturization') || has(u, 'enchantedCap') || activeGear(u).some((g) => g.mc?.includes('sizeChange'))) return true;
+  if (has(u, 'masterOfMiniaturization') || has(u, 'enchantedCap') || has(u, 'sorcerersCapSkill') || WEAPONS[u.weapons[0]]?.mc?.includes('sizeBoost') || activeGear(u).some((g) => g.mc?.includes('sizeChange'))) return true;
   return b.units.some((a) => a.team === u.team && a !== u && (has(a, 'masterOfMiniaturization') || has(a, 'enchantedCap')) && footDist(a.x, a.y, a.size, u.x, u.y, u.size) <= 1);
 }
 
@@ -343,6 +346,9 @@ export function mcUnusable(b: Battle, u: Unit, def: AbilityDef): string | null |
   return null;
 }
 
+/** Pack reactions to an internal strike (a boss's mechanisms, eyes or arms). */
+export const internalHooks: ((b: Battle, by: Unit, e: Unit) => string[])[] = [];
+
 export interface MCOutcome {
   hits: { uid: string; dmg: number; hp: number; killed: boolean; statuses: StatusKind[] }[];
   heals: { uid: string; amount: number }[];
@@ -428,10 +434,12 @@ export function castMicro(b: Battle, u: Unit, def: AbilityDef, rng: RNG, target?
       const es = effectiveStats(e);
       const w = WEAPONS[u.weapons[0]];
       const magical = w?.type === 'magic' || w?.type === 'staff';
-      const power = (magical ? s.mag : s.str) + (w?.might ?? 0) + (u.skills.includes('smallButMighty') ? 6 : 0) + (w?.mc?.includes('mechanical') && unitTags(e).includes('construct') ? 6 : 0);
-      const d = strike(e, power - Math.floor((magical ? es.res : es.def) * 0.25));
+      const power = (magical ? s.mag : s.str) + (w?.might ?? 0) + (u.skills.includes('smallButMightyMC') ? 6 : 0) + (w?.mc?.includes('mechanical') && unitTags(e).includes('construct') ? 6 : 0);
+      const mult = u.skills.includes('smallMechanisms') && unitTags(e).includes('construct') ? 1.5 : 1;
+      const d = strike(e, (power - Math.floor((magical ? es.res : es.def) * 0.25)) * mult);
       if (e.hp > 0) debuff(e, 'mcWeakPoint', 'Weak point exposed', 1, { def: -5 });
       out.lines.push(`${u.name} gets inside ${e.name} and strikes its internal weak point (−${d}).`);
+      if (e.hp > 0) for (const h of internalHooks) out.lines.push(...h(b, u, e));
       return out;
     }
     case 'mcPickpocket': {

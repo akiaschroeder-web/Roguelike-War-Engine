@@ -5,7 +5,7 @@ const k = (id: string, name: string, desc: string): SkillDef => ({ id, name, des
 export const SKILLS: SkillDef[] = [
   // ── Named characters ──
   k('fourSwordHero', 'Four Sword Hero', 'With an awakened Picori Blade (two Elements or more), Four Sword Split makes temporary magical duplicates (1, 2 or 3 with the Four Sword). Can shrink into Micro Link with Ezlo\'s help or on a Minish Portal.'),
-  k('smallButMighty', 'Small but Mighty', 'Full damage on exposed and internal weak points, and +25% more there; internal strikes +6.'),
+  k('smallButMightyMC', 'Small but Mighty', 'Full damage on exposed and internal weak points, and +25% more there; internal strikes +6.'),
   k('lightForce', 'Light Force', 'Allies within 2 recover 3 MP at the start of each turn and take 30% less dark damage.'),
   k('masterOfMiniaturization', 'Master of Miniaturization', 'Enables size-changing: he and allies next to him can shrink and grow anywhere. Allied Micro units within 2 gain +2 STR, MAG and DEF.'),
   k('enchantedCap', 'Enchanted Cap', 'A compatible host can shrink: he and allies next to him (or carrying him) shrink and grow anywhere. A host carrying him glides (+1 MOV, never pushed by gusts).'),
@@ -14,7 +14,7 @@ export const SKILLS: SkillDef[] = [
   k('royalAuthority', 'Royal Authority', 'Hyrule soldiers (soldiers, knights, archers and the royal guard) within 4 gain +3 STR and DEF.'),
   k('royalAdministration', 'Royal Administration', 'Better army supply efficiency: +2 supplies and +₹50 after every victory.'),
   k('masterCraftsmanMC', 'Master Craftsman', 'Repairs weapons (Master Craftsman); after every victory, 5 uses are restored to every worn weapon in the army.'),
-  k('sacredForging', 'Sacred Forging', 'While riding an ally, repairs and strengthens its equipment: at the start of each turn the host recovers 3 uses on its weapon and gains +2 STR for the turn.'),
+  k('sacredForgingMC', 'Sacred Forging', 'While riding an ally, repairs and strengthens its equipment: at the start of each turn the host recovers 3 uses on its weapon and gains +2 STR for the turn.'),
   k('forestPassage', 'Forest Passage', 'Reveals hidden enemies within 5 (and anyone in Giant Grass); finds woodland treasure after victories in forest regions.'),
   k('ancientWisdom', 'Ancient Wisdom', 'Allied Micro units within 2 recover 4 MP at the start of each turn.'),
   k('hiddenKnowledge', 'Hidden Knowledge', 'Reveals concealed traps and hidden units within 4; better magic proficiency (+10 Hit with magic).'),

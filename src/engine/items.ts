@@ -7,6 +7,7 @@ import { ogCanUseItem, ogHealItemMult, ogOnBlast, ogQuickItem, useOriginalItem }
 import { lgCanUseItem, lgHealItemMult, lgItemTiles, lgOnBlast, useLegendItem } from './legend';
 import { phHealItemMult, phItemTiles, phOnBlast, usePhantomItem } from './phantom';
 import { spOnBlast, useSpiritItem } from './spirit';
+import { MN_FREE_ITEMS, mnOnBlast, useMinishItem } from './minish';
 import { ITEMS, TEMPLATES } from '../data/registry';
 import { useFairy, type LevelUp } from './combat';
 import { footDist, inBounds, tilesInRange } from './grid';
@@ -167,6 +168,7 @@ export function useItem(b: Battle, u: Unit, index: number, rng: RNG, at?: Pos): 
     if (def.kind === 'bomb') res.lines.push(...lgOnBlast(b, u, blastVictims(b, u, def, at!), def.power));
     if (def.kind === 'bomb') res.lines.push(...phOnBlast(b, u, at!, def.radius ?? 0, def.power));
     if (def.kind === 'bomb') res.lines.push(...spOnBlast(b, u, at!, def.radius ?? 0));
+    if (def.kind === 'bomb') res.lines.push(...mnOnBlast(b, u, at!, def.radius ?? 0));
     if (def.element === 'fire') {
       const tiles: Pos[] = [];
       const r = def.radius ?? 0;
@@ -267,6 +269,8 @@ function useSpecial(b: Battle, u: Unit, def: ItemDef, rng: RNG, res: ItemResult,
   if (wildLine !== null) { res.lines.push(wildLine); return; }
   const spLine = useSpiritItem(b, u, def.id, at);
   if (spLine !== null) { res.lines.push(spLine); return; }
+  const mnLine = useMinishItem(b, u, def.id, at);
+  if (mnLine !== null) { res.lines.push(mnLine); if (MN_FREE_ITEMS.has(def.id)) res.free = true; return; }
   const phLine = usePhantomItem(b, def.id);
   if (phLine !== null) { res.lines.push(phLine); return; }
   const lgLine = useLegendItem(b, u, def.id, rng, tpTarget, at);

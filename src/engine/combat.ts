@@ -14,7 +14,7 @@ import { ogAfterCombat, ogAfterHit, ogCannotAttack, ogDefense, ogExtraAttack, og
 import { lgAfterCombat, lgAfterHit, lgCannotAttack, lgDefense, lgExtraAttack, lgMods, lgMultiplier, lgOnAttackMod, lgOnKill, lgOnStrike, lgRangeBonus, lgSaveFromDeath, lgSeedReady } from './legend';
 import { phAfterCombat, phAfterHit, phCannotAttack, phMods, phMultiplier, phOnKill, phRangeBonus } from './phantom';
 import { mcCannotWield, mcHit, mcMods, mcMultiplier } from './micro';
-import { mnAfterHit, mnCannotAttack, mnMods, mnMultiplier, mnOnKill, mnSaveFromDeath } from './minish';
+import { mnAfterCombat, mnAfterHit, mnCannotAttack, mnInterceptor, mnMods, mnMultiplier, mnOnKill, mnSaveFromDeath } from './minish';
 import { spAfterCombat, spAfterHit, spCannotAttack, spHealMult, spInterceptor, spMods, spMultiplier, spOnKill, spSaveFromDeath } from './spirit';
 
 const rangeBonus = (u: Unit, w: WeaponDef) => wwRangeBonus(u, w) + tpRangeBonus(u, w) + ssRangeBonus(u, w) + wildRangeBonus(u, w) + ogRangeBonus(u, w) + lgRangeBonus(u, w) + phRangeBonus(u, w);
@@ -629,7 +629,7 @@ export function resolveCombat(b: Battle, attacker: Unit, defender: Unit, rng: RN
     }
   }
   const landed2 = { atk: strikes.filter((s) => s.by === attacker.uid && !s.splash).reduce((n, s) => n + s.dmg, 0), def: strikes.filter((s) => s.by === defender.uid && !s.splash).reduce((n, s) => n + s.dmg, 0) };
-  for (const x of [...wwAfterCombat(b, attacker, defender), ...tpAfterCombat(b, attacker, defender), ...ssAfterCombat(b, attacker, defender, fc.attacker.arrowId, landed2), ...wildAfterCombat(b, attacker, defender, fc.attacker.arrowId, landed2), ...ogAfterCombat(b, attacker, defender, fc.attacker.arrowId, landed2), ...lgAfterCombat(b, attacker, defender, landed2, rng), ...phAfterCombat(b, attacker, defender, landed2), ...spAfterCombat(b, attacker, defender, landed2)]) {
+  for (const x of [...wwAfterCombat(b, attacker, defender), ...tpAfterCombat(b, attacker, defender), ...ssAfterCombat(b, attacker, defender, fc.attacker.arrowId, landed2), ...wildAfterCombat(b, attacker, defender, fc.attacker.arrowId, landed2), ...ogAfterCombat(b, attacker, defender, fc.attacker.arrowId, landed2), ...lgAfterCombat(b, attacker, defender, landed2, rng), ...phAfterCombat(b, attacker, defender, landed2), ...spAfterCombat(b, attacker, defender, landed2), ...mnAfterCombat(b, attacker, defender, landed2)]) {
     strikes.push({ by: x.by, target: x.uid, hit: true, crit: false, dmg: x.dmg, heal: 0, targetHp: x.hp, byHp: 0, killed: x.killed, blocked: false, splash: true });
     if (x.killed && !deaths.includes(x.uid)) deaths.push(x.uid);
   }
@@ -700,5 +700,5 @@ export function findInterceptor(b: Battle, attacker: Unit, target: Unit, weaponI
     || (p.skills.includes('royalGuardDeku') && royal(target) && unitDist(p, target) <= 1)
     || (p.skills.includes('captainsRightHand') && target.isCommander && unitDist(p, target) <= 1)
     || (p.skills.includes('skyShield') && CLASSES[target.classId]?.moveType === 'flying' && unitDist(p, target) <= 1)
-    || sacredDutyCovers(p, target) || wildInterceptor(b, p, target) || spInterceptor(b, p, target)));
+    || sacredDutyCovers(p, target) || wildInterceptor(b, p, target) || spInterceptor(b, p, target) || mnInterceptor(b, p, target)));
 }

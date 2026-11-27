@@ -73,7 +73,7 @@ describe('content integrity', () => {
     }
     for (const b of Object.values(BOSSES)) for (const d of b.drops ?? []) expect(WEAPONS[d] ?? GEAR[d], d).toBeDefined();
     for (const c of COMMANDERS) for (const id of c.startingItems ?? []) expect(WEAPONS[id] ?? GEAR[id] ?? ITEMS[id], id).toBeDefined();
-    expect(COMMANDERS.length).toBe(71);
+    expect(COMMANDERS.length).toBe(78);
     for (const c of COMMANDERS) {
       expect(TEMPLATES[c.heroId]).toBeDefined();
       for (const id of c.units) expect(TEMPLATES[id], id).toBeDefined();

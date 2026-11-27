@@ -10,6 +10,8 @@ import { castWild, WILD_ENEMY_AUTO, wildCooldownCut, wildCostMult, wildNeedsTarg
 import { castOriginal, OG_ENEMY_CASTS, ogCostMult, ogNeedsTarget, ogNeedsTile, ogTargets, ogTiles, ogUnusable } from './original';
 import { castLegend, LG_ENEMY_CASTS, lgAfterAbility, lgCooldownCut, lgCostMult, lgNeedsTarget, lgNeedsTile, lgTargets, lgTiles, lgUnusable } from './legend';
 import { castPhantom, PH_ENEMY_CASTS, phCostMult, phNeedsTarget, phNeedsTile, phTargets, phTiles, phUnusable } from './phantom';
+import { castMicro, mcNeedsTarget, mcNeedsTile, mcTargets, mcTiles, mcUnusable, microEnemyStompTarget } from './micro';
+import { castMinish, MN_ENEMY_CASTS, mnCostMult, mnUnusable } from './minish';
 import { castSpirit, SP_ENEMY_CASTS, spCostMult, spNeedsTarget, spNeedsTile, spTargets, spTiles, spUnusable } from './spirit';
 import { buildAt, buildTargets, canDig, dig, hasTimeBlocks, ignite, meltSunBlocks, toggleTimeBlocks } from './field';
 import { roomFor, transformInto } from './transform';
@@ -31,8 +33,8 @@ export function instrumentDiscount(u: Unit): number | null {
 
 /** MP (or stamina, for techniques) an ability costs this unit. */
 export function abilityCost(u: Unit, def: AbilityDef, b?: Battle): number {
-  const m = wwCostMult(b, u, def) * tpCostMult(b, u, def) * ssCostMult(b, u, def) * wildCostMult(b, u, def) * ogCostMult(b, u, def) * lgCostMult(b, u, def) * phCostMult(b, u, def) * spCostMult(b, u, def) * supportCostMult(b, u, def.kind, def.element, def.id);
-  if (def.sta) return techniqueCost(u, def, b?.bonus);
+  const m = wwCostMult(b, u, def) * tpCostMult(b, u, def) * ssCostMult(b, u, def) * wildCostMult(b, u, def) * ogCostMult(b, u, def) * lgCostMult(b, u, def) * phCostMult(b, u, def) * spCostMult(b, u, def) * mnCostMult(b, u, def) * supportCostMult(b, u, def.kind, def.element, def.id);
+  if (def.sta) return techniqueCost(u, def, b?.bonus, b?.groupSupports);
   if (m !== 1) return Math.max(def.kind === 'song' ? 1 : 0, Math.floor(abilityCost(u, def) * m));
   if (def.mp && u.buffs?.some((x) => x.id === 'chateau')) return 0; // Chateau Romani
   if (def.kind !== 'song') return def.mp;
@@ -108,6 +110,8 @@ export function unusableReason(b: Battle, u: Unit, def: AbilityDef): string | nu
   if (phr) return phr;
   const spr = spUnusable(b, u, def);
   if (spr) return spr;
+  const mcr = mcUnusable(b, u, def) ?? mnUnusable(b, u, def);
+  if (mcr) return mcr;
   if (def.perTurn && !def.wild && u.turnUses?.[`pt:${def.id}`] === b.turn) return 'Already used this turn';
   if (def.sta ? u.sta < abilityCost(u, def, b) : u.mp < abilityCost(u, def, b)) return def.sta ? 'Not enough stamina' : 'Not enough MP';
   const tr = terminaUnusable(b, u, def);
@@ -152,7 +156,7 @@ export function castableAbilities(b: Battle, u: Unit): AbilityDef[] {
 }
 
 export function needsTile(def: AbilityDef): boolean {
-  return !!def.warp || wwNeedsTile(def) || tpNeedsTile(def) || ssNeedsTile(def) || wildNeedsTile(def) || ogNeedsTile(def) || lgNeedsTile(def) || phNeedsTile(def) || spNeedsTile(def) || def.id === 'hookshotPull' || def.id === 'buildHere' || def.id === 'transportAlly';
+  return !!def.warp || wwNeedsTile(def) || tpNeedsTile(def) || ssNeedsTile(def) || wildNeedsTile(def) || ogNeedsTile(def) || lgNeedsTile(def) || phNeedsTile(def) || spNeedsTile(def) || mcNeedsTile(def) || def.id === 'hookshotPull' || def.id === 'buildHere' || def.id === 'transportAlly';
 }
 
 /** Destination tiles for tile-targeted abilities (warps, Hookshot, Build, Transport). */
@@ -168,6 +172,7 @@ export function abilityTiles(b: Battle, u: Unit, def: AbilityDef): Pos[] {
   if (lgNeedsTile(def)) return lgTiles(b, u, def);
   if (phNeedsTile(def)) return phTiles(b, u, def);
   if (spNeedsTile(def)) return spTiles(b, u, def);
+  if (mcNeedsTile(def)) return mcTiles(b, u, def);
   if (def.id === 'transportAlly') {
     const t = transportee(b, u);
     if (!t) return [];
@@ -221,6 +226,7 @@ export function abilityTargets(b: Battle, u: Unit, def: AbilityDef): Unit[] {
   if (lgNeedsTarget(def)) return lgTargets(b, u, def);
   if (phNeedsTarget(def)) return phTargets(b, u, def);
   if (spNeedsTarget(def)) return spTargets(b, u, def);
+  if (mcNeedsTarget(def)) return mcTargets(b, u, def);
   if (def.id === 'masterCraftsman') {
     return b.units.filter((a) => a.team === u.team && unitDist(u, a) <= 1 && a.weapons.some((w) => (a.wear?.[w] ?? 0) > 0));
   }
@@ -231,7 +237,7 @@ export function abilityTargets(b: Battle, u: Unit, def: AbilityDef): Unit[] {
 }
 
 export function needsTarget(def: AbilityDef): boolean {
-  if (terminaNeedsTarget(def) || wwNeedsTarget(def) || tpNeedsTarget(def) || ssNeedsTarget(def) || wildNeedsTarget(def) || ogNeedsTarget(def) || lgNeedsTarget(def) || phNeedsTarget(def) || spNeedsTarget(def)) return true;
+  if (terminaNeedsTarget(def) || wwNeedsTarget(def) || tpNeedsTarget(def) || ssNeedsTarget(def) || wildNeedsTarget(def) || ogNeedsTarget(def) || lgNeedsTarget(def) || phNeedsTarget(def) || spNeedsTarget(def) || mcNeedsTarget(def)) return true;
   return def.id === 'greatFairysBlessing' || def.id === 'masterCraftsman';
 }
 
@@ -374,7 +380,7 @@ export function castAbility(b: Battle, u: Unit, id: string, rng: RNG, targetUid?
       break;
     case 'spinAttack': {
       const sword = u.weapons.map((w) => WEAPONS[w]).find((w) => w?.type === 'sword');
-      const str = effectiveStats(u).str + (sword?.might ?? 0);
+      const str = effectiveStats(u).str + (sword?.might ?? 0) + (u.skills.includes('ultimateTechnique') ? 4 : 0);
       for (const e of foes(1)) {
         const dmg = Math.min(e.hp, Math.max(0, str - effectiveStats(e).def));
         e.hp -= dmg;
@@ -459,7 +465,7 @@ export function castAbility(b: Battle, u: Unit, id: string, rng: RNG, targetUid?
     }
     default:
       if (!def.warp) {
-        const tm = castSpirit(b, u, def, rng, target, at) ?? castPhantom(b, u, def, rng, target, at) ?? castWild(b, u, def, rng, target, at) ?? castSkyward(b, u, def, rng, target, at) ?? castOriginal(b, u, def, rng, target, at) ?? castLegend(b, u, def, rng, target, at) ?? castTwilight(b, u, def, rng, target, at) ?? castWindWaker(b, u, def, rng, target, at) ?? castTermina(b, u, def, rng, target, at);
+        const tm = castMicro(b, u, def, rng, target, at) ?? castMinish(b, u, def, rng, target, at) ?? castSpirit(b, u, def, rng, target, at) ?? castPhantom(b, u, def, rng, target, at) ?? castWild(b, u, def, rng, target, at) ?? castSkyward(b, u, def, rng, target, at) ?? castOriginal(b, u, def, rng, target, at) ?? castLegend(b, u, def, rng, target, at) ?? castTwilight(b, u, def, rng, target, at) ?? castWindWaker(b, u, def, rng, target, at) ?? castTermina(b, u, def, rng, target, at);
         if (!tm) return null;
         res.hits.push(...tm.hits);
         res.heals.push(...tm.heals);
@@ -503,10 +509,18 @@ function sister(b: Battle, u: Unit): Unit | undefined {
 /** Enemy Ganondorf and the witch sisters transform on their own when they can. */
 export function enemyAutoTransform(b: Battle, u: Unit, rng: RNG): AbilityResult | null {
   if (u.team !== 'enemy') return null;
-  for (const id of ['transformGanon', 'twinrovaFusion', ...ENEMY_TRANSFORMS, ...SS_ENEMY_TRANSFORMS, ...WILD_ENEMY_AUTO, ...OG_ENEMY_CASTS, ...LG_ENEMY_CASTS, ...PH_ENEMY_CASTS, ...SP_ENEMY_CASTS]) {
+  for (const id of ['transformGanon', 'twinrovaFusion', ...ENEMY_TRANSFORMS, ...SS_ENEMY_TRANSFORMS, ...WILD_ENEMY_AUTO, ...OG_ENEMY_CASTS, ...LG_ENEMY_CASTS, ...PH_ENEMY_CASTS, ...SP_ENEMY_CASTS, ...MN_ENEMY_CASTS]) {
     if (!u.abilities.includes(id)) continue;
     const def = ABILITIES[id];
-    if (def && !unusableReason(b, u, def)) return castAbility(b, u, id, rng);
+    if (!def || unusableReason(b, u, def)) continue;
+    // Bosses' area attacks wait until a foe is in reach; heals until they are hurt.
+    const mine = MN_ENEMY_CASTS.includes(id);
+    if (mine && def.wild?.target === 'foes' && !b.units.some((e) => e.team !== u.team && unitDist(u, e) <= (def.wild!.radius ?? 1))) continue;
+    if (mine && def.wild?.target === 'self' && def.wild.heal && u.hp > u.stats.hp * 0.6) continue;
+    return castAbility(b, u, id, rng);
   }
+  // A larger unit with an enemy Micro unit underfoot tries to crush it (Stomp).
+  const squash = microEnemyStompTarget(b, u);
+  if (squash) return castAbility(b, u, 'mcStomp', rng, squash.uid);
   return null;
 }

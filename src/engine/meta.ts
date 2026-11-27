@@ -23,6 +23,8 @@ export interface MetaProgress {
   counters: Record<string, number>;
   /** Archives. */
   convos: string[];
+  /** The Minish Cap: figurines from Carlov's Figurine Gallery (Hyrule Archives entries, no combat effect). */
+  figurines?: string[];
   enemiesSeen: string[];
   itemsSeen: string[];
 }

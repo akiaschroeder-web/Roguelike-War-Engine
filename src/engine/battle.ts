@@ -15,6 +15,8 @@ import { lgBossesRemain, lgStartPhase } from './legend';
 import { decoratePhantom, phantomBattleStart, phBossesRemain, phOnlyPhantomsLeft, phStartPhase } from './phantom';
 import { decorateSpirit, enemyTrains, isTrain, layoutRail, setupRail, spBossesRemain, spCapturedAll, spiritBattleStart, spStartPhase } from './spirit';
 import { resolveSinking } from './naval';
+import { mcStartPhase, placeMicroAtStart } from './micro';
+import { decorateMinish, minishBattleStart, mnBossesRemain, mnStartPhase } from './minish';
 import { revertMask } from './terminaAbilities';
 import { roomFor } from './transform';
 import { canRide as canRideMount, unitTags, hasEffect, isLavaImmune, isMounted, makeEnemy, mountOf, sizeWhen, makeEnemyFromTemplate, prepareForBattle } from './units';
@@ -106,8 +108,9 @@ export function createBattle(setup: BattleSetup): Battle {
   const leader = isBossFight && force?.leader && TEMPLATES[force.leader] ? TEMPLATES[force.leader] : undefined;
   const bossDef = isBossFight && !leader ? setup.boss ?? rng.pick(bossPool(setup.world)) : undefined;
   const playerSizes = setup.roster.map((u) => prepareForBattle(u).size);
-  const enemySizes = specs.map((sp) => ('arch' in sp ? sp.arch.size ?? 1 : TEMPLATES[sp.tmpl]?.size ?? 1));
-  const bossSize = leader?.size ?? bossDef?.size ?? 0;
+  // Micro units (size 0) take a single tile on the generated map.
+  const enemySizes = specs.map((sp) => ('arch' in sp ? sp.arch.size ?? 1 : TEMPLATES[sp.tmpl]?.size ?? 1) || 1);
+  const bossSize = (leader?.size ?? bossDef?.size ?? 0) || (leader || bossDef ? 1 : 0);
   const biggest = Math.max(1, ...playerSizes, ...enemySizes, bossSize);
 
   const width = 13 + (isBossFight ? 2 : 0) + rng.int(0, 2) + Math.max(0, biggest - 2) * 2;
@@ -198,6 +201,8 @@ export function createBattle(setup: BattleSetup): Battle {
   battle.silentRealm = setup.silentRealm;
   if (secondQuest) battle.secondQuest = true;
   decorateField(battle, rng, setup.nodeType);
+  // Micro units deploy riding larger allies where they can (shared tiles).
+  placeMicroAtStart(battle);
   windWakerUpkeepAtStart(battle, rng);
   if (setup.trials?.includes('mist')) battle.fog = true;
   battle.rngState = rng.state;
@@ -317,6 +322,8 @@ function createNavalBattle(setup: BattleSetup): Battle {
   // Spirit Tracks: the rails, junctions and stations; train-part sets.
   if (rail) setupRail(battle, (layout as { junctions?: number[] }).junctions ?? []);
   decorateSpirit(battle, rng);
+  decorateMinish(battle, rng);
+  minishBattleStart(battle);
   // Phantom Hourglass: sea spaces (Cyclone Warp Points, salvage) and steamship part sets.
   decoratePhantom(battle, rng);
   phantomBattleStart(battle);
@@ -457,6 +464,8 @@ export function startPhase(b: Battle, team: Team): TurnStartEvent[] {
     lgStartPhase(b, u, events);
     phStartPhase(b, u, events);
     spStartPhase(b, u, events);
+    mcStartPhase(b, u, events);
+    mnStartPhase(b, u, events);
     const max = u.stats.hp;
     const tiles = footprint(u.x, u.y, u.size).map((p) => b.tiles[keyOf(b, p.x, p.y)]);
     const anchor = tiles[0];
@@ -524,7 +533,7 @@ export function checkResult(b: Battle): Battle['result'] {
   if (!enemies.length || spCapturedAll(b)) return (b.result = 'won');
   // Without the Phantom Sword the Phantoms can't be beaten: once only they are left, the floor is cleared.
   if (b.objective.type === 'rout' && phOnlyPhantomsLeft(b, enemies)) return (b.result = 'won');
-  if (b.objective.type === 'boss' && b.fallen.some((u) => u.isBoss) && !lgBossesRemain(b) && !phBossesRemain(b) && !spBossesRemain(b)) return (b.result = 'won');
+  if (b.objective.type === 'boss' && b.fallen.some((u) => u.isBoss) && !lgBossesRemain(b) && !phBossesRemain(b) && !spBossesRemain(b) && !mnBossesRemain(b)) return (b.result = 'won');
   const o = b.objective;
   if (o.type === 'survive' && b.turn > (o.turns ?? 6)) return (b.result = 'won');
   if (o.type === 'seize' && onTiles(b, 'player', o.tiles)) return (b.result = 'won');

@@ -17,6 +17,7 @@ import { ssHazardImmune, ssStaminaMult } from './skyward';
 import { wildStaminaMult } from './wild';
 import { lgStaminaMult } from './legend';
 import { spChuFusion } from './spirit';
+import { mnStaminaAdjust } from './minish';
 import type { AbilityDef, Battle, Element, Pos, StatusKind, Terrain, Unit, WeaponDef } from './types';
 
 declare module './types' {
@@ -489,7 +490,7 @@ export function techniqueAllowed(u: Unit, a: AbilityDef, b?: Battle): boolean {
 }
 
 /** Stamina cost of a technique for this unit. */
-export function techniqueCost(u: Unit, a: AbilityDef, bonus?: string): number {
+export function techniqueCost(u: Unit, a: AbilityDef, bonus?: string, groups?: string[]): number {
   let c = a.sta ?? 0;
   if (!c) return 0;
   if (a.hidden || a.id === 'mountedSpin' || a.id === 'mountedGrapple') {
@@ -502,6 +503,8 @@ export function techniqueCost(u: Unit, a: AbilityDef, bonus?: string): number {
   if (bonus === 'forgottenTechniques' && u.team === 'player') c = Math.floor(c * 0.8);
   if (hasEffect(u, 'farorePearl')) c = Math.ceil(c * 0.75);
   c = Math.floor(c * ssStaminaMult(u, bonus) * wildStaminaMult(u, a.id) * lgStaminaMult(u, a));
+  // The Minish Cap: Swift Technique, Swiftblade's Sword, the Blade Brothers, Faster Spin.
+  c = mnStaminaAdjust(u, a, bonus, c, groups);
   return Math.max(0, c);
 }
 
@@ -811,7 +814,7 @@ export function tpUnusable(b: Battle, u: Unit, def: AbilityDef): string | null |
     case 'energyField': return b.units.some((a) => a.templateId === 'midnaImp' || a.templateId === 'midnaTrue') || (u.cargo ?? []).some((c) => has(c, 'twilightCompanion')) || u.templateId === 'wolfLinkMidna' ? (foesWithin(b, u, 3).length ? null : 'No enemies within 3') : 'Midna must be on the field';
     case 'zantsFrenzy': return foesWithin(b, u, 1).length ? (u.sta >= 4 + 3 * (u.turnUses?.frenzy ?? 0) ? null : 'Not enough stamina') : 'No adjacent enemies';
     case 'beastCharge': return u.sta >= 6 ? null : 'Not enough stamina';
-    case 'greatSpin': return u.hp < u.stats.hp ? 'Only at full HP' : foesWithin(b, u, 2).length ? null : 'No enemies within 2';
+    case 'greatSpin': return u.hp < u.stats.hp ? 'Only at full HP' : foesWithin(b, u, u.abilities.includes('longerGreatSpin') ? 3 : 2).length ? null : 'No enemies within range';
     case 'mountedSpin': return !isMounted(u) ? 'Only while mounted' : foesWithin(b, u, 1).length ? null : 'No adjacent enemies';
     case 'crimsonLantern': case 'curseWave': case 'hexingScreech': return foesWithin(b, u, 1).length ? null : 'No adjacent enemies';
     case 'fireburst': return foesWithin(b, u, 2).length ? null : 'No enemies within 2';
@@ -893,7 +896,8 @@ export function castTwilight(b: Battle, u: Unit, def: AbilityDef, rng: RNG, targ
       break;
     }
     case 'greatSpin':
-      for (const e of foes(2)) strike(e, power(u, e, false, 4));
+      // Longer Great Spin reaches 3; Swiftblade the First's Ultimate Technique hits harder.
+      for (const e of foes(u.abilities.includes('longerGreatSpin') ? 3 : 2)) strike(e, power(u, e, false, 4 + (has(u, 'ultimateTechnique') ? 4 : 0)));
       if (has(u, 'hiddenPotential')) buff(u, 'hiddenPotential', 'Hidden Potential', 2, { skl: 2 });
       break;
     case 'mountedSpin':
