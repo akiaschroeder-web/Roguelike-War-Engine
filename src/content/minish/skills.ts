@@ -1,0 +1,56 @@
+import type { SkillDef } from '../../engine/types';
+
+const k = (id: string, name: string, desc: string): SkillDef => ({ id, name, desc, implemented: true });
+
+export const SKILLS: SkillDef[] = [
+  // ── Named characters ──
+  k('fourSwordHero', 'Four Sword Hero', 'With an awakened Picori Blade (two Elements or more), Four Sword Split makes temporary magical duplicates (1, 2 or 3 with the Four Sword). Can shrink into Micro Link with Ezlo\'s help or on a Minish Portal.'),
+  k('smallButMighty', 'Small but Mighty', 'Full damage on exposed and internal weak points, and +25% more there; internal strikes +6.'),
+  k('lightForce', 'Light Force', 'Allies within 2 recover 3 MP at the start of each turn and take 30% less dark damage.'),
+  k('masterOfMiniaturization', 'Master of Miniaturization', 'Enables size-changing: he and allies next to him can shrink and grow anywhere. Allied Micro units within 2 gain +2 STR, MAG and DEF.'),
+  k('enchantedCap', 'Enchanted Cap', 'A compatible host can shrink: he and allies next to him (or carrying him) shrink and grow anywhere. A host carrying him glides (+1 MOV, never pushed by gusts).'),
+  k('forbiddenAmbition', 'Forbidden Ambition', '+2 MAG for each spell or ability he knows (up to +8).'),
+  k('sorcerersCapSkill', "Sorcerer's Cap", 'Magic damage +20%, and transformation magic: he shrinks and grows anywhere.'),
+  k('royalAuthority', 'Royal Authority', 'Hyrule soldiers (soldiers, knights, archers and the royal guard) within 4 gain +3 STR and DEF.'),
+  k('royalAdministration', 'Royal Administration', 'Better army supply efficiency: +2 supplies and +₹50 after every victory.'),
+  k('masterCraftsmanMC', 'Master Craftsman', 'Repairs weapons (Master Craftsman); after every victory, 5 uses are restored to every worn weapon in the army.'),
+  k('sacredForging', 'Sacred Forging', 'While riding an ally, repairs and strengthens its equipment: at the start of each turn the host recovers 3 uses on its weapon and gains +2 STR for the turn.'),
+  k('forestPassage', 'Forest Passage', 'Reveals hidden enemies within 5 (and anyone in Giant Grass); finds woodland treasure after victories in forest regions.'),
+  k('ancientWisdom', 'Ancient Wisdom', 'Allied Micro units within 2 recover 4 MP at the start of each turn.'),
+  k('hiddenKnowledge', 'Hidden Knowledge', 'Reveals concealed traps and hidden units within 4; better magic proficiency (+10 Hit with magic).'),
+  k('inspiringVerse', 'Inspiring Verse', 'Restores morale (+3 after each victory); allies within 2 gain +10 Hit and +5 Avoid.'),
+  k('windBlessing', 'Wind Blessing', 'Allied fliers within 3 gain +1 MOV; allies within 3 are never pushed by Gust Currents.'),
+  k('swiftTechnique', 'Swift Technique', 'Sword techniques cost 25% less STA.'),
+  k('powerTechnique', 'Power Technique', 'Charged sword attacks deal extra damage: +4 damage with a sword when he hasn\'t moved this turn.'),
+  k('perilTechnique', 'Peril Technique', 'Below half HP: +4 STR and +15 Crit.'),
+  k('ultimateTechnique', 'Ultimate Technique', 'Stronger spin attacks (Spin and Great Spin +4 damage) and undead resistance (half damage from undead).'),
+  // ── Generic Minish ──
+  k('hiddenTrails', 'Hidden Trails', 'Moves freely through tall grass (Tall and Giant Grass cost 1); reveals hidden passages and units within 3.'),
+  k('naturalMedicine', 'Natural Medicine', 'Heals a larger ally while sharing its space: the host recovers 15% HP at the start of each turn.'),
+  k('tinyHammer', 'Tiny Hammer', 'Extra damage against armour joints and mechanical weak points: Micro damage against armoured units and constructs is 50% (not 25%).'),
+  k('fieldForging', 'Field Forging', 'Repairs its host\'s equipment without the host spending an action: the host recovers 2 weapon uses a turn.'),
+  k('unnoticedHands', 'Unnoticed Hands', 'Better pickpocketing (+25%) and sabotage against larger enemies (the debuff lasts a turn longer).'),
+  k('smallMechanisms', 'Small Mechanisms', 'Can enter machinery to disable it: internal strikes ×1.5 against constructs, which are also Rooted for a turn.'),
+  // ── Monsters ──
+  k('flyingPest', 'Flying Pest', 'Flies over obstacles; attacks Micro units with +20 Hit.'),
+  k('sporeCloud', 'Spore Cloud', 'At the start of its turn, enemies sharing or next to its space may be Poisoned or Confused.'),
+  k('camouflage', 'Camouflage', 'Hides under rocks and vegetation: starts hidden (and hides again at turn start) on forest, mountain and grass.'),
+  k('armoredRoll', 'Armored Roll', 'Curls up: +5 DEF (and immune to knockback) when it hasn\'t moved since its last turn.'),
+  k('watchingGuardianSkill', 'Watching Guardian', 'Dormant (+10 DEF, doesn\'t move) until an enemy comes within 3; then it hunts.'),
+  k('sweepingChain', 'Sweeping Chain', 'Its flail hits enemies across several surrounding spaces (half damage to everyone next to it).'),
+  // ── Bosses ──
+  k('gelatinousGiant', 'Gelatinous Giant', '−40% physical damage unless knocked over (the Gust Jar knocks it over for 2 turns and exposes its head). Double damage to Micro units, and it can stomp them. Regenerates 5% HP a turn.'),
+  k('giganticCharge', 'Gigantic Charge', 'On odd turns its coating is charged: every enemy sharing its footprint takes electric damage at the start of its turn, and melee attackers are shocked. −40% physical damage unless knocked over (the Gust Jar only works while the coating is down).'),
+  k('frozenArena', 'Frozen Arena', '+8 DEF and RES while frozen. Fire on the flower on its back (a fire weapon or the Flame Lantern) thaws it for 2 turns.'),
+  k('volcanicShell', 'Volcanic Shell', 'Takes 40% damage until its shell mechanism is struck by a compatible tool (Cane of Pacci, a hammer or tool, bombs, or a Micro internal strike): then it is open for 2 turns.'),
+  k('mechanicalInterior', 'Mechanical Interior', 'Its outer body takes 30% damage. Micro units can enter its head (Internal Strike) and destroy the mechanisms: that exposes it to full damage for 2 turns.'),
+  k('aerialPair', 'Aerial Pair', '+3 STR, SPD and DEF while both Gyorgs are on the field. The Male Gyorg protects the Female (intercepts attacks on her). Micro units can ride the Female\'s back.'),
+  k('eyesOfDarkness', 'Eyes of Darkness', 'Four orbiting eyes absorb attacks (half damage while any remain; each hit destroys one, a Micro internal strike two). An eye returns every other turn.'),
+  k('eightfoldDefense', 'Eightfold Defense', 'Eight eyes shield his core: 25% damage while any eye remains. Each hit destroys one (a Micro internal strike destroys three); one regrows each turn.'),
+  k('demonicArms', 'Demonic Arms', 'Two arms attack independently each turn (an enemy within 2). Strong hits (10+) disable an arm; Micro units can enter a disabled arm (Internal Strike) to destroy it. Half damage while any arm remains.'),
+  k('enragedCrawl', 'Enraged Crawl', '+5 STR and +4 SPD for 2 turns after taking damage. Its exposed tail: Micro attackers deal ×1.5.'),
+  k('retractableSpikes', 'Retractable Spikes', 'Its spikes are out on even turns: direct melee attackers take damage (5 + its STR / 3).'),
+  k('silverGuard', 'Silver Guard', '−50% physical damage from melee attacks (not from Micro units at a weak point).'),
+  k('aggressiveSwordsmanship', 'Aggressive Swordsmanship', 'Against a unit with a shield: +15 Crit and +4 damage (it breaks guards).'),
+  k('masterOfTheBlade', 'Master of the Blade', 'Automatically counters the first successful melee hit each round (once per round, if the attacker is in reach).'),
+];
