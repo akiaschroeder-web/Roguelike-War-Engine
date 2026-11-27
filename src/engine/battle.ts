@@ -189,7 +189,8 @@ export function createBattle(setup: BattleSetup): Battle {
   };
   battle.bossTier = setup.depth < 7 ? 0 : setup.depth < 14 ? 1 : 2;
   // First-region bosses and leaders hold their ground instead of hunting your Commander.
-  if (battle.bossTier === 0) for (const u of units) if (u.isBoss) u.ai = 'stationary';
+  // (Horsehead marches on intruders: Armored Advance.)
+  if (battle.bossTier === 0) for (const u of units) if (u.isBoss) u.ai = u.skills.includes('armoredBody') ? 'guard' : 'stationary';
   battle.twilit = setup.twilit;
   battle.silentRealm = setup.silentRealm;
   if (secondQuest) battle.secondQuest = true;
@@ -299,7 +300,8 @@ function createNavalBattle(setup: BattleSetup): Battle {
     naval: true, wind: rng.pick([[1, 0], [-1, 0], [0, 1], [0, -1]] as [number, number][]), owned: setup.gearOwned,
   };
   battle.bossTier = setup.depth < 7 ? 0 : setup.depth < 14 ? 1 : 2;
-  if (battle.bossTier === 0) for (const u of units) if (u.isBoss) u.ai = 'stationary';
+  // (Horsehead marches on intruders: Armored Advance.)
+  if (battle.bossTier === 0) for (const u of units) if (u.isBoss) u.ai = u.skills.includes('armoredBody') ? 'guard' : 'stationary';
   battle.night = setup.night;
   if (battle.tiles.includes('current')) battle.currentDir = battle.wind;
   windWakerUpkeepAtStart(battle, rng);
