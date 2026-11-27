@@ -4,7 +4,7 @@
 // Spirit Gems and the Spirits' levels, the three metals and the Phantom Sword, treasure and salvage,
 // steamship parts, sea crossings fought at sea, and the pending units' after-battle work.
 
-import { BOSSES, GEAR, ITEMS, TEMPLATES, WEAPONS } from '../data/registry';
+import { BOSSES, GEAR, ITEMS, QUEST_ITEMS, TEMPLATES, WEAPONS } from '../data/registry';
 import {
   CHART_FOR, OCEAN_KING_TEMPLE, PAIRED_PH_REGIONS, PH_ROUTE_BOSSES, PH_TREASURES, PHANTOM_METALS, PHANTOM_ROUTE, SEA_CHARTS, SHIP_PART_IDS, SHIP_SETS, SPIRIT_GEMS,
 } from '../content/phantom';
@@ -35,7 +35,7 @@ export const phantomOf = (run: Run): PhantomRunState => (run.phantom ??= { templ
 const q = (run: Run) => (run.questItems ??= []);
 const count = (run: Run, id: string) => (run.questItems ?? []).filter((x) => x === id).length;
 const owns = (run: Run, id: string) => run.convoy.includes(id) || run.roster.some((u) => u.weapons.includes(id) || Object.values(u.gear).includes(id));
-const nameOf = (id: string) => WEAPONS[id]?.name ?? GEAR[id]?.name ?? ITEMS[id]?.name ?? id;
+const nameOf = (id: string) => WEAPONS[id]?.name ?? GEAR[id]?.name ?? ITEMS[id]?.name ?? QUEST_ITEMS[id]?.name ?? id;
 const MAX_ENERGY = 60;
 
 /** The Phantom Hourglass's reserve: 10, +5 for each Sands of Hours. */

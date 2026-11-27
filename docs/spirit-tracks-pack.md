@@ -128,3 +128,4 @@ Batch 1 (14): heroOfSpirits_logo (JPEG; has the Spirit Tracks logo and a waterma
 - The green official Phantom art (hourglass shield) is a normal Phantom, now phantomOfficial.webp. It becomes an alt art for the existing `phantom` unit.
 - The purple hand with the eye is the Key Master, now keyMaster.webp.
 - The dark bat-eared imp I had called the Key Master is unassigned, now unassigned_darkBatImp.webp.
+- The bat-eared imp is Fraaz (the user confirmed it; the blue and orange eyes match his ice and fire sides), now fraaz.webp. All Spirit Tracks art is in. Still unassigned: 4 extras (ghost cloud, grey spiked, blue horned, grey rock).

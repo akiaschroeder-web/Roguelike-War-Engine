@@ -27,11 +27,11 @@ const b = (d: BossDef): BossDef => d;
 
 export const BOSSES: BossDef[] = [
   b({ id: 'blaaz', name: 'Blaaz', title: 'Master of Fire', home: 'isleOfEmber', race: 'demon', classId: 'fireDemon', size: 3, glyph: 'BZ',
-    weapons: ['blaazsFlame', 'demonClaw'], skill: 'flameDivision', abilities: ['fireballBarrage', 'flameDivisionAbility', 'burningTeleport', 'infernalBlast'],
+    weapons: ['blaazFireball', 'demonClaw'], skill: 'flameDivision', abilities: ['fireballBarrage', 'flameDivisionAbility', 'burningTeleport', 'infernalBlast'],
     stats: st(65, 13, 26, 15, 12, 12, 23, 5, 22, 6, 25, 55),
     quote: '(A tall shape in a dark red robe spreads its arms in the Temple of Fire. Three flames peel away from it.)', drops: ['blaazsFlame'] }),
   b({ id: 'cyclok', name: 'Cyclok', title: 'Stirrer of Winds', home: 'isleOfGust', race: 'monster', classId: 'windSorcerer', size: 3, glyph: 'CY',
-    weapons: ['cyclokWindStaff', 'cyclokTentacle'], skill: 'tornadoRider', abilities: ['tornadoSummoning', 'windScythe', 'aerialDive', 'cycloneBarrage'],
+    weapons: ['cyclokGust', 'cyclokTentacle'], skill: 'tornadoRider', abilities: ['tornadoSummoning', 'windScythe', 'aerialDive', 'cycloneBarrage'],
     stats: st(60, 10, 28, 16, 16, 10, 22, 7, 20, 8, 25, 60),
     quote: '(An octopus rides a whirlwind over the Wind Temple, too high for any sword. Bombs drift up the cyclones...)', drops: ['cyclokWindStaff'] }),
   b({ id: 'crayk', name: 'Crayk', title: 'Bane of Courage', home: 'molidaIsland', race: 'aquatic', classId: 'invisibleCrustacean', size: 3, glyph: 'CR',
@@ -40,7 +40,7 @@ export const BOSSES: BossDef[] = [
     quote: '(Something clicks in the dark of the Temple of Courage. You can\'t see it. It can see you.)', drops: ['geozardShield'] }),
   ...[['1', 'Red'], ['2', 'Blue'], ['3', 'Gold'], ['4', 'Green']].map(([n, c]) => b({
     id: `cubusSister${n}`, name: `Cubus Sister (${c})`, title: 'Ghost Sorceress', home: 'ghostShipPH', race: 'undead', classId: 'ghostSorceress', size: 1, glyph: `C${n}`,
-    weapons: ['cubusOrb'], skill: 'deadMansVolley', abilities: ['cubusVolley', 'combinedBarrage'], stats: st(26, 3, 20, 15, 12, 4, 19, 9, 4, 6, 14, 45),
+    weapons: ['cubusBolt'], skill: 'deadMansVolley', abilities: ['cubusVolley', 'combinedBarrage'], stats: st(26, 3, 20, 15, 12, 4, 19, 9, 4, 6, 14, 45),
     quote: n === '1' ? '"Ooh, a visitor! Shall we play? We\'ll bounce our little ball back and forth... and you\'re in the middle!"' : '(Another sister giggles from the rigging.)', drops: ['cubusOrb'],
   })),
   b({ id: 'dongorongo', name: 'Dongorongo', title: 'Armored Lizard', home: 'goronIsland', race: 'monster', classId: 'armoredLizard', size: 4, glyph: 'DG',
@@ -52,7 +52,7 @@ export const BOSSES: BossDef[] = [
     stats: st(125, 32, 5, 10, 4, 35, 18, 3, 50, 4, 50, 15),
     quote: '(The Cobble\'s last guardian rises from Mutoh\'s Temple, every joint grinding. Its fists are the size of houses.)', drops: ['cobbleRoyalArmor'] }),
   b({ id: 'bellum', name: 'Bellum', title: 'Evil Phantom', home: 'templeOfTheOceanKing', race: 'demon', classId: 'lifeDrainingDemon', size: 4, glyph: 'BL',
-    weapons: ['bellumsTentacle', 'bellumEyeBeam'], skill: 'lifeForceConsumption',
+    weapons: ['bellumLash', 'bellumEyeBeam'], skill: 'lifeForceConsumption',
     abilities: ['tentacleStrike', 'phantomEyeSummoning', 'lifeForceDrain', 'spectralFlight', 'bellumPossession', 'maliciousRegeneration'],
     stats: st(110, 25, 35, 19, 15, 23, 30, 4, 38, 7, 45, 85),
     quote: '(At the bottom of the Temple of the Ocean King, a mass of tentacles and eyes. It has been drinking the Ocean King\'s life for a very long time.)', drops: ['bellumsTentacle', 'phantomArmor'] }),

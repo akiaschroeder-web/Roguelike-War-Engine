@@ -14,7 +14,7 @@ export const SKILLS: SkillDef[] = [
   k('mermaidsCharm', "Mermaid's Charm", 'Enemies within 2 are distracted (−10 Hit); allies within 2 have their spirits raised (+5 Hit).'),
   k('foresight', 'Foresight', 'At the start of each turn, hidden enemies and traps within 6 are revealed. Reinforcements and hazards are announced.'),
   k('mechanicalExpertise', 'Mechanical Expertise', 'At the start of each turn, adjacent allied vessels and constructs recover 10% HP and one knocked-out ship component.'),
-  k('sacredForging', 'Sacred Forging', 'Weapons of allies within 2 wear half as fast; after each victory every worn weapon in the army is repaired by 5 uses.'),
+  k('sacredForging', 'Sacred Forging', 'After each victory every worn weapon in the army is repaired by 5 uses (10 with his Forging Hammer).'),
   k('rollingCharge', 'Rolling Charge', 'Rolls through narrow passages (Goron Roll) and counts as striking from behind: Phantoms and frontal armor don\'t stop him.'),
   k('islandChief', 'Island Chief', 'Allied Gorons within 3 gain +3 STR and DEF.'),
   k('royalEngineering', 'Royal Engineering', 'Summons a temporary Cobble construct to fight beside him (Royal Engineering).'),
@@ -31,7 +31,7 @@ export const SKILLS: SkillDef[] = [
   k('frozenBreathSkill', 'Frozen Breath', 'Breathes a cone of freezing air (Frozen Breath).'),
   k('frozenRage', 'Frozen Rage', '+1 STR for every 10% of HP lost.'),
   // ── Monsters ──
-  k('phantomArmorSkill', 'Phantom Armor', 'Immune to ordinary weapon attacks from the front (the way it faces: toward the last enemy it attacked or approached). Vulnerable from behind and the sides, to sacred weapons (the Phantom Sword, light), and while time is stopped (Time Freeze, Sacred Opening).'),
+  k('phantomArmorSkill', 'Phantom Armor', 'Immune to ordinary weapon attacks from the front (the way it faces: toward the last enemy it attacked or approached). Vulnerable from behind and the sides, to sacred weapons (the Phantom Sword, light), and while time is stopped (Time Freeze, Sacred Opening). Without the Phantom Sword they can\'t really be beaten: a rout is won once only Phantoms are left.'),
   k('relentlessChase', 'Relentless Chase', 'Phantom Armor, and +4 MOV while pursuing a detected enemy (an alarm is raised or an enemy is in sight within 6).'),
   k('spectralWarp', 'Spectral Warp', 'Phantom Armor, and teleports next to enemies spotted by Phantom Eyes (or an alarm).'),
   k('phantomAlarmSkill', 'Alarm', 'Reveals hidden enemies within 3 and raises the alarm: every Phantom on the field gives chase.'),
@@ -50,7 +50,7 @@ export const SKILLS: SkillDef[] = [
   k('strongSalvage', 'Strong Salvage', 'Salvages Submerged Treasure from 2 spaces away and hauls up more (+50% salvage Rupees).'),
   k('fastPursuit', 'Fast Pursuit', '+2 MOV; passengers board and land without ending their turn.'),
   // ── The Potion Shop Lady ──
-  k('oldRecipes', 'Old Recipes', 'Potions and medicines she uses heal 30% more; once per battle she can use a pack item on an ally up to 2 spaces away without using her action (Quick Remedy).'),
+  k('oldRecipes', 'Old Recipes', 'Potions and medicines she uses heal 30% more; once per battle she can use a pack item on an ally up to 2 spaces away without using her action (Quick Remedy). Brew: after each victory she turns an ingredient in the convoy (a mushroom, ChuChu jelly, toadstool) into a random potion. Mixing Shop: at a potion shop she mixes two potions into a stronger one.'),
   // ── The Subrosians ──
   k('secretKey', 'Secret Key', 'Opens adjacent Locked Doors without a key (Secret Key) and reveals hidden passages and Invisible Floors within 2 at the start of each turn.'),
   k('volcanicNative', 'Volcanic Native', '+3 STR and DEF when standing on or next to lava. Subrosians take no lava damage.'),

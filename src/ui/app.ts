@@ -711,7 +711,8 @@ export class App {
       const n = run.map.nodes.find((x) => x.id === id)!;
       const info = NODE_INFO[n.type];
       const el = this.root.querySelector('.node-info') as HTMLElement;
-      el.innerHTML = `<b>${info.icon} ${esc(info.label)}</b> — ${esc(info.desc)}${go ? ` <button class="btn primary small" data-nav="go" data-id="${n.id}">Travel →</button>` : ''}`;
+      const where = (n.world !== run.region && WORLDS[n.world] ? ` <span class="badge">${esc(WORLDS[n.world].name)}</span>` : '') + (n.naval && run.campaign === 'phantom' ? ' <span class="badge">⚓ Fought at sea</span>' : '');
+      el.innerHTML = `<b>${info.icon} ${esc(info.label)}</b> — ${esc(info.desc)}${where}${go ? ` <button class="btn primary small" data-nav="go" data-id="${n.id}">Travel →</button>` : ''}`;
       el.classList.remove('dim');
     };
     this.on({
