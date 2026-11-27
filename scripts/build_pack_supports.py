@@ -75,6 +75,20 @@ PACKS = {
         'Cubus Gold': 'cubusSister3', 'Cubus Green': 'cubusSister4', 'Syrup': 'syrup', 'Potion Shop Lady': 'potionShopLady', 'Old Woman': 'oldWoman',
         'Grandma': 'grandma', 'OoT Impa': 'impa', 'Rosa': 'rosa', 'Subrosian Chef': 'subrosianChef', 'Subrosian Blacksmith': 'subrosianBlacksmith', 'King of Red Lions': 'kingOfRedLions',
     }),
+    'spirit': dict(doc='docs/spirit-tracks-pack.md', start='## 13. Supports', end='## 14. Commanders', suffix='Spirit', game='spirit',
+        # Big Blin's pairs are in the doc's "Additions (batch 4)" section.
+        extra='Internal: Big Blin×Miniblin S · Big Blin×Moblin A · Big Blin×Bulblin A · Big Blin×King Bulblin S · Big Blin×Boss Bokoblin A · Big Blin×Jolene A', names={
+        'Link': 'heroOfSpirits', 'Hero of Spirits': 'heroOfSpirits', 'Zelda': 'zeldaST', 'ST Zelda': 'zeldaST', 'Alfonzo': 'alfonzo', 'Elder Niko': 'elderNiko',
+        'Byrne': 'byrne', 'Ferrus': 'ferrus', 'Linebeck III': 'linebeck3', 'Anjean': 'anjean', 'Cole': 'cole', 'Malladus': 'malladus', 'Gage': 'gage',
+        'Steem': 'steem', 'Carben': 'carben', 'Embrose': 'embrose', 'Rael': 'rael', 'Hero of Winds': 'heroOfWinds', 'Hero of Legend': 'heroOfLegend',
+        'Hero of the Wild': 'heroOfTheWild', 'Tetra': 'tetra', 'Ciela': 'ciela', 'Midna': 'midnaImp', 'Fi': 'fi', 'Nayru': 'nayru', 'Young Niko': 'niko',
+        'Gonzo': 'gonzo', 'Linebeck': 'linebeck', 'Jolene': 'jolene', 'Eddo': 'eddo', 'Robbie': 'robbie', 'Purah': 'purah', "Hero's Shade": 'herosShade',
+        'Tingle': 'tingle', 'Ghirahim': 'ghirahim', 'Zant': 'zant', 'Oshus': 'oshus', 'Rauru (OoT)': 'rauru', 'Sahasrahla': 'sahasrahla', 'Saria': 'saria',
+        'Anouki Chief': 'anoukiChief', 'Yeta': 'yeta', 'Medli': 'medli', 'Lulu': 'lulu', 'Darunia': 'darunia', 'Din': 'din', 'Nabooru': 'nabooru',
+        'Aginah': 'aginah', 'Agahnim': 'agahnim', 'Veran': 'veran', 'Ganon': 'ganon', 'Demise': 'demise', 'Bellum': 'bellum', 'Majora': 'majorasMask',
+        'Wrecker Phantom': 'wreckerPhantom', 'Goron Roller': 'goronRoller', 'Big Blin': 'bigBlin', 'Miniblin': 'miniblin', 'Moblin': 'moblin',
+        'Bulblin': 'bulblin', 'King Bulblin': 'kingBulblin', 'Boss Bokoblin': 'bossBokoblin',
+    }),
 }
 SKIP = {'Epona', 'Four Giants', 'OOT Potion Shopkeeper', 'OoT Potion Shopkeeper', 'Cubus Sisters'}
 CANON = {'ghirahimTrue': 'ghirahim', 'imprisonedArmed': 'imprisoned', 'imprisonedFlying': 'imprisoned', 'ganon': 'ganondorf', 'sheik': 'zelda',
@@ -83,7 +97,7 @@ FORMS = {'kingOfRedLions': 'kingDaphnes', 'lightDragon': 'zeldaWild'}
 
 pack = PACKS[sys.argv[1]]
 DOC = (ROOT / pack['doc']).read_text()
-body = DOC[DOC.index(pack['start']):DOC.index(pack['end'])]
+body = DOC[DOC.index(pack['start']):DOC.index(pack['end'])] + '\n' + pack.get('extra', '')
 names = {**COMMON, **SS_GLOBAL, **pack['names']}
 
 

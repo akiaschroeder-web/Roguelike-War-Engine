@@ -8,12 +8,13 @@ import { SUPPORT_REGISTRY_ORIGINAL } from './registryOriginal';
 import { SUPPORT_REGISTRY_AOL } from './registryAol';
 import { SUPPORT_REGISTRY_LEGEND } from './registryLegend';
 import { SUPPORT_REGISTRY_PHANTOM } from './registryPhantom';
+import { SUPPORT_REGISTRY_SPIRIT } from './registrySpirit';
 import { CONVOS as EXAMPLES } from './convos/examples';
 import { WRITTEN } from './written';
 
 export type { SupportPairDef };
 /** Every registered pairing, all packs. */
-export const SUPPORT_REGISTRY: SupportPairDef[] = [...BASE_REGISTRY, ...SUPPORT_REGISTRY_SS, ...SUPPORT_REGISTRY_WILD, ...SUPPORT_REGISTRY_ORIGINAL, ...SUPPORT_REGISTRY_AOL, ...SUPPORT_REGISTRY_LEGEND, ...SUPPORT_REGISTRY_PHANTOM];
+export const SUPPORT_REGISTRY: SupportPairDef[] = [...BASE_REGISTRY, ...SUPPORT_REGISTRY_SS, ...SUPPORT_REGISTRY_WILD, ...SUPPORT_REGISTRY_ORIGINAL, ...SUPPORT_REGISTRY_AOL, ...SUPPORT_REGISTRY_LEGEND, ...SUPPORT_REGISTRY_PHANTOM, ...SUPPORT_REGISTRY_SPIRIT];
 
 export type SupportLine = ['a' | 'b' | 'n', string];
 export type SupportRankKey = 'C' | 'B' | 'A' | 'S';
@@ -32,6 +33,9 @@ export const SUPPORT_CANON: Record<string, string> = {
   ghirahimTrue: 'ghirahim', imprisonedArmed: 'imprisoned', imprisonedFlying: 'imprisoned',
   // Era of the Wild forms
   bellumbeck: 'linebeck', oceanKing: 'oshus',
+  // Spirit Tracks forms: Zelda's spirit and her Phantom armors, the Demon King in her body, boss forms
+  spiritZelda: 'zeldaST', phantomZelda: 'zeldaST', phantomZeldaTorch: 'zeldaST', phantomZeldaWarp: 'zeldaST', phantomZeldaWrecker: 'zeldaST',
+  malladusZelda: 'malladus', coleBoss: 'cole', byrneBoss: 'byrne', bigBlinBoss: 'bigBlin',
   nayruPossessed: 'nayru', onoxDragon: 'onox', veranFairy: 'veran', veranTurtle: 'veran', veranSpider: 'veran', veranBee: 'veran',
   lightDragon: 'zeldaWild', demonDragon: 'ganondorfWild', darkBeastGanonWild: 'calamityGanon', mineruConstruct: 'mineru',
 };
@@ -139,6 +143,12 @@ export const GROUP_SUPPORTS: GroupSupport[] = [
   { id: 'ancientWarMachines', name: 'The Ancient War Machines', members: ['guardianStalker', 'koloktos', 'fluxConstruct3'], text: '+4 DEF for machines; members within 3 of each other +10 Hit (coordinated attacks).' },
   { id: 'firstAndTheLast', name: 'The First and the Last', members: ['heroOfTheSky', 'heroOfTheWild', 'fi'], text: 'Master Sword +5 Might, more energy and faster recharge.' },
   { id: 'legacyOfHylia', name: 'The Legacy of Hylia', members: ['hylia', 'zeldaSS', 'zeldaWild'], text: 'Sacred abilities cost 30% less MP.' },
+  // Spirit Tracks (docs/spirit-tracks-pack.md section 13)
+  { id: 'royalEngineersGroup', name: 'Royal Engineers', members: ['heroOfSpirits', 'zeldaST', 'alfonzo'], text: 'Better railway combat and repairs: members and allied trains +2 STR and DEF (trains +10 Hit).' },
+  { id: 'sacredSymphonyGroup', name: 'Sacred Symphony', members: ['anjean', 'gage', 'steem', 'carben', 'embrose', 'rael'], text: 'Their songs cost 30% less MP.' },
+  { id: 'generationsOfAdventure', name: 'Generations of Adventure', members: ['linebeck', 'linebeck3', 'elderNiko'], text: 'More treasure and salvage: +25% battle Rupees; members +2 SKL and SPD.' },
+  { id: 'spiritsOfCourageST', name: 'Spirits of Courage', members: ['zeldaST', 'ciela', 'tetra'], text: '+3 SKL and MAG.' },
+  { id: 'brokenSeal', name: 'The Broken Seal', members: ['cole', 'byrne', 'malladus'], text: 'Dark magic hits harder and possession is resisted: +3 STR, MAG and RES with dark weapons.' },
   { id: 'demonKings', name: 'The Demon Kings', members: ['demise', 'ganondorf', 'ganondorfWW', 'ganondorfTP', 'ganondorfWild'], text: 'Dark damage +25%.' },
 ];
 
