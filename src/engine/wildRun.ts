@@ -537,7 +537,7 @@ export function wildCampOptions(run: Run, where: 'camp' | 'shop' | 'smith'): Wil
   add('monsterShop', { key: 'monsterMask', label: 'Buy a monster mask — ₹200', desc: 'Bokoblin, Moblin, Lizalfos or Horriblin disguise.', ok: run.rupees >= 200 && !used('mask') });
   // ── Hudson Construction Office ──
   add('hudson', { key: 'construction', label: `Expand the camp (Construction Lv ${w.construction} → ${w.construction + 1}) — ₹${Math.round(200 * w.construction * costMult(run, 'facility'))}, 3 Wood`, desc: 'Vehicles are sturdier and cheaper to build.', ok: run.rupees >= Math.round(200 * w.construction * costMult(run, 'facility')) && wildCount(run, 'wood') >= 3 });
-  add('hudson', { key: 'colossal', label: `Build a colossal hangar (Colossal Capacity ${w.colossal} → ${w.colossal + 1}) — ₹${Math.round(400 * w.colossal * costMult(run, 'facility'))}`, desc: 'Deploy more size-5 units (Divine Beasts, dragons) in one battle.', ok: run.rupees >= Math.round(400 * w.colossal * costMult(run, 'facility')) });
+  add('hudson', { key: 'colossal', label: `Build a colossal hangar (Colossal Capacity ${w.colossal} → ${w.colossal + 1}) — ₹${Math.round(400 * w.colossal * costMult(run, 'facility'))}`, desc: 'Room for one more unit of any size (Divine Beasts, dragons) in every battle: +1 deployment.', ok: run.rupees >= Math.round(400 * w.colossal * costMult(run, 'facility')) });
   add('hudson', { key: 'lightShrine', label: `Raise a light shrine (Gloom Resistance ${w.gloomRes} → ${w.gloomRes + 1}) — ₹${Math.round(250 * costMult(run, 'facility'))}, a Sun Pumpkin`, desc: 'The army takes 10% less Gloom per level (up to 50%).', ok: w.gloomRes < 5 && run.rupees >= Math.round(250 * costMult(run, 'facility')) && wildCount(run, 'sunPumpkin') > 0 });
   add('hudson', { key: 'blueprintCap', label: `Expand the blueprint archive (${w.blueprintCap + 3} → ${w.blueprintCap + 4}) — ₹${Math.round(300 * costMult(run, 'facility'))}`, desc: 'Hold more Autobuild blueprints.', ok: run.rupees >= Math.round(300 * costMult(run, 'facility')) });
   // ── Stable ──
@@ -718,7 +718,7 @@ export function doWildCamp(run: Run, key: string, rng: RNG, uid?: string, arg?: 
     }
     case 'monsterMask': run.rupees -= 200; run.convoy.push(rng.pick(['bokoblinMask', 'moblinMask', 'lizalfosMask', 'horriblinMask'])); done('mask'); return 'A monster mask, to the convoy.';
     case 'construction': run.rupees -= Math.round(200 * w.construction * costMult(run, 'facility')); takeQ(run, 'wood', 3); w.construction++; return `Construction Level ${w.construction}.`;
-    case 'colossal': run.rupees -= Math.round(400 * w.colossal * costMult(run, 'facility')); w.colossal++; return `Colossal Deployment Capacity ${w.colossal}.`;
+    case 'colossal': run.rupees -= Math.round(400 * w.colossal * costMult(run, 'facility')); w.colossal++; run.capBonus = { ...(run.capBonus ?? {}), deploy: (run.capBonus?.deploy ?? 0) + 1 }; return `Colossal hangar built: deployment +1 (Colossal Capacity ${w.colossal}).`;
     case 'lightShrine': run.rupees -= Math.round(250 * costMult(run, 'facility')); takeQ(run, 'sunPumpkin', 1); w.gloomRes++; return `Gloom Resistance ${w.gloomRes}.`;
     case 'blueprintCap': run.rupees -= Math.round(300 * costMult(run, 'facility')); w.blueprintCap++; return `Blueprint capacity ${w.blueprintCap + 3}.`;
     case 'buyMount': run.rupees -= 350; run.convoy.push(rng.pick(['royalWhiteStallionMount', 'mountainDeerMount'])); addQ(run, 'ponyPoint'); done('mount'); return 'A horse is registered (saddle in the convoy).';

@@ -17,7 +17,7 @@ export const RACES: RaceDef[] = [
 // Section 1 characters (doc stats), Big Blin (batch 4), the trains (section 6; stats are my proposal),
 // and Zelda's spirit and Phantom forms. Spirit Zelda and Phantom Zelda share the princess's progression
 // and supports (SUPPORT_CANON) but are recruitable on their own (exclusive pairs). The Torch, Warp and
-// Wrecker possession forms are battle-only (formOf): the doc says they are never recruited separately.
+// Wrecker possession forms (formOf) are recruitable too: every unit is recruitable.
 export const TEMPLATES: UnitTemplate[] = [
   // ── Named characters ──
   u({ id: 'heroOfSpirits', name: 'Link', title: 'Hero of Spirits', race: 'hylian', classId: 'royalEngineer', size: 1, home: 'abodaVillage', glyph: 'LS',

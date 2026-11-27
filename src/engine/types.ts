@@ -1093,6 +1093,8 @@ export interface Run {
   trials?: string[];
   /** Permanent bonuses bought between runs. */
   metaBonus?: { armyCap?: number; cp?: number };
+  /** Capacity earned during this run: boss victories, barracks bought at shops, Wild hangars. */
+  capBonus?: { army?: number; deploy?: number; barracks?: number };
   /** Discovered support conversations (keys 'templateA|templateB|rank'). */
   convosSeen?: string[];
   /** Form-specific support conversations unlocked (pair key#form). */

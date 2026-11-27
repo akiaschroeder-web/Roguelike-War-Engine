@@ -13,7 +13,7 @@ import { spiritStatus } from '../engine/spiritRun';
 import { canWield, type LevelUp } from '../engine/combat';
 import { randomSeed } from '../engine/rng';
 import {
-  advanceRegion, buySupplies, supplyPrice, give, clockLabel, songOfTimeReset, TERMINA_SCHEDULE, deposit, withdraw, returnStrayFairy, strayFairyCount, campFeast, commanderOf, FEAST_COST, improveMaterials, reviveWithDust, SUPPLY_PACK, availableNodes, buy, campDrill, campRest, campTrain, currentNode, depthOf, enterNode,
+  advanceRegion, buyBarracks, buySupplies, supplyPrice, give, clockLabel, songOfTimeReset, TERMINA_SCHEDULE, deposit, withdraw, returnStrayFairy, strayFairyCount, campFeast, commanderOf, FEAST_COST, improveMaterials, reviveWithDust, SUPPLY_PACK, availableNodes, buy, campDrill, campRest, campTrain, currentNode, depthOf, enterNode,
   equipFromConvoy, finishBattle, fountainBless, fountainHeal, fountainRevive, isRegionComplete, loadMeta, loadRun, newRun, offerRegions,
   recruit, recruitLevel, saveMeta, saveRun, canTake, canUseOutside, forgePrice, forgeWeapon, improveCost, improveWeapon, MAX_FORGE, repairCost, repairWeapon, FREE_FOR_ALL_REGION, isFreeForAll, fountainTeach, unlearnedFairySpells, priceOf, stashGear, stashItem, stashWeapon, useItemOutside, type ItemKindTag, startBattle, takeTreasure,
   canChoose, chooseEvent, descendDungeon, eventDef, leaveDungeon, fleetCrew, isNavalNode, ownedGear, vesselHasSlot,
@@ -21,7 +21,7 @@ import {
   TOUR_NAMES,
 } from '../engine/run';
 import { equip } from '../engine/combat';
-import { saveStatus } from '../storage';
+import { downloadSaveFile, importSaveFile, saveStatus } from '../storage';
 import { GEAR_SLOTS, VESSEL_SLOTS, type GearSlot, type MapNode, type NodeType, type TourCampaign, type Unit } from '../engine/types';
 import { forgeLevel, slotFor } from '../engine/units';
 import { maxRank, pointCap, rankOf } from '../engine/supports';
@@ -29,7 +29,7 @@ import { GROUP_SUPPORTS, PAIR_BONUSES, canonOf, formPairs, pairDef, pairKey } fr
 import { BattleView } from './battleView';
 import { CHART_SIZE, fleetCap, lockReason, navalDeployCap, sectorName, seaOf } from '../engine/sea';
 import { capacityOf, isVessel } from '../engine/naval';
-import { audioSettings, music, setAudio, sfx } from './audio';
+import { audioSettings, music, reloadAudioSettings, setAudio, sfx } from './audio';
 import {
   applyMetaToRun, awardMedals, BOUNTIES, bump, buyUpgrade, claimBounties, FORMATIONS, HERO_COST, heroCandidates, KITS, medalsForRun, setMax, TRIALS,
   trialMultiplier, unlockFormation, unlockHero, unlockKit, upgradeCost, upgradeLevel, UPGRADES, type RunChoices,
@@ -37,7 +37,7 @@ import {
 import { RNG } from '../engine/rng';
 import { rollLevelUp } from '../engine/units';
 import { conversationFor, type ConvoRank } from '../content/ocarina/conversations';
-import { armyCap, armyOf, BLESSINGS, cpMax, deployCap, moraleBonus, moraleLabel, ORDERS, ordersFor, repDiscount, supplyCap, useBlessing, xpToNext } from '../engine/army';
+import { armyCap, armyOf, barracksPrice, BLESSINGS, cpMax, deployCap, moraleBonus, moraleLabel, ORDERS, ordersFor, repDiscount, supplyCap, useBlessing, xpToNext } from '../engine/army';
 import {
   confirmDialog, esc, hpBar, itemLine, itemName, modal, SLOT_ICONS, SLOT_LABELS, weaponLine, showLevelUps, templateCard, token, unitDetails,
   portraitIdOf,
@@ -107,15 +107,37 @@ export class App {
           ${hasRun ? '<button class="btn primary big" data-nav="continue">Continue Campaign</button>' : ''}
           <button class="btn ${hasRun ? '' : 'primary'} big" data-nav="new">New Campaign</button>
           <button class="btn" data-nav="sanctuary">🏛 Sanctuary <span class="dim">· ${this.meta.medals} Hero Medals</span></button>
+          <button class="btn" data-nav="saveFile">💾 Save to file</button>
+          <button class="btn" data-nav="loadFile">📂 Load from file</button>
           <button class="btn" data-nav="sound">🔊 Sound</button>
           <button class="btn" data-nav="howto">How to Play</button>
           <button class="btn" data-nav="codex">Hyrule Archives</button>
         </div>
         <div class="records dim small">Campaigns ${this.meta.runs} · Furthest region ${this.meta.bestRegion} · Battles reached ${this.meta.bestDepth}</div>
-        <div class="dim small save-status">${saveStatus() === 'local' ? '💾 Saves are kept in this browser only' : saveStatus() === 'error' ? '⚠ Cloud save is retrying — your progress is also kept in this browser' : '☁ Saves are kept with your account and survive closing the page'}</div>
+        <div class="dim small save-status">${saveStatus() === 'local' ? '💾 Saves are kept in this browser only — use Save to file to keep a copy' : saveStatus() === 'error' ? '⚠ Cloud save is retrying — your progress is also kept in this browser' : '☁ Saves are kept with your account and survive closing the page'}</div>
         <div class="dim small fan">Fan project · not affiliated with Nintendo</div>
       </div>`, 'center');
     this.on({
+      saveFile: async () => {
+        this.save();
+        if (!(await downloadSaveFile())) await confirmDialog('The save file was not saved.', 'OK', 'Close');
+      },
+      loadFile: () => {
+        const input = document.createElement('input');
+        input.type = 'file';
+        input.accept = '.json,application/json';
+        input.onchange = async () => {
+          const file = input.files?.[0];
+          if (!file) return;
+          if (this.run && !(await confirmDialog('Replace your current campaign and records with this save file?', 'Load it', 'Cancel'))) return;
+          if (!importSaveFile(await file.text())) { await confirmDialog('That file is not a Hyrule Tactical War save.', 'OK', 'Close'); return; }
+          this.run = loadRun();
+          this.meta = loadMeta();
+          reloadAudioSettings();
+          this.title();
+        };
+        input.click();
+      },
       continue: () => this.resume(),
       new: async () => {
         if (this.run && !(await confirmDialog('Abandon your current campaign? You still earn Hero Medals for how far you got.', 'Abandon', 'Keep it'))) return;
@@ -1036,7 +1058,8 @@ export class App {
             ${run.clock ? `<h3>🏦 Clock Town Bank <span class="dim small">balance ₹${run.bank ?? 0}: safe through the Song of Time</span></h3>
             <div class="row"><button class="btn small" data-nav="deposit" ${run.rupees ? '' : 'disabled'}>Deposit all (₹${run.rupees})</button><button class="btn small" data-nav="withdraw" ${run.bank ? '' : 'disabled'}>Withdraw all</button></div>` : ''}
             <h3>Supplies <span class="dim small">${armyOf(run).supplies}/${supplyCap(run)}</span></h3>
-            <div class="shop-list"><div class="shop-item"><div><b>Crate of supplies</b> <span class="dim small">+${SUPPLY_PACK.amount} supplies (food, bandages, horse feed)</span></div><button class="btn small" data-nav="supplies" ${run.rupees < supplyPrice(run) || armyOf(run).supplies >= supplyCap(run) ? 'disabled' : ''}>₹${supplyPrice(run)}</button></div></div>
+            <div class="shop-list"><div class="shop-item"><div><b>Crate of supplies</b> <span class="dim small">+${SUPPLY_PACK.amount} supplies (food, bandages, horse feed)</span></div><button class="btn small" data-nav="supplies" ${run.rupees < supplyPrice(run) || armyOf(run).supplies >= supplyCap(run) ? 'disabled' : ''}>₹${supplyPrice(run)}</button></div>
+              <div class="shop-item"><div><b>Barracks expansion</b> <span class="dim small">+1 army capacity (now ${armyCap(run)})</span></div><button class="btn small" data-nav="barracks" ${run.rupees < barracksPrice(run) ? 'disabled' : ''}>₹${barracksPrice(run)}</button></div></div>
             <div class="center-text"><button class="btn primary big" data-nav="leave">Leave</button></div>
           </div>
           ${this.partyHtml()}
@@ -1051,6 +1074,7 @@ export class App {
           if (uid && buy(run, kind, id, uid)) { sfx('coin'); this.save(); render(); }
         },
         supplies: () => { if (buySupplies(run)) { this.save(); render(); } },
+        barracks: () => { if (buyBarracks(run)) { sfx('coin'); this.save(); render(); } },
         deposit: () => { if (deposit(run, run.rupees)) { sfx('coin'); this.save(); render(); } },
         withdraw: () => { if (withdraw(run, run.bank ?? 0)) { sfx('coin'); this.save(); render(); } },
         leave: () => this.finishEvent(),
@@ -1370,7 +1394,7 @@ export class App {
   }
 }
 
-function armyReportHtml(r: { xp: number; levelUps: number; supplies: number; materials: number; morale: number; reputation: number; fairyDust: number; sacredEnergy: number; starving: boolean }): string {
+function armyReportHtml(r: { xp: number; levelUps: number; supplies: number; materials: number; morale: number; reputation: number; fairyDust: number; sacredEnergy: number; starving: boolean; capNote?: string }): string {
   const sign = (n: number) => (n > 0 ? `+${n}` : String(n));
   const parts = [
     `Army EXP +${r.xp}${r.levelUps ? ` <b class="win">(Army Level up!)</b>` : ''}`,
@@ -1380,6 +1404,7 @@ function armyReportHtml(r: { xp: number; levelUps: number; supplies: number; mat
     r.reputation ? `Reputation ${sign(r.reputation)}` : '',
     r.fairyDust ? `Fairy Dust ${sign(r.fairyDust)}` : '',
     r.sacredEnergy ? `Sacred Energy ${sign(r.sacredEnergy)}` : '',
+    r.capNote ? `<b class="win">${r.capNote}</b>` : '',
   ].filter(Boolean);
   return `<span class="dim small">${parts.join(' · ')}</span>${r.starving ? '<div class="bad small">Out of supplies! The army goes hungry (less recovery, lower morale).</div>' : ''}`;
 }

@@ -1039,9 +1039,9 @@ describe('army management', () => {
     const run = newRun(5, 'link');
     expect(armyCap(run)).toBe(12);
     expect(deployCap(run)).toBe(8);
-    gainArmyXp(run, 5000);
-    expect(armyCap(run)).toBe(16);
-    expect(deployCap(run)).toBe(10);
+    gainArmyXp(run, 100000);
+    expect(armyCap(run)).toBe(20);
+    expect(deployCap(run)).toBe(12);
   });
 
   it('battles eat supplies, salvage materials and move morale', () => {

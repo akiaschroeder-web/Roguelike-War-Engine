@@ -15,11 +15,11 @@ import { applyPhantomEffect, inPhantomRoute, phantomAfterBattle, phantomBattleSe
 import { phantomBeforeFinish } from './phantom';
 import { applySpiritEffect, inSpiritRoute, spiritAfterBattle, spiritBattleSetup, spiritBossFor, spiritDecorateMap, spiritEnterDungeon, spiritRegionOptions, spiritStart, spiritStartRegion, spiritTreasure } from './spiritRun';
 import { spiritBeforeFinish } from './spirit';
-import { applyWildEffect, colossalCap, returnBoss, wildAfterBattle, wildBattleSetup, wildCampVisit, wildDecorateMap, wildOnRecruit, wildRecruitWeight, wildRegionOptions, wildRestBonus, wildStart } from './wildRun';
+import { applyWildEffect, returnBoss, wildAfterBattle, wildBattleSetup, wildCampVisit, wildDecorateMap, wildOnRecruit, wildRecruitWeight, wildRegionOptions, wildRestBonus, wildStart } from './wildRun';
 import { canWield, type LevelUp } from './combat';
 import { RNG } from './rng';
 import { ARMY_CAPACITY, DEPLOY_CAPACITY } from './rules';
-import { adjustMorale, adjustReputation, applyArmyBuffs, armyCap, armyOf, deployCap, gainArmyXp, newArmy, repDiscount, supplyCap } from './army';
+import { adjustMorale, adjustReputation, applyArmyBuffs, armyCap, armyOf, barracksPrice, bossCapacityReward, deployCap, gainArmyXp, newArmy, repDiscount, supplyCap } from './army';
 import { prepareForBattle } from './units';
 import { emptyProgress, type MetaProgress } from './meta';
 import { chartComplete, fleetCap, generateSeaChart, navalDeployCap, newSea, revealAround, sail, seaDepth, seaMoves, seaOf } from './sea';
@@ -388,10 +388,9 @@ export function startBattle(run: RunWithEvent, uids: string[]): void {
   // Ships only sail into sea battles; on land they stay in the harbour.
   // A Silent Realm trial takes only a few participants (the Commander and up to two more).
   const trial = ['battle', 'ambush', 'siege'].includes(node.type) ? run.skyward?.trialPending : undefined;
-  let colossal = colossalCap(run);
   const land = run.roster.filter((u) => !isVessel(u) && (uids.includes(u.uid) || u.isCommander)).sort((a, c) => (trial ? Number(!!c.isCommander) - Number(!!a.isCommander) : 0))
-    // Era of the Wild: Colossal Deployment Capacity limits size-5 units (the commander doesn't count).
-    .filter((u) => u.isCommander || (u.baseSize ?? u.size) < 5 || colossal-- > 0).slice(0, trial ? 3 : deployCap(run));
+    // Every chosen unit takes the field, however big (the map grows to fit).
+    .slice(0, trial ? 3 : deployCap(run));
   const ships = naval ? run.roster.filter((u) => isVessel(u) && (uids.includes(u.uid) || u.isCommander)).slice(0, navalDeployCap(run)) : [];
   const chosen = [...land, ...ships];
   run.deployment = chosen.map((u) => u.uid);
@@ -487,7 +486,7 @@ export function recruitOffers(run: Run, rng: RNG, world: WorldId): string[] {
   const sea = run.campaign === 'greatSea';
   const fleetRoom = sea && run.roster.filter(isVessel).length < fleetCap(run);
   const shipOk = (t: UnitTemplate) => !RACES[t.race]?.tags?.includes('vessel') || fleetRoom;
-  const available = TEMPLATE_LIST.filter((t) => !t.generic && !t.formOf && !have.has(t.id) && shipOk(t)
+  const available = TEMPLATE_LIST.filter((t) => !t.generic && !have.has(t.id) && shipOk(t)
     && !run.fallen.some((f) => f.templateId === t.id) && !conflicts(run, t)
     && (!day || !TERMINA_SCHEDULE[t.id] || TERMINA_SCHEDULE[t.id].includes(day)));
   const fresh = available.filter((t) => !run.seenHeroes.includes(t.id));
@@ -787,12 +786,15 @@ export interface ArmyReport {
   fairyDust: number;
   sacredEnergy: number;
   starving: boolean;
+  /** Capacity gained from a boss victory. */
+  capNote?: string;
 }
 
 /** Supplies eaten, materials salvaged, morale and reputation, army experience. */
 function armyAfterBattle(run: Run, b: Battle, won: boolean, losses: number, deployed: number): ArmyReport {
   const a = armyOf(run);
   const before = { ...a };
+  let capNote: string | undefined;
   const eat = 1 + Math.ceil(deployed / 3);
   const starving = a.supplies < eat;
   a.supplies = Math.max(0, a.supplies - eat);
@@ -805,6 +807,7 @@ function armyAfterBattle(run: Run, b: Battle, won: boolean, losses: number, depl
     adjustReputation(run, 2 + (b.objective.type === 'rescue' || b.objective.type === 'escort' ? 4 : 0));
     const bosses = b.fallen.filter((u) => u.team === 'enemy' && u.isBoss).length;
     a.sacredEnergy += kind === 'boss' ? 1 : 0;
+    if (kind === 'boss') capNote = bossCapacityReward(run);
     if (bosses && rng.chance(kind === 'boss' ? 100 : 35)) a.fairyDust++;
   } else {
     adjustMorale(run, -10);
@@ -814,7 +817,7 @@ function armyAfterBattle(run: Run, b: Battle, won: boolean, losses: number, depl
   const xp = won ? (kind === 'boss' ? 60 : kind === 'elite' || kind === 'siege' ? 35 : 20) : 8;
   const levelUps = gainArmyXp(run, xp);
   return {
-    xp, levelUps, starving,
+    xp, levelUps, starving, capNote,
     supplies: a.supplies - before.supplies, materials: a.materials - before.materials, morale: a.morale - before.morale,
     reputation: a.reputation - before.reputation, fairyDust: a.fairyDust - before.fairyDust, sacredEnergy: a.sacredEnergy - before.sacredEnergy,
   };
@@ -1497,6 +1500,17 @@ export const SUPPLY_PACK = { amount: 10, price: 90 };
 
 export function supplyPrice(run: Run): number {
   return Math.round(SUPPLY_PACK.price * (1 - repDiscount(run) / 100) * (run.trials?.includes('famine') ? 2 : 1));
+}
+
+/** Buy a barracks expansion at a merchant: +1 army capacity. */
+export function buyBarracks(run: RunWithEvent): boolean {
+  const price = barracksPrice(run);
+  if (run.event?.type !== 'shop' || run.rupees < price) return false;
+  run.rupees -= price;
+  const c = (run.capBonus ??= {});
+  c.army = (c.army ?? 0) + 1;
+  c.barracks = (c.barracks ?? 0) + 1;
+  return true;
 }
 
 /** Buy a crate of supplies at a merchant. */

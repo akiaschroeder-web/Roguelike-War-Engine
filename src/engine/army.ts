@@ -17,14 +17,28 @@ export function armyOf(run: Run): Army {
 
 export const xpToNext = (level: number) => 60 + level * 40;
 
-/** Army capacity grows from 12 to 16 with army level. */
+/** Army capacity: 12, +1 every two army levels (up to +8), plus meta upgrades, boss victories and barracks bought at shops. */
 export function armyCap(run: Run): number {
-  return Math.min(16, 12 + Math.floor((armyOf(run).level - 1) / 2) + (run.metaBonus?.armyCap ?? 0));
+  return 12 + Math.min(8, Math.floor((armyOf(run).level - 1) / 2)) + (run.metaBonus?.armyCap ?? 0) + (run.capBonus?.army ?? 0);
 }
 
-/** Deployment capacity grows from 8 to 10. */
+/** Deployment capacity: 8, +1 every three army levels (up to +4), plus every second boss victory and Wild hangars. */
 export function deployCap(run: Run): number {
-  return Math.min(10, 8 + Math.floor((armyOf(run).level - 1) / 3));
+  return 8 + Math.min(4, Math.floor((armyOf(run).level - 1) / 3)) + (run.capBonus?.deploy ?? 0);
+}
+
+/** Price of the next barracks expansion at a shop. */
+export function barracksPrice(run: Run): number {
+  return 250 + 150 * (run.capBonus?.barracks ?? 0);
+}
+
+/** A boss falls: +1 army capacity, and +1 deployment every second boss. */
+export function bossCapacityReward(run: Run): string {
+  const c = (run.capBonus ??= {});
+  c.army = (c.army ?? 0) + 1;
+  const wins = (c.army ?? 0) - (c.barracks ?? 0);
+  if (wins % 2 === 0) { c.deploy = (c.deploy ?? 0) + 1; return `Army capacity +1 and deployment +1 (${armyCap(run)} / ${deployCap(run)}).`; }
+  return `Army capacity +1 (${armyCap(run)}).`;
 }
 
 export function supplyCap(run: Run): number {

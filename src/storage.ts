@@ -2,7 +2,7 @@
 //
 // The game reads and writes saves synchronously through `appStorage()`. In the published
 // claude.ai page, saves are also kept in the artifact's private per-person database
-// (data/users/<id>/saves/<key>), which outlives the page, the browser session and new
+// (data/users/<id>/save~<key>), which outlives the page, the browser session and new
 // versions. Browser storage is kept as a local copy, and is the only store when the
 // database isn't available (tests, local dev, signed-out viewers).
 
@@ -80,7 +80,7 @@ export function flush(): Promise<void> {
 
 async function writeKey(k: string, v: string | null) {
   const { db, base } = cloud!;
-  const head = db.doc(`${base}/${k}`);
+  const head = db.doc(`${base}/save~${k}`);
   const prev = await head.get().catch(() => undefined);
   const prevN = Number(prev?.exists ? prev.data()?.n ?? 0 : 0);
   const prevVer = String(prev?.exists ? prev.data()?.ver ?? '' : '');
@@ -92,15 +92,15 @@ async function writeKey(k: string, v: string | null) {
     // Large saves: write the pieces under a new version first, then point the head at them.
     const ver = String(Date.now());
     const n = Math.ceil(v.length / CHUNK);
-    for (let i = 0; i < n; i++) await db.doc(`${base}/${k}~${ver}~${i}`).set({ d: v.slice(i * CHUNK, (i + 1) * CHUNK) });
+    for (let i = 0; i < n; i++) await db.doc(`${base}/save~${k}~${ver}~${i}`).set({ d: v.slice(i * CHUNK, (i + 1) * CHUNK) });
     await head.set({ ver, n, t: Date.now() });
   }
   // Tidy the previous version's pieces.
-  if (prevVer) for (let i = 0; i < prevN; i++) await db.doc(`${base}/${k}~${prevVer}~${i}`).delete().catch(() => undefined);
+  if (prevVer) for (let i = 0; i < prevN; i++) await db.doc(`${base}/save~${k}~${prevVer}~${i}`).delete().catch(() => undefined);
 }
 
 async function readKey(db: Db, base: string, k: string): Promise<string | null | undefined> {
-  const snap = await db.doc(`${base}/${k}`).get();
+  const snap = await db.doc(`${base}/save~${k}`).get();
   if (!snap.exists) return undefined; // never saved to the cloud
   const d = snap.data() ?? {};
   if (d.gone) return null;
@@ -108,7 +108,7 @@ async function readKey(db: Db, base: string, k: string): Promise<string | null |
   if (d.ver && d.n) {
     let s = '';
     for (let i = 0; i < Number(d.n); i++) {
-      const c = await db.doc(`${base}/${k}~${String(d.ver)}~${i}`).get();
+      const c = await db.doc(`${base}/save~${k}~${String(d.ver)}~${i}`).get();
       if (!c.exists) return undefined;
       s += String(c.data()?.d ?? '');
     }
@@ -126,7 +126,8 @@ export async function initCloudSave(): Promise<void> {
     const [db, user] = (await timeout(Promise.all([claude.use('db'), claude.use('user')]), 10_000)) ?? [];
     const id = db && user ? await timeout((user as { id(): Promise<string | null> }).id(), 10_000) : null;
     if (!db || !id) return;
-    const base = `data/users/${id}/saves`;
+    // Documents need an even number of path segments: data/users/<id>/<doc>.
+    const base = `data/users/${id}`;
     const loaded = await timeout(Promise.all(CLOUD_KEYS.map((k) => readKey(db as Db, base, k).catch(() => undefined))), 12_000);
     if (!loaded) return; // the store didn't answer: keep playing on the local copy this visit
     cloud = { db: db as Db, base };
@@ -150,4 +151,48 @@ export async function initCloudSave(): Promise<void> {
   } catch {
     /* no cloud this visit */
   }
+}
+
+// ───────────────────────── Save files ─────────────────────────
+
+const FILE_TAG = 'hyrule-tactical-war-save';
+
+/** Everything worth keeping, as the text of a save file. */
+export function exportSaveFile(): string {
+  const st = appStorage();
+  const keys: Record<string, string> = {};
+  for (const k of CLOUD_KEYS) { const v = st.getItem(k); if (v != null) keys[k] = v; }
+  return JSON.stringify({ tag: FILE_TAG, version: 1, savedAt: new Date().toISOString(), keys });
+}
+
+/** Load a save file's text. Returns false if it isn't one of ours. */
+export function importSaveFile(text: string): boolean {
+  let f: { tag?: string; keys?: Record<string, unknown> };
+  try { f = JSON.parse(text); } catch { return false; }
+  if (f?.tag !== FILE_TAG || !f.keys || typeof f.keys !== 'object') return false;
+  const st = appStorage();
+  for (const k of CLOUD_KEYS) {
+    const v = f.keys[k];
+    if (typeof v === 'string') st.setItem(k, v); else st.removeItem(k);
+  }
+  void flush();
+  return true;
+}
+
+/** Offer the save file for download: the page's download capability, else an ordinary link. */
+export async function downloadSaveFile(): Promise<boolean> {
+  const data = exportSaveFile();
+  const filename = `hyrule-war-save-${new Date().toISOString().slice(0, 10)}.json`;
+  const claude = (globalThis as unknown as { claude?: { use(n: string): Promise<unknown> } }).claude;
+  try {
+    const dl = (await claude?.use('downloads')) as { save(r: { filename: string; data: string }): Promise<unknown> } | null | undefined;
+    if (dl) { await dl.save({ filename, data }); return true; }
+  } catch { return false; /* declined or refused */ }
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([data], { type: 'application/json' }));
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1000);
+  return true;
 }
