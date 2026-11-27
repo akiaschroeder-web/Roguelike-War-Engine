@@ -4,10 +4,15 @@
 // Manhandla's four heads, Digdogger and the Recorder, rings, candles, keys and the pack's
 // battlefield spaces (hidden staircases, secret caves, blade traps, push blocks...).
 // Hooks are called from battle.ts, combat.ts, field.ts, grid.ts, items.ts, status.ts and
-// abilities.ts (like skyward.ts).
+// abilities.ts (like skyward.ts). Zelda II's rules (engine/aol.ts) hang off these same hooks.
 
 import { ENEMIES, WEAPONS, worldDef } from '../data/registry';
-import { BEAM_SWORDS, SPOILS } from '../content/original';
+import { BEAM_SWORDS, SPOILS, Z2_FEATURES } from '../content/original';
+import {
+  aolAfterCombat, aolAfterHit, aolAfterMove, aolBattleStart, aolCannotAttack, aolCostMult, aolDefense, aolExtraAttack, aolImmune, aolLeaps, aolMods, aolMultiplier,
+  aolNeedsTarget, aolNeedsTile, aolNoBlock, aolOnKill, aolRangeBonus, aolRound, aolSaveFromDeath, aolStartPhase, aolTargets, aolTileCost, aolTiles, aolUnusable,
+  castAol, isAolAbility, useAolItem, type AolStrike,
+} from './aol';
 import { anchorCost, footDist, footprint, inBounds, keyOf, tilesInRange, unitAt, unitDist } from './grid';
 import { RNG } from './rng';
 import { INF, isMagical } from './rules';
@@ -101,8 +106,11 @@ export function ogTileCost(_b: Battle, u: Unit, t: Terrain, c: number): number {
     case 'water': if (!flying && !canSwim(u)) { if (hasEffect(u, 'raft')) c = Math.min(c, 2); else if (hasEffect(u, 'stepladder')) c = Math.min(c, 3); } break;
     case 'wall': case 'gravestone': if (has(u, 'graveyardHaunting')) c = 2; break;
   }
-  return c;
+  return aolTileCost(_b, u, t, c);
 }
+
+/** Zelda II: leapers move through enemies (grid.ts). */
+export function ogLeaps(u: Unit): boolean { return aolLeaps(u); }
 
 // ───────────────────────── Battlefield setup ─────────────────────────
 
@@ -116,8 +124,9 @@ const FEATURES: Record<string, Partial<Record<Terrain, number>>> = {
   level7Demon: { goriyaCheckpoint: 1, bladeTrap: 2, lockedDoor: 1, pushBlock: 1, secretCave: 1, burnableBush: 1, raftDock: 1 },
   level8Lion: { ladderGap: 2, boulder: 2, bladeTrap: 2, shutterDoor: 1, lockedDoor: 1, secretCave: 1 },
   level9DeathMountain: { bladeTrap: 3, shutterDoor: 2, lockedDoor: 1, boulder: 1, gravestone: 1, secretCave: 1 },
+  ...Z2_FEATURES,
 };
-const OBSTACLES = new Set<Terrain>(['boulder', 'pushBlock', 'shutterDoor', 'bladeTrap', 'goriyaCheckpoint', 'gravestone', 'lockedDoor']);
+const OBSTACLES = new Set<Terrain>(['boulder', 'pushBlock', 'shutterDoor', 'bladeTrap', 'goriyaCheckpoint', 'gravestone', 'lockedDoor', 'palaceStatue', 'narrowPassage', 'riverDevil']);
 
 export function decorateOriginal(b: Battle, rng: RNG) {
   if (!isOG(b)) return;
@@ -130,11 +139,11 @@ export function decorateOriginal(b: Battle, rng: RNG) {
   const waterAt = (k: number) => tilesInRange(b, { x: k % b.width, y: Math.floor(k / b.width) }, 1, 1).some((p) => b.tiles[keyOf(b, p.x, p.y)] === 'water');
   for (const [t, n] of Object.entries(feats) as [Terrain, number][]) {
     for (let j = 0; j < n; j++) {
-      if (t === 'ladderGap') {
+      if (t === 'ladderGap' || t === 'riverDevil') {
         // A narrow gap in the water (or a pit in the floor).
         const wet = rng.shuffle(b.tiles.map((x, i) => (x === 'water' ? i : -1)).filter((i) => i >= 0));
         const k = wet[0] ?? plains.pop();
-        if (k !== undefined) b.tiles[k] = 'ladderGap';
+        if (k !== undefined) b.tiles[k] = t;
         continue;
       }
       const idx = t === 'raftDock' ? plains.findIndex(waterAt) : plains.length - 1;
@@ -153,6 +162,7 @@ export function decorateOriginal(b: Battle, rng: RNG) {
 export function originalBattleStart(b: Battle, rng: RNG) {
   const st = ogState(b);
   st.startEnemies = b.units.filter((u) => u.team === 'enemy').length;
+  aolBattleStart(b);
   // Ghinis need graves to haunt.
   if (b.units.some((u) => has(u, 'graveyardHaunting')) && !b.tiles.includes('gravestone')) {
     for (const g of b.units.filter((u) => has(u, 'graveyardHaunting')).slice(0, 2)) {
@@ -236,9 +246,9 @@ export function ogAfterMove(b: Battle, u: Unit): string | null {
         else { const h = Math.min(u.stats.hp - u.hp, Math.ceil(u.stats.hp * 0.4)); u.hp += h; lines.push(`A secret cave with a fairy pond: ${u.name} recovers ${h} HP.`); }
       }
     }
-    // Detection: an invisible Ganon close by gives himself away.
+    // Detection: an invisible Ganon (or Moa) close by gives itself away.
     for (const e of b.units) {
-      if (e.team !== u.team && e.hidden && has(e, 'invisibleDarkness') && unitDist(u, e) <= 2) { e.hidden = false; lines.push(`${u.name} senses ${e.name} nearby — he is revealed!`); }
+      if (e.team !== u.team && e.hidden && invisible(e) && unitDist(u, e) <= 2) { e.hidden = false; lines.push(`${u.name} senses ${e.name} nearby — ${has(e, 'invisibleDarkness') ? 'he is' : 'it is'} revealed!`); }
     }
     // Blade traps slide down their lane at whoever steps into it.
     for (let i = 0; i < b.tiles.length; i++) {
@@ -259,10 +269,14 @@ export function ogAfterMove(b: Battle, u: Unit): string | null {
     }
   }
   b.rngState = rng.state;
+  lines.push(...aolAfterMove(b, u));
   if (!lines.length) return null;
   b.log.push(...lines);
   return lines.join(' ');
 }
+
+/** Ganon's invisibility, which Zelda II's Moas share. */
+const invisible = (u: Unit) => has(u, 'invisibleDarkness') || has(u, 'unseenPresence');
 
 /** A bomb went off (items.ts): walls may hide staircases; Dodongo eats bombs. */
 export function ogOnBlast(b: Battle, at: Pos, radius: number, broken: number, victims: Unit[], power: number, rng: RNG): string[] {
@@ -303,9 +317,10 @@ export function ogStartPhase(b: Battle, u: Unit, events: OGEvent[]) {
       for (let i = 0; i < b.tiles.length; i++) if (b.tiles[i] === 'goriyaCheckpoint') b.tiles[i] = 'plain';
       b.log.push('With the Goriyas beaten, the Hungry Goriya\'s post is abandoned.');
     }
+    for (const l of aolRound(b)) events.push({ uid: u.uid, heal: 0, damage: 0, source: l });
   }
-  // ── Ganon's invisibility ──
-  if (has(u, 'invisibleDarkness')) {
+  // ── Ganon's (and Moa's) invisibility ──
+  if (invisible(u)) {
     if (hasBuff(u, 'silverSealed') || hasBuff(u, 'wisdomLit')) u.hidden = false;
     else if (u.team === 'enemy') { if (!u.hidden) events.push({ uid: u.uid, heal: 0, damage: 0, source: 'vanishes' }); u.hidden = true; }
     else addStatus(u, 'veiled', 1);
@@ -332,6 +347,8 @@ export function ogStartPhase(b: Battle, u: Unit, events: OGEvent[]) {
   }
   // ── Raft Docks ──
   if (hasEffect(u, 'raft') && footprint(u.x, u.y, u.size).some((p) => tileAt(b, p.x, p.y) === 'raftDock')) buff(u, 'raftDock', 'On the Raft', 1, { mov: 2 });
+  // ── Zelda II ──
+  aolStartPhase(b, u, events);
 }
 
 // ───────────────────────── Combat hooks ─────────────────────────
@@ -353,24 +370,27 @@ export function ogMods(b: Battle, u: Unit, pos: Pos, _foe: Unit, initiating: boo
   if (w?.type === 'boomerang' && hasBuff(u, 'goriyaFang')) m.dmg += 3;
   if (w?.id === 'patrasEye') m.dmg += Math.floor((u.ogEyes ?? 0) / 2);
   if (w && isMagical(w.type) && hasBuff(u, 'patraEye')) m.hit += 20;
+  const z = aolMods(b, u, _foe, initiating, w);
+  m.def += z.def; m.hit += z.hit; m.dmg += z.dmg;
   return m;
 }
 
 /** Extra attacks: Returning Strike (boomerangs hit on the way out and back). */
 export function ogExtraAttack(atk: Unit, w: WeaponDef, initiating: boolean): boolean {
-  return initiating && has(atk, 'returningStrike') && w.type === 'boomerang' && !w.brave;
+  return (initiating && has(atk, 'returningStrike') && w.type === 'boomerang' && !w.brave) || aolExtraAttack(atk, w, initiating);
 }
 
 /** Sword Beams: at full HP, sword attacks reach further. */
 export function ogRangeBonus(u: Unit, w: WeaponDef): number {
-  if (w.type !== 'sword' || u.hp < u.stats.hp) return 0;
-  if (!has(u, 'swordBeam') && !BEAM_SWORDS.includes(w.id)) return 0;
-  return w.id === 'magicalSword' ? 3 : 2;
+  const z2 = aolRangeBonus(u, w);
+  if (w.type !== 'sword' || u.hp < u.stats.hp) return z2;
+  if (!has(u, 'swordBeam') && !BEAM_SWORDS.includes(w.id)) return z2;
+  return (w.id === 'magicalSword' ? 3 : 2) + z2;
 }
 
 /** Damage multipliers: rings, Pols Voice's ears, Digdogger's shell, Silver Arrows, barriers. */
-export function ogMultiplier(b: Battle, atk: Unit, def: Unit, magical: boolean, w: WeaponDef | undefined, dist: number): number {
-  let mult = 1;
+export function ogMultiplier(b: Battle, atk: Unit, def: Unit, magical: boolean, w: WeaponDef | undefined, dist: number, arrow?: AbilityDef): number {
+  let mult = aolMultiplier(b, atk, def, magical, w, dist, arrow);
   if (hasEffect(def, 'redRing')) mult *= 0.5;
   else if (hasEffect(def, 'blueRing')) mult *= 0.75;
   if (magical && hasBuff(def, 'sacredBarrierHyrule')) mult = 0;
@@ -425,9 +445,23 @@ export function ogAfterHit(b: Battle, by: Unit, target: Unit, dmg: number, w: We
   if (dmg > 0 && hasBuff(by, 'ropeVenom') && target.hp > 0) { addStatus(target, 'poison', 2); by.buffs = by.buffs.filter((x) => x.id !== 'ropeVenom'); lines.push(`${target.name} is poisoned by the Rope Venom.`); }
   const fr = frenzy(target);
   if (fr) lines.push(fr);
+  lines.push(...aolAfterHit(by, target, dmg));
   b.log.push(...lines);
   return lines;
 }
+
+/** Zelda II combat hooks (combat.ts): DEF ignored, unblockable attacks, fairies, the Link Doll, after-combat effects. */
+export function ogDefense(atk: Unit, def: Unit, w: WeaponDef | undefined, arrow: AbilityDef | undefined, defense: number, magical: boolean): number {
+  return aolDefense(atk, def, w, arrow, defense, magical);
+}
+export function ogNoBlock(atk: Unit, w: WeaponDef | undefined, arrow?: AbilityDef): boolean { return aolNoBlock(atk, w, arrow); }
+export function ogCannotAttack(u: Unit): boolean { return aolCannotAttack(u); }
+export function ogSaveFromDeath(u: Unit): { line: string; heal: number } | null { return aolSaveFromDeath(u); }
+export function ogAfterCombat(b: Battle, attacker: Unit, defender: Unit, arrowId: string | null, landed: { atk: number; def: number }): AolStrike[] {
+  return aolAfterCombat(b, attacker, defender, arrowId, landed);
+}
+/** Ability MP multiplier (abilities.ts). */
+export function ogCostMult(b: Battle | undefined, u: Unit, def: AbilityDef): number { return aolCostMult(b, u, def); }
 
 /** Manhandla: count destroyed heads and speed up for each. */
 function frenzy(target: Unit): string | null {
@@ -454,6 +488,7 @@ export function ogOnKill(b: Battle, by: Unit, victim: Unit, rng: RNG, dmg: numbe
     const spoil = SPOILS[victim.bossId ?? victim.artId ?? victim.templateId ?? ''];
     if (spoil && rng.chance(victim.isBoss ? 60 : 18)) (b.loot ??= []).push(spoil);
   }
+  aolOnKill(b, victim);
   void by;
 }
 
@@ -464,13 +499,13 @@ const OG_TARGET = new Set(['sacredBarrierHyrule', 'darkFireball', 'disarmingThro
 const OG_OTHER = new Set(['triforcesCourage', 'lightOfWisdom', 'wisdomsGuidance', 'triforceRestoration', 'graveSummoning', 'eyeSwarm', 'dragonGuard', 'fourWayAssault',
   'seedBarrage', 'heavyImpact', 'fragmentation', 'pushBoulder', 'pushBlockOH', 'openLockedDoor']);
 /** Abilities enemies use on their own when they can (before acting). */
-export const OG_ENEMY_CASTS = ['fragmentation', 'dragonGuard'];
+export const OG_ENEMY_CASTS = ['fragmentation', 'dragonGuard', 'reseal'];
 
 export function isOGAbility(def: AbilityDef): boolean {
-  return OG_TILE.has(def.id) || OG_TARGET.has(def.id) || OG_OTHER.has(def.id);
+  return OG_TILE.has(def.id) || OG_TARGET.has(def.id) || OG_OTHER.has(def.id) || isAolAbility(def);
 }
-export function ogNeedsTile(def: AbilityDef): boolean { return OG_TILE.has(def.id); }
-export function ogNeedsTarget(def: AbilityDef): boolean { return OG_TARGET.has(def.id); }
+export function ogNeedsTile(def: AbilityDef): boolean { return OG_TILE.has(def.id) || aolNeedsTile(def); }
+export function ogNeedsTarget(def: AbilityDef): boolean { return OG_TARGET.has(def.id) || aolNeedsTarget(def); }
 
 const foesWithin = (b: Battle, u: Unit, r: number, min = 1) => b.units.filter((e) => e.team !== u.team && !e.captive && !(u.team === 'player' && e.hidden) && unitDist(u, e) >= min && unitDist(u, e) <= r);
 const alliesWithin = (b: Battle, u: Unit, r: number) => b.units.filter((a) => a.team === u.team && a !== u && unitDist(u, a) <= r);
@@ -490,6 +525,7 @@ const hasKey = (u: Unit) => hasEffect(u, 'magicalKey') || u.pack.some((p) => p.i
 const isGel = (a: Unit) => tid(a) === 'gel';
 
 export function ogTiles(b: Battle, u: Unit, def: AbilityDef): Pos[] {
+  if (isAolAbility(def)) return aolTiles(b, u, def);
   const out: Pos[] = [];
   const scan = (min: number, max: number, ok: (x: number, y: number) => boolean) => {
     for (let y = 0; y < b.height; y++) for (let x = 0; x < b.width; x++) {
@@ -506,6 +542,7 @@ export function ogTiles(b: Battle, u: Unit, def: AbilityDef): Pos[] {
 }
 
 export function ogTargets(b: Battle, u: Unit, def: AbilityDef): Unit[] {
+  if (isAolAbility(def)) return aolTargets(b, u, def);
   switch (def.id) {
     case 'sacredBarrierHyrule': return [u, ...alliesWithin(b, u, 2)];
     case 'darkFireball': return foesWithin(b, u, 4);
@@ -521,6 +558,7 @@ export function ogTargets(b: Battle, u: Unit, def: AbilityDef): Unit[] {
 
 export function ogUnusable(b: Battle, u: Unit, def: AbilityDef): string | null | undefined {
   if (!isOGAbility(def)) return undefined;
+  if (isAolAbility(def)) return aolUnusable(b, u, def);
   if (ogNeedsTarget(def) && !ogTargets(b, u, def).length) return def.id === 'slimeMerge' ? 'No temporary Gel next to you' : 'No one in range';
   if (ogNeedsTile(def) && !ogTiles(b, u, def).length) return 'Nowhere to go';
   switch (def.id) {
@@ -554,6 +592,7 @@ export interface OGOutcome {
 
 export function castOriginal(b: Battle, u: Unit, def: AbilityDef, rng: RNG, target?: Unit, at?: Pos): OGOutcome | null {
   if (!isOGAbility(def)) return null;
+  if (isAolAbility(def)) return castAol(b, u, def, rng, (e, dmg) => ogOnKill(b, u, e, rng, dmg, def.element, undefined), target, at);
   const out: OGOutcome = { hits: [], heals: [], statuses: [], cleansed: [], buffed: [], lines: [] };
   const s = effectiveStats(u);
   const magicMult = u.team === 'player' && b.bonus === 'wisdomOfHyrule' ? 1.2 : 1;
@@ -595,7 +634,7 @@ export function castOriginal(b: Battle, u: Unit, def: AbilityDef, rng: RNG, targ
     // ── Zelda ──
     case 'lightOfWisdom': {
       const n = revealAll(b, u, 5);
-      for (const e of b.units) if (e.team !== u.team && has(e, 'invisibleDarkness') && unitDist(u, e) <= 5) { e.hidden = false; buff(e, 'wisdomLit', 'Light of Wisdom', 2); }
+      for (const e of b.units) if (e.team !== u.team && invisible(e) && unitDist(u, e) <= 5) { e.hidden = false; buff(e, 'wisdomLit', 'Light of Wisdom', 2); }
       out.lines.push(n ? `The Light of Wisdom shines: ${n} hidden thing${n > 1 ? 's' : ''} revealed.` : 'The Light of Wisdom shines. Nothing is hiding nearby.');
       break;
     }
@@ -676,6 +715,7 @@ export function castOriginal(b: Battle, u: Unit, def: AbilityDef, rng: RNG, targ
         if (has(e, 'resonantWeakness') && !e.ogShrunk && unitDist(u, e) <= 4) { e.ogShrunk = true; buff(e, 'shrunk', 'Shrunk', 99, { def: -8 }); out.lines.push(`The Recorder\'s tune shrinks ${e.name}!`); }
       }
       for (const e of b.units.filter((x) => x.team !== u.team && has(x, 'sensitiveHearing') && unitDist(u, x) <= 3)) strike(e, Math.max(1, (s.mag + 8) * 2 - effectiveStats(e).res));
+      if (b.tiles.includes('riverDevil')) { for (let i = 0; i < b.tiles.length; i++) if (b.tiles[i] === 'riverDevil') b.tiles[i] = 'water'; out.lines.push('The River Devil hates the tune — it sinks out of sight.'); }
       if (at && (at.x !== u.x || at.y !== u.y)) { out.warped = { from, to: { ...at } }; u.x = at.x; u.y = at.y; out.lines.push('A whirlwind carries the player away.'); }
       break;
     }
@@ -729,7 +769,7 @@ export function castOriginal(b: Battle, u: Unit, def: AbilityDef, rng: RNG, targ
 
 /** Status immunities (status.ts): Triforce's Courage. */
 export function ogImmune(u: Unit, kind: StatusKind): boolean {
-  return (kind === 'fear' || kind === 'confuse') && !!u.buffs?.some((x) => x.id === 'triforcesCourage');
+  return ((kind === 'fear' || kind === 'confuse') && !!u.buffs?.some((x) => x.id === 'triforcesCourage')) || aolImmune(u, kind);
 }
 
 // ───────────────────────── Items ─────────────────────────
@@ -805,5 +845,5 @@ export function useOriginalItem(b: Battle, u: Unit, id: string, rng: RNG, target
     }
     case 'digdoggerFragment': t({ con: 5, def: 4 }, 'Digdogger Fragment'); return `${u.name} grows heavy and hard (+5 CON, +4 DEF).`;
   }
-  return null;
+  return useAolItem(b, u, id);
 }

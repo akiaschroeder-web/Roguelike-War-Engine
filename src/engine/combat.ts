@@ -10,7 +10,7 @@ import { techniqueAllowed, techniqueCost, tpAfterCombat, tpAfterHit, tpCannotAtt
 import { sacredDutyCovers, ssAfterCombat, ssAfterHit, ssCannotAttack, ssCanParry, ssElement, ssMods, ssMultiplier, ssOnBlock, ssOnKill, ssOnParry, ssOnStrike, ssRangeBonus, ssSideAdjust, ssXpMult } from './skyward';
 
 import { wildAfterCombat, wildAfterHit, wildAfterHeal, wildCannotAttack, wildCanParry, wildElement, wildFlurry, wildHealMult, wildInterceptor, wildMight, wildMods, wildMultiplier, wildOnKill, wildOnStrike, wildRangeBonus, wildSaveFromDeath, wildSideAdjust, wildXpMult } from './wild';
-import { ogAfterHit, ogExtraAttack, ogMods, ogMultiplier, ogOnKill, ogOnStrike, ogRangeBonus } from './original';
+import { ogAfterCombat, ogAfterHit, ogCannotAttack, ogDefense, ogExtraAttack, ogMods, ogMultiplier, ogNoBlock, ogOnKill, ogOnStrike, ogRangeBonus, ogSaveFromDeath } from './original';
 
 const rangeBonus = (u: Unit, w: WeaponDef) => wwRangeBonus(u, w) + tpRangeBonus(u, w) + ssRangeBonus(u, w) + wildRangeBonus(u, w) + ogRangeBonus(u, w);
 import { cannonsDown, isVessel, vesselMods } from './naval';
@@ -230,7 +230,7 @@ function sideStats(
   const d = unitDist({ ...atk, ...atkPos }, { ...def, ...defPos });
   const helpless = !initiating && isHelpless(atk);
   const beaming = !!weapon?.beam && d > 1;
-  if (!weapon || weapon.type === 'staff' || weapon.type === 'instrument' || !canReach(weapon, d, atk) || helpless || (beaming && atk.mp < weapon.beam!) || tpCannotAttack(atk, weapon) || ssCannotAttack(b, atk, weapon, initiating) || wildCannotAttack(b, atk, weapon, initiating, def, foeWeapon)) {
+  if (!weapon || weapon.type === 'staff' || weapon.type === 'instrument' || !canReach(weapon, d, atk) || helpless || (beaming && atk.mp < weapon.beam!) || tpCannotAttack(atk, weapon) || ssCannotAttack(b, atk, weapon, initiating) || wildCannotAttack(b, atk, weapon, initiating, def, foeWeapon) || ogCannotAttack(atk)) {
     return { uid: atk.uid, weaponId: weapon?.id ?? null, canAttack: false, dmg: 0, hit: 0, crit: 0, attacks: 0, triangle: 0, effective: false, block: 0, arrowId: null };
   }
   const as = effectiveStats(atk);
@@ -267,7 +267,7 @@ function sideStats(
   const adj = tpSideAdjust(b, atk, def, weapon, arrow, defense, magical);
   const sadj = ssSideAdjust(b, atk, def, weapon, arrow, adj.defense, magical, initiating);
   const wadj = wildSideAdjust(b, atk, def, weapon, arrow, sadj.defense, magical, initiating);
-  defense = wadj.defense;
+  defense = ogDefense(atk, def, weapon, arrow, wadj.defense, magical);
   adj.hit += sadj.hit + wadj.hit;
   adj.extraAttack = adj.extraAttack || sadj.extraAttack || wadj.extraAttack || ogExtraAttack(atk, weapon, initiating);
   let dmg = Math.max(0, power - defense);
@@ -277,7 +277,7 @@ function sideStats(
   dmg = Math.floor(dmg * tpMultiplier(b, atk, def, defPos, element, magical, weapon, d, arrow) * supportDamageMult(b, atk, element));
   dmg = Math.floor(dmg * ssMultiplier(b, atk, def, element, magical, weapon, d, arrow));
   dmg = Math.floor(dmg * wildMultiplier(b, atk, def, element, magical, weapon, d, arrow));
-  dmg = Math.floor(dmg * ogMultiplier(b, atk, def, magical, weapon, d));
+  dmg = Math.floor(dmg * ogMultiplier(b, atk, def, magical, weapon, d, arrow));
   if (adj.finish) dmg = Math.max(dmg, def.hp);
   if (atk.isBoss && atk.team === 'enemy' && (b.bossTier ?? 2) < 2) dmg = Math.floor(dmg * (b.bossTier === 0 ? 0.7 : 0.85)); // early bosses hit softer
   if (def.buffs?.some((x) => x.barrier || x.id === 'bubble')) dmg = 0; // Nayru's Love, Wart's bubbles
@@ -296,7 +296,7 @@ function sideStats(
   let attacks = atkSpd - defSpd >= 4 ? 2 : 1;
   if ((weapon.brave || (weapon.braveConcealed && concealed) || (atk.skills.includes('tripleShot') && atk.movedDist === 0)) && initiating) attacks *= 2;
   if (adj.extraAttack && initiating) attacks += 1;
-  return { uid: atk.uid, weaponId: weapon.id, canAttack: true, dmg, hit, crit, attacks, triangle: tri, effective, block: adj.noBlock ? 0 : Math.min(80, db.block), arrowId: arrow?.id ?? null, element };
+  return { uid: atk.uid, weaponId: weapon.id, canAttack: true, dmg, hit, crit, attacks, triangle: tri, effective, block: adj.noBlock || ogNoBlock(atk, weapon, arrow) ? 0 : Math.min(80, db.block), arrowId: arrow?.id ?? null, element };
 }
 
 /** Termina damage modifiers: boss slayers, aquatic predators, bat swarms, weaknesses, giants. */
@@ -492,7 +492,10 @@ export function resolveCombat(b: Battle, attacker: Unit, defender: Unit, rng: RN
     } else if (dmg >= target.hp && target.hp > 0) {
       const line = tpSaveFromDeath(b, target);
       if (line) { dmg = target.hp - 1; saved = 'triforce'; b.log.push(line); }
-      else { const ws = wildSaveFromDeath(b, target, by); if (ws) { dmg = target.hp - 1; saved = 'triforce'; graceHeal = ws.heal; b.log.push(ws.line); } }
+      else {
+        const ws = wildSaveFromDeath(b, target, by) ?? ogSaveFromDeath(target);
+        if (ws) { dmg = target.hp - 1; saved = 'triforce'; graceHeal = ws.heal; b.log.push(ws.line); }
+      }
     }
     target.hp -= dmg;
     if (graceHeal) target.hp = Math.min(target.stats.hp, target.hp + graceHeal);
@@ -596,7 +599,7 @@ export function resolveCombat(b: Battle, attacker: Unit, defender: Unit, rng: RN
     }
   }
   const landed2 = { atk: strikes.filter((s) => s.by === attacker.uid && !s.splash).reduce((n, s) => n + s.dmg, 0), def: strikes.filter((s) => s.by === defender.uid && !s.splash).reduce((n, s) => n + s.dmg, 0) };
-  for (const x of [...wwAfterCombat(b, attacker, defender), ...tpAfterCombat(b, attacker, defender), ...ssAfterCombat(b, attacker, defender, fc.attacker.arrowId, landed2), ...wildAfterCombat(b, attacker, defender, fc.attacker.arrowId, landed2)]) {
+  for (const x of [...wwAfterCombat(b, attacker, defender), ...tpAfterCombat(b, attacker, defender), ...ssAfterCombat(b, attacker, defender, fc.attacker.arrowId, landed2), ...wildAfterCombat(b, attacker, defender, fc.attacker.arrowId, landed2), ...ogAfterCombat(b, attacker, defender, fc.attacker.arrowId, landed2)]) {
     strikes.push({ by: x.by, target: x.uid, hit: true, crit: false, dmg: x.dmg, heal: 0, targetHp: x.hp, byHp: 0, killed: x.killed, blocked: false, splash: true });
     if (x.killed && !deaths.includes(x.uid)) deaths.push(x.uid);
   }

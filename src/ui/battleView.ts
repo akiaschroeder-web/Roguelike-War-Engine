@@ -51,6 +51,7 @@ const TERRAIN_GLYPH: Record<string, string> = {
   frozenWater: '❅',
   burnableBush: '❦', boulder: '●', hiddenStairs: '▤', raftDock: '⛵', ladderGap: '╪', pushBlock: '▣', shutterDoor: '▥', bladeTrap: '✦',
   goriyaCheckpoint: '🍖', secretCave: '◖', gravestone: '✝', lockedDoor: '🔒',
+  palaceStatue: '🗿', collapsingFloor: '▦', fallingBlock: '⬛', elevator: '⇕', narrowPassage: '⋮', fallingBoulderZone: '☄', riverDevil: '👹',
 };
 
 export class BattleView {
@@ -1470,6 +1471,13 @@ const WW_TERRAIN_NOTES: Record<string, string> = {
   watchtower: 'Climb up: +3 vision and +1 range for ranged weapons',
   searchlight: 'Spots hidden units within 3 and raises the alarm',
   commandStatue: 'The Command Melody brings it to life',
+  palaceStatue: 'A palace statue (obstacle). Whoever stands beside it when the guardian falls places the Palace Crystal — and gains a level',
+  collapsingFloor: 'Crumbles once someone has stood on it: it falls away into a pit at the start of the next turn',
+  fallingBlock: 'Marked floor: a block crashes down every other turn (8 damage to whoever is there)',
+  elevator: 'High ground (+10 Avoid). Ride the Elevator to another one without using your action',
+  narrowPassage: 'Only small units (size 1, CON 6 or less) or a Fairy can squeeze through',
+  fallingBoulderZone: 'Boulders fall here on odd turns (6 damage)',
+  riverDevil: 'The River Devil blocks the way until someone plays the Recorder',
 };
 
 /** Abilities shown in the Abilities menu (forecast-only modifiers are excluded). */

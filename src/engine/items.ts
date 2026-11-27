@@ -146,7 +146,7 @@ export function useItem(b: Battle, u: Unit, index: number, rng: RNG, at?: Pos): 
     res.mp = amount;
     xp = 5;
   } else if (def.kind === 'special') {
-    xp = 5;
+    xp = def.id === 'experienceBag' ? 60 : 5;
     useSpecial(b, u, def, rng, res, at);
   } else if (def.kind === 'bomb' || def.kind === 'fruit') {
     let broken = 0;

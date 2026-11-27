@@ -153,7 +153,9 @@ export type Terrain = BaseTerrain | 'cracked' | 'timeBlock' | 'timeGap' | 'bridg
   | 'chasm' | 'pristinePedestal' | 'frozenWater'
   // Original Hyrule battlefield spaces (bombable walls are the existing cracked walls)
   | 'burnableBush' | 'boulder' | 'hiddenStairs' | 'raftDock' | 'ladderGap' | 'pushBlock' | 'shutterDoor' | 'bladeTrap' | 'goriyaCheckpoint'
-  | 'secretCave' | 'gravestone' | 'lockedDoor';
+  | 'secretCave' | 'gravestone' | 'lockedDoor'
+  // Zelda II battlefield spaces
+  | 'palaceStatue' | 'collapsingFloor' | 'fallingBlock' | 'elevator' | 'narrowPassage' | 'fallingBoulderZone' | 'riverDevil';
 
 export type Team = 'player' | 'enemy';
 
@@ -526,7 +528,9 @@ export type GearEffect =
   | 'crimsonFeather' | 'academyCrest' | 'gratitudePendant' | 'fiCrystal' | 'ghirahimDiamond' | 'demisesFlame' | 'moltenCore' | 'ancientEye' | 'powerCore'
   | 'parasiteGem' | 'fireBlessing' | 'thunderBlessing' | 'crimsonDive'
   // ── Original Hyrule ──
-  | 'magicalShield' | 'blueRing' | 'redRing' | 'raft' | 'stepladder' | 'recorder' | 'bookOfMagic' | 'magicalKey' | 'letter' | 'blueCandle' | 'redCandle';
+  | 'magicalShield' | 'blueRing' | 'redRing' | 'raft' | 'stepladder' | 'recorder' | 'bookOfMagic' | 'magicalKey' | 'letter' | 'blueCandle' | 'redCandle'
+  // ── Zelda II ──
+  | 'frontalArmor' | 'spectralHelmet' | 'aerialAim' | 'lightningVulnerable' | 'waterWalk' | 'cross';
 
 export type ItemKind =
   | 'heal' | 'fullHeal' | 'mp' | 'sta' | 'fairy' | 'bomb' | 'stun' | 'learn'
@@ -728,7 +732,7 @@ export type CommanderBonus = 'extraTreasure' | 'healing' | 'forging' | 'postBatt
   // Era of the Wild
   | 'fusionMastery' | 'sacredResearch' | 'healingWaters' | 'goronGuard' | 'ritoGale' | 'gerudoLightning' | 'waterBarriers' | 'goronMining' | 'windRiders'
   | 'lightningFields' | 'zonaiEngineering' | 'kingOfLight' | 'yigaAmbush' | 'demonKingsGloom' | 'calamityCorruption'
-  | 'hiddenTreasure' | 'wisdomOfHyrule' | 'concealedDarkness';
+  | 'hiddenTreasure' | 'wisdomOfHyrule' | 'concealedDarkness' | 'ancientMagic';
 
 export type SkillId = string;
 
@@ -1113,7 +1117,9 @@ export type EventEffect =
   /** Skyward Sword: the army's next battle is a Silent Realm trial. */
   | { kind: 'silentRealm' }
   /** Era of the Wild: campaign effects (engine/wildRun.ts). */
-  | { kind: 'wild'; op: string; amount?: number; id?: string };
+  | { kind: 'wild'; op: string; amount?: number; id?: string }
+  /** Zelda II (engine/originalRun.ts): teach a spell or sword technique, hand over a pack item. */
+  | { kind: 'aol'; op: string; id?: string };
 
 /** Conditions for an event or a single choice. */
 export interface EventRequires {

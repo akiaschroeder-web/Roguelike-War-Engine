@@ -31,6 +31,8 @@ const SPECIAL = (open: number, water = INF, rough = 2, gap = INF) => ({
   // Original Hyrule (per-unit exceptions live in original.ts ogTileCost)
   burnableBush: rough, boulder: INF, hiddenStairs: open, raftDock: open, ladderGap: INF, pushBlock: INF, shutterDoor: INF, bladeTrap: INF,
   goriyaCheckpoint: INF, secretCave: open, gravestone: INF, lockedDoor: INF,
+  // Zelda II (per-unit exceptions live in aol.ts aolTileCost)
+  palaceStatue: INF, collapsingFloor: open, fallingBlock: open, elevator: open, narrowPassage: INF, fallingBoulderZone: open, riverDevil: INF,
 });
 export const MOVE_COSTS: Record<MoveType, Record<Terrain, number>> = {
   foot:    { plain: 1, forest: 2, mountain: 3, water: INF, wall: INF, fort: 1, lava: 2, ...SPECIAL(1) },
@@ -170,6 +172,13 @@ export const TERRAIN_BONUS: Record<Terrain, { avoid: number; def: number; heal: 
   secretCave: { avoid: 10, def: 1, heal: 10 },
   gravestone: { avoid: 0, def: 0, heal: 0 },
   lockedDoor: { avoid: 0, def: 0, heal: 0 },
+  palaceStatue: { avoid: 0, def: 0, heal: 0 },
+  collapsingFloor: { avoid: 0, def: 0, heal: 0 },
+  fallingBlock: { avoid: 0, def: 0, heal: 0 },
+  elevator: { avoid: 10, def: 1, heal: 0 },
+  narrowPassage: { avoid: 20, def: 1, heal: 0 },
+  fallingBoulderZone: { avoid: 0, def: 0, heal: 0 },
+  riverDevil: { avoid: 0, def: 0, heal: 0 },
 };
 
 /** Water-like spaces: swimmers move through them, others can't. */
@@ -299,6 +308,13 @@ export const SPECIAL_TERRAIN: Record<Exclude<Terrain, BaseTerrain>, { name: stri
   secretCave: { name: 'Secret Cave', color: '#2a1a14' },
   gravestone: { name: 'Gravestone', color: '#8a8a90' },
   lockedDoor: { name: 'Locked Door', color: '#7a5a2a' },
+  palaceStatue: { name: 'Palace Statue', color: '#9a9aa8' },
+  collapsingFloor: { name: 'Collapsing Floor', color: '#8a6a4a' },
+  fallingBlock: { name: 'Falling Block', color: '#6a5a6a' },
+  elevator: { name: 'Elevator', color: '#7a8aa0' },
+  narrowPassage: { name: 'Narrow Passage', color: '#3a3040' },
+  fallingBoulderZone: { name: 'Falling Boulder Zone', color: '#8a5a4a' },
+  riverDevil: { name: 'River Devil', color: '#4a6a5a' },
 };
 
 /** Lava damage at the start of a unit's turn (as % of max HP). */

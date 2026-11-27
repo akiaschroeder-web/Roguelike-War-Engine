@@ -1,6 +1,7 @@
 import { imgUrl } from './media';
 import { TEARS_NEEDED, twilightOf } from '../engine/twilightRun';
 import { TWILIT_PROVINCES } from '../content/twilight';
+import { LEVELS as LEVELS_OH } from '../content/original';
 import { availableRecipes, craft, materialBag, questCount, recipeCost, recipeHolders, repairShield, shieldRepairCost } from '../engine/skywardRun';
 import { packSize } from '../engine/units';
 import { shieldDurability } from '../engine/skyward';
@@ -289,7 +290,7 @@ export class App {
         <div class="page">
           <div class="page-head"><button class="btn" data-nav="back">← Back</button><h1>Choose your Commander</h1><span></span></div>
           <p class="dim center-text">Each commander brings their own army and a special bonus. If the commander falls, the campaign is over.</p>
-          ${(['hyrule', 'termina', 'greatSea', 'twilight', 'skyward', 'wild', 'original'] as const).map((pack) => `<h2 class="pack-head">${pack === 'hyrule' ? 'Ocarina of Time · Hyrule' : pack === 'termina' ? "Majora's Mask · Termina" : pack === 'greatSea' ? 'The Wind Waker · The Great Sea' : pack === 'twilight' ? 'Twilight Princess · Twilight Hyrule' : pack === 'skyward' ? 'Skyward Sword · The Sky' : pack === 'wild' ? 'Era of the Wild · Hyrule Reborn' : 'The Legend of Zelda · Original Hyrule'}</h2>
+          ${(['hyrule', 'termina', 'greatSea', 'twilight', 'skyward', 'wild', 'original'] as const).map((pack) => `<h2 class="pack-head">${pack === 'hyrule' ? 'Ocarina of Time · Hyrule' : pack === 'termina' ? "Majora's Mask · Termina" : pack === 'greatSea' ? 'The Wind Waker · The Great Sea' : pack === 'twilight' ? 'Twilight Princess · Twilight Hyrule' : pack === 'skyward' ? 'Skyward Sword · The Sky' : pack === 'wild' ? 'Era of the Wild · Hyrule Reborn' : 'The Legend of Zelda & Zelda II · Original Hyrule'}</h2>
           <div class="card-grid">${COMMANDERS.filter((c) => (c.campaign ?? 'hyrule') === pack).map((c) => {
             const t = TEMPLATES[c.heroId];
             const army = c.units.map((id) => TEMPLATES[id]);
@@ -313,7 +314,7 @@ export class App {
               <option value="twilight" ${choices.campaign === 'twilight' ? 'selected' : ''}>Twilight Hyrule: restore the Light Spirits</option>
               <option value="skyward" ${choices.campaign === 'skyward' ? 'selected' : ''}>The Sky: from Skyloft to the Demon's Realm</option>
               <option value="wild" ${choices.campaign === 'wild' ? 'selected' : ''}>Hyrule Reborn: surface, sky and Depths, under the Blood Moon</option>
-              <option value="original" ${choices.campaign === 'original' ? 'selected' : ''}>Original Hyrule: the nine Levels and the Triforce of Wisdom</option>
+              <option value="original" ${choices.campaign === 'original' ? 'selected' : ''}>Original Hyrule: the nine Levels, then Zelda II's palaces</option>
               <option value="random" ${choices.campaign === 'random' ? 'selected' : ''}>Random: any region, any enemy, any event</option>
               <option value="worldTour" ${choices.campaign === 'worldTour' ? 'selected' : ''}>World Tour: every campaign in turn, a few regions in each</option></select></div>
             ${choices.campaign === 'worldTour' ? `<div class="opt-row"><span class="dim small">World Tour: regions per campaign</span><select data-opt="tourActs">${[1, 2, 3, 4, 5].map((n) => `<option value="${n}" ${(choices.tourActs ?? '2') === String(n) ? 'selected' : ''}>${n}</option>`).join('')}</select></div>` : ''}
@@ -393,7 +394,8 @@ export class App {
         ${run.tour ? (() => { const t = run.tour; const left = Math.max(0, t.per - (run.act - t.legStartAct + 1)); const nxt = t.next ?? (t.leg + 1 < t.legs.length ? t.legs[t.leg + 1] : undefined);
           return `<div class="tb-res" title="World Tour: ${t.per} region${t.per > 1 ? 's' : ''} in each campaign, then on to the next. First pass: ${t.legs.map((c) => TOUR_NAMES[c]).join(' → ')}; after that the tour wanders at random"><span class="dim small">World Tour</span> <b>${t.leg + 1}</b> <span class="dim small">· ${esc(TOUR_NAMES[run.campaign as TourCampaign] ?? '')} · ${left ? `${left} more region${left > 1 ? 's' : ''}, then` : 'next:'} ${nxt ? esc(TOUR_NAMES[nxt]) : 'somewhere at random'}</span></div>`; })() : ''}
         ${run.campaign === 'original' ? (() => { const qi = run.questItems ?? []; const n = qi.includes('fullTriforce') ? 8 : Math.min(8, questCount(run, 'wisdomFragment'));
-          return `<div class="tb-res" title="Fragments of the Triforce of Wisdom (one from each Level's boss). All eight open Death Mountain.${run.trials?.includes('secondQuest') ? ' · Second Quest' : ''}"><span class="dim small">Triforce</span> <b>${n >= 8 ? '🔺 whole' : `🔺${n}/8`}</b>${run.trials?.includes('secondQuest') ? ' <span class="dim small">2nd Quest</span>' : ''}</div>`; })() : ''}
+          return `<div class="tb-res" title="Fragments of the Triforce of Wisdom (one from each Level's boss). All eight open Death Mountain.${run.trials?.includes('secondQuest') ? ' · Second Quest' : ''}"><span class="dim small">Triforce</span> <b>${n >= 8 ? '🔺 whole' : `🔺${n}/8`}</b>${run.trials?.includes('secondQuest') ? ' <span class="dim small">2nd Quest</span>' : ''}</div>`
+            + (WORLDS[run.region]?.campaign === 'original' && !LEVELS_OH.includes(run.region) || questCount(run, 'palaceCrystal') ? `<div class="tb-res" title="Palace Crystals placed in the palace statues (Zelda II). All six open the Great Palace."><span class="dim small">Crystals</span> <b>💎${questCount(run, 'palaceCrystal')}/6</b></div>` : ''); })() : ''}
         ${run.clock ? (() => { const c = clockLabel(run); return `<div class="tb-clock ${c.hoursLeft <= 12 ? 'bad' : c.day === 3 ? 'warn' : ''}" title="The Moon falls when the third day ends."><span class="dim small">Day ${c.day} ${c.night ? '☾' : '☀'}</span> <b>${c.time}</b> <span class="dim small">${c.hoursLeft}h left</span></div>
           <button class="btn small" data-nav="songoftime" title="Return to the dawn of the first day">🎵 Song of Time</button>`; })() : ''}
         <div class="spacer"></div>

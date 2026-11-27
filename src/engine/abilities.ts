@@ -7,7 +7,7 @@ import { supportCostMult } from './supports';
 import { castTwilight, techniqueAllowed, techniqueCost, tpCostMult, tpNeedsTarget, tpNeedsTile, tpTargets, tpTiles, tpUnusable } from './twilight';
 import { castSkyward, SS_ENEMY_TRANSFORMS, ssCostMult, ssNeedsTarget, ssNeedsTile, ssTargets, ssTiles, ssUnusable, TRANSFORM_ABILITIES } from './skyward';
 import { castWild, WILD_ENEMY_AUTO, wildCooldownCut, wildCostMult, wildNeedsTarget, wildNeedsTile, wildTargets, wildTiles, wildUnusable } from './wild';
-import { castOriginal, OG_ENEMY_CASTS, ogNeedsTarget, ogNeedsTile, ogTargets, ogTiles, ogUnusable } from './original';
+import { castOriginal, OG_ENEMY_CASTS, ogCostMult, ogNeedsTarget, ogNeedsTile, ogTargets, ogTiles, ogUnusable } from './original';
 import { buildAt, buildTargets, canDig, dig, hasTimeBlocks, ignite, meltSunBlocks, toggleTimeBlocks } from './field';
 import { roomFor, transformInto } from './transform';
 import { useFairy, type LevelUp } from './combat';
@@ -28,7 +28,7 @@ export function instrumentDiscount(u: Unit): number | null {
 
 /** MP (or stamina, for techniques) an ability costs this unit. */
 export function abilityCost(u: Unit, def: AbilityDef, b?: Battle): number {
-  const m = wwCostMult(b, u, def) * tpCostMult(b, u, def) * ssCostMult(b, u, def) * wildCostMult(b, u, def) * supportCostMult(b, u, def.kind, def.element, def.id);
+  const m = wwCostMult(b, u, def) * tpCostMult(b, u, def) * ssCostMult(b, u, def) * wildCostMult(b, u, def) * ogCostMult(b, u, def) * supportCostMult(b, u, def.kind, def.element, def.id);
   if (def.sta) return techniqueCost(u, def, b?.bonus);
   if (m !== 1) return Math.max(def.kind === 'song' ? 1 : 0, Math.floor(abilityCost(u, def) * m));
   if (def.mp && u.buffs?.some((x) => x.id === 'chateau')) return 0; // Chateau Romani

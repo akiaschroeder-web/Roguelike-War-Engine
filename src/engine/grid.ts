@@ -2,7 +2,7 @@ import { RACES } from '../data/registry';
 import { tpTileCost } from './twilight';
 import { ssTileCost } from './skyward';
 import { wildTileCost } from './wild';
-import { ogTileCost } from './original';
+import { ogLeaps, ogTileCost } from './original';
 import { INF, MOVE_COSTS } from './rules';
 import { canSwim, effectiveStats, hasEffect, isMounted, moveTypeOf, unitTags } from './units';
 import { windFactor } from './naval';
@@ -119,7 +119,7 @@ export interface Moves {
 export function computeMoves(b: Battle, unit: Unit, budget?: number): Moves {
   const mov = unit.statuses?.some((s) => s.kind === 'root') ? 0 : budget ?? effectiveStats(unit).mov;
   const ghost = unit.skills.includes('spectralPassage') || hasEffect(unit, 'phantomRide') || hasEffect(unit, 'phaseThrough')
-    || hasEffect(unit, 'spectralHull') || unit.skills.includes('phantomVoyage') || unit.skills.includes('suspendedHorror') || unit.skills.includes('burrowingAmbush');
+    || hasEffect(unit, 'spectralHull') || unit.skills.includes('phantomVoyage') || unit.skills.includes('suspendedHorror') || unit.skills.includes('burrowingAmbush') || ogLeaps(unit);
   const occ = new Map<number, Unit>();
   for (const u of b.units) for (const p of footprint(u.x, u.y, u.size)) occ.set(keyOf(b, p.x, p.y), u);
 

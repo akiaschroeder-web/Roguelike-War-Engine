@@ -7,7 +7,7 @@ import { maxRank, rankOf, supportKey, type SupportRank } from './supports';
 import { pairKey } from '../content/supports';
 import { HIDDEN_SKILLS } from '../content/twilight';
 import { canUsePouch, queueTrial, skywardAfterBattle, skywardQuestCheck, skywardRegionOptions, skywardRupeeMult, skywardStart, usePouch } from './skywardRun';
-import { inOriginalLevels, originalAfterBattle, originalBossFor, originalRegionOptions, originalStart } from './originalRun';
+import { applyAolEffect, inOriginalLevels, originalAfterBattle, originalBossFor, originalRegionOptions, originalStart, originalStartRegion } from './originalRun';
 import { restoreForm } from './transform';
 import { applyWildEffect, colossalCap, returnBoss, wildAfterBattle, wildBattleSetup, wildCampVisit, wildDecorateMap, wildOnRecruit, wildRecruitWeight, wildRegionOptions, wildRestBonus, wildStart } from './wildRun';
 import { canWield, type LevelUp } from './combat';
@@ -43,8 +43,8 @@ export function commanderOf(run: Run): CommanderDef {
 }
 
 /** Where each campaign begins (Hyrule: the commander's home region). */
-function startRegionFor(camp: string, home: WorldId): WorldId {
-  return camp === 'termina' ? 'clockTown' : camp === 'greatSea' ? 'outsetIsland' : camp === 'twilight' ? 'ordonProvince' : camp === 'skyward' ? 'skyloft' : camp === 'wild' ? 'greatPlateau' : camp === 'original' ? 'level1Eagle' : WORLDS[home]?.campaign || home === 'hyruleCastle' || !WORLDS[home] ? 'hyruleField' : home;
+function startRegionFor(camp: string, home: WorldId, run: { commanderId: string; regionsVisited: string[] }): WorldId {
+  return camp === 'termina' ? 'clockTown' : camp === 'greatSea' ? 'outsetIsland' : camp === 'twilight' ? 'ordonProvince' : camp === 'skyward' ? 'skyloft' : camp === 'wild' ? 'greatPlateau' : camp === 'original' ? originalStartRegion(run) : WORLDS[home]?.campaign || home === 'hyruleCastle' || !WORLDS[home] ? 'hyruleField' : home;
 }
 
 /** World Tour order: the commander's home campaign first, then the others in release order. */
@@ -58,7 +58,7 @@ export function newRun(seed: number, commanderId: string, campaign?: 'hyrule' | 
   const camp = tour ? first : campaign ?? cmd.campaign ?? 'hyrule';
   const home = TEMPLATES[cmd.heroId].home;
   // Hyrule campaigns start in the commander's home region; Termina always starts in Clock Town.
-  const region = camp === 'random' ? rng.pick(REGION_IDS.filter((r) => r !== 'moon')) : startRegionFor(camp, home);
+  const region = camp === 'random' ? rng.pick(REGION_IDS.filter((r) => r !== 'moon')) : startRegionFor(camp, home, { commanderId: cmd.heroId, regionsVisited: [] });
   const run: RunWithEvent = {
     seed, rngState: 0, act: 1, region, regionsVisited: [region], map: { rows: 0, nodes: [] }, currentNodeId: null,
     roster: [], fallen: [], rupees: 200, convoy: [], commanderId: cmd.heroId, bonus: cmd.bonus,
@@ -948,6 +948,8 @@ function applyEffect(run: Run, e: EventEffect, rng: RNG): string | null {
       return queueTrial(run, currentNode(run)?.world ?? run.region);
     case 'wild':
       return applyWildEffect(run, e, rng);
+    case 'aol':
+      return applyAolEffect(run, e, rng);
     case 'support': {
       const s = (run.supports ??= {});
       for (let i = 0; i < run.roster.length; i++)
@@ -994,7 +996,7 @@ export function offerRegions(run: RunWithEvent): void {
     const next = tourNext(run, rng);
     if (next && run.tour) {
       run.tour.next = next;
-      run.event = { type: 'region', options: [next === 'greatSea' ? 'greatSea' : startRegionFor(next, TEMPLATES[run.commanderId]?.home ?? 'hyruleField')] };
+      run.event = { type: 'region', options: [next === 'greatSea' ? 'greatSea' : startRegionFor(next, TEMPLATES[run.commanderId]?.home ?? 'hyruleField', run)] };
       return;
     }
     if (run.campaign === 'greatSea') { run.event = { type: 'region', options: ['greatSea'] }; return; }
@@ -1157,7 +1159,7 @@ function enterTourCampaign(run: RunWithEvent, camp: TourCampaign): void {
       revealAround(run, start.col, start.row);
       return;
     }
-    const region = startRegionFor(camp, TEMPLATES[run.commanderId]?.home ?? 'hyruleField');
+    const region = startRegionFor(camp, TEMPLATES[run.commanderId]?.home ?? 'hyruleField', run);
     run.region = region;
     run.regionsVisited.push(region);
     run.map = generateRegionMap(rng, run.act, region);
