@@ -114,7 +114,7 @@ export function minishBattleSetup(run: Run, b: Battle, rng: RNG) {
 
 /** Each boss's retinue (returning monsters and the pack's own). */
 const ESCORTS: Record<string, string[]> = {
-  spinyChuchu: ['chuchuGreen'], madderpillar: ['pesto', 'pesto', 'puffstool', 'rollobite'], bigGreenChuchu: ['chuchuGreen', 'puffstool'],
+  spinyChuchu: ['chuchuGreen'], madderpillar: ['spinyBeetle', 'spinyBeetle', 'octorok', 'octorok', 'puffstool'], bigGreenChuchu: ['chuchuGreen', 'puffstool'],
   gleerok: ['rollobite', 'spinyBeetle'], silverDarknut: ['eyegoreStatue'], mazaal: ['eyegoreStatue'], redDarknut: ['gibdo'], vaatiReborn: ['ballChainSoldier', 'blackKnight'],
 };
 const SEGMENTS = 3;
