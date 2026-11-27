@@ -527,3 +527,25 @@ Still missing:
 - the 6 bosses
 - the 12 monsters
 - the 6 Automatons
+
+Batch 2, matched in list order by filename:
+- conde.png
+- stampGuy.png
+- tekom_cloudbg.webp: red-eyed Zelda; the cloud background needs removing.
+- ignizol.png: candle blob.
+- hydrozol.png: teal blob.
+- caromadillo.webp
+- tornando.png: green frog in a swirl.
+- ribbitune.webp: orange frog.
+- drippitune.webp: blue frog with grapes.
+- holmill.png: mole.
+- platboom.webp: yellow block with an eye.
+- strandtula.png: spider.
+- tweelus.webp: rock creature.
+- chompfin.webp: shark.
+- seismicTalus.png
+
+Still missing:
+- Crawltula
+- Mogryph, Vocavor, Skorchill, Bori, Null
+- the 6 Automatons
