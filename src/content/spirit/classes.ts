@@ -18,14 +18,14 @@ const SLIME = g(60, 30, 40, 35, 40, 25, 35, 30);
 
 export const CLASSES: ClassDef[] = [
   // ── Named characters ──
-  c('royalEngineer', 'Royal Engineer', '🚂', ['sword', 'bow', 'boomerang', 'hookshot', 'instrument'], 'foot', g(70, 45, 20, 55, 50, 35, 25, 45)),
+  c('royalEngineer', 'Royal Engineer', '🚂', ['sword', 'bow', 'boomerang', 'hookshot', 'instrument'], 'foot', g(85, 45, 20, 55, 50, 45, 30, 45)),
   c('royalPrincessST', 'Royal Princess', '👑', ['magic', 'staff', 'bow', 'instrument'], 'foot', g(45, 10, 65, 50, 45, 15, 65, 55), undefined, ['royal']),
   c('spiritPrincess', 'Unbound Spirit', '👻', ['magic', 'instrument'], 'flying', g(45, 5, 65, 50, 45, 10, 65, 55), undefined, ['spirit', 'royal']),
   c('possessedKnightST', 'Possessed Knight', '🛡', ['sword', 'natural'], 'armor', KNIGHT, undefined, ['armored', 'phantom', 'possessed']),
   c('royalSwordsmanST', 'Royal Swordsman', '⚔', ['sword', 'lance', 'hammer'], 'foot', g(85, 50, 5, 55, 30, 45, 20, 35)),
   c('storyteller', 'Storyteller', '📖', ['staff', 'magic'], 'foot', g(45, 10, 40, 45, 15, 15, 45, 65)),
   c('darkSorcererST', 'Dark Sorcerer', '🎩', ['magic', 'staff'], 'foot', CASTER_BOSS, undefined, ['demon']),
-  c('fallenLokomo', 'Fallen Lokomo', '🦾', ['gauntlet', 'natural', 'magic'], 'foot', g(85, 55, 35, 55, 50, 40, 35, 20)),
+  c('fallenLokomo', 'Fallen Lokomo', '🦾', ['gauntlet', 'natural', 'magic'], 'foot', g(70, 45, 30, 45, 40, 30, 30, 20)),
   c('lokomoSage', 'Lokomo Sage', '✨', ['magic', 'staff', 'instrument'], 'foot', SAGE, undefined, ['lokomo']),
   c('lokomoMusician', 'Lokomo Musician', '🎶', ['instrument', 'magic', 'staff'], 'foot', MUSICIAN, undefined, ['lokomo']),
   c('railwayEnthusiast', 'Railway Enthusiast', '📷', ['bow', 'sling', 'boomerang'], 'foot', g(55, 25, 5, 60, 45, 20, 20, 65)),
@@ -44,7 +44,7 @@ export const CLASSES: ClassDef[] = [
   c('thornedMenace', 'Thorned Menace', '🌿', ['natural', 'magic'], 'armor', BOSS, undefined, ['plant']),
   c('lavaColossus', 'Lava Colossus', '🌋', ['natural', 'gauntlet'], 'armor', g(170, 60, 25, 25, 10, 60, 40, 10), undefined, ['stone', 'construct']),
   c('ancientDemonST', 'Ancient Demon', '💀', ['natural', 'magic'], 'armor', BOSS, undefined, ['demon', 'undead', 'armored']),
-  c('demonKingST', 'Demon King', '👹', ['natural', 'magic', 'sword'], 'foot', g(150, 55, 60, 40, 30, 45, 50, 10), undefined, ['demon']),
+  c('demonKingST', 'Demon King', '👹', ['natural', 'magic', 'sword'], 'foot', g(90, 35, 35, 30, 20, 25, 30, 10), undefined, ['demon']),
   c('stolenVessel', 'Stolen Vessel', '🩸', ['magic', 'staff'], 'flying', g(70, 10, 70, 55, 50, 25, 65, 15), undefined, ['demon', 'possessed', 'royal']),
   // ── Trains ──
   c('spiritTrainClass', 'Spirit Train', '🚂', ['siege', 'natural'], 'foot', TRAIN, undefined, ['vessel', 'train']),

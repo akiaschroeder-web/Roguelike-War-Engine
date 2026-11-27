@@ -8,7 +8,7 @@ const e = (id: string, name: string, classId: string, race: string, weapons: str
 // Hourglass Phantoms), and the six new ChuChus of docs/chuchu-expansion.md. Phantoms, Warp Phantoms,
 // Phantom Eyes, Geozards, Stalfos, Octoroks, Keese, Bulblins, Miniblins and the rest carry over.
 export const ENEMIES: EnemyArchetype[] = [
-  e('torchPhantom', 'Torch Phantom', 'torchPhantomClass', 'phantom', ['torchPhantomSword'], st(50, 23, 12, 14, 7, 26, 18, 3, 25, 5, 40, 25), { size: 2, skill: 'livingTorch', glyph: 'TP', ai: 'guard' }),
+  e('torchPhantom', 'Torch Phantom', 'torchPhantomClass', 'phantom', ['torchFlame'], st(50, 23, 12, 14, 7, 26, 18, 3, 25, 5, 40, 25), { size: 2, skill: 'livingTorch', glyph: 'TP', ai: 'guard' }),
   e('wreckerPhantom', 'Wrecker Phantom', 'wreckerPhantomClass', 'phantom', ['wreckerBall'], st(65, 28, 0, 10, 6, 32, 15, 3, 32, 5, 45, 0), { size: 2, skill: 'rollingDestruction', glyph: 'WR', ai: 'guard' }),
   e('geozardChief', 'Geozard Chief', 'geozardChiefClass', 'monster', ['geozardChiefsBlade', 'geozardChiefFire'], st(48, 21, 12, 17, 12, 22, 13, 6, 20, 6, 35, 25), { size: 2, skill: 'eliteReptilian', glyph: 'GC' }),
   e('sandworm', 'Sandworm', 'sandwormClass', 'monster', ['sandwormBite'], st(32, 15, 0, 10, 14, 9, 6, 4, 13, 7, 28, 0), { size: 2, skill: 'sandAmbushST', glyph: 'SW' }),
@@ -119,6 +119,6 @@ export const REGION_BOSSES: Record<string, string[]> = {
 
 /** Monster spoils in the spirit regions (dropped on defeat, 25%): treasures go to the quest bag, items to the loot. */
 export const ST_SPOILS: Record<string, string> = {
-  torchPhantom: 'phantomTear', wreckerPhantom: 'phantomTear', geozardChief: 'goronAmber', keyMaster: 'ancientGoldPiece', sandworm: 'mysticJade', stalfos: 'stalfosSkull',
+  torchPhantom: 'torchPhantomSword', wreckerPhantom: 'phantomTear', geozardChief: 'goronAmber', keyMaster: 'ancientGoldPiece', sandworm: 'mysticJade', stalfos: 'stalfosSkull',
   chuchuStandard: 'chuchuJellyST', chuchuFire: 'redChuJelly', chuchuIce: 'whiteChuJelly', chuchuElectric: 'yellowChuJelly', chuchuMetal: 'electrifiedMetalGel', chuchuHelmet: 'redChuJelly',
 };

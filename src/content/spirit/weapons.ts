@@ -45,13 +45,14 @@ export const WEAPONS: WeaponDef[] = [
   w('lokomoDrums', 'Lokomo Drums', 'instrument', 'epic', 0, 100, 0, 3, 1, 1, sig({ uses: 0, songDiscount: 2, desc: 'Embrose\'s drums.' })),
   w('lokomoHorn', 'Lokomo Horn', 'instrument', 'epic', 0, 100, 0, 3, 1, 1, sig({ uses: 0, songDiscount: 2, desc: 'Rael\'s great horn.' })),
   // ── Trains ──
-  w('trainCannon', 'Train Cannon', 'siege', 'uncommon', 13, 80, 0, 10, 2, 4, { uses: 0, unique: true, crewed: true, desc: 'A locomotive\'s mounted cannon (range 2–4).' }),
+  w('trainCannon', 'Train Cannon', 'siege', 'uncommon', 13, 80, 0, 10, 2, 4, { uses: 0, unique: true, crewed: true, effective: ['vessel'], desc: 'A locomotive\'s mounted cannon (range 2–4): effective against trains and ships, 60% against anything else.' }),
   nat('trainCollision', 'Collision', 8, 85, 0, 1, 1, { momentum: 4, st: ['collision'], desc: '+1 Might per space travelled before ramming (max +4); double damage to anyone on a Railway Crossing.' }),
-  w('darkTrainCannon', 'Dark Cannon', 'siege', 'rare', 14, 80, 0, 10, 2, 4, { uses: 0, unique: true, crewed: true, element: 'dark', desc: 'Demonic cannonballs (range 2–4).' }),
-  w('demonTrainCannon', 'Demon Train Cannons', 'siege', 'epic', 17, 80, 0, 12, 2, 5, { uses: 0, unique: true, crewed: true, element: 'dark', desc: 'The Demon Train\'s battery (range 2–5).' }),
+  w('darkTrainCannon', 'Dark Cannon', 'siege', 'rare', 14, 80, 0, 10, 2, 4, { uses: 0, unique: true, crewed: true, element: 'dark', effective: ['vessel'], desc: 'Demonic cannonballs (range 2–4): effective against trains and ships, 60% against anything else.' }),
+  w('demonTrainCannon', 'Demon Train Cannons', 'siege', 'epic', 17, 80, 0, 12, 2, 5, { uses: 0, unique: true, crewed: true, element: 'dark', desc: 'The Demon Train\'s battery (range 2–5): 60% against anything but trains and ships.' }),
   nat('demonTrainRam', "Demon Train's Charge", 15, 80, 0, 1, 1, { momentum: 4, st: ['collision'] }),
   // ── Monsters ──
-  nat('wreckerBall', 'Rolling Armor', 15, 80, 0, 1, 1, { armorBreaker: 1.3 }),
+  nat('wreckerBall', 'Rolling Armor', 10, 80, 0, 1, 1, { armorBreaker: 1.3 }),
+  nat('torchFlame', 'Torch Blade', 9, 80, 0, 1, 1, { element: 'fire', inflict: { status: 'burn', chance: 30, turns: 2 } }),
   nat('geozardChiefFire', 'Fire Breath', 13, 85, 0, 1, 2, { element: 'fire', magicContact: true, inflict: { status: 'burn', chance: 30, turns: 2 } }),
   nat('sandwormBite', 'Sandworm Bite', 11, 80, 5, 1, 1),
   nat('keyMasterClaw', 'Grasping Hand', 5, 95, 10, 1, 1),
@@ -67,8 +68,9 @@ export const WEAPONS: WeaponDef[] = [
   nat('skeldritchClaw', "Skeldritch's Claw", 16, 80, 5, 1, 1),
   // The bosses' own attacks (the doc's signature weapons are their drops).
   nat('colesDarkBolt', 'Dark Bolt', 7, 85, 0, 1, 3, { magicContact: true, element: 'dark' }),
-  nat('malladusClaw', "Malladus's Claw", 18, 85, 5, 1, 1),
-  nat('malladusDarkBeam', 'Demon Beam', 14, 85, 0, 1, 3, { magicContact: true, element: 'dark' }),
+  w('gauntletFist', 'Gauntlet Fist', 'gauntlet', 'rare', 12, 85, 5, 4, 1, 1, { uses: 0, unique: true, anyClass: true, desc: 'The great gauntlet\'s plain punch (Byrne\'s Claw itself is won from his boss form).' }),
+  nat('malladusClaw', "Malladus's Claw", 14, 85, 5, 1, 1),
+  nat('malladusDarkBeam', 'Demon Beam', 11, 85, 0, 1, 3, { magicContact: true, element: 'dark' }),
   w('stolenLight', 'Stolen Light', 'magic', 'mythic', 13, 90, 5, 0, 1, 3, { uses: 0, unique: true, anyClass: true, element: 'dark', desc: 'Zelda\'s power turned dark by the Demon King.' }),
   // ── The new ChuChus ──
   nat('chuchuSlam', 'Body Slam', 5, 85, 0, 1, 1),

@@ -40,7 +40,7 @@ export const SKILLS: SkillDef[] = [
   // ── Trains ──
   k('spiritLocomotive', 'Spirit Locomotive', 'On the Spirit Tracks it gains +3 STR and DEF. Passengers board and land at stations without ending their turn.'),
   k('armoredPlating', 'Armored Plating', 'Damage taken −20%; immune to knockback.'),
-  k('darkCollision', 'Dark Collision', 'Its collision attacks deal +50% damage, and double to anyone standing on a Railway Crossing.'),
+  k('darkCollision', 'Dark Collision', 'Its collision attacks deal +25% damage, and double to anyone standing on a Railway Crossing.'),
   k('multiCarTrain', 'Multi-Car Train', 'A boss train of many cars with independent weapons: after it attacks, two of its cars fire at other enemies within 4. Takes half damage until a car is knocked out (any hit of 15% of its HP).'),
   // ── The new ChuChus ──
   k('elementalAdaptation', 'Elemental Adaptation', 'When struck by fire, ice or lightning damage, it turns into the matching elemental ChuChu (Fire, Ice or Electric), keeping its level, experience and HP percentage.'),

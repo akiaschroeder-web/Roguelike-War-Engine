@@ -214,7 +214,7 @@ describe('Spirit Tracks: trains and railway combat', () => {
     const plain = spMultiplier(b, dt, dt, victim, false, w, 1);
     b.tiles[5 * 14 + 9] = 'railCrossing';
     expect(spMultiplier(b, dt, dt, victim, false, w, 1)).toBe(plain * 2);
-    expect(plain).toBe(1.5); // Dark Collision
+    expect(plain).toBe(1.25); // Dark Collision
   });
 
   it('the Demon Train takes half damage until a car is knocked out, and its other cars fire', () => {
@@ -355,7 +355,7 @@ describe('Spirit Tracks: bosses and the ChuChus', () => {
 
 describe('Spirit Tracks campaign', () => {
   it('starts in Aboda Village with the Hero of Spirits and a train; a Tower climb and a train battle on the map', () => {
-    const run = newRun(9, 'anjean', 'spirit');
+    const run = newRun(9, 'zeldaST', 'spirit');
     expect(run.region).toBe(spiritStartRegion());
     expect(run.region).toBe('abodaVillage');
     expect(run.roster.some((u) => u.templateId === 'heroOfSpirits')).toBe(true);

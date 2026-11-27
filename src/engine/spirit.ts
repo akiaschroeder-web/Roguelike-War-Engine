@@ -509,9 +509,10 @@ export function spMods(b: Battle, u: Unit, pos: Pos, foe: Unit, initiating: bool
   if (has(u, 'blinBrute')) { const n = Math.min(3, allies.filter((a) => tid(a) === 'miniblin' && within(a, 3)).length); m.str += 2 * n; m.def += 2 * n; }
   if (w?.type === 'sword' && allies.some((a) => has(a, 'swordTraining') && within(a, 2))) { m.skl += 2; m.hit += 5; }
   if (hasBuff(u, 'swordLesson')) m.crit += 10;
-  if (isDemonic(u) && allies.some((a) => has(a, 'demonicInfluence') && within(a, 3))) { m.str += 3; m.mag += 3; }
-  if (u.team === 'player' && b.bonus === 'demonicInfluence' && isPossessed(u)) { m.str += 3; m.mag += 3; }
-  if (u.team === 'player' && b.bonus === 'demonKingsRail' && isDemonic(u)) { m.str += 4; m.res += 4; }
+  // Cole's aura and his army's bonus don't stack; the commanders' bonuses are for their allies.
+  if (u.team === 'player' && b.bonus === 'demonicInfluence' && isPossessed(u) && !u.isCommander) { m.str += 3; m.mag += 3; }
+  else if (isDemonic(u) && allies.some((a) => has(a, 'demonicInfluence') && within(a, 3))) { m.str += 3; m.mag += 3; }
+  if (u.team === 'player' && b.bonus === 'demonKingsRail' && isDemonic(u) && !u.isCommander) { m.str += 4; m.res += 4; }
   if (allies.some((a) => has(a, 'sandMelody') && within(a, 2))) m.def += 2;
   if (w && w.type !== 'staff' && w.type !== 'instrument' && allies.some((a) => has(a, 'fireMelody') && within(a, 2))) m.dmg += 2;
   if (has(u, 'lavaColossusSkill') && [...here, ...tilesInRange(b, { x: pos.x, y: pos.y }, 1, 1, u.size).map((p) => tileAt(b, p.x, p.y))].includes('lava')) { m.def += 10; m.res += 10; }
@@ -551,8 +552,10 @@ export function spMultiplier(b: Battle, atk: Unit, atkPos: Pos, def: Unit, magic
     if (has(def, 'armoredPlating')) m *= 0.8;
     if (has(def, 'multiCarTrain') && !def.stCarsOut) m *= 0.5;
   }
+  // A train's cannons are built to hit other trains: 60% against anything else.
+  if (w?.crewed && isTrain(atk) && !isVessel(def)) m *= 0.6;
   if (w?.st?.includes('collision')) {
-    if (has(atk, 'darkCollision')) m *= 1.5;
+    if (has(atk, 'darkCollision')) m *= 1.25;
     if (tilesOf(b, def).includes('railCrossing')) m *= 2;
   }
   // Zelda's spirit: ordinary blows pass through her, sacred and demonic power doesn't.

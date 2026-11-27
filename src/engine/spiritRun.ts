@@ -57,9 +57,9 @@ function recruitOnce(run: Run, id: string, rng: RNG, lines: string[], why: strin
 export function spiritStart(run: Run, rng: RNG) {
   spiritOf(run);
   const lines: string[] = [];
-  // The villains (Cole, Byrne, the Demon King) march without the hero.
-  if (!TEMPLATES[run.commanderId]?.rare) recruitOnce(run, 'heroOfSpirits', rng, lines, 'Link, a young engineer of Aboda Village, sets out for the castle.');
-  if (!run.roster.some(isTrain)) recruitOnce(run, 'spiritTrain', rng, lines, 'The Spirit Train waits at Aboda Station.');
+  // Small armies pick up the hero on the way (the villains march without him).
+  if (!TEMPLATES[run.commanderId]?.rare && run.roster.filter((u) => !isTrain(u)).length < 3) recruitOnce(run, 'heroOfSpirits', rng, lines, 'Link, a young engineer of Aboda Village, sets out for the castle.');
+  if (!run.roster.some(isTrain) && !TEMPLATES[run.commanderId]?.rare) recruitOnce(run, 'spiritTrain', rng, lines, 'The Spirit Train waits at Aboda Station.');
   if (run.roster.some((u) => u.skills.includes('livingHistory')) && !q(run).includes('stampBook')) q(run).push('stampBook');
 }
 
@@ -133,7 +133,7 @@ export function spiritBattleSetup(run: Run, b: Battle, rng: RNG) {
   if (PAIRED_ST_REGIONS.includes(b.world)) for (const id of (ST_ROUTE_BOSSES[b.world] ?? []).filter((x) => x !== main.bossId)) addSpiritPartner(b, id, rng);
   const lvl = Math.max(1, main.level - 1);
   const tier = b.bossTier ?? 0;
-  if (main.bossId === 'coleBoss') spawnEnemyTemplate(b, 'keyMaster', main, lvl, rng);
+  if (main.bossId === 'coleBoss') { spawnEnemyTemplate(b, 'keyMaster', main, lvl, rng); if (tier > 0) spawnEnemyTemplate(b, 'bulblin', main, lvl, rng); }
   if (main.bossId === 'byrneBoss') spawnEnemyTemplate(b, 'phantom', main, lvl, rng);
   if (main.bossId === 'bigBlinBoss' && tier > 0) for (let i = 0; i < 2; i++) spawnEnemyTemplate(b, 'miniblin', main, lvl, rng);
   if (main.bossId === 'darkTrainBoss' && b.naval) spawnEnemyTemplate(b, 'darkTrain', main, lvl, rng);
