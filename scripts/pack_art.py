@@ -29,11 +29,20 @@ with mp.get_context('fork').Pool() as pool:
     done = pool.map(job, [('portraits', i, 82) for i in ids] + [('art', i, 80) for i in ids], chunksize=4)
 por = {i: d for k, i, d in done if k == 'portraits'}
 artd = {i: d for k, i, d in done if k == 'art'}
-packs = {'portraits-1': {i: por[i] for i in ids}}
-art = [i for i in ids]
-per = (len(art) + 2) // 3
-for n in range(3):
-    packs[f'art-{n + 1}'] = {i: artd[i] for i in art[n * per:(n + 1) * per]}
+# Split into files of at most ~9 MB each (the published page allows 16 MB per file).
+LIMIT = 9_000_000
+def split(prefix, data):
+    out, cur, size, n = {}, {}, 0, 1
+    for i in ids:
+        v = data[i]
+        if cur and size + len(v) > LIMIT:
+            out[f'{prefix}-{n}'] = cur; cur, size, n = {}, 0, n + 1
+        cur[i] = v; size += len(v)
+    if cur: out[f'{prefix}-{n}'] = cur
+    return out
+packs = {**split('portraits', por), **split('art', artd)}
+for old in out.glob('*.json'):
+    if old.name != 'index.json' and old.stem not in packs: old.unlink()
 for name, data in packs.items():
     p = out / f'{name}.json'
     p.write_text(json.dumps(data))
