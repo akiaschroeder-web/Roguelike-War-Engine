@@ -17,6 +17,7 @@ import { FOUR_SWORDS, QUEST_ITEMS as FS_QUEST } from '../content/fourswords';
 import { LINK_BETWEEN_WORLDS, QUEST_ITEMS as LB_QUEST } from '../content/lorule';
 import { RIVER_ZORA } from '../content/riverzora';
 import { ECHOES_OF_WISDOM, QUEST_ITEMS as EO_QUEST, resolveEchoesFallbacks } from '../content/echoes';
+import { TRI_FORCE_HEROES, QUEST_ITEMS as TF_QUEST } from '../content/triforce';
 import { SPECIAL_TERRAIN } from '../engine/rules';
 import type { ContentPack } from '../content/types';
 import type {
@@ -144,13 +145,14 @@ for (const [ab, gear] of [['rocsJump', 'rocsFeatherL2'], ['pegasusDash', 'pegasu
 installPack(LINK_BETWEEN_WORLDS);
 installPack(RIVER_ZORA);
 installPack(ECHOES_OF_WISDOM);
+installPack(TRI_FORCE_HEROES);
 // Phantom Ganon keeps his entry; his Wind Waker sword joins his drops.
 if (BOSSES.phantomGanon) BOSSES.phantomGanon.drops = [...(BOSSES.phantomGanon.drops ?? []), 'phantomGanonsSword'];
 // Echoes of Wisdom: content from packs built alongside it (the River Zora), once installed.
 resolveEchoesFallbacks(ENEMIES, ROSTERS, COMMANDERS, TEMPLATES);
 
 /** Quest items (shared quest inventory). */
-export const QUEST_ITEMS: Record<string, { id: string; name: string; desc: string }> = Object.fromEntries([...MM_QUEST, ...WW_QUEST, ...TP_QUEST, ...SS_QUEST, ...WILD_QUEST, ...OH_QUEST, ...LG_QUEST, ...PH_QUEST, ...ST_QUEST, ...MC_QUEST, ...FS_QUEST, ...LB_QUEST, ...EO_QUEST].map((q) => [q.id, q]));
+export const QUEST_ITEMS: Record<string, { id: string; name: string; desc: string }> = Object.fromEntries([...MM_QUEST, ...WW_QUEST, ...TP_QUEST, ...SS_QUEST, ...WILD_QUEST, ...OH_QUEST, ...LG_QUEST, ...PH_QUEST, ...ST_QUEST, ...MC_QUEST, ...FS_QUEST, ...LB_QUEST, ...EO_QUEST, ...TF_QUEST].map((q) => [q.id, q]));
 
 // ───────── Safe lookups ─────────
 

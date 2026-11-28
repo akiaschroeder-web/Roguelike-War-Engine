@@ -282,6 +282,10 @@ p { margin: 8px 0; }
 .unit.micro .token { box-shadow: 0 0 0 1px #fff8, 0 1px 3px #000a; }
 .unit.micro.riding .token { box-shadow: 0 0 0 2px var(--gold), 0 1px 3px #000a; }
 .unit.micro .stun-mark, .unit.micro .vip-mark, .unit.micro .mount-mark { transform: scale(0.6); }
+/* Tri Force Heroes: Totem riders above their base; folded into the Totem art (only their HP bar shows). */
+.unit.tf-rider { z-index: 3; }
+.unit.tf-folded .u-body, .unit.tf-folded .stun-mark { visibility: hidden; }
+.unit.tf-folded .hpbar { width: 60%; }
 .unit.big .hpbar { height: 6px; width: 60%; }
 .unit.big .token { border-radius: 18%; }
 .unit.acted .token { filter: grayscale(0.85) brightness(0.65); }

@@ -38,5 +38,7 @@ import { CONVOS as ECHOES1 } from './convos/echoes1';
 import { CONVOS as ECHOES2 } from './convos/echoes2';
 import { CONVOS as ECHOES3 } from './convos/echoes3';
 import { CONVOS as ECHOES4 } from './convos/echoes4';
+import { CONVOS as TRIFORCE1 } from './convos/triforce1';
+import { CONVOS as TRIFORCE2 } from './convos/triforce2';
 
-export const WRITTEN: Record<string, ConvoSet> = { ...OOT, ...MM, ...WW, ...TP1, ...TP2, ...CROSS1, ...CROSS2, ...MONSTERS, ...SS1, ...SS2, ...SS3, ...SS4, ...WILD1, ...WILD2, ...WILD3, ...WILD4, ...ORIGINAL, ...AOL, ...LEGEND1, ...LEGEND2, ...PHANTOM1, ...PHANTOM2, ...SPIRIT1, ...SPIRIT2, ...SPIRIT3, ...MINISH1, ...MINISH2, ...MINISH3, ...FOURSWORDS1, ...FOURSWORDS2, ...FOURSWORDS3, ...LORULE1, ...LORULE2, ...LORULE3, ...ECHOES1, ...ECHOES2, ...ECHOES3, ...ECHOES4 };
+export const WRITTEN: Record<string, ConvoSet> = { ...OOT, ...MM, ...WW, ...TP1, ...TP2, ...CROSS1, ...CROSS2, ...MONSTERS, ...SS1, ...SS2, ...SS3, ...SS4, ...WILD1, ...WILD2, ...WILD3, ...WILD4, ...ORIGINAL, ...AOL, ...LEGEND1, ...LEGEND2, ...PHANTOM1, ...PHANTOM2, ...SPIRIT1, ...SPIRIT2, ...SPIRIT3, ...MINISH1, ...MINISH2, ...MINISH3, ...FOURSWORDS1, ...FOURSWORDS2, ...FOURSWORDS3, ...LORULE1, ...LORULE2, ...LORULE3, ...ECHOES1, ...ECHOES2, ...ECHOES3, ...ECHOES4, ...TRIFORCE1, ...TRIFORCE2 };

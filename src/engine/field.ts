@@ -17,6 +17,7 @@ import { decorateMinish, minishBattleStart } from './minish';
 import { decorateFourSwords, fourSwordsBattleStart } from './fourswords';
 import { decorateLorule, loruleBattleStart } from './lorule';
 import { decorateEchoes, echoesBattleStart } from './echoes';
+import { decorateTriforce, triforceBattleStart } from './triforce';
 import { GEAR, ITEMS } from '../data/registry';
 import type { Battle, Pos, Terrain, Unit, WorldId } from './types';
 
@@ -69,6 +70,9 @@ export function decorateField(b: Battle, rng: RNG, nodeType: string) {
   // Echoes of Wisdom: its battlefield spaces, Energy, Null's arms, Bori's bubble.
   decorateEchoes(b, rng);
   echoesBattleStart(b);
+  // Tri Force Heroes: its battlefield spaces, outfit stats, boss defences.
+  decorateTriforce(b, rng);
+  triforceBattleStart(b);
   // Fog of war
   b.fog = rng.chance(FOGGY[world] ?? 6);
   // Buried treasure

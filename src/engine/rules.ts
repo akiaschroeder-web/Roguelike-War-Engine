@@ -58,6 +58,8 @@ const SPECIAL = (open: number, water = INF, rough = 2, gap = INF) => ({
   stampStation: open, glowingEnergyOrb: open, riftCorruptionSource: open,
   eoTable: open, eoBox: rough, eoOldBed: open, eoSoftBed: open, eoZeldaBed: open, eoBoulder: INF, eoRock: open, eoPot: open, eoIceBlock: INF, eoTorch: open,
   eoFlyingTile: open, eoCloud: open, eoTrampoline: open, eoWindCannon: INF, eoSign: open, eoCarrot: open, eoMeat: open, eoFish: open,
+  // Tri Force Heroes (a Water Pillar stands in water too; the Triforce Gateway opens for three units)
+  elevatedSwitch: open, totemPlatform: open, triforceGateway: INF, gripshotTarget: INF, waterPillar: open, outfitPedestal: open,
 });
 export const MOVE_COSTS: Record<MoveType, Record<Terrain, number>> = {
   foot:    { plain: 1, forest: 2, mountain: 3, water: INF, wall: INF, fort: 1, lava: 2, ...SPECIAL(1) },
@@ -277,6 +279,9 @@ export const TERRAIN_BONUS: Record<Terrain, { avoid: number; def: number; heal: 
   eoIceBlock: { avoid: 0, def: 0, heal: 0 }, eoTorch: { avoid: 0, def: 0, heal: 0 }, eoFlyingTile: { avoid: 0, def: 0, heal: 0 }, eoCloud: { avoid: 10, def: 0, heal: 0 },
   eoTrampoline: { avoid: 0, def: 0, heal: 0 }, eoWindCannon: { avoid: 0, def: 0, heal: 0 }, eoSign: { avoid: 10, def: 1, heal: 0 },
   eoCarrot: { avoid: 0, def: 0, heal: 0 }, eoMeat: { avoid: 0, def: 0, heal: 0 }, eoFish: { avoid: 0, def: 0, heal: 0 },
+  // Tri Force Heroes
+  elevatedSwitch: { avoid: 0, def: 0, heal: 0 }, totemPlatform: { avoid: 5, def: 0, heal: 0 }, triforceGateway: { avoid: 0, def: 0, heal: 0 },
+  gripshotTarget: { avoid: 0, def: 0, heal: 0 }, waterPillar: { avoid: 5, def: 0, heal: 0 }, outfitPedestal: { avoid: 0, def: 0, heal: 0 },
 };
 
 /** Water-like spaces: swimmers move through them, others can't. */
@@ -533,6 +538,12 @@ export const SPECIAL_TERRAIN: Record<Exclude<Terrain, BaseTerrain>, { name: stri
   eoCarrot: { name: 'Carrot (Echo)', color: '#f09030' },
   eoMeat: { name: 'Meat (Echo)', color: '#c05040' },
   eoFish: { name: 'Grilled Fish (Echo)', color: '#d0a060' },
+  elevatedSwitch: { name: 'Elevated Switch', color: '#e0b84a' },
+  totemPlatform: { name: 'Totem Platform', color: '#b08a5a' },
+  triforceGateway: { name: 'Triforce Gateway', color: '#f0d050' },
+  gripshotTarget: { name: 'Gripshot Target', color: '#8a8a9a' },
+  waterPillar: { name: 'Water Pillar', color: '#6ab0f0' },
+  outfitPedestal: { name: 'Outfit Pedestal', color: '#e08ac8' },
 };
 
 /** Lava damage at the start of a unit's turn (as % of max HP). */

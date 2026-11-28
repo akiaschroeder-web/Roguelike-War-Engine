@@ -11,6 +11,7 @@ import { MN_FREE_ITEMS, mnOnBlast, useMinishItem } from './minish';
 import { fsAdjustItem, fsCanUseItem, fsOnBlast, useFourSwordsItem } from './fourswords';
 import { lrOnBlast, useLoruleItem } from './lorule';
 import { EO_FREE_ITEMS, eoHealItemMult, eoOnBlast, useEchoesItem } from './echoes';
+import { tfAdjustItem, tfCanUseItem, tfHealItemMult, useTriforceItem } from './triforce';
 import { ITEMS, TEMPLATES } from '../data/registry';
 import { useFairy, type LevelUp } from './combat';
 import { footDist, inBounds, tilesInRange } from './grid';
@@ -84,6 +85,8 @@ export function canUseHere(b: Battle, u: Unit, index: number): boolean {
   if (og !== undefined) return og;
   const fsu = fsCanUseItem(b, u, def.id);
   if (fsu !== undefined) return fsu;
+  const tfu = tfCanUseItem(b, u, def.id);
+  if (tfu !== undefined) return tfu;
   if (isTargeted(def)) return targetTiles(b, u, def).length > 0;
   return true;
 }
@@ -141,14 +144,14 @@ function consume(u: Unit, index: number) {
 export function useItem(b: Battle, u: Unit, index: number, rng: RNG, at?: Pos): ItemResult | null {
   const slot = u.pack[index];
   // The Bombardier's Military Explosives: bigger, wider bombs.
-  const def = slot && fsAdjustItem(u, ITEMS[slot.id]);
+  const def = slot && fsAdjustItem(u, tfAdjustItem(u, ITEMS[slot.id]));
   if (!def || !canUseHere(b, u, index)) return null;
   if (isTargeted(def) && (!at || !inBounds(b, at.x, at.y) || !targetTiles(b, u, def).some((t) => t.x === at.x && t.y === at.y))) return null;
 
   const res: ItemResult = { item: def, heals: [], hits: [], stunned: [], statuses: [], lines: [], levelUps: [] };
   let xp = 0;
   if (def.kind === 'heal' || def.kind === 'fullHeal') {
-    const amount = Math.min(def.kind === 'fullHeal' ? u.stats.hp : Math.ceil(def.power * ogHealItemMult(b, u) * lgHealItemMult(b, u) * phHealItemMult(b, u) * eoHealItemMult(b, u)), u.stats.hp - u.hp);
+    const amount = Math.min(def.kind === 'fullHeal' ? u.stats.hp : Math.ceil(def.power * ogHealItemMult(b, u) * lgHealItemMult(b, u) * phHealItemMult(b, u) * eoHealItemMult(b, u) * tfHealItemMult(b, u)), u.stats.hp - u.hp);
     u.hp += amount;
     if (def.kind === 'fullHeal') u.mp = u.stats.mp;
     res.heals.push({ uid: u.uid, amount });
@@ -282,6 +285,8 @@ function useSpecial(b: Battle, u: Unit, def: ItemDef, rng: RNG, res: ItemResult,
   if (fsLine !== null) { res.lines.push(fsLine); return; }
   const lbLine = useLoruleItem(b, u, def.id);
   if (lbLine !== null) { res.lines.push(lbLine); return; }
+  const tfLine = useTriforceItem(b, u, def.id);
+  if (tfLine !== null) { res.lines.push(tfLine); return; }
   const mnLine = useMinishItem(b, u, def.id, at);
   if (mnLine !== null) { res.lines.push(mnLine); if (MN_FREE_ITEMS.has(def.id)) res.free = true; return; }
   const eoLine = useEchoesItem(b, u, def.id, at);

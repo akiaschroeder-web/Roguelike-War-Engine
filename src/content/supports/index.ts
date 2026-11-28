@@ -13,12 +13,13 @@ import { SUPPORT_REGISTRY_MINISH } from './registryMinish';
 import { SUPPORT_REGISTRY_FOURSWORDS } from './registryFourSwords';
 import { SUPPORT_REGISTRY_LORULE } from './registryLorule';
 import { SUPPORT_REGISTRY_ECHOES } from './registryEchoes';
+import { SUPPORT_REGISTRY_TRIFORCE } from './registryTriforce';
 import { CONVOS as EXAMPLES } from './convos/examples';
 import { WRITTEN } from './written';
 
 export type { SupportPairDef };
 /** Every registered pairing, all packs. */
-export const SUPPORT_REGISTRY: SupportPairDef[] = [...BASE_REGISTRY, ...SUPPORT_REGISTRY_SS, ...SUPPORT_REGISTRY_WILD, ...SUPPORT_REGISTRY_ORIGINAL, ...SUPPORT_REGISTRY_AOL, ...SUPPORT_REGISTRY_LEGEND, ...SUPPORT_REGISTRY_PHANTOM, ...SUPPORT_REGISTRY_SPIRIT, ...SUPPORT_REGISTRY_MINISH, ...SUPPORT_REGISTRY_FOURSWORDS, ...SUPPORT_REGISTRY_LORULE, ...SUPPORT_REGISTRY_ECHOES];
+export const SUPPORT_REGISTRY: SupportPairDef[] = [...BASE_REGISTRY, ...SUPPORT_REGISTRY_SS, ...SUPPORT_REGISTRY_WILD, ...SUPPORT_REGISTRY_ORIGINAL, ...SUPPORT_REGISTRY_AOL, ...SUPPORT_REGISTRY_LEGEND, ...SUPPORT_REGISTRY_PHANTOM, ...SUPPORT_REGISTRY_SPIRIT, ...SUPPORT_REGISTRY_MINISH, ...SUPPORT_REGISTRY_FOURSWORDS, ...SUPPORT_REGISTRY_LORULE, ...SUPPORT_REGISTRY_ECHOES, ...SUPPORT_REGISTRY_TRIFORCE];
 
 export type SupportLine = ['a' | 'b' | 'n', string];
 export type SupportRankKey = 'C' | 'B' | 'A' | 'S';
@@ -197,6 +198,11 @@ export const GROUP_SUPPORTS: GroupSupport[] = [
   { id: 'clockworkArmy', name: 'Clockwork Army', members: ['techtite', 'tocktorok', 'gizmol', 'highTekuBaba', 'roboblin', 'goldfinch'], text: 'Automatons spend 25% less Wind-Up Energy.' },
   { id: 'unitedWatersEoW', name: 'United Waters', members: ['dradd', 'kushara', 'oren'], text: 'Better aquatic stats for both Zora races: aquatic allies +2 DEF, RES and SPD.' },
   { id: 'falseCreation', name: 'False Creation', members: ['nullEoW', 'tekom', 'shadowLink'], text: 'Stronger temporary summons: allied Echoes +3 STR and MAG.' },
+  // Tri Force Heroes (docs/triforce-heroes-pack.md section 9)
+  { id: 'triForceHeroes', name: 'Tri Force Heroes', members: ['linkALBW', 'blueHero', 'redHero'], text: '+3 STR, SKL and SPD while all three are within 4 of one another.' },
+  { id: 'hytopianFashion', name: 'Hytopian Fashion', members: ['styla', 'kingTuft', 'madameCouture'], text: 'Outfit crafting costs 25% less (Rupees and materials) while all three are in the army.' },
+  { id: 'multicoloredCourage', name: 'Multicolored Courage', members: ['linkALBW', 'blueHero', 'redHero', 'greenLink', 'redLink', 'blueLink', 'purpleLink'], text: 'Cooperative commands (Totem actions) cost 25% less CP.' },
+  { id: 'mastersOfTransformation', name: 'Masters of Transformation', members: ['ladyMaud', 'yuga', 'veran'], text: 'Negative magical transformations they inflict (Fashion Curse, Grand Curse, curses) last 1 turn longer.' },
   { id: 'demonKings', name: 'The Demon Kings', members: ['demise', 'ganondorf', 'ganondorfWW', 'ganondorfTP', 'ganondorfWild'], text: 'Dark damage +25%.' },
 ];
 

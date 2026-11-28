@@ -180,7 +180,9 @@ export type Terrain = BaseTerrain | 'cracked' | 'timeBlock' | 'timeGap' | 'bridg
   | 'unstableRift' | 'riftBoundary' | 'rotatedTerrain' | 'triFriend' | 'echoLearningPoint' | 'bindHandle' | 'verticalWaterColumn'
   | 'stampStation' | 'glowingEnergyOrb' | 'riftCorruptionSource'
   | 'eoTable' | 'eoBox' | 'eoOldBed' | 'eoSoftBed' | 'eoZeldaBed' | 'eoBoulder' | 'eoRock' | 'eoPot' | 'eoIceBlock' | 'eoTorch' | 'eoFlyingTile' | 'eoCloud'
-  | 'eoTrampoline' | 'eoWindCannon' | 'eoSign' | 'eoCarrot' | 'eoMeat' | 'eoFish';
+  | 'eoTrampoline' | 'eoWindCannon' | 'eoSign' | 'eoCarrot' | 'eoMeat' | 'eoFish'
+  // Tri Force Heroes battlefield spaces (engine/triforce.ts)
+  | 'elevatedSwitch' | 'totemPlatform' | 'triforceGateway' | 'gripshotTarget' | 'waterPillar' | 'outfitPedestal';
 
 export type Team = 'player' | 'enemy';
 
@@ -403,6 +405,8 @@ export interface WeaponDef {
   fs?: string[];
   /** A Link Between Worlds and River Zora effects handled by engine/lorule.ts (painting, wind, Nice upgrades…). */
   lb?: string[];
+  /** Tri Force Heroes effects handled by engine/triforce.ts (the Water Rod, the Parasol, spectral and vertical reach). */
+  tf?: string[];
 }
 
 /** Era of the Wild weapon effects (section 13). */
@@ -473,6 +477,8 @@ export interface GearDef {
   fs?: string[];
   /** A Link Between Worlds and River Zora effects (Ravio's Bracelet, Hint Glasses…) handled by engine/lorule.ts. */
   lb?: string[];
+  /** Tri Force Heroes effects handled by engine/triforce.ts (the 34 outfits). */
+  tf?: string[];
 }
 
 export type GearEffect =
@@ -658,7 +664,7 @@ export interface WorldDef {
   terrainNames: Record<BaseTerrain, string>;
   terrainColors: Record<BaseTerrain, string>;
   /** Regions of the Termina campaign (with the three-day cycle). */
-  campaign?: 'termina' | 'greatSea' | 'twilight' | 'skyward' | 'wild' | 'original' | 'legend' | 'phantom' | 'spirit' | 'minish' | 'fourswords' | 'lorule' | 'echoes';
+  campaign?: 'termina' | 'greatSea' | 'twilight' | 'skyward' | 'wild' | 'original' | 'legend' | 'phantom' | 'spirit' | 'minish' | 'fourswords' | 'lorule' | 'echoes' | 'triforce';
   /** Era of the Wild: which layer of the three-layer map. */
   layer?: 'surface' | 'sky' | 'depths';
   /** Battles here are fought at sea (vessels, wind, islands). */
@@ -778,7 +784,7 @@ export interface CommanderDef {
   bonus: CommanderBonus;
   bonusText: string;
   /** Campaign this commander starts in by default. */
-  campaign?: 'termina' | 'greatSea' | 'twilight' | 'skyward' | 'wild' | 'original' | 'legend' | 'phantom' | 'spirit' | 'minish' | 'fourswords' | 'lorule' | 'echoes';
+  campaign?: 'termina' | 'greatSea' | 'twilight' | 'skyward' | 'wild' | 'original' | 'legend' | 'phantom' | 'spirit' | 'minish' | 'fourswords' | 'lorule' | 'echoes' | 'triforce';
   /** Weapons, gear and items handed out to the army at the start (commander first). */
   startingItems?: string[];
 }
@@ -806,7 +812,9 @@ export type CommanderBonus = 'extraTreasure' | 'healing' | 'forging' | 'postBatt
   // A Link Between Worlds
   | 'betweenWorldsLB' | 'sacredLightLB' | 'loruleGuard' | 'rentalDiscount' | 'livingPortraitLB' | 'riverQueenLB' | 'veteranTechniques' | 'demonKingsMonsters'
   // Echoes of Wisdom
-  | 'echoCapacity' | 'riftHunter' | 'formationCommand' | 'clockworkArmy' | 'goronObstacles' | 'desertMarch' | 'riverZoraMight' | 'aquaticHealing' | 'falseEchoes' | 'voidReflection';
+  | 'echoCapacity' | 'riftHunter' | 'formationCommand' | 'clockworkArmy' | 'goronObstacles' | 'desertMarch' | 'riverZoraMight' | 'aquaticHealing' | 'falseEchoes' | 'voidReflection'
+  // Tri Force Heroes
+  | 'triforceHeroes' | 'hytopianCrafting' | 'fashionTyranny';
 
 export type SkillId = string;
 
@@ -1082,7 +1090,7 @@ export interface RunMap {
 }
 
 /** A campaign the World Tour can visit. */
-export type TourCampaign = 'hyrule' | 'termina' | 'greatSea' | 'twilight' | 'skyward' | 'wild' | 'original' | 'legend' | 'phantom' | 'spirit' | 'minish' | 'fourswords' | 'lorule' | 'echoes';
+export type TourCampaign = 'hyrule' | 'termina' | 'greatSea' | 'twilight' | 'skyward' | 'wild' | 'original' | 'legend' | 'phantom' | 'spirit' | 'minish' | 'fourswords' | 'lorule' | 'echoes' | 'triforce';
 
 export interface Run {
   seed: number;
@@ -1115,7 +1123,7 @@ export interface Run {
   /** Army-wide stats and resources. */
   army?: Army;
   /** Which campaign: the endless Hyrule war, Termina with its three-day cycle, or the Great Sea. */
-  campaign?: 'hyrule' | 'termina' | 'greatSea' | 'twilight' | 'skyward' | 'wild' | 'original' | 'legend' | 'phantom' | 'spirit' | 'minish' | 'fourswords' | 'lorule' | 'echoes' | 'random' | 'worldTour';
+  campaign?: 'hyrule' | 'termina' | 'greatSea' | 'twilight' | 'skyward' | 'wild' | 'original' | 'legend' | 'phantom' | 'spirit' | 'minish' | 'fourswords' | 'lorule' | 'echoes' | 'triforce' | 'random' | 'worldTour';
   /** Great Sea: the naval campaign's state. */
   sea?: SeaState;
   /** Termina: hours passed in the current three-day cycle (0-71) and resets so far. */
@@ -1213,7 +1221,9 @@ export type EventEffect =
   /** A Link Between Worlds (engine/loruleRun.ts): rentals, Maiamai, Master Ore, Sage paintings, Yuga's fusion, the River Zora. */
   | { kind: 'lorule'; op: string; id?: string; amount?: number }
   /** Echoes of Wisdom (engine/echoesRun.ts): Echo learning, Might Crystals, stamps, smoothies, Tri's friends. */
-  | { kind: 'echoes'; op: string; id?: string; amount?: number };
+  | { kind: 'echoes'; op: string; id?: string; amount?: number }
+  /** Tri Force Heroes (engine/triforceRun.ts): materials, Doppel Dolls, Totem drill, the fashion show. */
+  | { kind: 'triforce'; op: string; id?: string; amount?: number };
 
 /** Conditions for an event or a single choice. */
 export interface EventRequires {

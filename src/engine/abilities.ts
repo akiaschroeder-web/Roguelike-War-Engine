@@ -13,6 +13,7 @@ import { castPhantom, PH_ENEMY_CASTS, phCostMult, phNeedsTarget, phNeedsTile, ph
 import { castMicro, mcNeedsTarget, mcNeedsTile, mcTargets, mcTiles, mcUnusable, microEnemyStompTarget, microSheltered } from './micro';
 import { castMinish, MN_ENEMY_CASTS, mnCostMult, mnUnusable } from './minish';
 import { castFourSwords, fsCostMult, fsEnemyCast, fsNeedsTarget, fsNeedsTile, fsTargets, fsTiles, fsUnusable } from './fourswords';
+import { castTriforce, tfEnemyCast, tfNeedsTarget, tfNeedsTile, tfTargets, tfTiles, tfUnusable } from './triforce';
 import { castLorule, LR_ENEMY_CASTS, lrCostMult, lrNeedsTarget, lrNeedsTile, lrTargets, lrTiles, lrUnusable } from './lorule';
 import { castEchoes, EO_ENEMY_CASTS, eoCostMult, eoNeedsTarget, eoNeedsTile, eoTargets, eoTiles, eoUnusable } from './echoes';
 import { castSpirit, SP_ENEMY_CASTS, spCostMult, spNeedsTarget, spNeedsTile, spTargets, spTiles, spUnusable } from './spirit';
@@ -121,6 +122,8 @@ export function unusableReason(b: Battle, u: Unit, def: AbilityDef): string | nu
   if (fsr) return fsr;
   const eor = eoUnusable(b, u, def);
   if (eor) return eor;
+  const tfr = tfUnusable(b, u, def);
+  if (tfr) return tfr;
   if (def.perTurn && !def.wild && u.turnUses?.[`pt:${def.id}`] === b.turn) return 'Already used this turn';
   if (def.sta ? u.sta < abilityCost(u, def, b) : u.mp < abilityCost(u, def, b)) return def.sta ? 'Not enough stamina' : 'Not enough MP';
   const tr = terminaUnusable(b, u, def);
@@ -165,7 +168,7 @@ export function castableAbilities(b: Battle, u: Unit): AbilityDef[] {
 }
 
 export function needsTile(def: AbilityDef): boolean {
-  return !!def.warp || wwNeedsTile(def) || tpNeedsTile(def) || ssNeedsTile(def) || wildNeedsTile(def) || ogNeedsTile(def) || lgNeedsTile(def) || phNeedsTile(def) || spNeedsTile(def) || mcNeedsTile(def) || fsNeedsTile(def) || lrNeedsTile(def) || eoNeedsTile(def) || def.id === 'hookshotPull' || def.id === 'buildHere' || def.id === 'transportAlly';
+  return !!def.warp || wwNeedsTile(def) || tpNeedsTile(def) || ssNeedsTile(def) || wildNeedsTile(def) || ogNeedsTile(def) || lgNeedsTile(def) || phNeedsTile(def) || spNeedsTile(def) || mcNeedsTile(def) || fsNeedsTile(def) || lrNeedsTile(def) || eoNeedsTile(def) || tfNeedsTile(def) || def.id === 'hookshotPull' || def.id === 'buildHere' || def.id === 'transportAlly';
 }
 
 /** Destination tiles for tile-targeted abilities (warps, Hookshot, Build, Transport). */
@@ -185,6 +188,7 @@ export function abilityTiles(b: Battle, u: Unit, def: AbilityDef): Pos[] {
   if (fsNeedsTile(def)) return fsTiles(b, u, def);
   if (lrNeedsTile(def)) return lrTiles(b, u, def);
   if (eoNeedsTile(def)) return eoTiles(b, u, def);
+  if (tfNeedsTile(def)) return tfTiles(b, u, def);
   if (def.id === 'transportAlly') {
     const t = transportee(b, u);
     if (!t) return [];
@@ -247,6 +251,7 @@ function rawAbilityTargets(b: Battle, u: Unit, def: AbilityDef): Unit[] {
   if (fsNeedsTarget(def)) return fsTargets(b, u, def);
   if (lrNeedsTarget(def)) return lrTargets(b, u, def);
   if (eoNeedsTarget(def)) return eoTargets(b, u, def);
+  if (tfNeedsTarget(def)) return tfTargets(b, u, def);
   if (def.id === 'masterCraftsman') {
     return b.units.filter((a) => a.team === u.team && unitDist(u, a) <= 1 && a.weapons.some((w) => (a.wear?.[w] ?? 0) > 0));
   }
@@ -257,7 +262,7 @@ function rawAbilityTargets(b: Battle, u: Unit, def: AbilityDef): Unit[] {
 }
 
 export function needsTarget(def: AbilityDef): boolean {
-  if (terminaNeedsTarget(def) || wwNeedsTarget(def) || tpNeedsTarget(def) || ssNeedsTarget(def) || wildNeedsTarget(def) || ogNeedsTarget(def) || lgNeedsTarget(def) || phNeedsTarget(def) || spNeedsTarget(def) || mcNeedsTarget(def) || fsNeedsTarget(def) || lrNeedsTarget(def) || eoNeedsTarget(def)) return true;
+  if (terminaNeedsTarget(def) || wwNeedsTarget(def) || tpNeedsTarget(def) || ssNeedsTarget(def) || wildNeedsTarget(def) || ogNeedsTarget(def) || lgNeedsTarget(def) || phNeedsTarget(def) || spNeedsTarget(def) || mcNeedsTarget(def) || fsNeedsTarget(def) || lrNeedsTarget(def) || eoNeedsTarget(def) || tfNeedsTarget(def)) return true;
   return def.id === 'greatFairysBlessing' || def.id === 'masterCraftsman';
 }
 
@@ -486,7 +491,7 @@ export function castAbility(b: Battle, u: Unit, id: string, rng: RNG, targetUid?
     default:
       if (!def.warp) {
         const tm0 = castEchoes(b, u, def, rng, target, at);
-        const tm = tm0 ?? castMicro(b, u, def, rng, target, at) ?? castLorule(b, u, def, rng, target, at) ?? castMinish(b, u, def, rng, target, at) ?? castFourSwords(b, u, def, rng, target, at) ?? castSpirit(b, u, def, rng, target, at) ?? castPhantom(b, u, def, rng, target, at) ?? castWild(b, u, def, rng, target, at) ?? castSkyward(b, u, def, rng, target, at) ?? castOriginal(b, u, def, rng, target, at) ?? castLegend(b, u, def, rng, target, at) ?? castTwilight(b, u, def, rng, target, at) ?? castWindWaker(b, u, def, rng, target, at) ?? castTermina(b, u, def, rng, target, at);
+        const tm = tm0 ?? castMicro(b, u, def, rng, target, at) ?? castLorule(b, u, def, rng, target, at) ?? castTriforce(b, u, def, rng, target, at) ?? castMinish(b, u, def, rng, target, at) ?? castFourSwords(b, u, def, rng, target, at) ?? castSpirit(b, u, def, rng, target, at) ?? castPhantom(b, u, def, rng, target, at) ?? castWild(b, u, def, rng, target, at) ?? castSkyward(b, u, def, rng, target, at) ?? castOriginal(b, u, def, rng, target, at) ?? castLegend(b, u, def, rng, target, at) ?? castTwilight(b, u, def, rng, target, at) ?? castWindWaker(b, u, def, rng, target, at) ?? castTermina(b, u, def, rng, target, at);
         if (!tm) return null;
         res.hits.push(...tm.hits);
         res.heals.push(...tm.heals);
@@ -543,6 +548,9 @@ export function enemyAutoTransform(b: Battle, u: Unit, rng: RNG): AbilityResult 
   // Four Swords bosses and Shadow Link aim their abilities.
   const fsr = fsEnemyCast(b, u, (d) => !unusableReason(b, u, d), (id, t, at) => castAbility(b, u, id, rng, t, at), ABILITIES);
   if (fsr) return fsr;
+  // Tri Force Heroes bosses and Lady Maud aim theirs.
+  const tfe = tfEnemyCast(b, u, (d) => !unusableReason(b, u, d), (id, t, at) => castAbility(b, u, id, rng, t, at), ABILITIES);
+  if (tfe) return tfe;
   // A larger unit with an enemy Micro unit underfoot tries to crush it (Stomp).
   const squash = microEnemyStompTarget(b, u);
   if (squash) return castAbility(b, u, 'mcStomp', rng, squash.uid);

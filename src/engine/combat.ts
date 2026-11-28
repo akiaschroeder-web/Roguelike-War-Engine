@@ -19,8 +19,9 @@ import { fsAfterHit, fsMods, fsMultiplier, fsOnKill } from './fourswords';
 import { eoAfterHit, eoCannotAttack, eoMods, eoMultiplier, eoOnKill } from './echoes';
 import { spAfterCombat, spAfterHit, spCannotAttack, spHealMult, spInterceptor, spMods, spMultiplier, spOnKill, spSaveFromDeath } from './spirit';
 import { lrAfterCombat, lrAfterHit, lrCannotAttack, lrInterceptor, lrMods, lrMultiplier, lrOnKill, lrSaveFromDeath } from './lorule';
+import { tfAfterCombat, tfAfterHit, tfCannotAttack, tfHealMult, tfMods, tfMultiplier, tfOnKill, tfRangeBonus, tfSaveFromDeath } from './triforce';
 
-const rangeBonus = (u: Unit, w: WeaponDef) => wwRangeBonus(u, w) + tpRangeBonus(u, w) + ssRangeBonus(u, w) + wildRangeBonus(u, w) + ogRangeBonus(u, w) + lgRangeBonus(u, w) + phRangeBonus(u, w);
+const rangeBonus = (u: Unit, w: WeaponDef) => wwRangeBonus(u, w) + tpRangeBonus(u, w) + ssRangeBonus(u, w) + wildRangeBonus(u, w) + ogRangeBonus(u, w) + lgRangeBonus(u, w) + phRangeBonus(u, w) + tfRangeBonus(u, w);
 import { cannonsDown, isVessel, vesselMods } from './naval';
 import type { RNG } from './rng';
 import { isMagical, TERRAIN_BONUS, TRIANGLE } from './rules';
@@ -233,6 +234,9 @@ export function situational(b: Battle, u: Unit, pos: Pos, foe: Unit, initiating:
   mn.hit += mc.hit; mn.avoid += mc.avoid; mn.def += mc.def; mn.skl += mc.skl;
   const lr = lrMods(b, u, pos, foe, initiating, WEAPONS[u.weapons[0]]);
   for (const k of ['str', 'mag', 'skl', 'spd', 'def', 'res', 'hit', 'avoid', 'crit', 'dmg'] as const) mn[k] += lr[k];
+  // Tri Force Heroes: the heroes, Totems, outfits and Hytopians.
+  const tfm = tfMods(b, u, pos, foe, initiating, WEAPONS[u.weapons[0]]);
+  for (const k of ['str', 'mag', 'skl', 'spd', 'def', 'res', 'hit', 'avoid', 'crit', 'dmg'] as const) mn[k] += tfm[k];
   for (const k of ['str', 'mag', 'skl', 'spd', 'def', 'res', 'hit', 'avoid', 'crit', 'dmg'] as const) ww[k] += tp[k] + ss[k] + wd[k] + og[k] + lg[k] + ph[k] + sp[k] + mn[k];
   // Echoes of Wisdom: formations, desert and river commanders, platforms, groups.
   const eo = eoMods(b, u, pos, foe, initiating, WEAPONS[u.weapons[0]]);
@@ -255,7 +259,7 @@ function sideStats(
   const d = unitDist({ ...atk, ...atkPos }, { ...def, ...defPos });
   const helpless = !initiating && isHelpless(atk);
   const beaming = !!weapon?.beam && d > 1;
-  if (!weapon || weapon.type === 'staff' || weapon.type === 'instrument' || !canReach(weapon, d, atk) || helpless || (beaming && atk.mp < weapon.beam!) || tpCannotAttack(atk, weapon) || ssCannotAttack(b, atk, weapon, initiating) || wildCannotAttack(b, atk, weapon, initiating, def, foeWeapon) || ogCannotAttack(atk) || lgCannotAttack(atk, def, d) || phCannotAttack(b, atk, def, d, initiating) || spCannotAttack(atk, weapon) || mnCannotAttack(b, atk, def, weapon) || lrCannotAttack(b, atk, def, weapon, d)) {
+  if (!weapon || weapon.type === 'staff' || weapon.type === 'instrument' || !canReach(weapon, d, atk) || helpless || (beaming && atk.mp < weapon.beam!) || tpCannotAttack(atk, weapon) || ssCannotAttack(b, atk, weapon, initiating) || wildCannotAttack(b, atk, weapon, initiating, def, foeWeapon) || ogCannotAttack(atk) || lgCannotAttack(atk, def, d) || phCannotAttack(b, atk, def, d, initiating) || spCannotAttack(atk, weapon) || mnCannotAttack(b, atk, def, weapon) || lrCannotAttack(b, atk, def, weapon, d) || tfCannotAttack(b, atk, def, weapon, d)) {
     return { uid: atk.uid, weaponId: weapon?.id ?? null, canAttack: false, dmg: 0, hit: 0, crit: 0, attacks: 0, triangle: 0, effective: false, block: 0, arrowId: null };
   }
   if (eoCannotAttack(b, atk, weapon)) return { uid: atk.uid, weaponId: weapon.id, canAttack: false, dmg: 0, hit: 0, crit: 0, attacks: 0, triangle: 0, effective: false, block: 0, arrowId: null };
@@ -311,6 +315,7 @@ function sideStats(
   dmg = Math.floor(dmg * fsMultiplier(b, atk, atkPos, def, magical, weapon, d, element));
   dmg = Math.floor(dmg * lrMultiplier(b, atk, atkPos, def, magical, weapon, d, element));
   dmg = Math.floor(dmg * eoMultiplier(b, atk, def, magical, weapon, element));
+  dmg = Math.floor(dmg * tfMultiplier(b, atk, atkPos, def, magical, weapon, d, element));
   // Micro vs Normal: 25% unless a weak point is open.
   dmg = Math.floor(dmg * mcMultiplier(b, atk, def, weapon));
   if (adj.finish) dmg = Math.max(dmg, def.hp);
@@ -532,7 +537,7 @@ export function resolveCombat(b: Battle, attacker: Unit, defender: Unit, rng: RN
       const line = tpSaveFromDeath(b, target);
       if (line) { dmg = target.hp - 1; saved = 'triforce'; b.log.push(line); }
       else {
-        const ws = wildSaveFromDeath(b, target, by) ?? ogSaveFromDeath(target) ?? lgSaveFromDeath(b, target) ?? spSaveFromDeath(b, target) ?? mnSaveFromDeath(b, target) ?? lrSaveFromDeath(b, target);
+        const ws = wildSaveFromDeath(b, target, by) ?? ogSaveFromDeath(target) ?? lgSaveFromDeath(b, target) ?? spSaveFromDeath(b, target) ?? mnSaveFromDeath(b, target) ?? lrSaveFromDeath(b, target) ?? tfSaveFromDeath(b, target);
         if (ws) { dmg = target.hp - 1; saved = 'triforce'; graceHeal = ws.heal; b.log.push(ws.line); }
       }
     }
@@ -574,6 +579,7 @@ export function resolveCombat(b: Battle, attacker: Unit, defender: Unit, rng: RN
     if (hit) fsAfterHit(b, by, target, dmg, weaponDef(side.weaponId), side.element);
     if (hit) lrAfterHit(b, by, target, dmg, weaponDef(side.weaponId), side.element);
     if (hit) eoAfterHit(b, by, target, dmg, weaponDef(side.weaponId), side.element);
+    if (hit) tfAfterHit(b, by, target, dmg, weaponDef(side.weaponId), side.element);
     if (killed) {
       by.kills++;
       deaths.push(target.uid);
@@ -590,6 +596,7 @@ export function resolveCombat(b: Battle, attacker: Unit, defender: Unit, rng: RN
       fsOnKill(b, by, target);
       lrOnKill(b, by, target, rng);
       eoOnKill(b, by, target);
+      tfOnKill(b, by, target);
       killUnit(b, target);
       onKillEffects(b, by, weaponDef(side.weaponId));
       break;
@@ -652,7 +659,7 @@ export function resolveCombat(b: Battle, attacker: Unit, defender: Unit, rng: RN
     }
   }
   const landed2 = { atk: strikes.filter((s) => s.by === attacker.uid && !s.splash).reduce((n, s) => n + s.dmg, 0), def: strikes.filter((s) => s.by === defender.uid && !s.splash).reduce((n, s) => n + s.dmg, 0) };
-  for (const x of [...wwAfterCombat(b, attacker, defender), ...tpAfterCombat(b, attacker, defender), ...ssAfterCombat(b, attacker, defender, fc.attacker.arrowId, landed2), ...wildAfterCombat(b, attacker, defender, fc.attacker.arrowId, landed2), ...ogAfterCombat(b, attacker, defender, fc.attacker.arrowId, landed2), ...lgAfterCombat(b, attacker, defender, landed2, rng), ...phAfterCombat(b, attacker, defender, landed2), ...spAfterCombat(b, attacker, defender, landed2), ...mnAfterCombat(b, attacker, defender, landed2), ...lrAfterCombat(b, attacker, defender, landed2)]) {
+  for (const x of [...wwAfterCombat(b, attacker, defender), ...tpAfterCombat(b, attacker, defender), ...ssAfterCombat(b, attacker, defender, fc.attacker.arrowId, landed2), ...wildAfterCombat(b, attacker, defender, fc.attacker.arrowId, landed2), ...ogAfterCombat(b, attacker, defender, fc.attacker.arrowId, landed2), ...lgAfterCombat(b, attacker, defender, landed2, rng), ...phAfterCombat(b, attacker, defender, landed2), ...spAfterCombat(b, attacker, defender, landed2), ...mnAfterCombat(b, attacker, defender, landed2), ...lrAfterCombat(b, attacker, defender, landed2), ...tfAfterCombat(b, attacker, defender, landed2)]) {
     strikes.push({ by: x.by, target: x.uid, hit: true, crit: false, dmg: x.dmg, heal: 0, targetHp: x.hp, byHp: 0, killed: x.killed, blocked: false, splash: true });
     if (x.killed && !deaths.includes(x.uid)) deaths.push(x.uid);
   }
@@ -691,7 +698,7 @@ export function resolveHeal(b: Battle, healer: Unit, target: Unit, rng: RNG, sta
   const groups = b.groupSupports ?? [];
   const boost = (hasEffect(target, 'healBoost') ? 1.25 : 1) * (groups.includes('guardiansOfTheWorld') && target.team === 'player' ? 1.2 : 1)
     * (groups.includes('outsetFamily') && ['heroOfWinds', 'aryll', 'grandma'].includes(target.templateId ?? '') ? 1.25 : 1)
-    * (groups.includes('voicesOfTheSea') && ['ruto', 'lulu', 'medli'].includes(healer.templateId ?? '') ? 1.25 : 1) * wildHealMult(b, healer, target) * spHealMult(b, healer);
+    * (groups.includes('voicesOfTheSea') && ['ruto', 'lulu', 'medli'].includes(healer.templateId ?? '') ? 1.25 : 1) * wildHealMult(b, healer, target) * spHealMult(b, healer) * tfHealMult(b, healer);
   const amount = staff ? Math.min(Math.round(healAmount(b, healer, staff) * gentle * boost), target.stats.hp - target.hp) : 0;
   target.hp += amount;
   if (amount > 0 && hasEffect(target, 'healStamina')) target.sta = Math.min(target.stats.sta, target.sta + Math.ceil(amount / 3));

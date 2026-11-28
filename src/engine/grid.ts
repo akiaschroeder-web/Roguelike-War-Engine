@@ -11,6 +11,7 @@ import { mnTileCost } from './minish';
 import { fsTileCost } from './fourswords';
 import { lrTileCost } from './lorule';
 import { eoTileCost } from './echoes';
+import { tfTileCost } from './triforce';
 import { INF, MOVE_COSTS } from './rules';
 import { canSwim, effectiveStats, hasEffect, isMounted, moveTypeOf, unitTags } from './units';
 import { windFactor } from './naval';
@@ -39,7 +40,7 @@ export function footprint(x: number, y: number, size: number): Pos[] {
 /** The normal-sized unit on a tile. Micro units (engine/micro.ts) share tiles and never block, so they are not
  *  returned: use micro.ts unitsAt / microAt for them. */
 export function unitAt(b: Battle, x: number, y: number): Unit | undefined {
-  return b.units.find((u) => !u.micro && x >= u.x && y >= u.y && x < u.x + u.size && y < u.y + u.size);
+  return b.units.find((u) => !u.micro && !u.tfStack && x >= u.x && y >= u.y && x < u.x + u.size && y < u.y + u.size);
 }
 
 /** Gap distance between two footprints (1 = adjacent, 0 = overlapping). */
@@ -53,7 +54,7 @@ export function footDist(ax: number, ay: number, as: number, bx: number, by: num
 export function unitDist(a: Unit, b: Unit, aPos: Pos = a): number {
   const d = footDist(aPos.x, aPos.y, a.size, b.x, b.y, b.size);
   // A Micro unit sharing a space with another unit is next to it (it can strike, be struck, ride or infiltrate).
-  return d === 0 && (a.micro || b.micro) && a.uid !== b.uid ? 1 : d;
+  return d === 0 && (a.micro || b.micro || !!a.tfStack || !!b.tfStack) && a.uid !== b.uid ? 1 : d;
 }
 
 /** Movement cost of a single tile for a unit, including racial traits. */
@@ -105,6 +106,8 @@ export function tileCost(b: Battle, unit: Unit, t: Terrain): number {
   c = lrTileCost(b, unit, t, c);
   // Echoes of Wisdom: climbing gear, the Frog Ring, Ice Spikes, wall-crawlers, Echoes crossing Rift Boundaries
   c = eoTileCost(b, unit, t, c);
+  // Tri Force Heroes: the Cozy Parka on ice, the Dunewalker Duds on sand
+  c = tfTileCost(b, unit, t, c);
   if (unit.buffs?.some((x) => x.id === 'spectralStep') && c >= INF && t !== 'water') c = 2;
   return c;
 }
@@ -151,7 +154,7 @@ export function computeMoves(b: Battle, unit: Unit, budget?: number): Moves {
   // Micro units never block, and pass through every space (up to four of them stop on one tile).
   const micro = !!unit.micro;
   const occ = new Map<number, Unit>();
-  for (const u of b.units) if (!u.micro) for (const p of footprint(u.x, u.y, u.size)) occ.set(keyOf(b, p.x, p.y), u);
+  for (const u of b.units) if (!u.micro && !u.tfStack) for (const p of footprint(u.x, u.y, u.size)) occ.set(keyOf(b, p.x, p.y), u);
 
   const blockedByFoe = (x: number, y: number) => {
     if (ghost || micro) return false;
