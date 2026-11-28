@@ -272,3 +272,7 @@ Batch 2 (final), matched in list order by filename:
 - gigaleon.webp: orange spiked crown on a gold base.
 
 All Tri Force Heroes art is in.
+
+## User decisions after the build
+1. Balance is fine as built.
+2. Recruited Grim Repoe and Lady Maud are full strength: Grim Repoe at the doc's stats with its intangibility, and Maud carrying her 26-Might Parasol.

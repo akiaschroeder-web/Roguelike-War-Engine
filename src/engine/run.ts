@@ -754,7 +754,7 @@ export function finishBattle(run: RunWithEvent): BattleSummary {
       for (const boss of b.fallen.filter((u) => u.isBoss && u.bossId)) {
         const options = (BOSSES[boss.bossId!]?.drops ?? []).filter((id) => !owned.has(id));
         if (options.length) {
-          const id = options.find((x) => x.endsWith('Remains')) ?? rng.pick(options); // Boss Remains always drop first
+          const id = options.find((x) => x.endsWith('Remains') || x.endsWith('Pearl')) ?? rng.pick(options); // Boss Remains and Goddess Pearls always drop first
           drops.push(id);
           run.convoy.push(id);
           owned.add(id);
@@ -1808,6 +1808,14 @@ export function migrateRun(run: RunWithEvent): RunWithEvent {
     if (u.templateId && TEMPLATES[u.templateId]?.size === 0 && !u.micro) { u.micro = true; u.size = 1; }
   };
   run.convoy = (run.convoy ?? []).map((id) => (id === 'raviosRabbitHood' ? 'raviosHood' : id));
+  // The Great Sea: a cleared Pearl island always yields its Goddess Pearl (older saves could miss one
+  // when the boss dropped another prize, leaving the Tower of the Gods locked for good).
+  if (run.sea) {
+    const owned = ownedGear(run);
+    for (const [island, pearl] of [['dragonRoost', 'dinsPearl'], ['forestHaven', 'faroresPearl'], ['forsaken', 'nayrusPearl']] as const) {
+      if (run.sea.cleared.includes(island) && !owned.has(pearl)) run.convoy.push(pearl);
+    }
+  }
   run.roster.forEach(fix);
   run.fallen.forEach(fix);
   run.battle?.units.forEach(fix);

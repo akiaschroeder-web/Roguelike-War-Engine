@@ -565,3 +565,10 @@ Batch 3 (final; the user said this is the last batch), matched in list order by 
 - goldfinch.png
 
 Crawltula never arrived, so it uses Strandtula's art. Everything else is in, and the pack is ready to build.
+
+## User decisions after the build
+- Tri Force Heroes balance is fine as built (recorded here and in the TFH doc).
+- Null as a recruit or commander keeps the doc's full stats; remove the "Starved of Rifts" weakening.
+- Add Lord Jabu-Jabu as a recruitable boss unit for the Echo Lord Jabu-Jabu encounter.
+  - Art: art_sources/echoes_of_wisdom/jabuJabuEOW.png (EoW style, main in this campaign) and jabuJabuOOT.webp (the OoT model, an alt).
+  - jabuJabuEOW.png has a dark-blue background to check and remove.

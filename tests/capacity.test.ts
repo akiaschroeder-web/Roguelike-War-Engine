@@ -95,3 +95,17 @@ describe('hitching a ride', () => {
     }
   });
 });
+
+import { migrateRun, ownedGear } from '../src/engine/run';
+import { lockReason } from '../src/engine/sea';
+describe('Great Sea pearls', () => {
+  it('a save with the Pearl islands cleared but a Pearl missing gets it back', () => {
+    const run = newRun(3, 'heroOfWinds', 'greatSea') as RunWithEvent;
+    run.sea!.cleared.push('dragonRoost', 'forestHaven', 'forsaken');
+    run.convoy = run.convoy.filter((id) => !id.endsWith('Pearl'));
+    for (const u of run.roster) for (const k of Object.keys(u.gear) as (keyof typeof u.gear)[]) if (String(u.gear[k]).endsWith('Pearl')) delete u.gear[k];
+    migrateRun(run);
+    const tower = run.map.nodes.find((n) => n.island === 'tower')!;
+    expect(lockReason(run, tower, ownedGear(run))).toBeNull();
+  });
+});
