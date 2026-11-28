@@ -20,7 +20,7 @@ const b = (d: BossDef): BossDef => d;
 export const BOSSES: BossDef[] = [
   // Yuga as a boss (Eastern Palace and Hyrule Castle): a form of the recruitable Yuga (bossAsTemplate).
   b({ id: 'yugaBoss', name: 'Yuga', title: 'Painting Sorcerer', home: 'easternPalaceLB', race: 'lorulean', classId: 'paintingSorcerer', size: 1, glyph: 'YU',
-    weapons: ['yugasPaintbrush'], skill: 'livingPortrait', abilities: ['wallMerge', 'yugaPaintStorm'],
+    weapons: ['yugaPaintSplash'], skill: 'livingPortrait', abilities: ['wallMerge', 'yugaPaintStorm'],
     stats: st(46, 6, 26, 21, 15, 9, 24, 7, 7, 6, 22, 85),
     quote: '"Ah, the hero. What a dreary subject. Hold still — I shall make you into something worth looking at."', drops: ['yugasRobes'] }),
   b({ id: 'margomill', name: 'Margomill', title: 'Wind Guardian', home: 'houseOfGales', race: 'construct', classId: 'windGuardian', size: 3, glyph: 'MG',
@@ -92,7 +92,7 @@ export const REGION_BOSSES: Record<string, string[]> = {
 
 // Regional rosters: the new monsters with the returning ones (River Zora join from engine/riverzora content).
 export const ROSTERS: Record<string, string[]> = {
-  kakarikoLB: ['octorok', 'keese', 'buzzBlob', 'rope', 'chuchuGreen', 'tektite'],
+  kakarikoLB: ['octorok', 'keese', 'octorok', 'rope', 'chuchuGreen', 'tektite'],
   easternPalaceLB: ['stalfos', 'keese', 'gel', 'zol', 'antiFairy', 'goriya', 'buzzBlob'],
   houseOfGales: ['keese', 'goriya', 'stalfos', 'rope', 'antiFairy', 'bari'],
   towerOfHeraLB: ['moldorm', 'tektite', 'keese', 'goriya', 'bari', 'antiFairy'],

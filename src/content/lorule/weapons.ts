@@ -57,6 +57,8 @@ export const WEAPONS: WeaponDef[] = [
   nat('grinexxShellSlam', 'Shell Slam', 17, 75, 0, 1, 1),
   nat('grinexxGeyser', 'Lava Geyser', 14, 80, 0, 1, 3, { magicContact: true, element: 'fire', inflict: { status: 'burn', chance: 30, turns: 2 } }),
   nat('yugaGanonBolts', 'Lightning Bolts', 15, 85, 0, 2, 3, { magicContact: true, element: 'lightning', inflict: { status: 'shock', chance: 20, turns: 1 } }),
+  nat('yugaPaintSplash', 'Paint Splash', 14, 85, 0, 1, 2, { magicContact: true, element: 'dark', lb: ['painting'] }),
+  nat('demonicTrident', 'Demonic Trident', 14, 85, 5, 1, 1, { lb: ['painting'] }),
   nat('heedleFlame', 'Burning Body', 9, 85, 0, 1, 2, { magicContact: true, element: 'fire', inflict: { status: 'burn', chance: 25, turns: 2 } }),
   nat('gigabariShock', 'Electric Mass', 12, 85, 0, 1, 1, { magicContact: true, element: 'lightning', inflict: { status: 'shock', chance: 25, turns: 1 } }),
   nat('bigPengatorCharge', 'Heavy Slide', 13, 85, 5, 1, 1),

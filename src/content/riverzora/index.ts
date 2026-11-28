@@ -129,7 +129,10 @@ const ENEMIES: EnemyArchetype[] = TEMPLATES.map((x) => ({ id: x.id, name: x.name
 
 // Region pools: every region of these campaigns with water (rivers, lakes, moats or many pools).
 const watery = [...ORIGINAL_REGIONS, ...LEGEND_REGIONS, ...LORULE_REGIONS].filter((r) => r.map.water !== 'none');
-const ROSTERS: Record<string, string[]> = Object.fromEntries(watery.map((r) => [r.id, ['riverZora', 'riverZora', 'riverZoraWarrior', 'riverZoraHunter', ...(r.map.water === 'many' || r.map.water === 'lake' ? ['riverZoraSorcerer', 'riverZoraGuardian'] : [])]]));
+// The first regions of each campaign only see the plain River Zora (the heavier ones wait further in).
+const EARLY = new Set(['kakarikoLB', 'easternPalaceLB', 'houseOfGales', 'level1Eagle', 'level2Moon', 'level3Manji', 'hyruleCastleLttP', 'easternPalace', 'mabeVillage', 'horonVillage', 'lynnaVillage']);
+const ROSTERS: Record<string, string[]> = Object.fromEntries(watery.map((r) => [r.id, EARLY.has(r.id) ? ['riverZora']
+  : ['riverZora', 'riverZora', 'riverZoraWarrior', 'riverZoraHunter', ...(r.map.water === 'many' || r.map.water === 'lake' ? ['riverZoraSorcerer', 'riverZoraGuardian'] : [])]]));
 /** The regions River Zora were added to. */
 export const RIVER_ZORA_REGIONS = watery.map((r) => r.id);
 
