@@ -21,7 +21,7 @@ export const WEAPONS: WeaponDef[] = [
   w('draddsDrum', "Dradd's Drum", 'instrument', 'epic', 0, 0, 0, 3, 1, 1, sig({ songDiscount: 2, eo: ['riverDrum'], desc: 'River Zora within 3 of the drummer gain +2 STR and MAG; songs cost 2 less MP.' })),
   w('kusharasInstrument', "Kushara's Harp", 'instrument', 'epic', 0, 0, 0, 2, 1, 1, sig({ songDiscount: 3, eo: ['healMusic'], desc: 'Restorative music: allies within 2 recover 5% HP each turn; songs cost 3 less MP.' })),
   w('condesSnowShovel', "Condé's Snow Shovel", 'hammer', 'rare', 16, 80, 0, 10, 1, 1, sig({ eo: ['shovel'], effective: ['construct', 'stone'], desc: 'Clears snow and ice; double Might against constructs and stone obstacles.' })),
-  w('falseTriRod', 'False Tri Rod', 'magic', 'legendary', 16, 90, 5, 2, 1, 2, sig({ uses: 0, element: 'dark', eo: ['triRod'], desc: 'Tekom\'s copy of the Tri Rod: dark Echoes, Bind (16 magical Might).' })),
+  w('falseTriRod', 'False Tri Rod', 'magic', 'legendary', 12, 90, 5, 2, 1, 2, sig({ uses: 0, element: 'dark', eo: ['triRod'], desc: 'Tekom\'s copy of the Tri Rod: dark Echoes, Bind (12 magical Might).' })),
   w('seerasTrident', "Seera's Trident", 'lance', 'epic', 15, 85, 5, 6, 1, 2, sig({ desc: 'The Gerudo chief\'s trident.' })),
   w('triLight', 'Light of Creation', 'magic', 'rare', 9, 95, 0, 0, 1, 2, { uses: 0, unique: true, element: 'light', desc: 'Tri\'s glow: a bolt of creation-light.' }),
   w('strategistsTome', "Strategist's Tome", 'magic', 'uncommon', 7, 90, 0, 2, 1, 2, { desc: 'Lefte\'s book of plans, thrown open with a flash.' }),

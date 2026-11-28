@@ -1256,7 +1256,7 @@ export class BattleView {
     for (const h of res.heals) { const t = this.unitById(h.uid); if (t) this.float(t, `+${h.amount}`, 'heal'); }
     for (const st of res.statuses) { const t = this.unitById(st.uid); if (t) this.float(t, STATUS_INFO[st.kind].name.toUpperCase(), 'miss'); }
     for (const id2 of res.cleansed) { const t = this.unitById(id2); if (t) this.float(t, 'CURED', 'heal'); }
-    for (const id2 of res.buffed) { const t = this.unitById(id2); if (t) this.float(t, res.def.id === 'nayrusLove' ? 'BARRIER' : res.def.id === 'songOfTime' ? 'REFRESHED' : '+SPD +LCK', 'heal'); }
+    for (const id2 of res.buffed) { const t = this.unitById(id2); if (t) this.float(t, res.def.id === 'swordfighterForm' ? 'SWORDFIGHTER' : res.def.id === 'mightInfusion' ? '+ENERGY' : res.def.id === 'triBond' ? '+MAG +RES' : res.def.id === 'nayrusLove' ? 'BARRIER' : res.def.id === 'songOfTime' ? 'REFRESHED' : '+SPD +LCK', 'heal'); }
     for (const line of res.lines) this.addLog(esc(line));
     if (res.marked) this.addLog('A return point is set.');
     if (res.warped && res.def.id === 'faroresWind') this.addLog(`${esc(u.name)} warps back to the return point.`);

@@ -92,7 +92,7 @@ export function echoesDecorateMap(run: Run, map: RunMap, rng: RNG) {
 }
 
 const ESCORTS: Record<string, string[]> = {
-  seismicTalus: ['octorok'], mogryph: ['holmill', 'caromadillo'], vocavor: ['chompfin', 'hydrozol'], skorchill: ['whiteWolfos', 'freezard'],
+  mogryph: ['holmill'], vocavor: ['chompfin', 'hydrozol'], skorchill: ['whiteWolfos', 'freezard'],
   tekomBoss: ['darknut'], nullEoW: ['lynel', 'darknut'], echoLink: ['moblin', 'lizalfos'],
 };
 
@@ -116,6 +116,7 @@ export function echoesBattleSetup(run: Run, b: Battle, rng: RNG) {
   st.triLevel = triLevel(run);
   st.might = count(run, 'mightCrystal');
   for (const u of b.units) if (u.eoEnergy !== undefined) u.eoEnergy = 40 + 5 * st.might;
+  if (b.groupSupports?.includes('royalCouncil') && b.cp !== undefined) { b.cp++; b.cpMax = (b.cpMax ?? 0) + 1; }
   if (!isEoCamp(run)) return;
   const node = run.map.nodes.find((n) => n.id === run.currentNodeId);
   if (node?.eoRift && !b.naval) startStillWorld(b, rng, STILL_WORLD_TERRAIN, !!TRI_FRIENDS[b.world]);
@@ -126,6 +127,16 @@ export function echoesBattleSetup(run: Run, b: Battle, rng: RNG) {
     main.name = main.name.startsWith('Echo') ? main.name : `Echo ${main.name}`;
     main.eoRift = true;
     if ((b.bossTier ?? 0) === 0) { for (const k of ['str', 'mag', 'def', 'res'] as const) main.stats[k] = Math.round(main.stats[k] * 0.9); main.stats.hp = main.hp = Math.round(main.stats.hp * 0.9); }
+  }
+  // The first regions' new bosses are gentler (they are fought by level-1 to level-5 armies).
+  const ri = ECHOES_ROUTE.indexOf(b.world);
+  if ((b.bossTier ?? 0) === 0 && ri >= 0 && ri <= 2 && !ECHO_BOSSES.includes(main.bossId ?? '')) {
+    const f = [0.6, 0.8, 0.9][ri];
+    for (const k of ['def', 'res'] as const) main.stats[k] = Math.round(main.stats[k] * f);
+    for (const k of ['str', 'mag'] as const) main.stats[k] = Math.round(main.stats[k] * (f + 0.15));
+    main.stats.hp = main.hp = Math.round(main.stats.hp * (f + 0.1));
+    // The Seismic Talus lumbers toward the army rather than waiting in place.
+    if (ri === 0) main.ai = 'aggressive';
   }
   for (const id of ESCORTS[main.bossId ?? ''] ?? []) spawnNear(b, id, main, Math.max(1, main.level - 1), rng);
 }

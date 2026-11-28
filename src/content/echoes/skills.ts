@@ -15,7 +15,7 @@ export const SKILLS: SkillDef[] = [
   k('mechanicalGenius', 'Mechanical Genius', 'Builds and repairs Automatons: allied Automatons within 2 gain +2 DEF and recover 3 Wind-Up Energy a turn; Rewind and Repair.'),
   k('growingCourage', 'Growing Courage', 'Each time an ally within 3 takes damage, +1 STR and DEF for the battle (up to +6).'),
   k('desertAuthority', 'Desert Authority', 'Allied Gerudo within 3 gain +3 STR and SKL.'),
-  k('desertTactics', 'Desert Tactics', 'In the desert or on sand: +1 MOV, +3 STR and +10 Avoid.'),
+  k('desertTactics', 'Desert Tactics', 'In the desert or on sand: +1 MOV, +2 STR and +5 Avoid.'),
   k('riverPercussion', 'River Percussion', 'River Zora within 3 gain +3 STR and MAG; water magic around him is 20% stronger.'),
   k('oceanMelody', 'Ocean Melody', 'Aquatic allies within 2 recover 10% HP at the start of each turn; her healing on aquatic allies +30%.'),
   k('gentleGiant', 'Gentle Giant', 'Cold resistance (half ice damage, no Freeze), double damage to objects and constructs; carries allies (+1 MOV to adjacent allies at turn start).'),
@@ -42,10 +42,10 @@ export const SKILLS: SkillDef[] = [
   k('mechanicalSwordmaster', 'Mechanical Swordmaster', 'Powerful sweeping sword attacks: half damage to everyone else next to it.'),
   k('goldenPeck', 'Golden Peck', 'Enemies it hits drop extra Rupees (+₹15 a hit).'),
   // ── Bosses ──
-  k('floatingCore', 'Floating Core', 'Takes 50% damage while its core is in place. Bind pulls the core out (Weak Point Extraction): it takes 125% for 2 turns. Bombs loosen it for a turn.'),
+  k('floatingCore', 'Floating Core', 'Takes 70% damage while its core is in place. Bind pulls the core out (Weak Point Extraction): it takes 125% for 2 turns. Bombs loosen it for a turn.'),
   k('desertBurrower', 'Desert Burrower', 'Travels under the sand: −30% damage taken while burrowed (it burrows every other turn); Burrowing Ambush brings it up under an enemy. Bind drags it out.'),
   k('whirlpoolMaster', 'Whirlpool Master', 'At the start of its turn, the current pulls enemies within 4 one space toward it.'),
   k('elementalHelmet', 'Elemental Helmet', 'Its helmet alternates fire (odd turns) and ice (even turns) protection: −40% damage, except from the opposing element, which shatters its horns (+30% damage taken for 2 turns).'),
   k('protectiveBubble', 'Protective Bubble', 'Shielded by a bubble (−60% damage) that pops after 15 damage, to a Bind, or to an arrow; summons Biri to defend it.'),
-  k('primordialNothingness', 'Primordial Nothingness', 'Many arms (4), each attacking a foe within 3 at the start of its turn; half damage while any arm remains, and a strong hit (12+) destroys one. Creates Rift spaces, summons Echoes and reflections of bosses.'),
+  k('primordialNothingness', 'Primordial Nothingness', 'Many arms (4), each attacking a foe within 3 at the start of its turn; half damage while any arm remains, and a strong hit (12+) destroys one. Creates Rift spaces, summons Echoes and reflections of bosses. On your side it has no arms, and outside the Still World it is starved of Rifts: −45% STR, MAG, DEF and RES, −4 SPD, and it enters battle at no more than 60% HP.'),
 ];

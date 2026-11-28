@@ -271,6 +271,8 @@ export function startStillWorld(b: Battle, rng: RNG, terrain: Partial<Record<Ter
   st.rift = true;
   layTerrain(b, rng, { ...terrain, ...(friend ? { triFriend: 1 } : {}) });
   for (const u of b.units) if (u.team === 'enemy') { u.eoRift = true; u.stats.res += 4; }
+  // Null is at home in the Still World.
+  for (const u of b.units) u.buffs = u.buffs.filter((x) => x.id !== 'eoStarved');
 }
 
 /** Battle start: Energy, Null's arms, Bori's bubble, Rift creatures. */
@@ -278,7 +280,9 @@ export function echoesBattleStart(b: Battle) {
   const st = eoState(b);
   for (const u of b.units) {
     if (has(u, 'wisdomOfThePrincess') || u.weapons.some((w) => WEAPONS[w]?.eo?.includes('mighty'))) u.eoEnergy ??= ENERGY_MAX + 5 * st.might;
-    if (has(u, 'primordialNothingness')) u.eoArms ??= 4;
+    if (has(u, 'primordialNothingness') && u.team === 'enemy') u.eoArms ??= 4;
+    // Null on your side, outside the Still World, is starved of Rifts.
+    if (has(u, 'primordialNothingness') && u.team === 'player' && !st.rift && !hasBuff(u, 'eoStarved')) { const k = (x: number) => -Math.round(x * 0.45); buff(u, 'eoStarved', 'Starved of Rifts', 999, { str: k(u.stats.str), mag: k(u.stats.mag), def: k(u.stats.def), res: k(u.stats.res), spd: -4 }); u.hp = Math.min(u.hp, Math.ceil(u.stats.hp * 0.6)); }
     if (has(u, 'protectiveBubble')) u.eoBubble ??= 15;
     if (st.rift && u.team === 'enemy') u.eoRift = true;
   }
@@ -441,14 +445,15 @@ export function eoMods(b: Battle, u: Unit, pos: Pos, foe: Unit, initiating: bool
   if (w?.eo?.includes('counter')) { m.spd += 2; if (!initiating) m.dmg += 4; }
   if (u.race === 'gerudo' && allies.some((a) => has(a, 'desertAuthority') && within(a, 3))) { m.str += 3; m.skl += 3; }
   const desert = DESERT_REGIONS.includes(b.world) || here === 'sinkingSand';
-  if (has(u, 'desertTactics') && desert) { m.str += 3; m.avoid += 10; }
-  if (u.team === 'player' && b.bonus === 'desertMarch' && desert) { m.str += 2; m.avoid += 10; }
+  if (has(u, 'desertTactics') && desert) { m.str += 2; m.avoid += 5; }
+  if (u.team === 'player' && b.bonus === 'desertMarch' && desert) { m.str += 1; m.avoid += 5; }
   if (isRiverZora(u)) {
     if (allies.some((a) => has(a, 'riverPercussion') && within(a, 3))) { m.str += 3; m.mag += 3; }
     if (allies.some((a) => weaponTag(a, 'riverDrum') && within(a, 3))) { m.str += 2; m.mag += 2; }
   }
-  if (u.team === 'player' && b.bonus === 'riverZoraMight' && (isRiverZora(u) || has(u, 'riverPercussion'))) { m.str += 3; m.mag += 3; }
-  if (u.team === 'player' && b.bonus === 'goronObstacles') m.def += 2;
+  if (u.team === 'player' && b.bonus === 'riverZoraMight' && (isRiverZora(u) || u.race === 'zora' || has(u, 'riverPercussion'))) { m.str += 3; m.mag += 3; m.def += 1; }
+  if (u.team === 'player' && b.bonus === 'goronObstacles') { m.def += 3; m.str += 2; }
+  if (u.team === 'player' && b.bonus === 'formationCommand' && infantry) { m.def += 2; m.dmg += 2; }
   if (allies.some((a) => has(a, 'livingPlatform') && within(a, 1))) m.hit += 15;
   if (w?.eo?.includes('mighty') && allies.some((a) => has(a, 'mightResearch') && within(a, 3))) m.dmg += 2;
   if (isAutomaton(u) && allies.some((a) => has(a, 'mechanicalGenius') && within(a, 2))) m.def += 2;
@@ -484,7 +489,7 @@ export function eoMultiplier(b: Battle, atk: Unit, def: Unit, magical: boolean, 
   if (has(def, 'stoneBody')) { if (!magical) m *= 0.6; if (element === 'fire') m = 0; }
   if (has(def, 'livingFlame') && element === 'fire') m = 0;
   if (has(atk, 'aquaticPredator') && footprint(def.x, def.y, def.size).some((p) => ['water', 'verticalWaterColumn'].includes(tileAt(b, p.x, p.y) ?? ''))) m *= 1.3;
-  if (has(def, 'floatingCore')) m *= hasBuff(def, 'eoCoreOut') ? 1.25 : hasBuff(def, 'eoLoosened') ? 1 : 0.5;
+  if (has(def, 'floatingCore')) m *= hasBuff(def, 'eoCoreOut') ? 1.25 : hasBuff(def, 'eoLoosened') ? 1 : 0.7;
   if (has(def, 'desertBurrower') && hasBuff(def, 'eoBurrowed') && !hasBuff(def, 'eoUnearthed')) m *= 0.7;
   if (has(def, 'elementalHelmet')) {
     const helmet: Element = b.turn % 2 === 1 ? 'fire' : 'ice';
@@ -554,6 +559,14 @@ export function eoImmune(u: Unit, kind: StatusKind): boolean {
 
 /** Food does nothing for Automatons (items.ts healing items). */
 export const eoHealItemMult = (b: Battle, u: Unit) => { void b; return isAutomaton(u) ? 0 : 1; };
+
+/** Battle orders (army.ts): Wright's formation commands −25% CP, Lefte's Strategic Wisdom −1 CP (minimum 1). */
+export function eoOrderCost(b: Battle, cp: number): number {
+  let c = cp;
+  if (b.bonus === 'formationCommand') c = Math.floor(c * 0.75);
+  if (b.units.some((u) => u.team === 'player' && has(u, 'strategicWisdom'))) c -= 1;
+  return Math.max(1, Math.min(cp, c));
+}
 
 /** Taunting Croak: a unit within 2 of a Ribbitune attacks it if it can (ai.ts). */
 export function eoTauntFilter(unit: Unit, foes: Unit[]): Unit[] {
@@ -727,10 +740,10 @@ export function castEchoes(b: Battle, u: Unit, def: AbilityDef, rng: RNG, target
       const t = target!;
       const ts = effectiveStats(t);
       const chance = gearTag(u, 'nullsEmbrace') || t.team === u.team ? 100 : Math.max(15, Math.min(100, 75 + (es.mag - ts.res) * 2 - ts.con - (t.size - 1) * 15));
-      if (!rng.chance(chance)) { out.lines.push(`${t.name} resists the Bind (${chance}%).`); return out; }
       if (has(t, 'floatingCore')) { buff(t, 'eoCoreOut', 'Core extracted', 2); out.lines.push(`Weak Point Extraction: ${u.name} pulls ${t.name}'s core out of its body!`); return out; }
       if (has(t, 'protectiveBubble') && (t.eoBubble ?? 0) > 0) { t.eoBubble = 0; out.lines.push(`${u.name} binds ${t.name}'s bubble and tears it open!`); return out; }
       if (has(t, 'desertBurrower')) { buff(t, 'eoUnearthed', 'Dragged out', 2); t.buffs = t.buffs.filter((x) => x.id !== 'eoBurrowed'); out.lines.push(`${u.name} drags ${t.name} out of the sand!`); return out; }
+      if (!rng.chance(chance)) { out.lines.push(`${t.name} resists the Bind (${chance}%).`); return out; }
       if (t.team !== u.team && t.gear.shield && !t.isBoss) { out.lines.push(`Shield Pull: ${u.name} tears ${t.name}'s shield away!`); t.gear = { ...t.gear, shield: undefined }; }
       if (pullToward(b, t, u, 2)) out.lines.push(`${u.name} binds ${t.name} and drags it closer.`);
       else if (!out.lines.length) out.lines.push(`${t.name} is bound, but there is nowhere to drag it.`);

@@ -2,6 +2,7 @@
 // morale, reputation, Fairy Dust, Sacred Energy, and commander orders.
 
 import { anchorCost, footprint, unitAt, unitDist } from './grid';
+import { eoOrderCost } from './echoes';
 import { INF } from './rules';
 import { addStatus } from './status';
 import { canSwim } from './units';
@@ -128,7 +129,7 @@ const players = (b: Battle) => b.units.filter((u) => u.team === 'player' && !u.n
 
 export function orderUnusable(b: Battle, id: OrderId): string | null {
   const def = ORDERS[id];
-  if ((b.cp ?? 0) < def.cp) return 'Not enough Command Points';
+  if ((b.cp ?? 0) < eoOrderCost(b, def.cp)) return 'Not enough Command Points';
   if (b.phase !== 'player') return 'Only during your phase';
   if (id === 'reinforce' && (!b.reserves?.length || !reinforceTile(b, b.reserves[0]))) return b.reserves?.length ? 'No room near the edge' : 'No benched units';
   if (id === 'emergencyRetreat' && !orderTargets(b, id).length) return 'No one to pull out';
@@ -219,7 +220,7 @@ export function issueOrder(b: Battle, id: OrderId, targetUid?: string): string |
       text = 'The army catches its second wind.';
       break;
   }
-  b.cp = (b.cp ?? 0) - def.cp;
+  b.cp = (b.cp ?? 0) - eoOrderCost(b, def.cp);
   b.log.push(`Order: ${def.name}. ${text}`);
   return text;
 }

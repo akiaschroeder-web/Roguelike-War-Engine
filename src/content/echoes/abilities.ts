@@ -18,7 +18,7 @@ export const ABILITIES: AbilityDef[] = [
   q('createEcho', 'Create Echo', 5, 'Summon a learned monster (75% of its HP, STR, MAG, DEF and RES; no EXP, items or casualties) or object on an empty space within 2 (more at higher Tri levels). Uses Echo Capacity until it falls or is dismissed. Not in Swordfighter Form.',
     { grantedBy: TRI_ROD, icon: '✨' }),
   q('dismissEcho', 'Dismiss Echo', 0, 'Remove one of your Echoes (a summoned monster or object) and free its capacity. Doesn\'t use your action.', { grantedBy: TRI_ROD, icon: '💨', freeAction: true }),
-  q('eoBind', 'Bind', 5, 'Tie a creature within 3 to your movement and drag it 2 spaces toward you (size, CON and RES resist; a boss can\'t be moved). Pulls shields off (Shield Pull) and weak points out of bosses (the Seismic Talus\'s core, Bori\'s bubble, Mogryph from the sand). Not in Swordfighter Form.',
+  q('eoBind', 'Bind', 5, 'Tie a creature within 3 to your movement and drag it 2 spaces toward you (size, CON and RES resist; a boss can\'t be moved, but its weak point always comes free). Pulls shields off (Shield Pull) and weak points out of bosses (the Seismic Talus\'s core, Bori\'s bubble, Mogryph from the sand). Not in Swordfighter Form.',
     { grantedBy: TRI_ROD, icon: '🔗' }),
   q('eoReverseBond', 'Reverse Bond', 5, 'Follow a bound creature: move next to a unit (or Echo) within 6. Doesn\'t use your action.', { grantedBy: TRI_ROD, icon: '🔁', freeAction: true, perTurn: true }),
   q('swordfighterForm', 'Swordfighter Form', 0, 'Costs 5 Energy: Zelda becomes a swordfighter (STR 24, MAG 12, SKL 25, SPD 23, DEF 18, RES 16, MOV 7) until her Energy runs out (10 a turn; Mighty weapon attacks 3 more). Echoes already summoned stay. Use again to change back. Doesn\'t use your action.',

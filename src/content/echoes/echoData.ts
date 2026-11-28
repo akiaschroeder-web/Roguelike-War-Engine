@@ -65,4 +65,4 @@ export const ENERGY_ACTIVATE = 5;
 export const ENERGY_PER_TURN = 10;
 export const ENERGY_PER_MIGHTY_ATTACK = 3;
 /** Wind-Up Energy an Automaton spends at the start of each of its turns. */
-export const WINDUP_PER_TURN = 6;
+export const WINDUP_PER_TURN = 4;

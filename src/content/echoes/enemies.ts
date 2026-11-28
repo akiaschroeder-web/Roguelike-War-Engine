@@ -86,7 +86,7 @@ export const REGION_BOSSES: Record<string, string[]> = {
 
 // Regional rosters: the new monsters with the returning ones and the regional generics (section 2).
 export const ROSTERS: Record<string, string[]> = {
-  suthornForest: ['octorok', 'moblin', 'keese', 'caromadillo', 'strandtula', 'zol', 'rope'],
+  suthornForest: ['octorok', 'moblin', 'keese', 'strandtula', 'zol', 'rope', 'octorok', 'keese'],
   gerudoDesertEoW: ['moldorm', 'caromadillo', 'gibdo', 'holmill', 'tornando', 'lizalfos'],
   jabulWaters: ['chompfin', 'octorok', 'hydrozol', 'ribbitune', 'drippitune', 'buzzBlob'],
   hyruleCastleEoW: ['darknut', 'moblin', 'lizalfos', 'wizzrobe', 'keese'],

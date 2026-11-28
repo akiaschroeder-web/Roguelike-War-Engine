@@ -41,7 +41,7 @@ export const STILL_WORLD_TERRAIN: Partial<Record<Terrain, number>> = { unstableR
 
 export const REGIONS: WorldDef[] = [
   r('suthornForest', 'Suthorn Forest and Ruins', 'Octoroks · Moblins · Seismic Talus', 'The woods south of the castle where the first Rift opened, and the old ruins where Zelda found the Tri Rod.',
-    '#5a9a4a', t('Glade', 'Thicket', 'Ruin Mound', 'Stream', 'Ruin Wall', 'Old Shrine', 'Lava'), t('#9ac07a', '#3a7a3a', '#8a8a6a', '#4a8ad0', '#6a6a5a', '#a08a6a', '#d0502a'), { forest: 3, mountain: 1, water: 'river', walls: 2, forts: 1 }),
+    '#5a9a4a', t('Glade', 'Thicket', 'Ruin Mound', 'Stream', 'Ruin Wall', 'Old Shrine', 'Lava'), t('#9ac07a', '#3a7a3a', '#8a8a6a', '#4a8ad0', '#6a6a5a', '#a08a6a', '#d0502a'), { forest: 1.5, mountain: 0.5, water: 'none', walls: 1, forts: 1 }),
   r('gerudoDesertEoW', 'Gerudo Desert and Sanctum', 'Moldorms · Caromadillos · Mogryph', 'Dunes, Gerudo Town under a Rift, and the Sanctum where Mogryph sleeps in the sand.',
     '#d8b060', t('Sand', 'Oasis Palms', 'Dune', 'Oasis', 'Sandstone', 'Sanctum', 'Lava'), t('#e0c890', '#7aa05a', '#c8a060', '#4aa0c0', '#a0805a', '#c09a6a', '#d0602a'), { forest: 0.3, mountain: 2, water: 'lake', walls: 2, forts: 1 }),
   r('jabulWaters', 'Jabul Waters and Ruins', 'Chompfins · River Zora · Vocavor', 'Rivers and the sea where River Zora and Sea Zora quarrel, and the sunken ruins of an older Zora kingdom.',
