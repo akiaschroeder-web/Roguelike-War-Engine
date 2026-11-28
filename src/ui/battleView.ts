@@ -15,6 +15,7 @@ import { spAfterMove } from '../engine/spirit';
 import { isMicro, mcAfterMove, microSlot, unitsAt } from '../engine/micro';
 import { fsAfterMove, fsStatus } from '../engine/fourswords';
 import { lrAfterWalk } from '../engine/lorule';
+import { tfAfterWalk, tfStatus, tfView } from '../engine/triforce';
 import { enemyUnload, windLabel } from '../engine/naval';
 import { sideQuestText } from '../engine/run';
 import { adjacentCaptives, checkResult, freeCaptive, mountToggleBlocked, moveUnit, toggleMount, objectiveText, spawnReinforcements, startPhase, type TurnStartEvent } from '../engine/battle';
@@ -78,6 +79,8 @@ const TERRAIN_GLYPH: Record<string, string> = {
   // A Link Between Worlds
   mergeWall: '▤', wallCrack: '⚡', portraitFrame: '🖼', tornadoLift: '🌪', icePlatform: '❄', maiamaiSpot: '🐚', rupeeTrap: '💎', gemBarrier: '◆',
   darknessSwitch: '◐', energyOrb: '✪',
+  // Tri Force Heroes
+  elevatedSwitch: '⏫', totemPlatform: '▲', triforceGateway: '🔺', gripshotTarget: '⚓', waterPillar: '⛲', outfitPedestal: '👗',
 };
 
 export class BattleView {
@@ -254,6 +257,11 @@ export class BattleView {
       const slot = micro ? microSlot(this.b, u) : 0;
       this.posStyle(el, u.x + (micro ? (slot % 2) * 0.5 : 0), u.y + (micro ? Math.floor(slot / 2) * 0.5 : 0));
       el.style.setProperty('--s', micro ? '0.5' : String(u.size));
+      // Tri Force Heroes: Totem riders sit above their base (folded into the Totem art when it's the three heroes).
+      const tv = tfView(this.b, u);
+      if (tv) this.posStyle(el, u.x, u.y + tv.dy);
+      el.classList.toggle('tf-rider', !!tv);
+      el.classList.toggle('tf-folded', !!tv?.folded);
       el.classList.toggle('micro', micro);
       el.classList.toggle('riding', !!u.mcRide);
       el.classList.toggle('acted', u.team === 'player' && u.acted && this.b.phase === 'player');
@@ -263,7 +271,7 @@ export class BattleView {
       el.classList.toggle('captive', !!u.captive);
       el.classList.toggle('unseen', !isSeen(this.b, u));
       el.classList.toggle('big', u.size > 1);
-      el.innerHTML = `<div class="u-body">${token(u, Math.round(this.tile * (micro ? 0.42 : u.size * (u.size > 1 ? 0.86 : 0.78))))}</div>${hpBar(u.hp, u.stats.hp)}${u.statuses.length ? `<i class="stun-mark">${u.statuses.map((st) => STATUS_INFO[st.kind].icon).join('')}</i>` : ''}${isMounted(u) && !CLASSES_MOUNTED(u) ? '<i class="mount-mark">🐎</i>' : ''}${u.vip ? '<i class="vip-mark">VIP</i>' : u.captive ? '<i class="vip-mark">⛓</i>' : ''}${u.cargo?.length ? `<i class="vip-mark" title="${esc(u.cargo.map((p) => p.name).join(', '))}">⛵${u.cargo.length}</i>` : ''}${u.damaged && Object.keys(u.damaged).length ? '<i class="mount-mark" title="Damaged">🔧</i>' : ''}`;
+      el.innerHTML = `<div class="u-body">${token(u, Math.round(this.tile * (micro ? 0.42 : tv ? tv.scale * 0.78 : u.size * (u.size > 1 ? 0.86 : 0.78))))}</div>${hpBar(u.hp, u.stats.hp)}${u.statuses.length ? `<i class="stun-mark">${u.statuses.map((st) => STATUS_INFO[st.kind].icon).join('')}</i>` : ''}${isMounted(u) && !CLASSES_MOUNTED(u) ? '<i class="mount-mark">🐎</i>' : ''}${u.vip ? '<i class="vip-mark">VIP</i>' : u.captive ? '<i class="vip-mark">⛓</i>' : ''}${u.cargo?.length ? `<i class="vip-mark" title="${esc(u.cargo.map((p) => p.name).join(', '))}">⛵${u.cargo.length}</i>` : ''}${u.damaged && Object.keys(u.damaged).length ? '<i class="mount-mark" title="Damaged">🔧</i>' : ''}`;
       el.classList.toggle('barrier', u.buffs.some((x) => x.barrier));
     }
   }
@@ -402,7 +410,8 @@ export class BattleView {
       const here = this.hover ? unitsAt(b, this.hover.x, this.hover.y) : [];
       const u = (this.hover ? unitAt(b, this.hover.x, this.hover.y) ?? here[0] : undefined) ?? this.sel ?? undefined;
       const micros = here.filter((x) => isMicro(x) && x !== u && isSeen(b, x));
-      html = u ? unitDetails(u) + (micros.length ? `<div class="dim small">🍀 Micro units here: ${micros.map((x) => `<b class="${x.team}">${esc(x.name)}</b>${x.mcRide ? ' (riding)' : ''}`).join(', ')} — tap again to cycle</div>` : '') : `<div class="dim small help">
+      const tfs = u ? tfStatus(b, u) : null;
+      html = u ? unitDetails(u) + (tfs ? `<div class="dim small">🗼 ${esc(tfs)}${here.length > 1 ? ' — tap again to cycle' : ''}</div>` : '') + (micros.length ? `<div class="dim small">🍀 Micro units here: ${micros.map((x) => `<b class="${x.team}">${esc(x.name)}</b>${x.mcRide ? ' (riding)' : ''}`).join(', ')} — tap again to cycle</div>` : '') : `<div class="dim small help">
         <p><b>Tap a unit</b> to select it. Blue shows where it can move; red shows what it can hit.</p>
         <p>Tap an <b>enemy</b> to see its threat range. Swords beat axes, axes beat lances, lances beat swords.</p>
         <p>Large units fill several squares. Lava burns anyone but Gorons and fliers.</p>
@@ -1097,6 +1106,8 @@ export class BattleView {
     moveUnit(u, dest.x, dest.y, Math.max(0, path.length - 1));
     const lb = lrAfterWalk(this.b, u, path); // A Link Between Worlds: wall merging, River Zora surfacing, Maiamai and Energy Orbs
     if (lb) this.addLog(`🖼 ${esc(lb)}`);
+    const tf = tfAfterWalk(this.b, u, path); // Tri Force Heroes: Totems, switches, pedestals and gateways
+    if (tf) this.addLog(`🗼 ${esc(tf)}`);
     this.mode = prev;
   }
 
@@ -1669,6 +1680,13 @@ const WW_TERRAIN_NOTES: Record<string, string> = {
   gemBarrier: 'A Gemstone Barrier: a gem-covered obstacle',
   darknessSwitch: 'A Darkness Switch: the lights go out around it',
   energyOrb: 'An Energy Orb: step on it to restore 10 MP and STA',
+  // Tri Force Heroes
+  elevatedSwitch: 'An Elevated Switch: reach it at height 2 or more (a Totem, a Totem Platform) or flying — the enemy\'s gates drop (−3 DEF and RES)',
+  totemPlatform: 'A Totem Platform: +1 height to whoever stands on it (elevated attacks, +5 Avoid)',
+  triforceGateway: 'A Triforce Gateway: three allies next to it at once open it (the army recovers 15% HP)',
+  gripshotTarget: 'A Gripshot Target: an obstacle; pull yourself across to it with the Gripshot',
+  waterPillar: 'A Water Pillar: a platform of water that lifts whoever stands on it (+1 height)',
+  outfitPedestal: 'An Outfit Pedestal: step on it to wear its outfit for the rest of the battle',
 };
 
 /** Abilities shown in the Abilities menu (forecast-only modifiers are excluded). */

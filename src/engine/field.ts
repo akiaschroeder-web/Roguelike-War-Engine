@@ -16,6 +16,7 @@ import { decorateSpirit, spiritBattleStart } from './spirit';
 import { decorateMinish, minishBattleStart } from './minish';
 import { decorateFourSwords, fourSwordsBattleStart } from './fourswords';
 import { decorateLorule, loruleBattleStart } from './lorule';
+import { decorateTriforce, triforceBattleStart } from './triforce';
 import { GEAR, ITEMS } from '../data/registry';
 import type { Battle, Pos, Terrain, Unit, WorldId } from './types';
 
@@ -65,6 +66,9 @@ export function decorateField(b: Battle, rng: RNG, nodeType: string) {
   // A Link Between Worlds: its battlefield spaces, boss defences, the head-counting group supports.
   decorateLorule(b, rng);
   loruleBattleStart(b);
+  // Tri Force Heroes: its battlefield spaces, outfit stats, boss defences.
+  decorateTriforce(b, rng);
+  triforceBattleStart(b);
   // Fog of war
   b.fog = rng.chance(FOGGY[world] ?? 6);
   // Buried treasure
