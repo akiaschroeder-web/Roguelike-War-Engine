@@ -139,7 +139,7 @@ PACKS = {
         'Queen of Fairies': 'queenOfFairies', 'Dark Link': 'darkLink', 'Demise': 'demise', 'Majora': 'majorasMask', 'Calamity Ganon': 'calamityGanon',
         'Darunia': 'darunia', 'Yunobo': 'yunobo', 'Yeto': 'yeto', 'Yeta': 'yeta', 'Ruto': 'ruto', 'Mipha': 'mipha', 'Urbosa': 'urbosa', 'Nabooru': 'nabooru',
         'Robbie': 'robbie', 'Mineru': 'mineru', 'Purah': 'purah', 'Gondo': 'gondo', 'Tingle': 'tingle', 'Seismic Talus': 'seismicTalus',
-        'Stone Talus': 'stoneTalus', 'Skorchill': 'skorchill', 'Blizzeta': 'blizzeta',
+        'Stone Talus': 'stoneTalus', 'Skorchill': 'skorchill', 'Blizzeta': 'blizzeta', 'Jabu-Jabu': 'jabuJabuEoW',
         # Partners from the A Link Between Worlds and Four Swords packs
         'ALBW Zelda': 'zeldaALBW', 'Hilda': 'hilda', 'Ravio': 'ravio', 'Oren': 'oren', 'Shadow Link': 'shadowLink', 'Yuga': 'yuga',
     }),

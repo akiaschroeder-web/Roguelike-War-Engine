@@ -73,6 +73,13 @@ export const ABILITIES: AbilityDef[] = [
   q('electricalSummons', 'Electrical Summons', 10, 'Summons two Biri to defend it.', { grantedBy: { templates: ['bori'] }, cooldown: 4 }),
   q('bubbleShield', 'Bubble Shield', 8, 'Re-forms its protective bubble.', { grantedBy: { templates: ['bori'] }, cooldown: 3 }),
   p('aquaticCollision', 'Aquatic Collision', 0, 'Rams a foe within 3 (STR + 4) and Shocks it.', ['bori'], { target: 'foe', range: [1, 3], move: true, dmg: { stat: 'str', base: 4 }, status: { kind: 'shock', turns: 1, chance: 40 } }, { sta: 6, cooldown: 2 }),
+  // ── Lord Jabu-Jabu (the Echo Lord Jabu-Jabu encounter) ──
+  q('jabuSwallow', 'Swallow', 0, 'Swallows the weakest adjacent size-1 foe (not a boss): STR + 6 vs DEF; below a quarter of its HP it is swallowed whole (defeated), otherwise it is spat out 2 spaces and Stunned.',
+    { sta: 8, grantedBy: { templates: ['jabuJabuEoW', 'jabuJabuBoss'] }, cooldown: 2, icon: '🐟' }),
+  p('tidalSplash', 'Tidal Splash', 12, 'A belly-flop wave: every foe within 2 takes MAG + 4 water and is pushed 1 space.', ['jabuJabuEoW', 'jabuJabuBoss'],
+    { target: 'foes', radius: 2, push: 1, dmg: { stat: 'mag', base: 4, vs: 'res', element: 'water' }, tags: ['water'] }, { cooldown: 3 }),
+  p('jabuSacredWaters', 'Sacred Waters', 14, 'Fountain water washes over Jabu-Jabu and allies within 2: 20% HP and statuses cleansed.', ['jabuJabuEoW', 'jabuJabuBoss'],
+    { target: 'allies', radius: 2, heal: { pct: 20 }, cleanse: true, tags: ['water'] }, { cooldown: 4 }),
   // ── Null (section 4) ──
   p('voidGraspAct', 'Void Grasp', 0, 'Grabs a smaller foe within 2 and holds it: STR + 4 and Rooted.', ['nullEoW'], { target: 'foe', range: [1, 2], dmg: { stat: 'str', base: 4 }, status: { kind: 'root', turns: 1 } }, { sta: 8, cooldown: 2 }),
   q('riftCreation', 'Rift Creation', 15, 'Turns the ground within 2 of a foe into unstable Still World.', { grantedBy: { templates: ['nullEoW'] }, cooldown: 3 }),
@@ -88,8 +95,8 @@ export const ABILITIES: AbilityDef[] = [
 /** Abilities handled by engine/echoes.ts castEchoes. */
 export const EO_SPECIAL = ['createEcho', 'dismissEcho', 'eoBind', 'eoReverseBond', 'swordfighterForm', 'eoRestoration', 'triBond', 'riftBreaker', 'mightInfusion',
   'rewindAutomaton', 'repairAutomaton', 'mechanicalMawAct', 'helmetReconstruction', 'electricalSummons', 'bubbleShield', 'riftCreation', 'echoCreationNull',
-  'echoCreationTekom', 'bossReflection', 'consumption', 'voidRestoration', 'returnToNothing'];
+  'echoCreationTekom', 'bossReflection', 'consumption', 'voidRestoration', 'returnToNothing', 'jabuSwallow'];
 /** Boss abilities enemies cast on their own (when a foe is in reach, or when hurt). */
 export const EO_ENEMY_CASTS = ['returnToNothing', 'bossReflection', 'voidRestoration', 'consumption', 'shadowArms', 'riftCreation', 'echoCreationNull', 'echoCreationTekom',
   'coreReconstruction', 'doubleSlam', 'rotatingBody', 'sandTornado', 'quicksandField', 'crushingCurrent', 'deepWaterRetreat', 'helmetReconstruction', 'frozenHorns', 'burningHorns',
-  'mountainSmash', 'electricalSummons', 'bubbleShield'];
+  'mountainSmash', 'electricalSummons', 'bubbleShield', 'jabuSwallow', 'tidalSplash'];

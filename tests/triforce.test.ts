@@ -336,3 +336,35 @@ describe('The Tri Force Heroes campaign', () => {
     expect(b.units.length).toBeGreaterThan(0);
   });
 });
+
+describe('Tri Force Heroes: full-strength recruits', () => {
+  it('a recruited Grim Repoe has the doc\'s sheet and is intangible on odd turns on your side too', async () => {
+    const { tfCannotAttack } = await import('../src/engine/triforce');
+    expect(TEMPLATES.grimRepoe.stats).toEqual(BOSSES.grimRepoe.stats);
+    const b = field();
+    const g = place(b, hero('grimRepoe'), 3, 3);
+    const m = place(b, foe('moblin'), 5, 3, 'enemy');
+    const spear = WEAPONS[m.weapons[0]];
+    b.turn = 1;
+    expect(tfCannotAttack(b, m, g, spear, 1)).toBe(true);
+    b.turn = 2;
+    expect(tfCannotAttack(b, m, g, spear, 1)).toBe(false);
+  });
+
+  it('Lady Maud carries her real Parasol, and old saves\' Drablands Parasol becomes it', async () => {
+    const { migrateRun } = await import('../src/engine/run');
+    expect(TEMPLATES.ladyMaud.weapons).toEqual(['ladyMaudsParasol']);
+    expect(WEAPONS.drablandsParasol).toBeUndefined();
+    const run = newRun(5, 'ladyMaud', 'triforce');
+    const maud = run.roster.find((u) => u.templateId === 'ladyMaud')!;
+    expect(maud.weapons).toContain('ladyMaudsParasol');
+    maud.weapons = ['drablandsParasol'];
+    maud.wear = { drablandsParasol: 3 };
+    run.convoy.push('drablandsParasol');
+    migrateRun(run);
+    expect(maud.weapons).toEqual(['ladyMaudsParasol']);
+    expect(maud.wear).toEqual({ ladyMaudsParasol: 3 });
+    expect(run.convoy).not.toContain('drablandsParasol');
+    expect(run.convoy).toContain('ladyMaudsParasol');
+  });
+});

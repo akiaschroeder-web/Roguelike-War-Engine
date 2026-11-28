@@ -9,6 +9,10 @@ Special cases:
                           (transparent) background; transparent pixels get their colour bled in from the nearest
                           opaque pixels, so resizing never drags black into the edges.
   biriEOW_alt.png      -> biriEoW (an alternate for the A Link Between Worlds pack's Biri).
+  jabuJabuEOW.png      -> jabuJabuEoW: a dark-blue backdrop (23, 69, 110) at alpha 1 fills the canvas, and the
+                          anti-aliased rim is mixed with it. The near-transparent backdrop is dropped, the alpha is
+                          eroded 2px to cut the blue fringe and softened, and edge colours are bled in from inside.
+  jabuJabuOOT.webp     -> jabuJabuOoT (the Ocarina of Time model, an alternate look).
   *EOW                 -> *EoW (zeldaEoW, linkEoW, kingEoW, impaEoW, dampeEoW).
   small images         (shortest side < 400px) a 2x LANCZOS upscale (3x below 200px).
 
@@ -27,6 +31,7 @@ OUT = ROOT / "art-src"
 RENAME = {
     "zeldaEOW": "zeldaEoW", "linkEOW": "linkEoW", "kingEOW": "kingEoW", "impaEOW": "impaEoW", "dampeEOW": "dampeEoW",
     "biriEOW_alt": "biriEoW", "tekom_cloudbg": "tekom", "null": "nullEoW",
+    "jabuJabuEOW": "jabuJabuEoW", "jabuJabuOOT": "jabuJabuOoT",
 }
 SMALL = 400
 TINY = 200
@@ -106,6 +111,29 @@ def key_sky(im: Image.Image) -> Image.Image:
     return Image.fromarray(np.dstack([out, alpha]).astype(np.uint8), "RGBA")
 
 
+def key_backdrop(im: Image.Image, cut: int = 32, erode: int = 2) -> Image.Image:
+    """Drop a near-transparent solid backdrop and the backdrop-tinted rim of the subject."""
+    a = np.array(im.convert("RGBA"))
+    keep = a[..., 3] >= cut
+    mask = Image.fromarray((keep * 255).astype(np.uint8))
+    for _ in range(erode):
+        mask = mask.filter(ImageFilter.MinFilter(3))
+    solid = np.array(mask) > 0
+    soft = np.array(mask.filter(ImageFilter.GaussianBlur(0.8))).astype(np.float64)
+    alpha = np.where(solid, 255, np.where(soft > 96, soft, 0))
+    a[..., 3] = alpha.astype(np.uint8)
+    return _rebleed(a, solid)
+
+
+def _rebleed(a: np.ndarray, solid: np.ndarray) -> Image.Image:
+    """Colour every non-solid pixel from the nearest solid one (the soft edge then fades the subject, not the backdrop)."""
+    rgba = a.copy()
+    rgba[..., 3] = np.where(solid, 255, 0).astype(np.uint8)
+    bled = np.array(bleed(Image.fromarray(rgba, "RGBA"), 6))
+    bled[..., 3] = a[..., 3]
+    return Image.fromarray(bled, "RGBA")
+
+
 def upscale(im: Image.Image) -> Image.Image:
     w, h = im.size
     k = 3 if min(w, h) < TINY else 2 if min(w, h) < SMALL else 1
@@ -124,6 +152,8 @@ def main() -> None:
         raw = Image.open(f)
         if f.stem == "tekom_cloudbg":
             img = key_sky(raw)
+        elif f.stem == "jabuJabuEOW":
+            img = key_backdrop(raw)
         else:
             img = raw.convert("RGBA")
         img = clean_halo(img)

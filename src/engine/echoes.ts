@@ -41,6 +41,8 @@ declare module './types' {
     eoBubble?: number;
     /** Null's arms. */
     eoArms?: number;
+    /** Lord Jabu-Jabu's Parasite Shield (damage it can still take; 0 = torn loose for good). */
+    eoParasite?: number;
     /** Hydrozol: turns spent absorbing water. */
     eoAbsorb?: number;
   }
@@ -271,8 +273,6 @@ export function startStillWorld(b: Battle, rng: RNG, terrain: Partial<Record<Ter
   st.rift = true;
   layTerrain(b, rng, { ...terrain, ...(friend ? { triFriend: 1 } : {}) });
   for (const u of b.units) if (u.team === 'enemy') { u.eoRift = true; u.stats.res += 4; }
-  // Null is at home in the Still World.
-  for (const u of b.units) u.buffs = u.buffs.filter((x) => x.id !== 'eoStarved');
 }
 
 /** Battle start: Energy, Null's arms, Bori's bubble, Rift creatures. */
@@ -280,10 +280,10 @@ export function echoesBattleStart(b: Battle) {
   const st = eoState(b);
   for (const u of b.units) {
     if (has(u, 'wisdomOfThePrincess') || u.weapons.some((w) => WEAPONS[w]?.eo?.includes('mighty'))) u.eoEnergy ??= ENERGY_MAX + 5 * st.might;
-    if (has(u, 'primordialNothingness') && u.team === 'enemy') u.eoArms ??= 4;
-    // Null on your side, outside the Still World, is starved of Rifts.
-    if (has(u, 'primordialNothingness') && u.team === 'player' && !st.rift && !hasBuff(u, 'eoStarved')) { const k = (x: number) => -Math.round(x * 0.45); buff(u, 'eoStarved', 'Starved of Rifts', 999, { str: k(u.stats.str), mag: k(u.stats.mag), def: k(u.stats.def), res: k(u.stats.res), spd: -4 }); u.hp = Math.min(u.hp, Math.ceil(u.stats.hp * 0.6)); }
+    // Null brings its arms on either side.
+    if (has(u, 'primordialNothingness')) u.eoArms ??= 4;
     if (has(u, 'protectiveBubble')) u.eoBubble ??= 15;
+    if (has(u, 'parasiteShield')) u.eoParasite ??= 20;
     if (st.rift && u.team === 'enemy') u.eoRift = true;
   }
 }
@@ -413,9 +413,10 @@ export function eoStartPhase(b: Battle, u: Unit, events: EOEvent[]) {
     if (spot) { u.x = spot.x; u.y = spot.y; events.push({ uid: u.uid, heal: 0, damage: 0, source: 'burrows and pops up' }); }
   }
   // ── Bosses ──
+  if (has(u, 'parasiteShield') && (b.weather?.kind === 'rain' || tilesInRange(b, u, 0, 1, u.size).some((p) => ['water', 'verticalWaterColumn'].includes(tileAt(b, p.x, p.y) ?? '')))) heal(u, 0.1, 'is healed by the water');
   if (has(u, 'whirlpoolMaster')) for (const e of foesOf(b, u)) if (unitDist(u, e) <= 4 && unitDist(u, e) > 1) pullToward(b, e, u, 1);
   if (has(u, 'desertBurrower')) { if (b.turn % 2 === 0 && !hasBuff(u, 'eoUnearthed')) buff(u, 'eoBurrowed', 'Burrowed', 1); }
-  if (has(u, 'primordialNothingness') && u.team === 'enemy') {
+  if (has(u, 'primordialNothingness')) {
     const s = effectiveStats(u);
     const targets = foesOf(b, u).filter((e) => !e.hidden && unitDist(u, e) <= 3).sort((x, y) => x.hp - y.hp);
     for (let i = 0; i < (u.eoArms ?? 0) && targets.length; i++) {
@@ -498,6 +499,7 @@ export function eoMultiplier(b: Battle, atk: Unit, def: Unit, magical: boolean, 
   }
   if (has(def, 'protectiveBubble') && (def.eoBubble ?? 0) > 0 && w?.type !== 'bow') m *= 0.4;
   if (has(def, 'primordialNothingness') && (def.eoArms ?? 0) > 0) m *= 0.5;
+  if (has(def, 'parasiteShield') && (def.eoParasite ?? 0) > 0 && element !== 'lightning' && w?.type !== 'boomerang') m *= 0.5;
   if (has(def, 'gentleGiant') && element === 'ice') m *= 0.5;
   if (atk.team === 'player' && b.bonus === 'goronObstacles' && unitTags(def).includes('construct')) m *= 1.5;
   if (has(atk, 'gentleGiant') && unitTags(def).includes('construct')) m *= 1.5;
@@ -522,6 +524,10 @@ export function eoAfterHit(b: Battle, by: Unit, target: Unit, dmg: number, w: We
     if (has(target, 'protectiveBubble') && (target.eoBubble ?? 0) > 0) {
       target.eoBubble = w?.type === 'bow' ? 0 : Math.max(0, (target.eoBubble ?? 0) - dmg);
       if (!target.eoBubble) lines.push(`${target.name}'s bubble pops!`);
+    }
+    if (has(target, 'parasiteShield') && (target.eoParasite ?? 0) > 0) {
+      target.eoParasite = element === 'lightning' || w?.type === 'boomerang' ? 0 : Math.max(0, (target.eoParasite ?? 0) - dmg);
+      if (!target.eoParasite) lines.push(`The parasite tears loose from ${target.name}: his shield is gone!`);
     }
     if (has(target, 'elementalHelmet') && element === (b.turn % 2 === 1 ? 'ice' : 'fire') && !hasBuff(target, 'eoHornsBroken')) { buff(target, 'eoHornsBroken', 'Horns shattered', 2); lines.push(`The opposing element shatters ${target.name}'s horns!`); }
     if (has(target, 'primordialNothingness') && dmg >= 12 && (target.eoArms ?? 0) > 0) { target.eoArms!--; lines.push(`One of ${target.name}'s arms is destroyed (${target.eoArms} left).`); }
@@ -593,6 +599,8 @@ export function echoesBeforeFinish(b: Battle) {
   b.units = b.units.filter((u) => !u.eoBy);
   b.fallen = b.fallen.filter((u) => !u.eoBy);
   for (const u of b.units) if (u.eoSword) revertSword(u);
+  // Arms, bubbles and parasites are per battle: they come back for the next one.
+  for (const u of [...b.units, ...b.fallen]) { delete u.eoArms; delete u.eoBubble; delete u.eoParasite; }
 }
 
 /** Monsters defeated this battle that the Compendium can learn. */
@@ -624,7 +632,7 @@ export function eoTiles(b: Battle, u: Unit, def: AbilityDef): Pos[] {
 export function eoTargets(b: Battle, u: Unit, def: AbilityDef): Unit[] {
   const d = (e: Unit) => unitDist(u, e);
   switch (def.id) {
-    case 'eoBind': return b.units.filter((e) => e !== u && d(e) <= 3 && !(e.isBoss && !has(e, 'floatingCore') && !has(e, 'protectiveBubble') && !has(e, 'desertBurrower')));
+    case 'eoBind': return b.units.filter((e) => e !== u && d(e) <= 3 && !(e.isBoss && !has(e, 'floatingCore') && !has(e, 'protectiveBubble') && !has(e, 'desertBurrower') && !has(e, 'parasiteShield')));
     case 'eoReverseBond': return b.units.filter((e) => e !== u && d(e) <= 6 && d(e) > 1);
     case 'triBond': return alliesOf(b, u).filter((a) => d(a) <= 3);
     case 'riftBreaker': return foesOf(b, u).filter((e) => d(e) === 1);
@@ -658,10 +666,13 @@ export function eoUnusable(b: Battle, u: Unit, def: AbilityDef): string | null |
       if (!has(u, 'powerOfCreation') && !u.weapons.some((w) => WEAPONS[w]?.eo?.includes('triRod')) && !alliesOf(b, u).some((a) => has(a, 'powerOfCreation'))) return 'Needs Tri (in the battle) or the Tri Rod';
       return tilesInRange(b, u, 0, restoreReach(u), u.size).some((p) => ['unstableRift', 'riftCorruptionSource', 'triFriend'].includes(tileAt(b, p.x, p.y) ?? '')) ? null : 'No Rift spaces within reach';
     case 'echoCreationNull': case 'echoCreationTekom': case 'bossReflection': return blocked ? 'Summoning is disabled' : null;
+    case 'jabuSwallow': return swallowable(b, u).length ? null : 'No small foe next to him';
   }
   if (TARGET.has(def.id) && !eoTargets(b, u, def).length) return 'No target';
   return null;
 }
+/** Foes Lord Jabu-Jabu can swallow: adjacent, size 1, not a boss. */
+const swallowable = (b: Battle, u: Unit) => foesOf(b, u).filter((e) => unitDist(u, e) === 1 && !e.isBoss && e.size <= 1);
 const restoreReach = (u: Unit) => 2 + (gearTag(u, 'nullsEmbrace') ? 1 : 0);
 
 export function eoCostMult(b: Battle | undefined, u: Unit, def: AbilityDef): number {
@@ -742,6 +753,7 @@ export function castEchoes(b: Battle, u: Unit, def: AbilityDef, rng: RNG, target
       const chance = gearTag(u, 'nullsEmbrace') || t.team === u.team ? 100 : Math.max(15, Math.min(100, 75 + (es.mag - ts.res) * 2 - ts.con - (t.size - 1) * 15));
       if (has(t, 'floatingCore')) { buff(t, 'eoCoreOut', 'Core extracted', 2); out.lines.push(`Weak Point Extraction: ${u.name} pulls ${t.name}'s core out of its body!`); return out; }
       if (has(t, 'protectiveBubble') && (t.eoBubble ?? 0) > 0) { t.eoBubble = 0; out.lines.push(`${u.name} binds ${t.name}'s bubble and tears it open!`); return out; }
+      if (has(t, 'parasiteShield') && (t.eoParasite ?? 0) > 0 && t.team !== u.team) { t.eoParasite = 0; out.lines.push(`${u.name} binds the parasite inside ${t.name} and drags it out!`); return out; }
       if (has(t, 'desertBurrower')) { buff(t, 'eoUnearthed', 'Dragged out', 2); t.buffs = t.buffs.filter((x) => x.id !== 'eoBurrowed'); out.lines.push(`${u.name} drags ${t.name} out of the sand!`); return out; }
       if (!rng.chance(chance)) { out.lines.push(`${t.name} resists the Bind (${chance}%).`); return out; }
       if (t.team !== u.team && t.gear.shield && !t.isBoss) { out.lines.push(`Shield Pull: ${u.name} tears ${t.name}'s shield away!`); t.gear = { ...t.gear, shield: undefined }; }
@@ -853,6 +865,18 @@ export function castEchoes(b: Battle, u: Unit, def: AbilityDef, rng: RNG, target
       if (dealt) out.heals.push({ uid: u.uid, amount: dealt });
       return out;
     }
+    case 'jabuSwallow': {
+      const t = swallowable(b, u).sort((x, y) => x.hp - y.hp)[0];
+      if (!t) return null;
+      if (t.hp < t.stats.hp * 0.25) { hurt(b, u, t, t.hp, out, true); out.lines.push(`${u.name} swallows ${t.name} whole!`); return out; }
+      hurt(b, u, t, Math.max(0, es.str + 6 - effectiveStats(t).def), out);
+      if (t.hp > 0) {
+        addStatus(t, 'stun', 1); out.statuses.push({ uid: t.uid, kind: 'stun' });
+        pushAway(b, t, u, 2);
+        out.lines.push(`${u.name} swallows ${t.name} and spits it back out!`);
+      }
+      return out;
+    }
     case 'voidRestoration': { u.eoArms = 4; out.lines.push(`${u.name}'s arms grow back.`); return out; }
     case 'returnToNothing': {
       for (const t of foesOf(b, u).filter((e) => unitDist(u, e) <= 3)) hurt(b, u, t, Math.max(0, es.mag + 6 - effectiveStats(t).res), out);
@@ -902,6 +926,7 @@ export function eoUnitNote(b: Battle, u: Unit): string | null {
   if (isAutomaton(u)) parts.push(`Wind-Up ${u.sta}/${u.stats.sta}`);
   if (u.eoArms) parts.push(`Arms ${u.eoArms}`);
   if (u.eoBubble) parts.push(`Bubble ${u.eoBubble}`);
+  if (u.eoParasite) parts.push(`Parasite Shield ${u.eoParasite}`);
   if (isEcho(u)) parts.push('Echo');
   void EO_WORLD;
   return parts.length ? parts.join(' · ') : null;

@@ -140,7 +140,7 @@ Returning boss encounters, with no new entries:
 |---|---|
 | Echo Ganon | Era of Legend Ganon with an Echo modifier |
 | Sword, Bow and Bomb Link | This pack's Link, with an Echo modifier and different loadouts |
-| Lord Jabu-Jabu | OoT Jabu-Jabu with an Echo modifier |
+| Lord Jabu-Jabu | A new entry for this pack (recruitable as jabuJabuEoW; its boss form jabuJabuBoss has an Echo modifier), fought in Jabul Waters alongside Vocavor |
 | Lanmola variants | Original Zelda Lanmola |
 | Volvagia | OoT |
 | Gohma | Existing Queen Gohma |
@@ -399,7 +399,7 @@ Collectibles:
 Regions:
 1. Suthorn Forest and Ruins: Seismic Talus.
 2. Gerudo Desert and Sanctum: Mogryph.
-3. Jabul Waters and Ruins: Vocavor.
+3. Jabul Waters and Ruins: Vocavor, or the Echo Lord Jabu-Jabu.
 4. Hyrule Castle: Echo Ganon.
 5. Eldin Volcano and Temple: Volvagia (returning).
 6. Faron Wetlands and Temple: Gohma (returning).
@@ -436,6 +436,7 @@ Camp facilities:
 - Dampe × Lueburry S
 - Tri × Null A
 - Tekom × Null A
+- Jabu-Jabu × Kushara A
 
 ### Cross-pack
 - EoW Zelda × OoT Zelda S
@@ -471,6 +472,7 @@ Camp facilities:
 - Stamp Guy × Tingle S
 - Seismic Talus × Stone Talus A
 - Skorchill × Blizzeta A
+- Jabu-Jabu × Ruto S
 
 ### Groups
 | Group | Bonus |
@@ -572,3 +574,4 @@ Crawltula never arrived, so it uses Strandtula's art. Everything else is in, and
 - Add Lord Jabu-Jabu as a recruitable boss unit for the Echo Lord Jabu-Jabu encounter.
   - Art: art_sources/echoes_of_wisdom/jabuJabuEOW.png (EoW style, main in this campaign) and jabuJabuOOT.webp (the OoT model, an alt).
   - jabuJabuEOW.png has a dark-blue background to check and remove.
+- Built: Null's player-side weakening is gone (full stats, HP and arms). Lord Jabu-Jabu (size 4, rare): 115 HP, STR 27, MAG 28, DEF 28, RES 27; Parasite Shield (−50% damage until 20 damage, lightning, a boomerang or a Bind tears it loose for the battle; 10% HP a turn in or next to water or rain), Guardian of the Zora, Swallow, Tidal Splash and Sacred Waters. Supports: Jabu-Jabu × Ruto S, Jabu-Jabu × Kushara A.

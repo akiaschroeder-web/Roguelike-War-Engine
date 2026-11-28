@@ -75,10 +75,13 @@ export function echoesStart(run: Run, rng: RNG) {
   void rng;
 }
 
-/** The fixed boss of a route region. */
-export function echoesBossFor(run: Run, node: MapNode): BossDef | null {
+/** A route region's boss: its only one, or one of its pool (Jabul Waters: Vocavor or the Echo Lord Jabu-Jabu), preferring one not yet fought. */
+export function echoesBossFor(run: Run, node: MapNode, rng?: RNG): BossDef | null {
   if (!isEoCamp(run) || node.type !== 'boss') return null;
-  const id = (EO_ROUTE_BOSSES[node.world] ?? []).find((x) => BOSSES[x]);
+  const ids = (EO_ROUTE_BOSSES[node.world] ?? []).filter((x) => BOSSES[x]);
+  const fresh = ids.filter((x) => !run.bossesFought.includes(x));
+  const pool = fresh.length ? fresh : ids;
+  const id = pool.length > 1 && rng ? rng.pick(pool) : pool[0];
   return id ? BOSSES[id] : null;
 }
 
@@ -93,7 +96,7 @@ export function echoesDecorateMap(run: Run, map: RunMap, rng: RNG) {
 
 const ESCORTS: Record<string, string[]> = {
   mogryph: ['holmill'], vocavor: ['chompfin', 'hydrozol'], skorchill: ['whiteWolfos', 'freezard'],
-  tekomBoss: ['darknut'], nullEoW: ['lynel', 'darknut'], echoLink: ['moblin', 'lizalfos'],
+  tekomBoss: ['darknut'], nullEoW: ['lynel', 'darknut'], echoLink: ['moblin', 'lizalfos'], jabuJabuBoss: ['biri', 'hydrozol'],
 };
 
 function spawnNear(b: Battle, id: string, near: Unit, level: number, rng: RNG): Unit | undefined {

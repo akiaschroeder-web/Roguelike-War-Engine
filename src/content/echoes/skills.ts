@@ -47,5 +47,6 @@ export const SKILLS: SkillDef[] = [
   k('whirlpoolMaster', 'Whirlpool Master', 'At the start of its turn, the current pulls enemies within 4 one space toward it.'),
   k('elementalHelmet', 'Elemental Helmet', 'Its helmet alternates fire (odd turns) and ice (even turns) protection: −40% damage, except from the opposing element, which shatters its horns (+30% damage taken for 2 turns).'),
   k('protectiveBubble', 'Protective Bubble', 'Shielded by a bubble (−60% damage) that pops after 15 damage, to a Bind, or to an arrow; summons Biri to defend it.'),
-  k('primordialNothingness', 'Primordial Nothingness', 'Many arms (4), each attacking a foe within 3 at the start of its turn; half damage while any arm remains, and a strong hit (12+) destroys one. Creates Rift spaces, summons Echoes and reflections of bosses. On your side it has no arms, and outside the Still World it is starved of Rifts: −45% STR, MAG, DEF and RES, −4 SPD, and it enters battle at no more than 60% HP.'),
+  k('parasiteShield', 'Parasite Shield', 'A parasite clings inside him like armour: −50% damage while it holds. It tears loose after 20 damage, to a lightning hit, a boomerang or a Bind, and never grows back. Water healing: in or next to water, or in the rain, he recovers 10% HP at the start of each turn.'),
+  k('primordialNothingness', 'Primordial Nothingness', 'Many arms (4), each attacking a foe within 3 at the start of its turn; half damage while any arm remains, and a strong hit (12+) destroys one. Creates Rift spaces, summons Echoes and reflections of bosses.'),
 ];

@@ -1,17 +1,17 @@
 import { describe, expect, it } from 'vitest';
-import { ABILITIES, BOSSES, COMMANDERS, ENEMIES, GEAR, ITEMS, REGION_BOSSES, ROSTERS, TEMPLATES, WEAPONS, WORLDS, artFor } from '../src/data/registry';
-import { ECHOES_OF_WISDOM, ECHOES_ROUTE, EO_ROUTE_BOSSES, TRI_CAPACITY, resolveEchoesFallbacks } from '../src/content/echoes';
+import { ABILITIES, ART_VARIANTS, BOSSES, COMMANDERS, ENEMIES, GEAR, ITEMS, REGION_BOSSES, ROSTERS, TEMPLATES, WEAPONS, WORLDS, artFor } from '../src/data/registry';
+import { ECHO_BOSSES, ECHOES_OF_WISDOM, ECHOES_ROUTE, EO_ROUTE_BOSSES, TRI_CAPACITY, resolveEchoesFallbacks } from '../src/content/echoes';
 import { DEFERRED_GROUPS_EOW, GROUP_SUPPORTS, SUPPORT_REGISTRY } from '../src/content/supports';
 import { castAbility, unusableReason } from '../src/engine/abilities';
 import { startPhase } from '../src/engine/battle';
 import { forecast } from '../src/engine/combat';
 import { keyOf } from '../src/engine/grid';
 import { echoCapacity, echoCost, echoesBattleStart, echoesBeforeFinish, echoUsed, eoState, isEchoEligible } from '../src/engine/echoes';
-import { blendSmoothie, echoesAfterBattle, echoesOf, echoesRegionOptions, smoothieOptions, triLevel } from '../src/engine/echoesRun';
+import { blendSmoothie, echoesAfterBattle, echoesBossFor, echoesOf, echoesRegionOptions, smoothieOptions, triLevel } from '../src/engine/echoesRun';
 import { RNG } from '../src/engine/rng';
 import { availableNodes, enterNode, newRun, startBattle, type RunWithEvent } from '../src/engine/run';
 import { addStatus } from '../src/engine/status';
-import { makeEnemy, makeHero, prepareForBattle } from '../src/engine/units';
+import { effectiveStats, makeEnemy, makeHero, prepareForBattle } from '../src/engine/units';
 import type { Battle, CommanderDef, EnemyArchetype, Terrain, Unit } from '../src/engine/types';
 
 const rng = (s = 11) => new RNG(s);
@@ -60,7 +60,7 @@ describe('Echoes of Wisdom content', () => {
     expect(EO_ROUTE_BOSSES.nullsBody).toEqual(['nullEoW']);
     expect(EO_ROUTE_BOSSES.hyruleCastleEoW).toEqual(['ganonLegendBoss']);
     expect(COMMANDERS.filter((c) => c.campaign === 'echoes').length).toBe(10);
-    expect(SUPPORT_REGISTRY.filter((p) => p.game === 'echoes').length).toBe(49);
+    expect(SUPPORT_REGISTRY.filter((p) => p.game === 'echoes').length).toBe(51);
     expect(GROUP_SUPPORTS.filter((g) => ['primeEnergy', 'royalCouncil', 'mechanicalMasters', 'mountainBrotherhood', 'desertCommand', 'clockworkArmy'].includes(g.id)).length).toBe(6);
     expect(DEFERRED_GROUPS_EOW).toEqual([]);
     expect(GROUP_SUPPORTS.some((g) => g.id === 'unitedWatersEoW') && GROUP_SUPPORTS.some((g) => g.id === 'falseCreation')).toBe(true);
@@ -204,5 +204,70 @@ describe('The Still World campaign', () => {
     enterNode(run, node.id);
     if (run.event?.type === 'deploy') startBattle(run, run.roster.map((u) => u.uid));
     if (run.battle) expect(run.battle.eo?.known.length).toBeGreaterThan(0);
+  });
+});
+
+describe('Echoes of Wisdom: Null at full strength and Lord Jabu-Jabu', () => {
+  it('Null on your side keeps the doc\'s stats, its HP and its arms, outside the Still World too', () => {
+    const b = field(14, 10);
+    const n = place(b, hero('nullEoW', 'n', 10), 3, 3);
+    const full = effectiveStats(n);
+    echoesBattleStart(b);
+    expect(n.buffs.some((x) => x.id === 'eoStarved')).toBe(false);
+    expect(effectiveStats(n)).toEqual(full);
+    expect(n.hp).toBe(n.stats.hp);
+    expect(n.eoArms).toBe(4);
+    expect(TEMPLATES.nullEoW.stats).toEqual(BOSSES.nullEoW.stats);
+  });
+
+  it('is recruitable with art, sits beside Vocavor in Jabul Waters, and is an Echo boss', () => {
+    const t = TEMPLATES.jabuJabuEoW;
+    expect(t).toBeDefined();
+    expect(t.size).toBeGreaterThanOrEqual(3); expect(t.size).toBeLessThanOrEqual(4); expect(t.rare).toBe(true);
+    expect(BOSSES.jabuJabuBoss.stats).toEqual(t.stats);
+    expect(TEMPLATES.jabuJabuBoss).toBeUndefined();
+    expect(artFor('jabuJabuEoW')).toBe('jabuJabuEoW');
+    expect(artFor('jabuJabuBoss')).toBe('jabuJabuEoW');
+    expect(ART_VARIANTS.jabuJabuEoW).toEqual(['jabuJabuEoW', 'jabuJabuOoT']);
+    expect(EO_ROUTE_BOSSES.jabulWaters).toEqual(['vocavor', 'jabuJabuBoss']);
+    expect(REGION_BOSSES.jabulWaters).toContain('jabuJabuBoss');
+    expect(ECHO_BOSSES).toContain('jabuJabuBoss');
+    expect(SUPPORT_REGISTRY.some((p) => p.key === 'jabuJabuEoW|ruto' && p.max === 'S')).toBe(true);
+    // The campaign picks the one this run hasn't fought.
+    const run = newRun(9, 'zeldaEoW', 'echoes');
+    const node = { ...run.map.nodes[0], type: 'boss' as const, world: 'jabulWaters' };
+    run.bossesFought = ['vocavor'];
+    expect(echoesBossFor(run, node, rng())?.id).toBe('jabuJabuBoss');
+    run.bossesFought = ['jabuJabuBoss'];
+    expect(echoesBossFor(run, node, rng())?.id).toBe('vocavor');
+  });
+
+  it('his Parasite Shield halves damage until it tears loose; Swallow eats the weak and spits out the rest', () => {
+    const b = field(14, 10);
+    const j = place(b, foe('jabuJabuBoss', 'j', 5), 6, 3, 'enemy');
+    j.isBoss = true;
+    const l = place(b, hero('linkEoW', 'l', 10), 5, 3);
+    echoesBattleStart(b);
+    expect(j.eoParasite).toBe(20);
+    const shielded = forecast(b, l, l, j, l.weapons[0]).attacker.dmg;
+    j.eoParasite = 0;
+    expect(forecast(b, l, l, j, l.weapons[0]).attacker.dmg).toBeGreaterThan(shielded);
+    j.eoParasite = 20;
+    const z = place(b, hero('zeldaEoW', 'z', 10), 4, 4);
+    castAbility(b, z, 'eoBind', rng(), j.uid);
+    expect(j.eoParasite).toBe(0);
+    // Swallow: a healthy foe is hurt, Stunned and spat out; a weak one is swallowed whole.
+    const p = place(b, hero('jabuJabuEoW', 'p', 10), 10, 6);
+    const m = place(b, foe('octorok', 'm', 1), 0, 9, 'enemy');
+    m.hp = m.stats.hp;
+    expect(unusableReason(b, p, ABILITIES.jabuSwallow)).toBeTruthy();
+    m.x = 9; m.y = 7;
+    expect(unusableReason(b, p, ABILITIES.jabuSwallow)).toBeNull();
+    castAbility(b, p, 'jabuSwallow', rng());
+    expect(m.statuses.some((s) => s.kind === 'stun') || m.hp <= 0).toBe(true);
+    const k = place(b, foe('keese', 'k', 1), 10, 5, 'enemy');
+    k.hp = 1; p.cooldowns = {}; p.sta = p.stats.sta;
+    castAbility(b, p, 'jabuSwallow', rng());
+    expect(b.units.includes(k)).toBe(false);
   });
 });

@@ -482,8 +482,8 @@ export function tfCannotAttack(b: Battle, atk: Unit, def: Unit, w: WeaponDef | u
   // Out of melee reach: the top of a three-unit Totem (or of any Totem braced by Totem Guard).
   const braced = !!def.tfStack && hasBuff(baseOf(b, def), 'tfTotemGuard');
   if (isTop(def) && (def.tfStack!.level >= 2 || braced) && d <= 1 && w.type !== 'magic' && w.type !== 'staff' && !isElevated(b, atk) && atk.size <= 1 && !tfTag(w, 'vertical') && !has(atk, 'toweringSwordsman')) return true;
-  // Grim Repoe is intangible on odd turns: physical attacks pass through.
-  if (has(def, 'spectralReaper') && def.team === 'enemy' && b.turn % 2 === 1 && !isMagicW(w) && w.element !== 'light' && !w.sacredMult) return true;
+  // Grim Repoe (on either side) is intangible on odd turns: physical attacks pass through.
+  if (has(def, 'spectralReaper') && b.turn % 2 === 1 && !isMagicW(w) && w.element !== 'light' && !w.sacredMult) return true;
   return false;
 }
 

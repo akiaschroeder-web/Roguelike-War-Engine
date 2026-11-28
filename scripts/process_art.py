@@ -366,6 +366,8 @@ ENTRIES = {
     "highTekuBaba": ("highTekuBaba.png", (0.46, 0.40, 0.80)),
     "roboblin": ("roboblin.png", (0.50, 0.25, 0.40)),
     "goldfinch": ("goldfinch.png", (0.30, 0.50, 0.45)),
+    "jabuJabuEoW": ("jabuJabuEoW.png", (0.40, 0.38, 0.86)),
+    "jabuJabuOoT": ("jabuJabuOoT.png", (0.34, 0.42, 0.66)),
     # (Twilight Princess, continued)
     "heroOfTwilight": ("heroOfTwilight.png", (0.500, 0.150, 0.40)),
     "wolfLinkMidna": ("wolfLinkMidna.png", (0.500, 0.350, 0.50)),

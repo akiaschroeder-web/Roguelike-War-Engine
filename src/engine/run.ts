@@ -263,7 +263,7 @@ function bossPower(b: BossDef): number {
 
 function bossFor(run: Run, rng: RNG, node: MapNode): BossDef {
   // Original Hyrule: every Level has its own boss (the Second Quest moves them around).
-  const level = originalBossFor(run, node) ?? legendBossFor(run, node) ?? phantomBossFor(run, node) ?? spiritBossFor(run, node) ?? minishBossFor(run, node) ?? fourswordsBossFor(run, node) ?? loruleBossFor(run, node) ?? echoesBossFor(run, node) ?? triforceBossFor(run, node);
+  const level = originalBossFor(run, node) ?? legendBossFor(run, node) ?? phantomBossFor(run, node) ?? spiritBossFor(run, node) ?? minishBossFor(run, node) ?? fourswordsBossFor(run, node) ?? loruleBossFor(run, node) ?? echoesBossFor(run, node, rng) ?? triforceBossFor(run, node);
   if (level) return level;
   // Not canon: anyone can be a boss, even someone already in your army.
   // After the free-for-all point, bosses come from every region.
@@ -1804,10 +1804,15 @@ export function migrateRun(run: RunWithEvent): RunWithEvent {
     }
     // Ravio's Rabbit Hood merged into Ravio's Hood.
     for (const k of Object.keys(u.gear) as (keyof typeof u.gear)[]) if (u.gear[k] === 'raviosRabbitHood') u.gear[k] = 'raviosHood';
+    // Lady Maud's stand-in Drablands Parasol was retired: she carries her real one.
+    if (u.weapons?.includes('drablandsParasol')) {
+      u.weapons = u.weapons.map((w) => (w === 'drablandsParasol' ? 'ladyMaudsParasol' : w));
+      for (const rec of [u.wear, u.forge]) if (rec?.drablandsParasol !== undefined) { rec.ladyMaudsParasol ??= rec.drablandsParasol; delete rec.drablandsParasol; }
+    }
     // Units whose template became Micro (e.g. the fairy companions) pick up the flag.
     if (u.templateId && TEMPLATES[u.templateId]?.size === 0 && !u.micro) { u.micro = true; u.size = 1; }
   };
-  run.convoy = (run.convoy ?? []).map((id) => (id === 'raviosRabbitHood' ? 'raviosHood' : id));
+  run.convoy = (run.convoy ?? []).map((id) => (id === 'raviosRabbitHood' ? 'raviosHood' : id === 'drablandsParasol' ? 'ladyMaudsParasol' : id));
   // The Great Sea: a cleared Pearl island always yields its Goddess Pearl (older saves could miss one
   // when the boss dropped another prize, leaving the Tower of the Gods locked for good).
   if (run.sea) {

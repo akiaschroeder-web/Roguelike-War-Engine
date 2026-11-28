@@ -59,6 +59,10 @@ export const BOSSES: BossDef[] = [
     weapons: ['herosSword', 'travelersBow'], skill: 'mysteriousSwordsman', abilities: ['heroicSpin', 'mightyShot'],
     stats: st(58, 23, 8, 21, 19, 16, 13, 10, 10, 7, 45, 25),
     quote: '(A silent copy of Link steps out of the Rift — sword, bow and bombs, in turn. Its eyes glow red.)', drops: ['heartBarrette'] }),
+  b({ id: 'jabuJabuBoss', name: 'Lord Jabu-Jabu', title: 'Guardian Deity of the Zora', home: 'jabulWaters', race: 'aquatic', classId: 'guardianFishDeity', size: 4, glyph: 'JJ',
+    weapons: ['jabuMaw', 'jabuWaterSpout'], skill: 'parasiteShield', abilities: ['jabuSwallow', 'tidalSplash', 'jabuSacredWaters'],
+    stats: st(115, 27, 28, 14, 9, 28, 27, 10, 42, 5, 55, 70),
+    quote: '(The sunken ruins flood with a smell of old fish. The Zora\'s guardian rises from the water — red-eyed, a Rift copy, with something writhing in its belly.)', drops: ['zoraSapphire'] }),
   b({ id: 'volcanicTalus', name: 'Volcanic Talus', title: 'Stone Construct (fire)', home: 'eldinVolcanoEoW', race: 'fireCreature', classId: 'stoneConstructEoW', size: 3, glyph: 'VT',
     weapons: ['talusFist', 'volcanicTalusMagma'], skill: 'floatingCore', abilities: ['stoneFistEoW', 'doubleSlam', 'coreReconstruction'],
     stats: st(100, 31, 18, 12, 7, 33, 18, 4, 38, 4, 50, 35),
@@ -66,20 +70,21 @@ export const BOSSES: BossDef[] = [
 ];
 
 /** Boss forms of existing templates (not recruited separately). */
-export const BOSS_AS_TEMPLATE: Record<string, string> = { tekomBoss: 'tekom', echoLink: 'linkEoW' };
+export const BOSS_AS_TEMPLATE: Record<string, string> = { tekomBoss: 'tekom', echoLink: 'linkEoW', jabuJabuBoss: 'jabuJabuEoW' };
 
-/** Each Still World region's bosses, in order (section 14; Echo Ganon, Volvagia, Gohma and Smog are returning entries). */
+/** Each Still World region's bosses (section 14; Echo Ganon, Volvagia, Gohma and Smog are returning entries). The campaign fights
+ *  one of a region's list (Jabul Waters: Vocavor or the Echo Lord Jabu-Jabu), preferring one this run hasn't fought. */
 export const ROUTE_BOSSES: Record<string, string[]> = {
-  suthornForest: ['seismicTalus'], gerudoDesertEoW: ['mogryph'], jabulWaters: ['vocavor'], hyruleCastleEoW: ['ganonLegendBoss'],
+  suthornForest: ['seismicTalus'], gerudoDesertEoW: ['mogryph'], jabulWaters: ['vocavor', 'jabuJabuBoss'], hyruleCastleEoW: ['ganonLegendBoss'],
   eldinVolcanoEoW: ['volvagia'], faronWetlands: ['queenGohma'], hebraMountain: ['skorchill'], easternTemple: ['smog'],
   wreckedShip: ['bori'], eternalForest: ['tekomBoss'], ancientRuins: ['echoLink'], nullsBody: ['nullEoW'],
 };
 /** Returning bosses fought as Echoes (an Echo modifier: rift creatures, a touch weaker, red-eyed). */
-export const ECHO_BOSSES = ['ganonLegendBoss', 'volvagia', 'queenGohma', 'smog', 'manhandla', 'lanmolasBoss', 'slimeEye', 'echoLink'];
+export const ECHO_BOSSES = ['ganonLegendBoss', 'volvagia', 'queenGohma', 'smog', 'manhandla', 'lanmolasBoss', 'slimeEye', 'echoLink', 'jabuJabuBoss'];
 
 // Boss pools (other campaigns and the Random mode).
 export const REGION_BOSSES: Record<string, string[]> = {
-  suthornForest: ['seismicTalus'], gerudoDesertEoW: ['mogryph', 'lanmolasBoss'], jabulWaters: ['vocavor'], hyruleCastleEoW: ['ganonLegendBoss', 'echoLink'],
+  suthornForest: ['seismicTalus'], gerudoDesertEoW: ['mogryph', 'lanmolasBoss'], jabulWaters: ['vocavor', 'jabuJabuBoss'], hyruleCastleEoW: ['ganonLegendBoss', 'echoLink'],
   eldinVolcanoEoW: ['volvagia', 'volcanicTalus'], faronWetlands: ['queenGohma', 'manhandla'], hebraMountain: ['skorchill'], easternTemple: ['smog', 'slimeEye'],
   wreckedShip: ['bori'], eternalForest: ['tekomBoss'], ancientRuins: ['echoLink', 'manhandla', 'lanmolasBoss', 'slimeEye'], nullsBody: ['nullEoW'],
 };
@@ -108,5 +113,5 @@ export const RIVER_ZORA_REGIONS = ['jabulWaters', 'faronWetlands', 'wreckedShip'
 export const EO_SPOILS: Record<string, string> = {
   ignizol: 'warmPepper', hydrozol: 'bubbleKelp', caromadillo: 'rocktato', tornando: 'floralNectar', ribbitune: 'riverhorse', drippitune: 'refreshingGrapes',
   holmill: 'rocktato', platboom: 'toughMango', strandtula: 'bokoblinFang', crawltula: 'bokoblinFang', tweelus: 'monsterStone', chompfin: 'moblinGuts',
-  seismicTalus: 'musicBox', mogryph: 'goldenFan', vocavor: 'prismaticMusicBox', skorchill: 'heirloomKatana', bori: 'electroApple', nullEoW: 'goldenEgg',
+  seismicTalus: 'musicBox', mogryph: 'goldenFan', vocavor: 'prismaticMusicBox', skorchill: 'heirloomKatana', bori: 'electroApple', nullEoW: 'goldenEgg', jabuJabuBoss: 'bubbleKelp',
 };

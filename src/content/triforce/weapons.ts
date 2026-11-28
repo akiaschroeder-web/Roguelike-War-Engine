@@ -22,7 +22,6 @@ export const WEAPONS: WeaponDef[] = [
   w('stalchampionsSword', "Stalchampion's Sword", 'sword', 'legendary', 28, 80, 5, 12, 1, 2, { tf: ['vertical'], twoHanded: true,
     desc: 'More vertical attack range: reaches 2 spaces, and strikes the top of a Totem and fliers without penalty.' }),
   // ── Character weapons ──
-  w('drablandsParasol', 'Drablands Parasol', 'magic', 'rare', 8, 90, 5, 2, 1, 2, sig({ desc: 'Lady Maud\'s everyday parasol. The real one she keeps for special occasions (her boss form drops it).' })),
   w('fashionSparkle', 'Fashion Sparkle', 'magic', 'uncommon', 8, 95, 5, 1, 1, 2, sig({ element: 'light', desc: 'A dazzle of sequins: light magic.' })),
   w('kingsScepterTF', "King Tuft's Scepter", 'hammer', 'rare', 13, 85, 0, 6, 1, 1, sig({ desc: 'Heavy, golden and covered in jewels. It has never been used as anything but a weapon.' })),
   w('tailorsNeedle', "Tailor's Needle", 'dagger', 'rare', 8, 95, 15, 1, 1, 1, sig({ desc: 'A needle as long as a sword. Precise.' })),

@@ -71,6 +71,11 @@ export const TEMPLATES: UnitTemplate[] = [
   u({ id: 'tekom', name: 'Tekom', title: 'Echo Zelda', race: 'hylian', classId: 'darkSummoner', size: 1, home: 'eternalForest', glyph: 'TK', rare: true,
     stats: st(38, 7, 36, 21, 17, 10, 30, 5, 6, 6, 25, 100), weapons: ['falseTriRod'], skill: 'falseWisdom', abilities: ['createEcho', 'dismissEcho', 'eoBind'],
     bio: 'A red-eyed copy of Zelda made by Null, who summons hostile Echoes and copies anything the real princess conjures. Freed of the Rift, she has to decide what a copy is for.' }),
+  // Lord Jabu-Jabu: the Ocarina of Time deity in this pack's style, recruitable at the full sheet of his Echo boss form (jabuJabuBoss).
+  u({ id: 'jabuJabuEoW', name: 'Lord Jabu-Jabu', title: 'Guardian Deity of the Zora', race: 'aquatic', classId: 'guardianFishDeity', size: 4, home: 'jabulWaters', glyph: 'JJ', rare: true,
+    stats: st(115, 27, 28, 14, 9, 28, 27, 10, 42, 5, 55, 70), weapons: ['jabuMaw', 'jabuWaterSpout'], skill: 'parasiteShield', extraSkills: ['guardianOfTheZora'],
+    abilities: ['jabuSwallow', 'tidalSplash', 'jabuSacredWaters'],
+    bio: 'The great fish the Zora have fed and worshipped for longer than they have had a kingdom. He swallows what threatens his people, and sometimes what doesn\'t. Something small and unpleasant still lives in his belly; he would rather you didn\'t mention it.' }),
   // ── Section 5: Automatons (recruitable, permanent, take deployment slots; Wind-Up Energy in the STA slot) ──
   u({ id: 'techtite', name: 'Techtite', title: 'Automaton', race: 'automaton', classId: 'automatonLeaper', size: 1, home: 'eternalForest', glyph: 'Tt', generic: true,
     stats: st(30, 16, 0, 13, 17, 15, 8, 3, 10, 7, 35, 0), weapons: ['techtiteLegs'], skill: 'mechanicalLeap', abilities: ['mechanicalLeapAct'],

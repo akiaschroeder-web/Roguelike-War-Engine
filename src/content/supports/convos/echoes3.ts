@@ -334,4 +334,36 @@ export const CONVOS: Record<string, Partial<Record<'C' | 'B' | 'A' | 'S', Line[]
       ['a', 'Warm… Thank you.'],
     ],
   },
+  // a = jabuJabuEoW, b = ruto
+  'jabuJabuEoW|ruto': {
+    C: [
+      ['n', 'Ruto stops dead at the water\'s edge. The fish in front of her is round, smooth and wearing a crown.'],
+      ['b', 'Lord Jabu-Jabu? You look… polished.'],
+      ['a', 'Hrrrm.'],
+      ['b', 'And you have a crown now. Who gave you a crown? I never gave you a crown.'],
+    ],
+    B: [
+      ['b', 'They say a parasite lives in your belly again. In this age too. Honestly, Lord Jabu-Jabu.'],
+      ['a', 'Hmmrr…'],
+      ['b', 'Don\'t you "hmmrr" me. Last time it was Barinade, and I had to be carried out by a boy with a slingshot.'],
+      ['n', 'Jabu-Jabu opens his mouth, very slightly, as if offering.'],
+      ['b', 'No! I am not going in there. I am a princess. I will fight it from the outside, like a sensible person.'],
+    ],
+    A: [
+      ['b', 'Whatever age this is, the Zora still feed you. I watched them at dawn.'],
+      ['a', 'Hrrrrmmm.'],
+      ['b', 'River Zora and Sea Zora, both. They argue about everything else, but not about you.'],
+      ['n', 'The great fish turns slowly in the water so that one eye is level with hers.'],
+      ['b', 'I suppose that is what a guardian is for. Something everyone agrees to love.'],
+    ],
+    S: [
+      ['b', 'I used to think my mother\'s oath was a chore. Fish in the morning, fish in the evening.'],
+      ['a', 'Hmmm.'],
+      ['b', 'But you are still here. Ages later, with a new face and a silly crown, still swallowing whatever comes for your people.'],
+      ['n', 'Ruto takes a fish from her basket and holds it out, close this time, close enough to touch his lip.'],
+      ['b', 'So I will feed you in every age I can reach. That is my oath. Not my mother\'s. Mine.'],
+      ['a', 'Hrrrrrmmmmm.'],
+      ['n', 'He takes the fish very gently, and does not swallow the princess. She counts it as a declaration.'],
+    ],
+  },
 };

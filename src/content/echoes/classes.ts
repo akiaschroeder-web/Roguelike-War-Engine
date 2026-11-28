@@ -55,5 +55,6 @@ export const CLASSES: ClassDef[] = [
   c('aquaticGuardian', 'Aquatic Guardian', '🐋', ['natural', 'magic'], 'foot', BOSS, undefined, ['beast', 'aquatic']),
   c('elementalMountainBeast', 'Elemental Mountain Beast', '🐏', ['natural', 'magic'], 'foot', BOSS, undefined, ['beast']),
   c('bubbleGuardian', 'Bubble Guardian', '🎐', ['natural', 'magic'], 'flying', CASTER_BOSS, undefined, ['beast', 'aquatic', 'slime']),
+  c('guardianFishDeity', 'Guardian Fish Deity', '🐟', ['natural', 'magic'], 'foot', g(150, 50, 40, 25, 15, 50, 45, 25), undefined, ['beast', 'aquatic', 'divine']),
   c('primordialEntity', 'Primordial Entity', '🕳', ['natural', 'magic'], 'armor', g(160, 50, 70, 40, 20, 50, 60, 5), undefined, ['void', 'rift', 'demon']),
 ];

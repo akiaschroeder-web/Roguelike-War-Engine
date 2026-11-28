@@ -25,6 +25,6 @@ export const SKILLS: SkillDef[] = [
   k('electricBrood', 'Electric Brood', 'Summons an electrified Buzz Blob every other turn (four at most); blobs within 2 gain +3 STR and MAG.'),
   k('livingGlacier', 'Living Glacier', 'Ice armour: 40% less damage until fire breaks it (fire deals 50% more, then the armour is gone for 2 turns). Its projectiles freeze.'),
   k('desertSovereign', 'Desert Sovereign', 'Wind currents push enemies within 2 back a space at the start of its turn; attacks from high ground (+20% damage against units on the ground).'),
-  k('spectralReaper', 'Spectral Reaper', 'On the enemy side it turns intangible on odd turns (immune to physical attacks); on even turns it strikes hard (+50% damage).'),
+  k('spectralReaper', 'Spectral Reaper', 'It turns intangible on odd turns (immune to physical attacks); on even turns it strikes hard (+50% damage).'),
   k('perfectCamouflage', 'Perfect Camouflage', 'Invisible until it attacks or is revealed (Light Armor, a hit, or an enemy next to it); hidden again when no enemy is near.'),
 ];

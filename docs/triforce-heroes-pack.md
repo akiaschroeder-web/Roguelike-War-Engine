@@ -276,3 +276,4 @@ All Tri Force Heroes art is in.
 ## User decisions after the build
 1. Balance is fine as built.
 2. Recruited Grim Repoe and Lady Maud are full strength: Grim Repoe at the doc's stats with its intangibility, and Maud carrying her 26-Might Parasol.
+3. Built: the recruited Grim Repoe uses the miniboss's sheet and is intangible on odd turns on either side; Lady Maud carries Lady Maud's Parasol (26 Might). The stand-in Drablands Parasol is gone, and saves holding it get the real one.

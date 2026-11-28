@@ -18,6 +18,7 @@ export const SUPPORT_REGISTRY_ECHOES: SupportPairDef[] = [
   { key: 'dampeEoW|lueburry', a: 'dampeEoW', b: 'lueburry', max: 'S', game: 'echoes', theme: '' },
   { key: 'nullEoW|tri', a: 'tri', b: 'nullEoW', max: 'A', game: 'echoes', theme: '' },
   { key: 'nullEoW|tekom', a: 'tekom', b: 'nullEoW', max: 'A', game: 'echoes', theme: '' },
+  { key: 'jabuJabuEoW|kushara', a: 'jabuJabuEoW', b: 'kushara', max: 'A', game: 'echoes', theme: '' },
   { key: 'zelda|zeldaEoW', a: 'zeldaEoW', b: 'zelda', max: 'S', game: 'echoes', theme: '' },
   { key: 'zeldaALBW|zeldaEoW', a: 'zeldaEoW', b: 'zeldaALBW', max: 'S', game: 'echoes', theme: '' },
   { key: 'hilda|zeldaEoW', a: 'zeldaEoW', b: 'hilda', max: 'S', game: 'echoes', theme: '' },
@@ -51,4 +52,5 @@ export const SUPPORT_REGISTRY_ECHOES: SupportPairDef[] = [
   { key: 'stampGuy|tingle', a: 'stampGuy', b: 'tingle', max: 'S', game: 'echoes', theme: '' },
   { key: 'seismicTalus|stoneTalus', a: 'seismicTalus', b: 'stoneTalus', max: 'A', game: 'echoes', theme: '' },
   { key: 'blizzeta|skorchill', a: 'skorchill', b: 'blizzeta', max: 'A', game: 'echoes', theme: '' },
+  { key: 'jabuJabuEoW|ruto', a: 'jabuJabuEoW', b: 'ruto', max: 'S', game: 'echoes', theme: '' },
 ];

@@ -30,13 +30,13 @@ export const TEMPLATES: UnitTemplate[] = [
     stats: st(25, 5, 12, 23, 10, 6, 13, 18, 6, 5, 22, 30), weapons: ['tailorsNeedle', 'healStaff'], skill: 'expertTailoringSkill', abilities: ['expertTailoring'],
     bio: 'The owner of Hytopia\'s grandest boutique, who will sew you anything — the Big Bomb Outfit, the Cheetah Costume, the Tingle Tights — if you bring her the materials and the Rupees. Her cat supervises.' }),
   u({ id: 'ladyMaud', name: 'Lady Maud', title: 'Fashion Witch', race: 'hytopian', classId: 'fashionWitch', size: 1, home: 'skyRealmTF', glyph: 'LM', rare: true,
-    stats: st(35, 5, 32, 20, 17, 9, 29, 10, 7, 6, 20, 85), weapons: ['drablandsParasol'], skill: 'fashionCurseSkill',
+    stats: st(35, 5, 32, 20, 17, 9, 29, 10, 7, 6, 20, 85), weapons: ['ladyMaudsParasol'], skill: 'fashionCurseSkill',
     abilities: ['fashionCurse', 'parasolBarrage', 'magicalReflection', 'witchsEnsemble', 'grandCurse'],
     bio: 'The Drablands witch behind the sunglasses and the parasol, Madame Couture\'s estranged sister, who cursed Princess Styla out of sheer envy. She can take the fashion right off your back.' }),
-  // Grim Repoe as a recruit (and Lady Maud's escort): the miniboss at a recruit's strength (the boss keeps the doc's sheet).
+  // Grim Repoe as a recruit (and Lady Maud's escort): the doc's full sheet, the same as the miniboss.
   u({ id: 'grimRepoe', name: 'Grim Repoe', title: 'Spectral Reaper', race: 'undead', classId: 'spectralReaperClass', size: 2, home: 'ruinsTF', glyph: 'GR', rare: true,
-    stats: st(36, 14, 15, 14, 11, 8, 15, 5, 12, 6, 30, 35), weapons: ['repoeScythe'], skill: 'spectralReaper',
-    bio: 'A hooded ghost in a jewelled collar who reaps for whoever holds its leash. Its full strength only shows when it is the one guarding the Ruins.' }),
+    stats: st(65, 23, 26, 21, 17, 14, 26, 5, 18, 7, 40, 60), weapons: ['repoeScythe'], skill: 'spectralReaper',
+    bio: 'A hooded ghost in a jewelled collar who reaps for whoever holds its leash, and slips through blades on every other breath.' }),
 ];
 
 /** The three Tri Force Heroes: the Green Hero is the ALBW Link. Colour codes for the Totem art. */

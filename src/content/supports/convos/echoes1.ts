@@ -365,4 +365,29 @@ export const CONVOS: Record<string, Partial<Record<'C' | 'B' | 'A' | 'S', Line[]
       ['a', 'Then we will learn it together. Two things that were not, and now are.'],
     ],
   },
+  // a = jabuJabuEoW, b = kushara
+  'jabuJabuEoW|kushara': {
+    C: [
+      ['n', 'Kushara sits on a rock at the water\'s edge, tuning her harp. Lord Jabu-Jabu surfaces beside her, very close, very large.'],
+      ['b', 'You are the River Zora\'s god, aren\'t you? Or the old Zora\'s. Nobody in Jabul can agree.'],
+      ['a', 'Hrrrrm.'],
+      ['b', 'That is what the River Zora say too, when you ask them anything.'],
+    ],
+    B: [
+      ['b', 'Dradd says you belong to the river. I say you came from the sea. Which is it?'],
+      ['n', 'Jabu-Jabu blows a long stream of bubbles. Some drift upstream. Some drift down.'],
+      ['b', 'Both. Of course it is both.'],
+      ['b', 'If I play for you, will you tell him he is wrong?'],
+      ['a', 'Hrrm-hrrm.'],
+      ['b', 'No. I didn\'t think so. A god who takes sides is not much of a god.'],
+    ],
+    A: [
+      ['b', 'When the Rift took the ruins, I thought you were gone with them.'],
+      ['a', 'Hmmmrrrr…'],
+      ['b', 'And then a red-eyed copy of you came out of the dark, and I thought: that is worse.'],
+      ['n', 'The great fish sinks until only his eyes show, and stays there, beside her.'],
+      ['b', 'You are not a copy. A copy would not sulk.'],
+      ['n', 'Kushara plays. Somewhere upstream, a drum answers her, very quietly, and then stops as if embarrassed.'],
+    ],
+  },
 };

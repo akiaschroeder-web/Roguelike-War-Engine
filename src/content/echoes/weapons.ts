@@ -61,6 +61,8 @@ export const WEAPONS: WeaponDef[] = [
   nat('skorchillBreath', 'Fire-and-Ice Breath', 12, 85, 0, 1, 2, { magicContact: true, element: 'ice', inflict: { status: 'freeze', chance: 15, turns: 1 } }),
   nat('boriShock', 'Electric Tendrils', 10, 85, 0, 1, 2, { magicContact: true, element: 'lightning', inflict: { status: 'shock', chance: 25, turns: 1 } }),
   nat('boriBounce', 'Bubble Bounce', 10, 80, 0, 1, 1),
+  nat('jabuMaw', 'Great Maw', 14, 85, 5, 1, 1),
+  nat('jabuWaterSpout', 'Water Spout', 13, 85, 0, 1, 3, { magicContact: true, element: 'water' }),
   nat('voidGrasp', 'Void Grasp', 17, 85, 5, 1, 2),
   nat('nullDarkness', 'Nothingness', 17, 85, 0, 1, 3, { magicContact: true, element: 'dark' }),
 ];
