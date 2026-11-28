@@ -15,6 +15,7 @@ import { lgAfterCombat, lgAfterHit, lgCannotAttack, lgDefense, lgExtraAttack, lg
 import { phAfterCombat, phAfterHit, phCannotAttack, phMods, phMultiplier, phOnKill, phRangeBonus } from './phantom';
 import { mcCannotWield, mcHit, mcMods, mcMultiplier, microSheltered } from './micro';
 import { mnAfterCombat, mnAfterHit, mnCannotAttack, mnInterceptor, mnMods, mnMultiplier, mnOnKill, mnSaveFromDeath } from './minish';
+import { fsAfterHit, fsMods, fsMultiplier, fsOnKill } from './fourswords';
 import { spAfterCombat, spAfterHit, spCannotAttack, spHealMult, spInterceptor, spMods, spMultiplier, spOnKill, spSaveFromDeath } from './spirit';
 
 const rangeBonus = (u: Unit, w: WeaponDef) => wwRangeBonus(u, w) + tpRangeBonus(u, w) + ssRangeBonus(u, w) + wildRangeBonus(u, w) + ogRangeBonus(u, w) + lgRangeBonus(u, w) + phRangeBonus(u, w);
@@ -223,6 +224,9 @@ export function situational(b: Battle, u: Unit, pos: Pos, foe: Unit, initiating:
   const ph = phMods(b, u, pos, foe, initiating, WEAPONS[u.weapons[0]]);
   const sp = spMods(b, u, pos, foe, initiating, WEAPONS[u.weapons[0]]);
   const mn = mnMods(b, u, pos, foe, initiating, WEAPONS[u.weapons[0]]);
+  // Four Swords: the Links' courage, formations and Force Power, the Maidens, the military classes.
+  const fsm = fsMods(b, u, pos, foe, initiating, WEAPONS[u.weapons[0]]);
+  for (const k of ['str', 'mag', 'skl', 'spd', 'def', 'res', 'hit', 'avoid', 'crit', 'dmg'] as const) mn[k] += fsm[k];
   const mc = mcMods(b, u, pos);
   mn.hit += mc.hit; mn.avoid += mc.avoid; mn.def += mc.def; mn.skl += mc.skl;
   for (const k of ['str', 'mag', 'skl', 'spd', 'def', 'res', 'hit', 'avoid', 'crit', 'dmg'] as const) ww[k] += tp[k] + ss[k] + wd[k] + og[k] + lg[k] + ph[k] + sp[k] + mn[k];
@@ -296,6 +300,7 @@ function sideStats(
   dmg = Math.floor(dmg * phMultiplier(b, atk, atkPos, def, magical, weapon, d, element));
   dmg = Math.floor(dmg * spMultiplier(b, atk, atkPos, def, magical, weapon, d, element));
   dmg = Math.floor(dmg * mnMultiplier(b, atk, atkPos, def, magical, weapon, d, element));
+  dmg = Math.floor(dmg * fsMultiplier(b, atk, atkPos, def, magical, weapon, d, element));
   // Micro vs Normal: 25% unless a weak point is open.
   dmg = Math.floor(dmg * mcMultiplier(b, atk, def, weapon));
   if (adj.finish) dmg = Math.max(dmg, def.hp);
@@ -556,6 +561,7 @@ export function resolveCombat(b: Battle, attacker: Unit, defender: Unit, rng: RN
     if (hit) phAfterHit(b, by, target, dmg, weaponDef(side.weaponId), side.element);
     if (hit) spAfterHit(b, by, target, dmg, weaponDef(side.weaponId), side.element);
     if (hit) mnAfterHit(b, by, target, dmg, weaponDef(side.weaponId), side.element);
+    if (hit) fsAfterHit(b, by, target, dmg, weaponDef(side.weaponId), side.element);
     if (killed) {
       by.kills++;
       deaths.push(target.uid);
@@ -569,6 +575,7 @@ export function resolveCombat(b: Battle, attacker: Unit, defender: Unit, rng: RN
       phOnKill(b, by, target, rng);
       spOnKill(b, by, target, rng);
       mnOnKill(b, by, target);
+      fsOnKill(b, by, target);
       killUnit(b, target);
       onKillEffects(b, by, weaponDef(side.weaponId));
       break;

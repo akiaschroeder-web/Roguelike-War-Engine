@@ -170,7 +170,10 @@ export type Terrain = BaseTerrain | 'cracked' | 'timeBlock' | 'timeGap' | 'bridg
   | 'minishPortal' | 'microPassage' | 'microBridge' | 'microTunnel' | 'minishDoor' | 'giantGrass' | 'waterDroplet' | 'floatingLeaf'
   | 'internalWeakPoint' | 'softEarthWall' | 'pacciHole' | 'duplicationTile' | 'windCrest' | 'giantMushroom' | 'minishVine' | 'spiderweb' | 'gustCurrent'
   // Size-dependent terrain (normal / Micro)
-  | 'puddle' | 'giantFlower' | 'fallenTwig' | 'bookshelf' | 'minishTable' | 'tallGrass' | 'raindrop' | 'ordinaryHouse';
+  | 'puddle' | 'giantFlower' | 'fallenTwig' | 'bookshelf' | 'minishTable' | 'tallGrass' | 'raindrop' | 'ordinaryHouse'
+  // Four Swords & Four Swords Adventures battlefield spaces (engine/fourswords.ts; the Gnat Passage is the Micro Passage)
+  | 'forceGemDeposit' | 'forceBarrier' | 'fourPersonSwitch' | 'formationSwitch' | 'cooperativeBlock' | 'itemPedestal' | 'fairyPedestal'
+  | 'magneticPillar' | 'fsDarkPortal' | 'shadowMirrorGate' | 'giantBombZone' | 'royalJewelPedestal' | 'sanctuarySeal';
 
 export type Team = 'player' | 'enemy';
 
@@ -389,6 +392,8 @@ export interface WeaponDef {
   st?: string[];
   /** The Minish Cap effects handled by engine/minish.ts (and Micro gear for engine/micro.ts). */
   mc?: string[];
+  /** Four Swords effects handled by engine/fourswords.ts (Level 2 tools, the Trident, the Shadow Sword). */
+  fs?: string[];
 }
 
 /** Era of the Wild weapon effects (section 13). */
@@ -455,6 +460,8 @@ export interface GearDef {
   st?: string[];
   /** The Minish Cap effects (Micro gear, Mole Mitts, Grip Ring…) handled by engine/minish.ts and engine/micro.ts. */
   mc?: string[];
+  /** Four Swords effects (the Gnat Hat, the Hero's Medal, the Shadow Mirror…) handled by engine/fourswords.ts. */
+  fs?: string[];
 }
 
 export type GearEffect =
@@ -640,7 +647,7 @@ export interface WorldDef {
   terrainNames: Record<BaseTerrain, string>;
   terrainColors: Record<BaseTerrain, string>;
   /** Regions of the Termina campaign (with the three-day cycle). */
-  campaign?: 'termina' | 'greatSea' | 'twilight' | 'skyward' | 'wild' | 'original' | 'legend' | 'phantom' | 'spirit' | 'minish';
+  campaign?: 'termina' | 'greatSea' | 'twilight' | 'skyward' | 'wild' | 'original' | 'legend' | 'phantom' | 'spirit' | 'minish' | 'fourswords';
   /** Era of the Wild: which layer of the three-layer map. */
   layer?: 'surface' | 'sky' | 'depths';
   /** Battles here are fought at sea (vessels, wind, islands). */
@@ -760,7 +767,7 @@ export interface CommanderDef {
   bonus: CommanderBonus;
   bonusText: string;
   /** Campaign this commander starts in by default. */
-  campaign?: 'termina' | 'greatSea' | 'twilight' | 'skyward' | 'wild' | 'original' | 'legend' | 'phantom' | 'spirit' | 'minish';
+  campaign?: 'termina' | 'greatSea' | 'twilight' | 'skyward' | 'wild' | 'original' | 'legend' | 'phantom' | 'spirit' | 'minish' | 'fourswords';
   /** Weapons, gear and items handed out to the army at the start (commander first). */
   startingItems?: string[];
 }
@@ -782,7 +789,9 @@ export type CommanderBonus = 'extraTreasure' | 'healing' | 'forging' | 'postBatt
   // Spirit Tracks
   | 'royalEngineers' | 'unboundSpirit' | 'sacredSymphony' | 'ironGauntlet' | 'demonicInfluence' | 'demonKingsRail'
   // The Minish Cap
-  | 'fourSwordHero' | 'minishSage' | 'lightForceBonus' | 'masterForging' | 'royalAuthority' | 'bladeBrothers' | 'windSorcery';
+  | 'fourSwordHero' | 'minishSage' | 'lightForceBonus' | 'masterForging' | 'royalAuthority' | 'bladeBrothers' | 'windSorcery'
+  // Four Swords & Four Swords Adventures
+  | 'fourSwordLeader' | 'warriorsCourage' | 'scoutsCourage' | 'mysticCommand' | 'sanctuaryLight' | 'shadowCommand' | 'windMage' | 'darkKingsHost';
 
 export type SkillId = string;
 
@@ -1058,7 +1067,7 @@ export interface RunMap {
 }
 
 /** A campaign the World Tour can visit. */
-export type TourCampaign = 'hyrule' | 'termina' | 'greatSea' | 'twilight' | 'skyward' | 'wild' | 'original' | 'legend' | 'phantom' | 'spirit' | 'minish';
+export type TourCampaign = 'hyrule' | 'termina' | 'greatSea' | 'twilight' | 'skyward' | 'wild' | 'original' | 'legend' | 'phantom' | 'spirit' | 'minish' | 'fourswords';
 
 export interface Run {
   seed: number;
@@ -1091,7 +1100,7 @@ export interface Run {
   /** Army-wide stats and resources. */
   army?: Army;
   /** Which campaign: the endless Hyrule war, Termina with its three-day cycle, or the Great Sea. */
-  campaign?: 'hyrule' | 'termina' | 'greatSea' | 'twilight' | 'skyward' | 'wild' | 'original' | 'legend' | 'phantom' | 'spirit' | 'minish' | 'random' | 'worldTour';
+  campaign?: 'hyrule' | 'termina' | 'greatSea' | 'twilight' | 'skyward' | 'wild' | 'original' | 'legend' | 'phantom' | 'spirit' | 'minish' | 'fourswords' | 'random' | 'worldTour';
   /** Great Sea: the naval campaign's state. */
   sea?: SeaState;
   /** Termina: hours passed in the current three-day cycle (0-71) and resets so far. */
@@ -1183,7 +1192,9 @@ export type EventEffect =
   /** Spirit Tracks (engine/spiritRun.ts): train parts, stamps, Force Gems, passengers and freight, Lokomo duets. */
   | { kind: 'spirit'; op: string; id?: string; amount?: number }
   /** The Minish Cap (engine/minishRun.ts): Kinstone fusions, Mysterious Shells, figurines, Picolytes, the Elements. */
-  | { kind: 'minish'; op: string; id?: string; amount?: number };
+  | { kind: 'minish'; op: string; id?: string; amount?: number }
+  /** Four Swords (engine/fourswordsRun.ts): Level 2 upgrades, Force Power, the Links, Shrine Maidens, formation drill. */
+  | { kind: 'fourswords'; op: string; id?: string; amount?: number };
 
 /** Conditions for an event or a single choice. */
 export interface EventRequires {

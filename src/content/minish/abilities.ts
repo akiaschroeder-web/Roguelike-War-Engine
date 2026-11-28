@@ -41,10 +41,10 @@ export const ABILITIES: AbilityDef[] = [
   q('ezloCapForm', 'Cap Form', 0, 'Ezlo becomes the Minish Cap (Magical Companion) for the rest of the battle.', { grantedBy: { templates: ['ezloMinish'] }, freeAction: true, perTurn: true }),
   q('ezloMinishForm', 'Minish Form', 0, 'Ezlo returns to his true Minish form (Minish Sage).', { grantedBy: { templates: ['ezloCap'] }, freeAction: true, perTurn: true }),
   // ── Personal abilities ──
-  p('lightForceBarrier', 'Light Force', 10, 'Allies within 2 gain +6 RES and recover 15% HP; dark magic is repelled.', ['zeldaMC'], { target: 'allies', radius: 2, heal: { pct: 15 }, buff: { id: 'lightForceBarrier', name: 'Light Force', turns: 2, stats: { res: 6 } }, tags: ['sacred'] }, { cooldown: 3 }),
+  p('lightForceBarrier', 'Light Force', 10, 'Allies within 2 gain +6 RES and recover 15% HP; dark magic is repelled.', ['zeldaMC'], { target: 'allies', radius: 2, heal: { pct: 0.15 }, buff: { id: 'lightForceBarrier', name: 'Light Force', turns: 2, stats: { res: 6 } }, tags: ['sacred'] }, { cooldown: 3 }),
   p('vaatiCurse', 'Petrifying Curse', 12, 'A curse of stone on a foe within 3: MAG-based damage and Stunned.', ['vaatiHylian'], { target: 'foe', range: [1, 3], dmg: { stat: 'mag', base: 4, vs: 'res', element: 'dark' }, status: { kind: 'stun', turns: 1, chance: 60 } }, { cooldown: 3 }),
   p('royalDecree', 'Royal Decree', 6, 'Allies within 3 gain +2 STR and DEF for 2 turns.', ['kingDaltus'], { target: 'allies', radius: 3, buff: { id: 'royalDecree', name: 'Royal Decree', turns: 2, stats: { str: 2, def: 2 } } }, { cooldown: 3 }),
-  p('royalRequisition', 'Royal Requisition', 6, 'Supplies from the royal stores: allies within 2 recover 20% HP. Once per battle.', ['potho'], { target: 'allies', radius: 2, heal: { pct: 20 } }, { oncePerBattle: true }),
+  p('royalRequisition', 'Royal Requisition', 6, 'Supplies from the royal stores: allies within 2 recover 20% HP. Once per battle.', ['potho'], { target: 'allies', radius: 2, heal: { pct: 0.2 } }, { oncePerBattle: true }),
   p('inspiringVerseAct', 'Ode to Courage', 8, 'Allies within 2 gain +3 SKL and +2 SPD for 2 turns.', ['percy'], { target: 'allies', radius: 2, buff: { id: 'odeToCourage', name: 'Ode to Courage', turns: 2, stats: { skl: 3, spd: 2 } } }, { cooldown: 3 }),
   p('windTribeTailwind', 'Tailwind', 8, 'Allies within 2 gain +2 MOV this turn.', ['gregal'], { target: 'allies', radius: 2, buff: { id: 'windTribeTailwind', name: 'Tailwind', turns: 1, stats: { mov: 2 } } }, { cooldown: 2 }),
   // ── Sword techniques (section 8): the existing Spin Attack, Great Spin, Downward Thrust and Sword Beam, and the new ones ──
@@ -60,7 +60,7 @@ export const ABILITIES: AbilityDef[] = [
   q('longerGreatSpin', 'Longer Great Spin', 0, 'Passive: Great Spin reaches 1 space further (3).', { hidden: true }),
   // ── Boss and monster abilities (enemies use them on their own) ──
   p('crushingBounce', 'Crushing Bounce', 6, 'Bounces down on every enemy next to it (STR + 4 vs DEF).', ['bigGreenChuchu', 'bigBlueChuchu'], { target: 'foes', radius: 1, dmg: { stat: 'str', base: 4 } }, { cooldown: 3 }),
-  p('bodyRegeneration', 'Body Regeneration', 8, 'Regrows its gel: recovers 25% HP.', ['bigGreenChuchu', 'bigBlueChuchu'], { target: 'self', heal: { pct: 25 } }, { cooldown: 4 }),
+  p('bodyRegeneration', 'Body Regeneration', 8, 'Regrows its gel: recovers 25% HP.', ['bigGreenChuchu', 'bigBlueChuchu'], { target: 'self', heal: { pct: 0.25 } }, { cooldown: 4 }),
   p('vacuumInhale', 'Vacuum Inhale', 6, 'Inhales a foe within 3, pulling it 2 spaces closer.', ['bigOctorok'], { target: 'foe', range: [1, 3], pull: 2 }, { cooldown: 2 }),
   p('octorokInk', 'Ink Cloud', 8, 'Blinds every foe within 2 for 2 turns.', ['bigOctorok'], { target: 'foes', radius: 2, status: { kind: 'blind', turns: 2, chance: 70 } }, { cooldown: 3 }),
   p('volcanicEruption', 'Volcanic Eruption', 10, 'Lava rains on every foe within 2 (MAG + 6 fire vs RES).', ['gleerok'], { target: 'foes', radius: 2, dmg: { stat: 'mag', base: 6, vs: 'res', element: 'fire' } }, { cooldown: 3 }),
@@ -69,7 +69,7 @@ export const ABILITIES: AbilityDef[] = [
   p('magicalTeleport', 'Magical Teleport', 6, 'Vanish and reappear on a space within 5.', ['vaatiReborn'], { target: 'tile', range: [2, 5], move: true }, { cooldown: 2 }),
   p('windCataclysm', 'Wind Cataclysm', 14, 'A storm of dark wind strikes every foe within 3 (MAG + 4 vs RES).', ['vaatisWrath'], { target: 'foes', radius: 3, dmg: { stat: 'mag', base: 4, vs: 'res' } }, { cooldown: 4 }),
   p('crawlingCharge', 'Crawling Charge', 4, 'Charges at a foe within 3 (STR + 3 vs DEF).', ['madderpillar'], { target: 'foe', range: [1, 3], move: true, dmg: { stat: 'str', base: 3 } }, { cooldown: 2 }),
-  p('spinyGelRecovery', 'Gel Recovery', 4, 'Recovers 25% HP.', ['spinyChuchu'], { target: 'self', heal: { pct: 25 } }, { cooldown: 3 }),
+  p('spinyGelRecovery', 'Gel Recovery', 4, 'Recovers 25% HP.', ['spinyChuchu'], { target: 'self', heal: { pct: 0.25 } }, { cooldown: 3 }),
   p('defensiveStance', 'Defensive Stance', 0, '+6 DEF for 2 turns.', ['silverDarknut'], { target: 'self', buff: { id: 'defensiveStance', name: 'Defensive Stance', turns: 2, stats: { def: 6 } } }, { cooldown: 3 }),
   p('lungingThrust', 'Lunging Thrust', 4, 'A lunge at a foe 1–2 away (STR + 5 vs DEF).', ['redDarknut'], { target: 'foe', range: [1, 2], move: true, dmg: { stat: 'str', base: 5 } }, { cooldown: 2 }),
   p('executionStrike', 'Execution Strike', 6, 'A killing blow on an adjacent foe (STR + 8 vs DEF).', ['blackKnight'], { target: 'foe', range: [1, 1], dmg: { stat: 'str', base: 8 } }, { cooldown: 3 }),
