@@ -367,3 +367,6 @@ Batch 2:
 
 Still missing: Dera Zol, plus the Spearman, Bombardier and Captain. The generics can use the existing Hyrule soldier art, and Dera Zol can use Delu Zol's art tinted as a fallback.
 - The user decided: Dera Zol shares Delu Zol's art as is (an art alias, no tint). All Four Swords art is in.
+
+## User decision after the build
+Balance is fine as built (Green 87%, Purple 81%, Vaati 75%, Blue 27% on the region-2 boss). No retuning.
