@@ -1720,6 +1720,8 @@ export function migrateRun(run: RunWithEvent): RunWithEvent {
       u.gear.acc1 = u.accessory;
       delete u.accessory;
     }
+    // Units whose template became Micro (e.g. the fairy companions) pick up the flag.
+    if (u.templateId && TEMPLATES[u.templateId]?.size === 0 && !u.micro) { u.micro = true; u.size = 1; }
   };
   run.roster.forEach(fix);
   run.fallen.forEach(fix);

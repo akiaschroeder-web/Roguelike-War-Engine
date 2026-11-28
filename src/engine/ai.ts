@@ -4,6 +4,7 @@ import { LAVA_DAMAGE_PCT, TERRAIN_BONUS, WATERY } from './rules';
 import { hasEffect, isLavaImmune } from './units';
 import { wildIgnores } from './wildGear';
 import type { Battle, Pos, Unit } from './types';
+import { microSheltered } from './micro';
 
 export interface AIPlan {
   unit: string;
@@ -58,6 +59,7 @@ export function planAction(b: Battle, unit: Unit): AIPlan {
   for (const [k] of moves.reach) {
     const p = posOf(b, k);
     for (const foe of foes) {
+      if (microSheltered(b, foe)) continue;
       const d = footDist(p.x, p.y, unit.size, foe.x, foe.y, foe.size);
       for (const w of attackWeapons(unit, d)) {
         const fc = forecast(b, unit, p, foe, w.id);

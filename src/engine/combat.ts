@@ -13,7 +13,7 @@ import { wildAfterCombat, wildAfterHit, wildAfterHeal, wildCannotAttack, wildCan
 import { ogAfterCombat, ogAfterHit, ogCannotAttack, ogDefense, ogExtraAttack, ogMods, ogMultiplier, ogNoBlock, ogOnKill, ogOnStrike, ogRangeBonus, ogSaveFromDeath } from './original';
 import { lgAfterCombat, lgAfterHit, lgCannotAttack, lgDefense, lgExtraAttack, lgMods, lgMultiplier, lgOnAttackMod, lgOnKill, lgOnStrike, lgRangeBonus, lgSaveFromDeath, lgSeedReady } from './legend';
 import { phAfterCombat, phAfterHit, phCannotAttack, phMods, phMultiplier, phOnKill, phRangeBonus } from './phantom';
-import { mcCannotWield, mcHit, mcMods, mcMultiplier } from './micro';
+import { mcCannotWield, mcHit, mcMods, mcMultiplier, microSheltered } from './micro';
 import { mnAfterCombat, mnAfterHit, mnCannotAttack, mnInterceptor, mnMods, mnMultiplier, mnOnKill, mnSaveFromDeath } from './minish';
 import { spAfterCombat, spAfterHit, spCannotAttack, spHealMult, spInterceptor, spMods, spMultiplier, spOnKill, spSaveFromDeath } from './spirit';
 
@@ -348,8 +348,10 @@ export function forecast(b: Battle, attacker: Unit, from: Pos, defender: Unit, w
   const aw = (weaponId ? weaponDef(weaponId) : undefined) ?? attackWeapons(attacker, d)[0];
   const dw = counterWeapon(defender, d);
   const arrow = arrowId && attackMods(attacker, aw, b).some((a) => a.id === arrowId) ? ABILITIES[arrowId] : undefined;
+  const atkSide = sideStats(b, attacker, from, defender, defPos, true, aw, dw, arrow);
+  if (microSheltered(b, defender)) atkSide.canAttack = false;
   return {
-    attacker: sideStats(b, attacker, from, defender, defPos, true, aw, dw, arrow),
+    attacker: atkSide,
     defender: sideStats(b, defender, defPos, attacker, from, false, dw, aw),
     distance: d,
   };

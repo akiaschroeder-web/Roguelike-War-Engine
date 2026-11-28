@@ -82,7 +82,7 @@ export const NAMED: UnitTemplate[] = [
   u({ id: 'carpenterBoss', name: 'Carpenter Boss', title: 'Engineer', race: 'hylian', classId: 'engineer', size: 1, home: 'gerudoDesert', glyph: 'CB',
     stats: st(27, 9, 7, 5, 7, 11, 4, 1, 3, 8, 16, 0), weapons: ['carpenterHammer'], skill: 'masterBuilder',
     bio: 'Mutoh’s crew can build anything. Getting them to finish it is another matter.' }),
-  u({ id: 'navi', name: 'Navi', title: 'Guide Fairy', race: 'fairy', classId: 'guide', size: 1, home: 'kokiriForest',
+  u({ id: 'navi', name: 'Navi', title: 'Guide Fairy', race: 'fairy', classId: 'guide', size: 0, home: 'kokiriForest',
     stats: st(8, 0, 14, 16, 0, 1, 8, 6, 10, 12, 8, 16), weapons: ['fairyLight'], skill: 'heyListen',
     bio: 'Link’s fairy companion. Limited offensive ability, unlimited opinions.' }),
   u({ id: 'kaepora', name: 'Kaepora Gaebora', title: 'Sky Guide', race: 'owl', classId: 'skyGuide', size: 2, home: 'lostWoods', glyph: 'KG',

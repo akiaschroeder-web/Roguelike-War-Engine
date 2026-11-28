@@ -44,3 +44,28 @@ describe('deployment', () => {
     for (const id of ['ikanaGiant', 'snowheadGiant', 'woodfallGiant']) expect(fielded.has(`g-${id}`)).toBe(true);
   });
 });
+
+import { microSheltered } from '../src/engine/micro';
+import { forecast } from '../src/engine/combat';
+describe('fairy companions', () => {
+  it('are Micro units', () => {
+    const rng = new RNG(1);
+    for (const id of ['navi', 'tatl', 'tael', 'ciela', 'leaf', 'neri']) expect(makeHero(id, `f-${id}`, 1, rng).micro).toBe(true);
+  });
+  it('cannot be targeted while sharing a tile with a normal-sized ally', () => {
+    const run = newRun(21, 'link', 'hyrule') as RunWithEvent;
+    run.roster.push(makeHero('navi', 'navi-1', 1, new RNG(2)));
+    enterNode(run, (availableNodes(run).find((n) => n.type === 'battle') ?? availableNodes(run)[0]).id);
+    run.event = undefined;
+    startBattle(run, run.roster.map((u) => u.uid));
+    const b = run.battle!;
+    const navi = b.units.find((u) => u.uid === 'navi-1')!;
+    const host = b.units.find((u) => u.team === 'player' && !u.micro)!;
+    const foe = b.units.find((u) => u.team === 'enemy')!;
+    navi.x = host.x; navi.y = host.y;
+    expect(microSheltered(b, navi)).toBe(true);
+    expect(forecast(b, foe, { x: navi.x + 1, y: navi.y }, navi).attacker.canAttack).toBe(false);
+    navi.x = host.x + host.size + 2; navi.y = host.y;
+    if (!b.units.some((u) => u !== navi && !u.micro && u.team === 'player' && navi.x >= u.x && navi.x < u.x + u.size && navi.y >= u.y && navi.y < u.y + u.size)) expect(microSheltered(b, navi)).toBe(false);
+  });
+});

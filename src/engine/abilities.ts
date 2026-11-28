@@ -10,7 +10,7 @@ import { castWild, WILD_ENEMY_AUTO, wildCooldownCut, wildCostMult, wildNeedsTarg
 import { castOriginal, OG_ENEMY_CASTS, ogCostMult, ogNeedsTarget, ogNeedsTile, ogTargets, ogTiles, ogUnusable } from './original';
 import { castLegend, LG_ENEMY_CASTS, lgAfterAbility, lgCooldownCut, lgCostMult, lgNeedsTarget, lgNeedsTile, lgTargets, lgTiles, lgUnusable } from './legend';
 import { castPhantom, PH_ENEMY_CASTS, phCostMult, phNeedsTarget, phNeedsTile, phTargets, phTiles, phUnusable } from './phantom';
-import { castMicro, mcNeedsTarget, mcNeedsTile, mcTargets, mcTiles, mcUnusable, microEnemyStompTarget } from './micro';
+import { castMicro, mcNeedsTarget, mcNeedsTile, mcTargets, mcTiles, mcUnusable, microEnemyStompTarget, microSheltered } from './micro';
 import { castMinish, MN_ENEMY_CASTS, mnCostMult, mnUnusable } from './minish';
 import { castSpirit, SP_ENEMY_CASTS, spCostMult, spNeedsTarget, spNeedsTile, spTargets, spTiles, spUnusable } from './spirit';
 import { buildAt, buildTargets, canDig, dig, hasTimeBlocks, ignite, meltSunBlocks, toggleTimeBlocks } from './field';
@@ -217,6 +217,11 @@ function transportee(b: Battle, u: Unit): Unit | undefined {
 
 /** Units an ability can be aimed at (only abilities that need a target). */
 export function abilityTargets(b: Battle, u: Unit, def: AbilityDef): Unit[] {
+  // A sheltered Micro foe (hiding on a larger ally) can't be singled out.
+  return rawAbilityTargets(b, u, def).filter((t) => t.team === u.team || !microSheltered(b, t));
+}
+
+function rawAbilityTargets(b: Battle, u: Unit, def: AbilityDef): Unit[] {
   if (terminaNeedsTarget(def)) return terminaTargets(b, u, def);
   if (wwNeedsTarget(def)) return wwTargets(b, u, def);
   if (tpNeedsTarget(def)) return tpTargets(b, u, def);

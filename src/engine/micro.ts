@@ -483,3 +483,10 @@ export function microEnemyStompTarget(b: Battle, u: Unit): Unit | undefined {
   if (u.team !== 'enemy' || u.micro) return undefined;
   return b.units.filter((e) => e.team !== u.team && e.micro && !e.hidden && sharesTile(u, e)).sort((x, y) => x.hp - y.hp)[0];
 }
+
+/** A Micro unit sharing a tile with a normal-sized ally can't be targeted: it hides on its friend. */
+export function microSheltered(b: Battle, u: Unit): boolean {
+  if (!u.micro || u.hp <= 0) return false;
+  return b.units.some((a) => a !== u && a.team === u.team && !a.micro && a.hp > 0
+    && u.x >= a.x && u.y >= a.y && u.x < a.x + a.size && u.y < a.y + a.size);
+}
