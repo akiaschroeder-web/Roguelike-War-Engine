@@ -116,7 +116,8 @@ const PIECES: GearDef[] = [
   head('thunderHelm', 'Thunder Helm', 'legendary', { def: 3 }, '+3 DEF. Lightning immunity (no lightning damage or Shock).', { effects: ['shockImmune'], wildFx: ['lightningImmune'], unique: true }),
   head('lightningHelm', 'Lightning Helm', 'epic', { def: 2 }, '+2 DEF. A Yiga replica of the Thunder Helm: lightning immunity.', { effects: ['shockImmune'], wildFx: ['lightningImmune'] }),
   head('midnasHelmet', "Midna's Helmet", 'legendary', { def: 3, res: 3 }, '+3 DEF, +3 RES. Guardian and Gloom resistance.', { wildFx: ['guardianRes', 'gloomRes'], unique: true }),
-  head('raviosHood', "Ravio's Hood", 'rare', { def: 1 }, '+1 DEF. Sideways climbing: cliffs cost 1 less.', { wildFx: ['climb'] }),
+  // One Ravio's Hood for every era (merged with A Link Between Worlds' Rabbit Hood).
+  head('raviosHood', "Ravio's Hood", 'rare', { def: 1, lck: 5 }, '+1 DEF, +5 LCK. Sideways climbing: cliffs cost 1 less. Ravio\'s Shop is 15% cheaper while someone in the army wears it.', { wildFx: ['climb'], lb: ['prices'] }),
   body('islandLobsterShirt', 'Island Lobster Shirt', 'uncommon', { def: 2 }, '+2 DEF. Heat resistance.', { wildFx: ['heatRes'] }),
   head('korokMask', 'Korok Mask', 'rare', { lck: 3 }, '+3 LCK. Reveals Korok Seeds: Korok puzzles on the field are worth 2 seeds.', { wildFx: ['korokSense'] }),
   head('bokoblinMask', 'Bokoblin Mask', 'uncommon', { def: 1 }, 'Disguise: Bokoblins ignore the wearer unless it attacks them or stands next to them.', { wildFx: ['disguise:bokoblin'] }),

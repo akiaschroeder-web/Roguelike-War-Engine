@@ -13,7 +13,6 @@ export const GEAR: GearDef[] = [
   // ── Character gear ──
   mount('irenesBroom', "Irene's Broom", 'epic', { mov: 1 }, 'Flying movement for a size-1 rider (+1 MOV).', { size: 1, effects: ['flight'], lb: ['broom'] }),
   hands('rossosMiningGloves', "Rosso's Mining Gloves", 'epic', { str: 5 }, '+5 STR; more obstacle damage (+30% against armoured units, constructs and stone).', { lb: ['obstacles'] }),
-  head('raviosRabbitHood', "Ravio's Rabbit Hood", 'rare', { lck: 5 }, '+5 LCK; better prices (Ravio\'s Shop 15% cheaper while someone in the army wears it).', { lb: ['prices'] }),
   body('raviosRobes', "Ravio's Robes", 'rare', { res: 4 }, '+4 RES; tools use less energy (Wall Merge and item rods cost 25% less MP).', { lb: ['toolThrift'] }),
   head('hildasCrown', "Hilda's Crown", 'legendary', { mag: 5, res: 5 }, '+5 MAG and RES.'),
   body('hildasRoyalDress', "Hilda's Royal Dress", 'legendary', { mag: 6, res: 6 }, '+6 MAG and RES.'),

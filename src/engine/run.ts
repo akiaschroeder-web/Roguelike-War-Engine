@@ -1761,9 +1761,12 @@ export function migrateRun(run: RunWithEvent): RunWithEvent {
       u.gear.acc1 = u.accessory;
       delete u.accessory;
     }
+    // Ravio's Rabbit Hood merged into Ravio's Hood.
+    for (const k of Object.keys(u.gear) as (keyof typeof u.gear)[]) if (u.gear[k] === 'raviosRabbitHood') u.gear[k] = 'raviosHood';
     // Units whose template became Micro (e.g. the fairy companions) pick up the flag.
     if (u.templateId && TEMPLATES[u.templateId]?.size === 0 && !u.micro) { u.micro = true; u.size = 1; }
   };
+  run.convoy = (run.convoy ?? []).map((id) => (id === 'raviosRabbitHood' ? 'raviosHood' : id));
   run.roster.forEach(fix);
   run.fallen.forEach(fix);
   run.battle?.units.forEach(fix);

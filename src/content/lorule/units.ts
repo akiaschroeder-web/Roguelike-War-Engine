@@ -74,11 +74,11 @@ export const TEMPLATES: UnitTemplate[] = [
   u({ id: 'impaALBW', name: 'Impa (Seven Sages)', title: 'Royal Sage', race: 'sheikah', classId: 'royalSageLB', size: 1, home: 'hyruleCastleLB', glyph: 'IB',
     stats: st(32, 14, 19, 20, 16, 12, 22, 15, 8, 6, 32, 50), weapons: ['impasBlade'], skill: 'royalProtection', abilities: ['paintingDispel'],
     bio: 'Princess Zelda\'s attendant in this age, a descendant of the Sages, who was painted onto the wall of Hyrule Castle\'s throne room beside her princess.' }),
-  // Yuga Ganon as a recruit (and commander): the boss's form at a recruit's strength (the boss keeps the doc's sheet).
+  // Yuga Ganon as a recruit (and commander) keeps the doc's full stat sheet (user decision).
   u({ id: 'yugaGanon', name: 'Yuga Ganon', title: 'Painting Demon King', race: 'demon', classId: 'paintingDemonKing', size: 3, home: 'loruleCastle', glyph: 'YG', rare: true,
-    stats: st(56, 17, 19, 15, 11, 15, 17, 8, 20, 6, 40, 70), weapons: ['demonicTrident', 'yugaGanonBolts'], skill: 'fusionOfPower',
+    stats: st(130, 36, 40, 25, 17, 30, 35, 8, 40, 7, 55, 100), weapons: ['demonicTrident', 'yugaGanonBolts'], skill: 'fusionOfPower',
     abilities: ['lightningBarrage', 'paintingPrison', 'darkWorldMerge', 'reflectedEnergy', 'triforceCataclysm'],
-    bio: 'Yuga fused with the Demon King\'s painting: Ganon\'s strength in an artist\'s hands. The full strength of the fusion only shows when he is the one waiting at the end of Lorule Castle.' }),
+    bio: 'Yuga fused with the Demon King\'s painting: Ganon\'s strength in an artist\'s hands.' }),
   // ── Generics (Lorule) ──
   u({ id: 'loruleSoldier', name: 'Lorule Soldier', title: 'Soldier of Lorule', race: 'lorulean', classId: 'loruleSoldierClass', size: 1, home: 'loruleCastle', glyph: 'lS', generic: true,
     stats: st(27, 12, 0, 11, 10, 10, 7, 5, 9, 5, 28, 0), weapons: ['loruleSword'], skill: 'desperateDefense',

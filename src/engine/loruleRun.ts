@@ -451,7 +451,7 @@ export function loruleTreasure(run: Run, rng: RNG, ev: { rewards: Reward[]; rupe
   const lorule = KINGDOM[run.region] === 'lorule';
   if (rng.chance(lorule ? 35 : 15)) { q(run).push('masterOre'); lines.push('Master Ore is tucked in the chest.'); }
   if (rng.chance(40)) { lines.push('A Baby Maiamai was hiding in the chest.'); rescueMaiamai(run, 1, lines); }
-  if (lorule && rng.chance(40)) ev.rewards.unshift({ kind: 'gear', id: rng.pick(['hintGlasses', 'raviosRobes', 'raviosRabbitHood', 'stalblindsShield', 'blueMail']) });
+  if (lorule && rng.chance(40)) ev.rewards.unshift({ kind: 'gear', id: rng.pick(['hintGlasses', 'raviosRobes', 'raviosHood', 'stalblindsShield', 'blueMail']) });
   if (rng.chance(25)) ev.rewards.unshift({ kind: 'item', id: rng.pick(['scootFruit', 'foulFruit']) });
   return lines;
 }
@@ -467,7 +467,7 @@ export function rentPrice(run: Run, id: string): number {
   const base = WEAPONS[id]?.price ?? GEAR[id]?.price ?? 300;
   return Math.max(30, Math.round((Math.max(200, base * 2) / 12) * priceMult(run) * (run.bonus === 'rentalDiscount' ? 0.5 : 1) / 10) * 10);
 }
-const priceMult = (run: Run) => (run.roster.some((u) => Object.values(u.gear).includes('raviosRabbitHood')) ? 0.85 : 1)
+const priceMult = (run: Run) => (run.roster.some((u) => Object.values(u.gear).includes('raviosHood')) ? 0.85 : 1)
   * (['ravio', 'beedle', 'tingle', 'linebeck'].every((id) => run.roster.some((u) => u.templateId === id)) ? 0.85 : 1);
 export const RAVIO_STOCK = [...RENTALS, 'bomb', 'raviosBracelet', 'hintGlasses', 'scootFruit', 'foulFruit', 'staminaScroll'];
 

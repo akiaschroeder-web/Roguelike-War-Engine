@@ -432,3 +432,9 @@ Batch 3, matched in list order by filename:
   - moldormALBW_alt.webp: goes to Moldorm.
 
 All ALBW art is in. Lorule Spearman and Lorule Knight share loruleSoldier.png.
+
+## User decisions after the build
+1. The ALBW Impa stays her own unit (`impaALBW`).
+2. Ravio's Rabbit Hood is merged into the Wild pack's Ravio's Hood: one `raviosHood` with +1 DEF and +5 LCK, cliff climbing, and Ravio's Shop 15% cheaper. Old saves are converted.
+3. Yuga Ganon as a recruit or commander keeps the doc's full stats; the reduced sheet is gone.
+4. Boss choices for Kakariko, Sanctuary and Thieves' Town are fine as built.
