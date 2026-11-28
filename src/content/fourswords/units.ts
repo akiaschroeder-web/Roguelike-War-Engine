@@ -16,7 +16,7 @@ export const MAIDENS = ['greenMaiden', 'redMaiden', 'blueMaiden', 'purpleMaiden'
 /** Generic Hyrule soldiers (Military Command, Royal Authority). */
 export const HYRULE_SOLDIERS = ['hyruleSoldier', 'hyruleKnight', 'hyruleArcher', 'hyruleSpearman', 'hyruleBombardier', 'hyruleCaptain'];
 
-const LINK_KIT = ['formationBox', 'formationLine', 'formationColumn', 'formationCross', 'formationMarch', 'combinedSpin', 'heroStack', 'cooperativeThrow', 'fourfoldStrike', 'fourfoldBarrier', 'sacredSeal'];
+const LINK_KIT = ['formationBox', 'formationLine', 'formationColumn', 'formationCross', 'formationMarch', 'combinedSpin', 'heroStack', 'cooperativeThrow', 'fourfoldStrike', 'fourfoldBarrier', 'sacredSealFS'];
 
 // Sections 1–3 (doc stats). Shadow Link and Ganon also have boss entries (enemies.ts) with the same ids.
 export const TEMPLATES: UnitTemplate[] = [

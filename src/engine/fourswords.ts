@@ -99,7 +99,7 @@ const isWind = (w: WeaponDef | undefined) => !!w && (!!w.fs?.includes('wind') ||
 const isSacred = (w: WeaponDef | undefined, element?: Element) => element === 'light' || !!w?.sacredMult || !!w?.mc?.includes('sacred');
 /** Force Power gives its threshold effects while it is held (stolen gems can drop it back). */
 export const forceAt = (b: Battle, at: number) => (b.fs?.force ?? 0) >= at;
-const darkHere = (b: Battle, u: Unit) => !!b.night || !!b.fog || DARK_REGIONS.includes(b.world) || hasBuff(u, 'fsDarkWorld') || tileAt(b, u.x, u.y) === 'fsDarkPortal';
+const darkHere = (b: Battle, u: Unit) => !!b.fog || DARK_REGIONS.includes(b.world) || hasBuff(u, 'fsDarkWorld') || tileAt(b, u.x, u.y) === 'fsDarkPortal';
 const groups = (b: Battle) => b.groupSupports ?? [];
 
 // ───────────────────────── Force Power ─────────────────────────
@@ -146,7 +146,7 @@ function killGem(b: Battle, victim: Unit): number {
   if (victim.isBoss) return FORCE_GEMS.giant.force;
   if (victim.fsDup !== undefined || victim.summoned) return FORCE_GEMS.smallBlue.force;
   const r = roll(b);
-  const base = r < 25 ? FORCE_GEMS.smallBlue.force : r < 60 ? FORCE_GEMS.smallRed.force : r < 90 ? FORCE_GEMS.largeGreen.force : FORCE_GEMS.largeBlue.force;
+  const base = r < 35 ? FORCE_GEMS.smallBlue.force : r < 75 ? FORCE_GEMS.smallRed.force : r < 95 ? FORCE_GEMS.largeGreen.force : FORCE_GEMS.largeBlue.force;
   return base + (TEMPLATES[victim.templateId ?? '']?.generic === false ? FORCE_GEMS.largeBlue.force : 0);
 }
 
@@ -177,13 +177,13 @@ export function decorateFourSwords(b: Battle, rng: RNG) {
       const k = t === 'fsDarkPortal' ? takeHalf(b, plains, j % 2 === 0) : OBSTACLES.has(t) ? takeOpen(b, plains) : plains.pop();
       if (k === undefined) continue;
       b.tiles[k] = t;
-      if (t === 'forceGemDeposit') st.deposits[k] = rng.pick([FORCE_GEMS.largeGreen.force, FORCE_GEMS.largeBlue.force, FORCE_GEMS.largeBlue.force, FORCE_GEMS.largeRed.force]);
+      if (t === 'forceGemDeposit') st.deposits[k] = rng.pick([FORCE_GEMS.largeGreen.force, FORCE_GEMS.largeGreen.force, FORCE_GEMS.largeBlue.force, FORCE_GEMS.largeRed.force]);
       if (t === 'fsDarkPortal') st.portals.push(k);
     }
   }
   if (st.portals.length % 2) { b.tiles[st.portals.pop()!] = 'plain'; }
-  // Boss fights: a Giant Force Gem in the arena.
-  if (b.units.some((u) => u.isBoss)) { const k = plains.pop(); if (k !== undefined) { b.tiles[k] = 'forceGemDeposit'; st.deposits[k] = FORCE_GEMS.giant.force; } }
+  // Boss fights: a Large Red Force Gem in the arena.
+  if (b.units.some((u) => u.isBoss)) { const k = plains.pop(); if (k !== undefined) { b.tiles[k] = 'forceGemDeposit'; st.deposits[k] = FORCE_GEMS.largeRed.force; } }
 }
 const OBSTACLES = new Set<Terrain>(['forceBarrier', 'cooperativeBlock', 'magneticPillar', 'shadowMirrorGate', 'sanctuarySeal']);
 /** A plain whose eight neighbours are all open ground (plain or forest). */
@@ -205,7 +205,7 @@ function takeHalf(b: Battle, plains: number[], left: boolean): number | undefine
 export function fourSwordsBattleStart(b: Battle) {
   for (const u of b.units) {
     if (has(u, 'massiveDetonation')) u.fsFuse = 3;
-    if (has(u, 'sandAmbush') && u.team === 'enemy' && DESERT_REGIONS.includes(b.world)) u.hidden = true;
+    if (has(u, 'sandAmbushFS') && u.team === 'enemy' && DESERT_REGIONS.includes(b.world)) u.hidden = true;
   }
 }
 
@@ -242,8 +242,8 @@ export function fsStartPhase(b: Battle, u: Unit, events: FSEvent[]) {
   // The Shrine Maidens' blessings.
   for (const a of alliesOf(b, u)) {
     if (unitDist(u, a) > 2) continue;
-    if (has(a, 'forestBlessing')) { heal(u, 0.05, 'Forest Blessing'); u.statuses = u.statuses.filter((x) => x.kind !== 'poison'); }
-    if (has(a, 'waterBlessing')) { heal(u, 0.05, 'Water Blessing'); u.mp = Math.min(u.stats.mp, u.mp + 3); }
+    if (has(a, 'forestBlessing')) { heal(u, 0.04, 'Forest Blessing'); u.statuses = u.statuses.filter((x) => x.kind !== 'poison'); }
+    if (has(a, 'waterBlessing')) { heal(u, 0.04, 'Water Blessing'); u.mp = Math.min(u.stats.mp, u.mp + 3); }
     if (has(a, 'radiantBlessing')) u.statuses = u.statuses.filter((x) => !['curse', 'silence', 'weaken'].includes(x.kind));
     if (has(a, 'protectiveBlessing')) { buff(u, 'wildShield', 'Protective Blessing', 1); (u.turnUses ??= {}).wildShield = Math.max(u.turnUses.wildShield ?? 0, 5); }
   }
@@ -251,9 +251,9 @@ export function fsStartPhase(b: Battle, u: Unit, events: FSEvent[]) {
   if (fsTag(u, 'shadowConceal') && (b.fog || darkHere(b, u) || tileAt(b, u.x, u.y) === 'forest')) addStatus(u, 'veiled', 1);
   if (b.groupSupports?.includes('darkConspiracy') && u.team === 'player' && ['vaatiWindMage', 'vaatiHylian', 'ganonFSA', 'shadowLink'].includes(u.templateId ?? '') && !foesOf(b, u).some((e) => unitDist(u, e) <= 1)) addStatus(u, 'veiled', 1);
   // Monsters and bosses.
-  if (has(u, 'sandAmbush') && u.team === 'enemy' && DESERT_REGIONS.includes(b.world) && !foesOf(b, u).some((e) => unitDist(u, e) <= 1)) u.hidden = true;
-  if (has(u, 'shiftingDefense')) heal(u, 0.1, 'Gel Recovery');
-  if (has(u, 'moltenBody') && footprint(u.x, u.y, u.size).some((p) => tileAt(b, p.x, p.y) === 'lava')) heal(u, 0.1, 'Molten Body');
+  if (has(u, 'sandAmbushFS') && u.team === 'enemy' && DESERT_REGIONS.includes(b.world) && !foesOf(b, u).some((e) => unitDist(u, e) <= 1)) u.hidden = true;
+  if (has(u, 'shiftingDefense') && u.isBoss) heal(u, 0.14, 'Gel Recovery');
+  if (has(u, 'moltenBodyFS') && footprint(u.x, u.y, u.size).some((p) => tileAt(b, p.x, p.y) === 'lava')) heal(u, 0.1, 'Molten Body');
   if (has(u, 'windFortress')) for (const e of foesOf(b, u)) if (unitDist(u, e) <= 1 && pushAway(b, e, u, 1)) events.push({ uid: e.uid, heal: 0, damage: 0, source: 'is blown back by the Wind Fortress' });
   if (tid(u) === 'mightyDarknut' && u.isBoss && !u.fsShed && u.hp < u.stats.hp / 2) {
     u.fsShed = true;
@@ -416,10 +416,11 @@ function spawnFromMirrors(b: Battle) {
     if (t !== 'shadowMirrorGate') return;
     if (b.units.filter((u) => u.fsGate === k).length >= 2) return;
     const at = { x: k % b.width, y: Math.floor(k / b.width) };
-    const probe = { x: at.x, y: at.y, size: 1 } as Unit;
-    const spot = tilesInRange(b, at, 1, 2).find((p) => anchorCost(b, { ...probe, classId: 'shadowSwordsmanFS', race: 'shadow', skills: [], buffs: [], gear: {} } as unknown as Unit, p.x, p.y) < INF && !unitAt(b, p.x, p.y));
+    if (!BOSSES.shadowLink) return;
+    const probe = makeEnemy(BOSSES.shadowLink, b.world, Math.max(1, b.enemyLevel - 1), `fsp${b.uidCounter}`, new RNG(b.rngState + k));
+    const spot = tilesInRange(b, at, 1, 2).find((p) => anchorCost(b, probe, p.x, p.y) < INF && !unitAt(b, p.x, p.y));
     if (!spot) return;
-    const d = shadowDuplicate(b, null, 'enemy', spot, Math.max(1, b.enemyLevel - 1), 3);
+    const d = shadowDuplicate(b, probe, 'enemy', spot, probe.level, 3);
     if (d) { d.fsGate = k; b.log.push('A shadow steps out of the Shadow Mirror Gate.'); }
   });
 }
@@ -444,7 +445,10 @@ export function fsMods(b: Battle, u: Unit, pos: Pos, foe: Unit, initiating: bool
   const within = (a: Unit, r: number) => unitDist(u, a, pos) <= r;
   const add = (o: Partial<FSMods>) => { for (const [k, v] of Object.entries(o)) m[k as keyof FSMods] += v ?? 0; };
   const link = isLink(u);
-  if (link && allies.some((a) => isLink(a) && has(a, 'unitedCourage') && within(a, 4))) add({ str: 2, skl: 2, def: 2 });
+  // Fourfold Courage: all four Links within 4 of one another (every other Link within 4 of this one).
+  const fourfold = groups(b).includes('fourfoldCourage') && u.team === 'player' && link && FOUR_LINKS.every((id) => id === u.templateId || allies.some((a) => a.templateId === id && within(a, 4)));
+  // United Courage is the lesser form of Fourfold Courage: they don't stack.
+  if (!fourfold && link && allies.some((a) => isLink(a) && has(a, 'unitedCourage') && within(a, 4))) add({ str: 2, skl: 2, def: 2 });
   if (has(u, 'burningCourage') && u.hp < u.stats.hp / 2) m.str += 4;
   if (hasBuff(u, 'fsEvasive')) m.avoid += 30;
   if (hasBuff(u, 'fsStacked')) m.hit += 15;
@@ -456,9 +460,9 @@ export function fsMods(b: Battle, u: Unit, pos: Pos, foe: Unit, initiating: bool
     if (f === 'line') add({ str: 3, hit: 10 });
     if (f === 'cross') add({ avoid: 15, crit: 10 });
     if (forceAt(b, 500)) add({ str: 2, mag: 2 });
-    if (forceAt(b, 1000) && w?.type === 'sword') m.dmg += 4;
+    if (forceAt(b, 1000) && w?.type === 'sword') m.dmg += 2;
   }
-  if (u.team === 'player' && w?.id === 'fourSword' && forceAt(b, 1000) && !link) m.dmg += 4;
+  if (u.team === 'player' && w?.id === 'fourSword' && forceAt(b, 1000) && !link) m.dmg += 2;
   // Zelda's Seal of Light weakens dark foes near her.
   if (isDark(u) && b.units.some((a) => a.team !== u.team && has(a, 'sealOfLight') && unitDist(a, u, pos) <= 2)) add({ str: -3, mag: -3, def: -3 });
   // Ganon's King of Darkness, and his commander bonus.
@@ -468,12 +472,12 @@ export function fsMods(b: Battle, u: Unit, pos: Pos, foe: Unit, initiating: bool
   // The military classes.
   if (has(u, 'spearFormation')) m.def += Math.min(4, 2 * allies.filter((a) => has(a, 'spearFormation') && within(a, 1)).length);
   if (isSoldier(u) && allies.some((a) => has(a, 'militaryCommand') && within(a, 3))) add({ str: 2, skl: 2 });
-  if (has(u, 'sandAmbush') && u.hidden && initiating) add({ dmg: 6, hit: 20 });
+  if (has(u, 'sandAmbushFS') && u.hidden && initiating) add({ dmg: 6, hit: 20 });
   // The Dark World.
   if (hasBuff(u, 'fsDarkWorld')) { if (isDark(u) || has(u, 'shadowReflectionSkill')) add({ str: 3, mag: 3 }); else m.def -= 2; }
   if (u.team === 'player' && b.bonus === 'shadowCommand' && (DARK_REGIONS.includes(b.world) || hasBuff(u, 'fsDarkWorld'))) add({ str: 3, mag: 3 });
   // Group supports.
-  if (groups(b).includes('fourfoldCourage') && link && allies.some((a) => isLink(a) && within(a, 4))) add({ str: 3, mag: 3, skl: 3, spd: 3, def: 3, res: 3 });
+  if (fourfold) add({ str: 3, mag: 3, skl: 3, spd: 3, def: 3, res: 3 });
   void foe;
   return m;
 }
@@ -507,9 +511,9 @@ export function fsMultiplier(b: Battle, atk: Unit, atkPos: Pos, def: Unit, magic
   if (has(def, 'armoredShell') && !hasBuff(def, 'fsFlipped')) m *= 0.5;
   if (has(def, 'windFortress') && d > 1) m *= 0.5;
   if (hasBuff(def, 'fsWindBarrier') && d > 1) m *= 0;
-  if (has(def, 'frozenDefense') && !hasBuff(def, 'fsThawed') && element !== 'fire') m *= 0.4;
-  if (has(def, 'shiftingDefense')) m *= element === weaknessOf(b, def) ? 1.75 : 0.65;
-  if (has(def, 'moltenBody') && element === 'fire') m *= 0;
+  if (has(def, 'frozenDefense') && def.isBoss && !hasBuff(def, 'fsThawed') && element !== 'fire') m *= 0.4;
+  if (has(def, 'shiftingDefense')) m *= element === weaknessOf(b, def) ? 1.25 : !def.isBoss ? 1 : magical ? 0.4 : 0.65;
+  if (has(def, 'moltenBodyFS') && element === 'fire') m *= 0;
   return m;
 }
 
@@ -526,7 +530,7 @@ export function fsAfterHit(b: Battle, by: Unit, target: Unit, dmg: number, w: We
     if (w?.fs?.includes('wind') && w.id === 'vaatisCycloneOrb' && pushAway(b, target, by, 1)) lines.push(`The cyclone throws ${target.name} back.`);
     if (has(target, 'armoredShell') && (w?.type === 'hammer' || w?.fs?.includes('flip') || w?.mc?.includes('flip'))) { buff(target, 'fsFlipped', 'Flipped', 2, { def: -5 }); lines.push(`${target.name} is flipped onto its back!`); }
     if (has(target, 'frozenDefense') && !hasBuff(target, 'fsThawed') && (element === 'fire' || w?.type === 'hammer' || dmg >= 15)) { buff(target, 'fsThawed', 'Ice broken', 2); lines.push(`${target.name}'s ice armour ${element === 'fire' ? 'melts' : 'shatters'}!`); }
-    if (has(target, 'dividingBody')) lines.push(...splitSlime(b, target));
+    if (has(target, 'dividingBodyFS') && target.isBoss) lines.push(...splitSlime(b, target));
   }
   if (w?.fs?.includes('flames') && dmg > 0) {
     ignite(b, [{ x: target.x, y: target.y }]);
@@ -627,7 +631,7 @@ const TILE = new Set(['cooperativeThrow', 'giantBombThrow', 'fsMagnetSwing']);
 export const fsNeedsTarget = (def: AbilityDef) => TARGET.has(def.id);
 export const fsNeedsTile = (def: AbilityDef) => TILE.has(def.id);
 /** Enemies use these on their own when they can (engine/abilities.ts enemyAutoTransform). */
-export const FS_ENEMY_CASTS = ['cycloneFS', 'vacuumFS', 'windBarrierFS', 'eyeBeamFS', 'greatTornado', 'slimeDivision', 'gelAbsorption', 'flameBreathFS', 'lavaBurst', 'crushingSlamFS', 'moltenArmor',
+export const FS_ENEMY_CASTS = ['cycloneFS', 'vacuumFS', 'windBarrierFS', 'eyeBeamFS', 'greatTornado', 'slimeDivision', 'gelAbsorption', 'flameBreathFS', 'lavaBurstFS', 'crushingSlamFS', 'moltenArmor',
   'elementalShift', 'slimeBarrage', 'iceBeamFS', 'frozenBarrier', 'blizzardFS', 'frostRegeneration', 'phantomVolley', 'stoneShellFS', 'dodongoFireBreath', 'vineLash', 'talonDive',
   'hinoxBombToss', 'tailWhip', 'tridentSpin', 'banishToDarkWorld', 'shadowReflection', 'giantBombThrow', 'sacredLightFS'];
 
@@ -718,7 +722,7 @@ export function fsUnusable(b: Battle, u: Unit, def: AbilityDef): string | null |
     switch (def.id) {
       case 'formationMarch': return linksOf(b, u.team).some((a) => !a.moved && unitDist(u, a) <= 3) ? null : 'Every Link nearby has moved';
       case 'combinedSpin': return adjLinks(b, u).some((a) => !a.acted) && [u, ...adjLinks(b, u)].some((a) => adjFoes(b, a).length) ? null : 'Needs an adjacent Link and enemies next to you';
-      case 'sacredSeal': return forceAt(b, 2000) ? null : 'Needs Sacred Awakening (2,000 Force Power)';
+      case 'sacredSealFS': return forceAt(b, 2000) ? null : 'Needs Sacred Awakening (2,000 Force Power)';
       case 'fourfoldBarrier': return null;
     }
     return null;
@@ -928,7 +932,7 @@ export function castFourSwords(b: Battle, u: Unit, def: AbilityDef, rng: RNG, ta
       out.lines.push('The four Links raise a barrier of light.');
       return out;
     }
-    case 'sacredSeal': {
+    case 'sacredSealFS': {
       payCp();
       const crew = linksOf(b, u.team);
       const hit = foesOf(b, u).filter((e) => crew.some((l) => unitDist(l, e) <= 3));

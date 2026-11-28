@@ -22,7 +22,7 @@ export const WEAPONS: WeaponDef[] = [
   w('tridentOfPower', 'Trident of Power', 'lance', 'mythic', 32, 85, 10, 12, 1, 2, sig({ uses: 0, element: 'dark', fs: ['banish'],
     desc: 'Ganon\'s trident, stolen from the Pyramid: dark damage, and a hit can banish the target into the Dark World (25%: Banished, −4 STR, MAG, DEF and RES and rooted for 2 turns).' })),
   w('shadowSword', 'Shadow Sword', 'sword', 'legendary', 22, 90, 10, 6, 1, 1, sig({ uses: 0, element: 'dark', fs: ['darkness'],
-    desc: 'A blade of the Dark Mirror\'s shadow: +25% damage in darkness (night, fog, the Dark World, or a Dark World Portal underfoot).' })),
+    desc: 'A blade of the Dark Mirror\'s shadow: +25% damage in darkness (fog, the Dark World, or a Dark World Portal underfoot).' })),
   w('vaatisCycloneOrb', "Vaati's Cyclone Orb", 'magic', 'mythic', 30, 90, 5, 4, 1, 2, sig({ uses: 0, fs: ['wind'],
     desc: 'The Wind Mage\'s orb: 30 magical Might; wind attacks that push the target back a space.' })),
   // ── Level 2 tools ──
@@ -47,9 +47,9 @@ export const WEAPONS: WeaponDef[] = [
   nat('galeBolt', 'Gale Bolt', 14, 85, 0, 1, 3, { magicContact: true, fs: ['wind'] }),
   nat('gelSlam', 'Gel Slam', 13, 80, 0, 1, 1),
   nat('gelSpit', 'Gel Spit', 9, 80, 0, 2, 2, { magicContact: true, element: 'nature' }),
-  nat('magmaFist', 'Magma Fist', 16, 80, 5, 1, 1, { element: 'fire' }),
+  nat('gouenMagmaFist', 'Magma Fist', 16, 80, 5, 1, 1, { element: 'fire' }),
   nat('gouenFlame', 'Flame Breath', 13, 85, 0, 1, 2, { magicContact: true, element: 'fire', inflict: { status: 'burn', chance: 30, turns: 2 } }),
-  nat('elementalSpit', 'Elemental Spit', 12, 85, 0, 1, 2, { magicContact: true }),
+  nat('elementalSpit', 'Elemental Spit', 13, 85, 0, 1, 2),
   nat('iceShard', 'Ice Shard', 13, 85, 0, 1, 3, { magicContact: true, element: 'ice', inflict: { status: 'freeze', chance: 15, turns: 1 } }),
   nat('frostTouch', 'Frost Touch', 12, 85, 0, 1, 1, { element: 'ice' }),
 ];

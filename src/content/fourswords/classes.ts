@@ -8,7 +8,7 @@ const c = (id: string, name: string, icon: string, weapons: WeaponType[], moveTy
   ({ id, name, icon, weapons, moveType, base, growths, tags });
 
 // Growth presets (my balancing proposal; named units use the doc's stat sheets).
-const LINK = g(80, 45, 25, 55, 50, 35, 30, 45);
+const LINK = g(55, 15, 35, 40, 35, 20, 35, 45);
 const MAIDEN = g(50, 5, 60, 45, 35, 15, 60, 50);
 const SOLDIER = g(75, 45, 0, 45, 35, 40, 20, 30);
 const BOSS = g(140, 50, 35, 35, 25, 45, 35, 15);
@@ -18,9 +18,9 @@ const LINK_TOOLS: WeaponType[] = ['sword', 'bow', 'boomerang', 'sling', 'hammer'
 
 export const CLASSES: ClassDef[] = [
   // ── The four Links ──
-  c('fourSwordLeader', 'Four Sword Leader', '🗡', [...LINK_TOOLS, 'magic'], 'foot', g(85, 50, 25, 55, 50, 40, 30, 45)),
-  c('fourSwordWarrior', 'Four Sword Warrior', '⚔', [...LINK_TOOLS, 'axe'], 'foot', g(100, 60, 10, 45, 30, 50, 20, 35)),
-  c('fourSwordScout', 'Four Sword Scout', '🏹', [...LINK_TOOLS, 'dagger'], 'foot', g(70, 40, 20, 60, 70, 25, 25, 50)),
+  c('fourSwordLeader', 'Four Sword Leader', '🗡', [...LINK_TOOLS, 'magic'], 'foot', g(70, 40, 20, 45, 40, 30, 25, 40)),
+  c('fourSwordWarrior', 'Four Sword Warrior', '⚔', [...LINK_TOOLS, 'axe'], 'foot', g(75, 40, 5, 35, 25, 35, 15, 30)),
+  c('fourSwordScout', 'Four Sword Scout', '🏹', [...LINK_TOOLS, 'dagger'], 'foot', g(65, 35, 15, 50, 60, 20, 20, 45)),
   c('fourSwordMystic', 'Four Sword Mystic', '✨', [...LINK_TOOLS, 'magic', 'staff'], 'foot', LINK),
   // ── Section 2 ──
   c('sacredPrincess', 'Sacred Princess', '👑', ['magic', 'staff', 'bow'], 'foot', g(55, 10, 65, 50, 40, 20, 65, 55), undefined, ['royal']),
@@ -40,6 +40,6 @@ export const CLASSES: ClassDef[] = [
   c('windSorcererFS', 'Wind Sorcerer', '🌪', ['magic', 'natural'], 'flying', CASTER_BOSS, undefined, ['demon']),
   c('giantSlimeFS', 'Giant Slime', '🟩', ['natural', 'magic'], 'armor', SLIME, undefined, ['slime']),
   c('volcanicMonster', 'Volcanic Monster', '🔥', ['natural', 'magic'], 'armor', BOSS, undefined, ['fire']),
-  c('elementalSlime', 'Elemental Slime', '🟪', ['natural', 'magic'], 'armor', SLIME, undefined, ['slime']),
+  c('elementalSlimeFS', 'Elemental Slime', '🟪', ['natural', 'magic'], 'armor', SLIME, undefined, ['slime']),
   c('iceGuardian', 'Ice Guardian', '❄', ['natural', 'magic'], 'flying', CASTER_BOSS, undefined, ['ice']),
 ];

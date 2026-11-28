@@ -15,7 +15,7 @@ export const FORCE_GEMS: Record<string, { name: string; force: number }> = {
 /** Force Power thresholds (section 9). */
 export const FORCE_THRESHOLDS: { at: number; id: string; name: string; desc: string }[] = [
   { at: 500, id: 'awakening', name: 'Force Awakening', desc: 'The four Links gain +2 STR and MAG.' },
-  { at: 1000, id: 'enhancement', name: 'Force Enhancement', desc: 'The Links\' sword attacks and the Four Sword deal extra sacred damage (+4).' },
+  { at: 1000, id: 'enhancement', name: 'Force Enhancement', desc: 'The Links\' sword attacks and the Four Sword deal extra sacred damage (+2).' },
   { at: 1500, id: 'mastery', name: 'Force Mastery', desc: 'Cooperative attacks (formation attacks and Coordinated Strike) deal 30% more.' },
   { at: 2000, id: 'sacred', name: 'Sacred Awakening', desc: 'The Four Sword is fully empowered (+50% damage) and Sacred Seal is enabled.' },
 ];

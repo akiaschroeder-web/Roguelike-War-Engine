@@ -18,12 +18,12 @@ const GREEN = ['greenLink'], RED = ['redLink'], BLUE = ['blueLink'], PURPLE = ['
 /** Formation command CP costs (before the Green Link commander's discount). */
 export const FORMATION_CP: Record<string, number> = {
   formationBox: 4, formationLine: 3, formationColumn: 2, formationCross: 3,
-  formationMarch: 1, combinedSpin: 2, heroStack: 1, cooperativeThrow: 1, fourfoldStrike: 3, fourfoldBarrier: 3, sacredSeal: 4,
+  formationMarch: 1, combinedSpin: 2, heroStack: 1, cooperativeThrow: 1, fourfoldStrike: 3, fourfoldBarrier: 3, sacredSealFS: 4,
 };
 /** Links each formation command needs on the field. */
 export const FORMATION_NEEDS: Record<string, number> = {
   formationBox: 2, formationLine: 2, formationColumn: 2, formationCross: 2,
-  formationMarch: 2, combinedSpin: 2, heroStack: 2, cooperativeThrow: 2, fourfoldStrike: 4, fourfoldBarrier: 4, sacredSeal: 4,
+  formationMarch: 2, combinedSpin: 2, heroStack: 2, cooperativeThrow: 2, fourfoldStrike: 4, fourfoldBarrier: 4, sacredSealFS: 4,
 };
 /** The four formations: what each gives the Links while it holds (3 turns). */
 export const FORMATIONS: Record<string, { name: string; text: string }> = {
@@ -62,7 +62,7 @@ export const ABILITIES: AbilityDef[] = [
   f('cooperativeThrow', 'Cooperative Throw', '🤾', 'Throw an adjacent Link to a free space up to 4 away, over gaps and obstacles. 1 CP; uses your action (the thrown Link can still act).'),
   f('fourfoldStrike', 'Fourfold Strike', '✴', 'Four Links: every Link within 3 of an enemy within 2 of you hits it in turn (STR or MAG + weapon vs DEF). 3 CP; uses every participant\'s action.'),
   f('fourfoldBarrier', 'Fourfold Barrier', '🛡', 'Four Links: a barrier around the Links and every ally next to them blocks all damage until your next turn. 3 CP; uses every Link\'s action.'),
-  f('sacredSeal', 'Sacred Seal', '🔆', 'Four Links and Sacred Awakening (2,000 Force): massive sacred damage (2 × the best of STR and MAG + 10 vs RES) to every enemy within 3 of any Link; demonic bosses are stunned for a turn. 4 CP; uses every Link\'s action.'),
+  f('sacredSealFS', 'Sacred Seal', '🔆', 'Four Links and Sacred Awakening (2,000 Force): massive sacred damage (2 × the best of STR and MAG + 10 vs RES) to every enemy within 3 of any Link; demonic bosses are stunned for a turn. 4 CP; uses every Link\'s action.'),
   // ── Section 2 ──
   p('sacredLightFS', 'Sacred Light', 12, 'Every enemy within 2 takes MAG + 4 sacred light damage vs RES (demons and the undead take 50% more) and may be Stunned.', ['zeldaFS'],
     { target: 'foes', radius: 2, dmg: { stat: 'mag', base: 4, vs: 'res', element: 'light', sacred: true }, status: { kind: 'stun', turns: 1, chance: 30 }, tags: ['sacred'] }, { cooldown: 3 }),
@@ -90,7 +90,7 @@ export const ABILITIES: AbilityDef[] = [
   q('slimeDivision', 'Slime Division', 10, 'Two Zols split off its body onto the spaces beside it.', { cooldown: 4, grantedBy: { templates: ['deluZol'] } }),
   q('gelAbsorption', 'Gel Absorption', 6, 'Engulfs an adjacent enemy (STR + 2 vs DEF) and absorbs half the damage as HP.', { cooldown: 2, grantedBy: { templates: ['deluZol'] } }),
   p('flameBreathFS', 'Flame Breath', 8, 'Fire at an enemy within 2 (MAG + 4 fire vs RES; may Burn).', ['gouen'], { target: 'foe', range: [1, 2], dmg: { stat: 'mag', base: 4, vs: 'res', element: 'fire' }, status: { kind: 'burn', turns: 2, chance: 40 } }, { cooldown: 2 }),
-  p('lavaBurst', 'Lava Burst', 12, 'Lava erupts under every enemy within 2 (MAG + 2 fire vs RES).', ['gouen'], { target: 'foes', radius: 2, dmg: { stat: 'mag', base: 2, vs: 'res', element: 'fire' } }, { cooldown: 3 }),
+  p('lavaBurstFS', 'Lava Burst', 12, 'Lava erupts under every enemy within 2 (MAG + 2 fire vs RES).', ['gouen'], { target: 'foes', radius: 2, dmg: { stat: 'mag', base: 2, vs: 'res', element: 'fire' } }, { cooldown: 3 }),
   p('crushingSlamFS', 'Crushing Slam', 8, 'Slams every enemy next to it (STR + 4 vs DEF).', ['gouen'], { target: 'foes', radius: 1, dmg: { stat: 'str', base: 4 } }, { cooldown: 2 }),
   p('moltenArmor', 'Molten Armor', 10, '+8 DEF for 2 turns.', ['gouen'], { target: 'self', buff: { id: 'moltenArmor', name: 'Molten Armor', turns: 2, stats: { def: 8 } } }, { cooldown: 4 }),
   q('elementalShift', 'Elemental Shift', 8, 'Its weakness shifts to the next element at once, and it recovers 10% HP.', { cooldown: 2, grantedBy: { templates: ['deraZol'] } }),

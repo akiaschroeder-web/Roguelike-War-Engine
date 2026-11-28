@@ -10,7 +10,7 @@ export const ENEMIES: EnemyArchetype[] = [
   e('ballChainTrooper', 'Ball and Chain Trooper', 'chainTrooper', 'monster', ['trooperChain'], st(32, 18, 0, 12, 8, 14, 5, 5, 15, 5, 35, 0), { skill: 'chainReach', glyph: 'BT' }),
   e('bigBomb', 'Big Bomb', 'livingBomb', 'construct', ['bigBombBody'], st(35, 30, 0, 5, 3, 8, 5, 1, 20, 3, 15, 0), { size: 2, skill: 'massiveDetonation', glyph: 'BB' }),
   e('terrorpin', 'Terrorpin', 'armoredTurtle', 'monster', ['shellRam'], st(25, 12, 0, 8, 10, 20, 4, 5, 12, 5, 25, 0), { skill: 'armoredShell', glyph: 'TP' }),
-  e('geldman', 'Geldman', 'sandAmbusher', 'monster', ['sandClaw'], st(28, 15, 3, 12, 14, 9, 6, 5, 10, 6, 30, 10), { skill: 'sandAmbush', glyph: 'GD' }),
+  e('geldman', 'Geldman', 'sandAmbusher', 'monster', ['sandClaw'], st(28, 15, 3, 12, 14, 9, 6, 5, 10, 6, 30, 10), { skill: 'sandAmbushFS', glyph: 'GD' }),
 ];
 
 const b = (d: BossDef): BossDef => d;
@@ -21,14 +21,14 @@ export const BOSSES: BossDef[] = [
     stats: st(100, 12, 38, 22, 19, 20, 35, 7, 25, 8, 30, 100),
     quote: '(A black orb with a single red eye and bat wings hangs in a cyclone above the palace. "Four of you? Then I will break four heroes.")', drops: ['vaatisCycloneOrb'] }),
   b({ id: 'deluZol', name: 'Delu Zol', title: 'Giant Slime', home: 'seaOfTrees', race: 'chuchu', classId: 'giantSlimeFS', size: 3, glyph: 'DZ',
-    weapons: ['gelSlam', 'gelSpit'], skill: 'dividingBody', abilities: ['crushingBounce', 'slimeDivision', 'gelAbsorption', 'bodyRegeneration'],
+    weapons: ['gelSlam', 'gelSpit'], skill: 'dividingBodyFS', abilities: ['crushingBounce', 'slimeDivision', 'gelAbsorption', 'bodyRegeneration'],
     stats: st(70, 20, 10, 8, 6, 16, 12, 4, 30, 5, 35, 20),
     quote: '(A green slug of a slime, spiked along its back, heaves itself out of the Sea of Trees. Wherever it is cut, a smaller slime crawls away.)', drops: ['greenHerosTunic'] }),
   b({ id: 'gouen', name: 'Gouen', title: 'Volcanic Monster', home: 'deathMountainFS', race: 'fireCreature', classId: 'volcanicMonster', size: 4, glyph: 'GO',
-    weapons: ['magmaFist', 'gouenFlame'], skill: 'moltenBody', abilities: ['flameBreathFS', 'lavaBurst', 'crushingSlamFS', 'moltenArmor'],
+    weapons: ['gouenMagmaFist', 'gouenFlame'], skill: 'moltenBodyFS', abilities: ['flameBreathFS', 'lavaBurstFS', 'crushingSlamFS', 'moltenArmor'],
     stats: st(105, 30, 25, 14, 8, 28, 20, 5, 40, 4, 45, 50),
     quote: '(A face in a crown of flame rises out of the crater of Death Mountain, scowling at the four of you as if you were late.)', drops: ['redHerosTunic'] }),
-  b({ id: 'deraZol', name: 'Dera Zol', title: 'Elemental Slime', home: 'talusCave', race: 'chuchu', classId: 'elementalSlime', size: 3, glyph: 'DR',
+  b({ id: 'deraZol', name: 'Dera Zol', title: 'Elemental Slime', home: 'talusCave', race: 'chuchu', classId: 'elementalSlimeFS', size: 3, glyph: 'DR',
     weapons: ['gelSlam', 'elementalSpit'], skill: 'shiftingDefense', abilities: ['elementalShift', 'slimeBarrage', 'crushingBounce', 'spinyGelRecovery'],
     stats: st(85, 22, 26, 12, 9, 18, 24, 5, 32, 5, 40, 55),
     quote: '(Deep in the Talus Cave a slime glows one colour, then another. Whatever hurt it a moment ago doesn\'t any more.)', drops: ['blueHerosTunic'] }),
@@ -65,7 +65,7 @@ export const BIG_RETURNING: Record<string, { name: string; title: string; quote:
 };
 /** Each boss's retinue (returning monsters and the pack's own). */
 export const FS_ESCORTS: Record<string, string[]> = {
-  deluZol: ['zol', 'zol'], deraZol: ['zol', 'zol', 'stalfos', 'iceKeese'], gouen: ['fireKeese', 'tektite'], vaatiWindMage: ['ballChainTrooper', 'darknut'],
+  deluZol: ['zol', 'zol'], deraZol: ['zol', 'zol', 'stalfos', 'stalfos', 'iceKeese'], gouen: ['fireKeese', 'tektite'], vaatiWindMage: ['ballChainTrooper', 'darknut'],
   phantomGanon: ['moldorm', 'stalfos'], arrghus: ['octorok', 'terrorpin'], dodongo: ['tektite', 'bigBomb'], mightyDarknut: ['darknut', 'ballChainTrooper'],
   shadowLink: ['hinox'], manhandla: ['geldman', 'geldman'], frostare: ['iceKeese'],
 };

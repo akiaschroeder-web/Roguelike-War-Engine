@@ -164,7 +164,7 @@ export const GROUP_SUPPORTS: GroupSupport[] = [
   { id: 'forbiddenAmbitionGroup', name: 'Forbidden Ambition', members: ['vaatiHylian', 'ghirahim', 'zant'], text: 'More dark magic damage (+20%).' },
   { id: 'ancientGuardians', name: 'Ancient Guardians', members: ['mazaal', 'gohdan', 'eox'], text: 'More construct defence (allied constructs take 15% less damage) and resistance to disabling effects (no Stun, Root or Freeze).' },
   // Four Swords & Four Swords Adventures (docs/four-swords-pack.md section 12)
-  { id: 'fourfoldCourage', name: 'Fourfold Courage', members: ['greenLink', 'redLink', 'blueLink', 'purpleLink'], text: '+3 to all combat stats (STR, MAG, SKL, SPD, DEF, RES) within 4 of another Link.' },
+  { id: 'fourfoldCourage', name: 'Fourfold Courage', members: ['greenLink', 'redLink', 'blueLink', 'purpleLink'], text: '+3 to all combat stats (STR, MAG, SKL, SPD, DEF, RES) while all four Links are within 4 of one another.' },
   { id: 'sacredFellowship', name: 'Sacred Fellowship', members: ['greenLink', 'redLink', 'blueLink', 'purpleLink', 'zeldaFS'], text: 'More healing (+15%) and sacred damage (+15% for the Links and Zelda).' },
   { id: 'fivefoldReflection', name: 'Fivefold Reflection', members: ['greenLink', 'redLink', 'blueLink', 'purpleLink', 'shadowLink'], text: 'Stronger shadow duplicates (60% HP, 75% of STR, MAG and SKL) and Four Sword copies.' },
   { id: 'sacredSealGroup', name: 'Sacred Seal', members: ['zeldaFS', 'greenMaiden', 'redMaiden', 'blueMaiden', 'purpleMaiden', 'yellowMaiden', 'whiteMaiden'], text: 'Much more resistance to dark magic: members take half dark damage.' },
