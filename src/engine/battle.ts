@@ -19,6 +19,7 @@ import { mcStartPhase, placeMicroAtStart } from './micro';
 import { decorateMinish, minishBattleStart, mnBossesRemain, mnStartPhase } from './minish';
 import { fsBossesRemain, fsStartPhase } from './fourswords';
 import { lrBossesRemain, lrStartPhase } from './lorule';
+import { eoStartPhase } from './echoes';
 import { revertMask } from './terminaAbilities';
 import { roomFor } from './transform';
 import { canRide as canRideMount, unitTags, hasEffect, isLavaImmune, isMounted, makeEnemy, mountOf, sizeWhen, makeEnemyFromTemplate, prepareForBattle } from './units';
@@ -470,6 +471,7 @@ export function startPhase(b: Battle, team: Team): TurnStartEvent[] {
     mnStartPhase(b, u, events);
     fsStartPhase(b, u, events);
     lrStartPhase(b, u, events);
+    eoStartPhase(b, u, events);
     const max = u.stats.hp;
     const tiles = footprint(u.x, u.y, u.size).map((p) => b.tiles[keyOf(b, p.x, p.y)]);
     const anchor = tiles[0];

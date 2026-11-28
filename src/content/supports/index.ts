@@ -12,12 +12,13 @@ import { SUPPORT_REGISTRY_SPIRIT } from './registrySpirit';
 import { SUPPORT_REGISTRY_MINISH } from './registryMinish';
 import { SUPPORT_REGISTRY_FOURSWORDS } from './registryFourSwords';
 import { SUPPORT_REGISTRY_LORULE } from './registryLorule';
+import { SUPPORT_REGISTRY_ECHOES } from './registryEchoes';
 import { CONVOS as EXAMPLES } from './convos/examples';
 import { WRITTEN } from './written';
 
 export type { SupportPairDef };
 /** Every registered pairing, all packs. */
-export const SUPPORT_REGISTRY: SupportPairDef[] = [...BASE_REGISTRY, ...SUPPORT_REGISTRY_SS, ...SUPPORT_REGISTRY_WILD, ...SUPPORT_REGISTRY_ORIGINAL, ...SUPPORT_REGISTRY_AOL, ...SUPPORT_REGISTRY_LEGEND, ...SUPPORT_REGISTRY_PHANTOM, ...SUPPORT_REGISTRY_SPIRIT, ...SUPPORT_REGISTRY_MINISH, ...SUPPORT_REGISTRY_FOURSWORDS, ...SUPPORT_REGISTRY_LORULE];
+export const SUPPORT_REGISTRY: SupportPairDef[] = [...BASE_REGISTRY, ...SUPPORT_REGISTRY_SS, ...SUPPORT_REGISTRY_WILD, ...SUPPORT_REGISTRY_ORIGINAL, ...SUPPORT_REGISTRY_AOL, ...SUPPORT_REGISTRY_LEGEND, ...SUPPORT_REGISTRY_PHANTOM, ...SUPPORT_REGISTRY_SPIRIT, ...SUPPORT_REGISTRY_MINISH, ...SUPPORT_REGISTRY_FOURSWORDS, ...SUPPORT_REGISTRY_LORULE, ...SUPPORT_REGISTRY_ECHOES];
 
 export type SupportLine = ['a' | 'b' | 'n', string];
 export type SupportRankKey = 'C' | 'B' | 'A' | 'S';
@@ -40,6 +41,8 @@ export const SUPPORT_CANON: Record<string, string> = {
   spiritZelda: 'zeldaST', phantomZelda: 'zeldaST', phantomZeldaTorch: 'zeldaST', phantomZeldaWarp: 'zeldaST', phantomZeldaWrecker: 'zeldaST',
   malladusZelda: 'malladus', coleBoss: 'cole', byrneBoss: 'byrne', bigBlinBoss: 'bigBlin',
   // The Minish Cap forms: Micro Link, Ezlo's cap, and Vaati's Minish and demonic shapes
+  // Echoes of Wisdom boss forms
+  tekomBoss: 'tekom', echoLink: 'linkEoW',
   microLink: 'heroOfMinish', ezloCap: 'ezloMinish', vaatiMinish: 'vaatiHylian', vaatiReborn: 'vaatiHylian', vaatiTransfigured: 'vaatiHylian', vaatisWrath: 'vaatiHylian',
   // Four Swords: the Wind Mage is Vaati too
   vaatiWindMage: 'vaatiHylian',
@@ -185,6 +188,15 @@ export const GROUP_SUPPORTS: GroupSupport[] = [
   { id: 'mastersOfTheCurrent', name: 'Masters of the Current', members: ['riverZoraChieftain', 'riverZoraSorcerer'], text: 'Their floods last 2 more turns.' },
   { id: 'riverRoyalty', name: 'River Royalty', members: ['oren', 'riverZoraChieftain'], text: 'Every allied River Zora gains +3 DEF and RES.' },
   { id: 'unitedWaters', name: 'United Waters', members: ['riverZora', 'zoraWarrior'], need: 2, text: 'Any River Zora with any Sea Zora: both races +2 SKL and SPD while swimming.' },
+  // Echoes of Wisdom (docs/echoes-of-wisdom-pack.md section 15; with Oren and Shadow Link now in the game, United Waters and False Creation are live)
+  { id: 'primeEnergy', name: 'Prime Energy', members: ['zeldaEoW', 'linkEoW', 'tri'], text: '+3 STR, MAG and RES; Echoes cost 1 less capacity.' },
+  { id: 'royalCouncil', name: 'Royal Council', members: ['kingEoW', 'generalWright', 'ministerLefte', 'impaEoW'], text: 'More morale and CP recovery: +1 CP at the start of battle, +5 morale after victories, and members +2 DEF and RES.' },
+  { id: 'mechanicalMasters', name: 'Mechanical Masters', members: ['dampeEoW', 'robbie', 'mineru'], text: 'Constructs and Automatons +4 DEF and SKL.' },
+  { id: 'mountainBrotherhood', name: 'Mountain Brotherhood', members: ['darston', 'conde', 'yeto'], text: 'More obstacle destruction and cold resistance: members +2 DEF, half ice damage.' },
+  { id: 'desertCommand', name: 'Desert Command', members: ['chiefSeera', 'dohna', 'urbosa'], text: 'Allied Gerudo +2 STR and SPD.' },
+  { id: 'clockworkArmy', name: 'Clockwork Army', members: ['techtite', 'tocktorok', 'gizmol', 'highTekuBaba', 'roboblin', 'goldfinch'], text: 'Automatons spend 25% less Wind-Up Energy.' },
+  { id: 'unitedWatersEoW', name: 'United Waters', members: ['dradd', 'kushara', 'oren'], text: 'Better aquatic stats for both Zora races: aquatic allies +2 DEF, RES and SPD.' },
+  { id: 'falseCreation', name: 'False Creation', members: ['nullEoW', 'tekom', 'shadowLink'], text: 'Stronger temporary summons: allied Echoes +3 STR and MAG.' },
   { id: 'demonKings', name: 'The Demon Kings', members: ['demise', 'ganondorf', 'ganondorfWW', 'ganondorfTP', 'ganondorfWild'], text: 'Dark damage +25%.' },
 ];
 
@@ -193,3 +205,8 @@ export function convoSet(ta: string, tb: string, form?: string): ConvoSet | unde
   const k = pairKey(ta, tb);
   return form ? SUPPORT_CONVOS[`${k}#${form}`] : SUPPORT_CONVOS[k];
 }
+
+/** Echoes of Wisdom groups whose members come with packs built in parallel (Queen Oren from A Link Between Worlds,
+ *  Shadow Link from Four Swords): append them to GROUP_SUPPORTS once those templates exist. */
+export const DEFERRED_GROUPS_EOW: GroupSupport[] = [
+];

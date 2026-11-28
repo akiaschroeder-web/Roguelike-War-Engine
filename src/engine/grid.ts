@@ -10,6 +10,7 @@ import { mcTileCost, microRoom } from './micro';
 import { mnTileCost } from './minish';
 import { fsTileCost } from './fourswords';
 import { lrTileCost } from './lorule';
+import { eoTileCost } from './echoes';
 import { INF, MOVE_COSTS } from './rules';
 import { canSwim, effectiveStats, hasEffect, isMounted, moveTypeOf, unitTags } from './units';
 import { windFactor } from './naval';
@@ -102,6 +103,8 @@ export function tileCost(b: Battle, unit: Unit, t: Terrain): number {
   c = fsTileCost(b, unit, t, c);
   // A Link Between Worlds: wall-merged units travel through walls; forests, River Zora waters
   c = lrTileCost(b, unit, t, c);
+  // Echoes of Wisdom: climbing gear, the Frog Ring, Ice Spikes, wall-crawlers, Echoes crossing Rift Boundaries
+  c = eoTileCost(b, unit, t, c);
   if (unit.buffs?.some((x) => x.id === 'spectralStep') && c >= INF && t !== 'water') c = 2;
   return c;
 }
