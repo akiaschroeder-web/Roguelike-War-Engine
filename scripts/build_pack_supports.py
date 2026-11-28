@@ -103,6 +103,18 @@ PACKS = {
         'Gohdan': 'gohdan', 'Eox': 'eox', 'Koloktos': 'koloktos', 'Gyorg (MM)': 'gyorg', 'Mountain Minish Blacksmith': 'mountainMinishBlacksmith',
         'Goron Warrior': 'goronWarrior', 'Town Minish Tinkerer': 'townMinishTinkerer', 'Steward Construct': 'stewardConstruct',
     }),
+    'echoes': dict(doc='docs/echoes-of-wisdom-pack.md', start='## 15. Supports', end='### Groups', suffix='Echoes', game='echoes',
+        # Characters from packs built in parallel (A Link Between Worlds, Four Swords): their pairs are added after the merge.
+        skip={'ALBW Zelda', 'Hilda', 'Ravio', 'Oren', 'Shadow Link', 'Yuga'}, names={
+        'Zelda': 'zeldaEoW', 'EoW Zelda': 'zeldaEoW', 'Link': 'linkEoW', 'EoW Link': 'linkEoW', 'Tri': 'tri', 'King': 'kingEoW', 'Impa': 'impaEoW',
+        'Dohna': 'dohna', 'Condé': 'conde', 'Tekom': 'tekom', 'Lueburry': 'lueburry', 'Wright': 'generalWright', 'Lefte': 'ministerLefte',
+        'Seera': 'chiefSeera', 'Darston': 'darston', 'Dradd': 'dradd', 'Kushara': 'kushara', 'Dampe': 'dampeEoW', 'Null': 'nullEoW', 'Stamp Guy': 'stampGuy',
+        'OoT Zelda': 'zelda', 'Hero of Time': 'link', 'Hero of Legend': 'heroOfLegend', 'Fi': 'fi', 'Navi': 'navi', 'Ciela': 'ciela', 'Ezlo': 'ezloMinish',
+        'Queen of Fairies': 'queenOfFairies', 'Dark Link': 'darkLink', 'Demise': 'demise', 'Majora': 'majorasMask', 'Calamity Ganon': 'calamityGanon',
+        'Darunia': 'darunia', 'Yunobo': 'yunobo', 'Yeto': 'yeto', 'Yeta': 'yeta', 'Ruto': 'ruto', 'Mipha': 'mipha', 'Urbosa': 'urbosa', 'Nabooru': 'nabooru',
+        'Robbie': 'robbie', 'Mineru': 'mineru', 'Purah': 'purah', 'Gondo': 'gondo', 'Tingle': 'tingle', 'Seismic Talus': 'seismicTalus',
+        'Stone Talus': 'stoneTalus', 'Skorchill': 'skorchill', 'Blizzeta': 'blizzeta',
+    }),
 }
 SKIP = {'Epona', 'Four Giants', 'OOT Potion Shopkeeper', 'OoT Potion Shopkeeper', 'Cubus Sisters'}
 CANON = {'ghirahimTrue': 'ghirahim', 'imprisonedArmed': 'imprisoned', 'imprisonedFlying': 'imprisoned', 'ganon': 'ganondorf', 'sheik': 'zelda',
@@ -119,12 +131,16 @@ def resolve(n, unresolved):
     n = n.strip()
     if n in SKIP:
         return None
+    if n in pack.get('skip', ()):
+        DEFERRED.add(n)
+        return None
     if n in names:
         return names[n]
     unresolved.add(n)
     return None
 
 
+DEFERRED = set()
 pairs, unresolved, section, last_left = [], set(), None, None
 for line in body.splitlines():
     if line.startswith('### ') or (line.endswith(':') is False and re.match(r'^(Internal|Cross-pack):', line)):
@@ -164,6 +180,8 @@ for p in pairs:
         continue
     p['key'] = k
     out.append(p)
+if DEFERRED:
+    print('DEFERRED (pairs skipped):', sorted(DEFERRED), file=sys.stderr)
 if unresolved:
     print('UNRESOLVED:', sorted(unresolved), file=sys.stderr)
 print(len(out), 'pairs', file=sys.stderr)

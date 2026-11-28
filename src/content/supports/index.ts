@@ -10,12 +10,13 @@ import { SUPPORT_REGISTRY_LEGEND } from './registryLegend';
 import { SUPPORT_REGISTRY_PHANTOM } from './registryPhantom';
 import { SUPPORT_REGISTRY_SPIRIT } from './registrySpirit';
 import { SUPPORT_REGISTRY_MINISH } from './registryMinish';
+import { SUPPORT_REGISTRY_ECHOES } from './registryEchoes';
 import { CONVOS as EXAMPLES } from './convos/examples';
 import { WRITTEN } from './written';
 
 export type { SupportPairDef };
 /** Every registered pairing, all packs. */
-export const SUPPORT_REGISTRY: SupportPairDef[] = [...BASE_REGISTRY, ...SUPPORT_REGISTRY_SS, ...SUPPORT_REGISTRY_WILD, ...SUPPORT_REGISTRY_ORIGINAL, ...SUPPORT_REGISTRY_AOL, ...SUPPORT_REGISTRY_LEGEND, ...SUPPORT_REGISTRY_PHANTOM, ...SUPPORT_REGISTRY_SPIRIT, ...SUPPORT_REGISTRY_MINISH];
+export const SUPPORT_REGISTRY: SupportPairDef[] = [...BASE_REGISTRY, ...SUPPORT_REGISTRY_SS, ...SUPPORT_REGISTRY_WILD, ...SUPPORT_REGISTRY_ORIGINAL, ...SUPPORT_REGISTRY_AOL, ...SUPPORT_REGISTRY_LEGEND, ...SUPPORT_REGISTRY_PHANTOM, ...SUPPORT_REGISTRY_SPIRIT, ...SUPPORT_REGISTRY_MINISH, ...SUPPORT_REGISTRY_ECHOES];
 
 export type SupportLine = ['a' | 'b' | 'n', string];
 export type SupportRankKey = 'C' | 'B' | 'A' | 'S';
@@ -38,6 +39,8 @@ export const SUPPORT_CANON: Record<string, string> = {
   spiritZelda: 'zeldaST', phantomZelda: 'zeldaST', phantomZeldaTorch: 'zeldaST', phantomZeldaWarp: 'zeldaST', phantomZeldaWrecker: 'zeldaST',
   malladusZelda: 'malladus', coleBoss: 'cole', byrneBoss: 'byrne', bigBlinBoss: 'bigBlin',
   // The Minish Cap forms: Micro Link, Ezlo's cap, and Vaati's Minish and demonic shapes
+  // Echoes of Wisdom boss forms
+  tekomBoss: 'tekom', echoLink: 'linkEoW',
   microLink: 'heroOfMinish', ezloCap: 'ezloMinish', vaatiMinish: 'vaatiHylian', vaatiReborn: 'vaatiHylian', vaatiTransfigured: 'vaatiHylian', vaatisWrath: 'vaatiHylian',
   nayruPossessed: 'nayru', onoxDragon: 'onox', veranFairy: 'veran', veranTurtle: 'veran', veranSpider: 'veran', veranBee: 'veran',
   lightDragon: 'zeldaWild', demonDragon: 'ganondorfWild', darkBeastGanonWild: 'calamityGanon', mineruConstruct: 'mineru',
