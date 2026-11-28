@@ -130,6 +130,13 @@ PACKS = {
         'Stalblind': 'stalblind', 'Blind the Thief': 'blind', 'Gemesaur King': 'gemesaurKing', 'Helmasaur King': 'helmasaurKing', 'Gigabari': 'gigabari',
         'Barinade': 'barinade',
     }),
+    'triforce': dict(doc='docs/triforce-heroes-pack.md', start='## 9. Supports', end='Groups:', suffix='Triforce', game='triforce', names={
+        'ALBW Link': 'linkALBW', 'Blue Hero': 'blueHero', 'Red Hero': 'redHero', 'Styla': 'styla', 'King Tuft': 'kingTuft', 'Madame Couture': 'madameCouture',
+        'Lady Maud': 'ladyMaud', 'Ravio': 'ravio', 'Hilda': 'hilda', 'ALBW Zelda': 'zeldaALBW', 'Blue Link (FS)': 'blueLink', 'Red Link (FS)': 'redLink', 'Yuga': 'yuga',
+        # Twinrova shares Koume's support progression (SUPPORT_CANON).
+        'Veran': 'veran', 'Twinrova': 'koume', 'Blizzagia': 'blizzagia', 'Volvagia': 'volvagia', 'Stalchampion': 'stalchampion', 'Stalmaster': 'stalmaster',
+        'Margoma': 'margoma', 'Margomill': 'margomill',
+    }),
 }
 SKIP = {'Epona', 'Four Giants', 'OOT Potion Shopkeeper', 'OoT Potion Shopkeeper', 'Cubus Sisters',
         # Four Swords: rows the pack entry expands into concrete pairs

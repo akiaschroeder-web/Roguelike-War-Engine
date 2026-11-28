@@ -105,6 +105,7 @@ export function curseOutfit(b: Battle, u: Unit, turns: number, grand = false): b
   const g = id ? GEAR[id] : undefined;
   const st = b.tf;
   if (st?.tyranny && u.team === 'enemy') turns += st.tyranny;
+  if (u.team === 'enemy' && groups(b).includes('mastersOfTransformation')) turns += 1;
   if (grand) {
     // Halve every equipment bonus.
     const half: Record<string, number> = {};
@@ -396,6 +397,11 @@ export function tfStartPhase(b: Battle, u: Unit, events: TFEvent[]) {
     dmg = Math.min(e.hp - 1, Math.max(1, Math.floor(dmg)));
     if (dmg > 0) { e.hp -= dmg; events.push({ uid: e.uid, heal: 0, damage: dmg, source }); }
   };
+  // Hytopian Authority: the king's morale keeps his army on its feet.
+  if (alliesOf(b, u).some((a) => has(a, 'hytopianAuthority') && unitDist(u, a) <= 3) && u.hp < u.stats.hp) {
+    const h = Math.min(u.stats.hp - u.hp, Math.ceil(u.stats.hp * 0.05));
+    u.hp += h; events.push({ uid: u.uid, heal: h, damage: 0, source: 'is rallied by King Tuft' });
+  }
   // The Cheer Outfit: allies close by recover more.
   if (alliesOf(b, u).some((a) => wears(a, 'cheer') && unitDist(u, a) <= 2)) { u.sta = Math.min(effectiveStats(u).sta, u.sta + 5); u.mp = Math.min(effectiveStats(u).mp, u.mp + 5); }
   // Monsters and bosses.
@@ -442,7 +448,7 @@ export function tfMods(b: Battle, u: Unit, pos: Pos, foe: Unit, initiating: bool
   // The heroes' personal skills.
   if (has(u, 'heroicAgility') && allies.some((a) => isHero(a) && within(a, 2))) { m.spd += 3; m.skl += 3; }
   if (has(u, 'heroicStrength') && allies.some((a) => isHero(a) && within(a, 2))) { m.str += 3; m.def += 3; }
-  if (allies.some((a) => has(a, 'hytopianAuthority') && within(a, 3))) m.hit += 5;
+  if (allies.some((a) => has(a, 'hytopianAuthority') && within(a, 3))) { m.hit += 5; m.str += 2; m.def += 2; }
   // Fashionable Inspiration: 20% more from the outfit's stats.
   const o = outfitOf(u);
   if (o && allies.some((a) => has(a, 'fashionableInspiration') && !hasBuff(a, 'tfStylaCursed') && within(a, 2))) {
@@ -476,7 +482,7 @@ export function tfCannotAttack(b: Battle, atk: Unit, def: Unit, w: WeaponDef | u
   const braced = !!def.tfStack && hasBuff(baseOf(b, def), 'tfTotemGuard');
   if (isTop(def) && (def.tfStack!.level >= 2 || braced) && d <= 1 && w.type !== 'magic' && w.type !== 'staff' && !isElevated(b, atk) && atk.size <= 1 && !tfTag(w, 'vertical') && !has(atk, 'toweringSwordsman')) return true;
   // Grim Repoe is intangible on odd turns: physical attacks pass through.
-  if (has(def, 'spectralReaper') && b.turn % 2 === 1 && !isMagicW(w) && w.element !== 'light' && !w.sacredMult) return true;
+  if (has(def, 'spectralReaper') && def.team === 'enemy' && b.turn % 2 === 1 && !isMagicW(w) && w.element !== 'light' && !w.sacredMult) return true;
   return false;
 }
 
@@ -499,7 +505,7 @@ export function tfMultiplier(b: Battle, atk: Unit, atkPos: Pos, def: Unit, magic
   // Elevation: fliers and high targets.
   if (up && moveTypeOf(def) === 'flying' && moveTypeOf(atk) !== 'flying') m *= 1.25;
   // Bosses.
-  if (has(def, 'rotatingFortress')) m *= up ? 1.5 : 0.5;
+  if (has(def, 'rotatingFortress')) m *= up ? 1.5 : 0.7;
   if (has(def, 'toweringSwordsman') && !up) m *= 0.6;
   if ((def.tfLayers ?? 0) > 0) m *= 0.7;
   if (has(def, 'rotatingPrism')) {
@@ -828,7 +834,6 @@ export function castTriforce(b: Battle, u: Unit, def: AbilityDef, rng: RNG, targ
   if (cost && b.cp !== undefined) b.cp = Math.max(0, b.cp - cost);
   if (TOTEM_IDS.has(def.id) && def.id !== 'tfTotemStack') st.coop++;
   const used = (list: Unit[]) => { for (const a of list) if (a !== u) { a.acted = true; a.moved = true; } };
-  const tyranny = u.team === 'player' ? st.tyranny ?? 0 : 0;
   switch (def.id) {
     // ── Totems ──
     case 'tfTotemStack': {
@@ -933,14 +938,14 @@ export function castTriforce(b: Battle, u: Unit, def: AbilityDef, rng: RNG, targ
     }
     case 'fashionCurse': {
       const e = target!;
-      curseOutfit(b, e, 3 + tyranny);
+      curseOutfit(b, e, 3);
       out.statuses.push({ uid: e.uid, kind: 'curse' });
-      out.lines.push(`${u.name} curses ${e.name}'s outfit: its bonuses are gone for ${3 + tyranny} turns.`);
+      out.lines.push(`${u.name} curses ${e.name}'s outfit: its bonuses are gone for ${e.buffs.find((x) => x.id === 'tfFashionCursed')?.turns ?? 3} turns.`);
       return out;
     }
     case 'grandCurse': {
       const foes = visibleFoes(b, u).filter((e) => unitDist(u, e) <= 4);
-      for (const e of foes) { curseOutfit(b, e, 2 + tyranny, true); out.statuses.push({ uid: e.uid, kind: 'curse' }); }
+      for (const e of foes) { curseOutfit(b, e, 2, true); out.statuses.push({ uid: e.uid, kind: 'curse' }); }
       out.lines.push(`The Grand Curse falls: ${foes.length} enem${foes.length === 1 ? 'y\'s' : 'ies\''} equipment bonuses are halved.`);
       return out;
     }
