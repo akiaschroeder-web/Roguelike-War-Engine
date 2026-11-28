@@ -178,8 +178,10 @@ describe('Zelda, Link, Tri and the Automatons', () => {
     addStatus(t, 'poison', 3);
     expect(t.statuses.some((s) => s.kind === 'poison')).toBe(false);
     t.sta = 1;
+    d.x = 9;
     startPhase(b, 'player');
     expect(t.acted).toBe(true);
+    d.x = 2;
     castAbility(b, d, 'rewindAutomaton', rng(), t.uid);
     expect(t.sta).toBe(t.stats.sta);
   });
