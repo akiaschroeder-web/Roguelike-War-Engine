@@ -60,7 +60,7 @@ describe('Echoes of Wisdom content', () => {
     expect(EO_ROUTE_BOSSES.nullsBody).toEqual(['nullEoW']);
     expect(EO_ROUTE_BOSSES.hyruleCastleEoW).toEqual(['ganonLegendBoss']);
     expect(COMMANDERS.filter((c) => c.campaign === 'echoes').length).toBe(10);
-    expect(SUPPORT_REGISTRY.filter((p) => p.game === 'echoes').length).toBe(43);
+    expect(SUPPORT_REGISTRY.filter((p) => p.game === 'echoes').length).toBe(49);
     expect(GROUP_SUPPORTS.filter((g) => ['primeEnergy', 'royalCouncil', 'mechanicalMasters', 'mountainBrotherhood', 'desertCommand', 'clockworkArmy'].includes(g.id)).length).toBe(6);
     expect(DEFERRED_GROUPS_EOW).toEqual([]);
     expect(GROUP_SUPPORTS.some((g) => g.id === 'unitedWatersEoW') && GROUP_SUPPORTS.some((g) => g.id === 'falseCreation')).toBe(true);

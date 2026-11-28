@@ -131,8 +131,7 @@ PACKS = {
         'Barinade': 'barinade',
     }),
     'echoes': dict(doc='docs/echoes-of-wisdom-pack.md', start='## 15. Supports', end='### Groups', suffix='Echoes', game='echoes',
-        # Characters from packs built in parallel (A Link Between Worlds, Four Swords): their pairs are added after the merge.
-        skip={'ALBW Zelda', 'Hilda', 'Ravio', 'Oren', 'Shadow Link', 'Yuga'}, names={
+        names={
         'Zelda': 'zeldaEoW', 'EoW Zelda': 'zeldaEoW', 'Link': 'linkEoW', 'EoW Link': 'linkEoW', 'Tri': 'tri', 'King': 'kingEoW', 'Impa': 'impaEoW',
         'Dohna': 'dohna', 'Condé': 'conde', 'Tekom': 'tekom', 'Lueburry': 'lueburry', 'Wright': 'generalWright', 'Lefte': 'ministerLefte',
         'Seera': 'chiefSeera', 'Darston': 'darston', 'Dradd': 'dradd', 'Kushara': 'kushara', 'Dampe': 'dampeEoW', 'Null': 'nullEoW', 'Stamp Guy': 'stampGuy',
@@ -141,6 +140,8 @@ PACKS = {
         'Darunia': 'darunia', 'Yunobo': 'yunobo', 'Yeto': 'yeto', 'Yeta': 'yeta', 'Ruto': 'ruto', 'Mipha': 'mipha', 'Urbosa': 'urbosa', 'Nabooru': 'nabooru',
         'Robbie': 'robbie', 'Mineru': 'mineru', 'Purah': 'purah', 'Gondo': 'gondo', 'Tingle': 'tingle', 'Seismic Talus': 'seismicTalus',
         'Stone Talus': 'stoneTalus', 'Skorchill': 'skorchill', 'Blizzeta': 'blizzeta',
+        # Partners from the A Link Between Worlds and Four Swords packs
+        'ALBW Zelda': 'zeldaALBW', 'Hilda': 'hilda', 'Ravio': 'ravio', 'Oren': 'oren', 'Shadow Link': 'shadowLink', 'Yuga': 'yuga',
     }),
 }
 SKIP = {'Epona', 'Four Giants', 'OOT Potion Shopkeeper', 'OoT Potion Shopkeeper', 'Cubus Sisters',
