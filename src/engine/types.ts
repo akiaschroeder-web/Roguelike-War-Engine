@@ -170,7 +170,12 @@ export type Terrain = BaseTerrain | 'cracked' | 'timeBlock' | 'timeGap' | 'bridg
   | 'minishPortal' | 'microPassage' | 'microBridge' | 'microTunnel' | 'minishDoor' | 'giantGrass' | 'waterDroplet' | 'floatingLeaf'
   | 'internalWeakPoint' | 'softEarthWall' | 'pacciHole' | 'duplicationTile' | 'windCrest' | 'giantMushroom' | 'minishVine' | 'spiderweb' | 'gustCurrent'
   // Size-dependent terrain (normal / Micro)
-  | 'puddle' | 'giantFlower' | 'fallenTwig' | 'bookshelf' | 'minishTable' | 'tallGrass' | 'raindrop' | 'ordinaryHouse';
+  | 'puddle' | 'giantFlower' | 'fallenTwig' | 'bookshelf' | 'minishTable' | 'tallGrass' | 'raindrop' | 'ordinaryHouse'
+  // Echoes of Wisdom battlefield spaces (section 13) and Object Echoes (section 8; engine/echoes.ts)
+  | 'unstableRift' | 'riftBoundary' | 'rotatedTerrain' | 'triFriend' | 'echoLearningPoint' | 'bindHandle' | 'verticalWaterColumn'
+  | 'stampStation' | 'glowingEnergyOrb' | 'riftCorruptionSource'
+  | 'eoTable' | 'eoBox' | 'eoOldBed' | 'eoSoftBed' | 'eoZeldaBed' | 'eoBoulder' | 'eoRock' | 'eoPot' | 'eoIceBlock' | 'eoTorch' | 'eoFlyingTile' | 'eoCloud'
+  | 'eoTrampoline' | 'eoWindCannon' | 'eoSign' | 'eoCarrot' | 'eoMeat' | 'eoFish';
 
 export type Team = 'player' | 'enemy';
 
@@ -640,7 +645,7 @@ export interface WorldDef {
   terrainNames: Record<BaseTerrain, string>;
   terrainColors: Record<BaseTerrain, string>;
   /** Regions of the Termina campaign (with the three-day cycle). */
-  campaign?: 'termina' | 'greatSea' | 'twilight' | 'skyward' | 'wild' | 'original' | 'legend' | 'phantom' | 'spirit' | 'minish';
+  campaign?: 'termina' | 'greatSea' | 'twilight' | 'skyward' | 'wild' | 'original' | 'legend' | 'phantom' | 'spirit' | 'minish' | 'echoes';
   /** Era of the Wild: which layer of the three-layer map. */
   layer?: 'surface' | 'sky' | 'depths';
   /** Battles here are fought at sea (vessels, wind, islands). */
@@ -760,7 +765,7 @@ export interface CommanderDef {
   bonus: CommanderBonus;
   bonusText: string;
   /** Campaign this commander starts in by default. */
-  campaign?: 'termina' | 'greatSea' | 'twilight' | 'skyward' | 'wild' | 'original' | 'legend' | 'phantom' | 'spirit' | 'minish';
+  campaign?: 'termina' | 'greatSea' | 'twilight' | 'skyward' | 'wild' | 'original' | 'legend' | 'phantom' | 'spirit' | 'minish' | 'echoes';
   /** Weapons, gear and items handed out to the army at the start (commander first). */
   startingItems?: string[];
 }
@@ -782,7 +787,9 @@ export type CommanderBonus = 'extraTreasure' | 'healing' | 'forging' | 'postBatt
   // Spirit Tracks
   | 'royalEngineers' | 'unboundSpirit' | 'sacredSymphony' | 'ironGauntlet' | 'demonicInfluence' | 'demonKingsRail'
   // The Minish Cap
-  | 'fourSwordHero' | 'minishSage' | 'lightForceBonus' | 'masterForging' | 'royalAuthority' | 'bladeBrothers' | 'windSorcery';
+  | 'fourSwordHero' | 'minishSage' | 'lightForceBonus' | 'masterForging' | 'royalAuthority' | 'bladeBrothers' | 'windSorcery'
+  // Echoes of Wisdom
+  | 'echoCapacity' | 'riftHunter' | 'formationCommand' | 'clockworkArmy' | 'goronObstacles' | 'desertMarch' | 'riverZoraMight' | 'aquaticHealing' | 'falseEchoes' | 'voidReflection';
 
 export type SkillId = string;
 
@@ -1058,7 +1065,7 @@ export interface RunMap {
 }
 
 /** A campaign the World Tour can visit. */
-export type TourCampaign = 'hyrule' | 'termina' | 'greatSea' | 'twilight' | 'skyward' | 'wild' | 'original' | 'legend' | 'phantom' | 'spirit' | 'minish';
+export type TourCampaign = 'hyrule' | 'termina' | 'greatSea' | 'twilight' | 'skyward' | 'wild' | 'original' | 'legend' | 'phantom' | 'spirit' | 'minish' | 'echoes';
 
 export interface Run {
   seed: number;
@@ -1091,7 +1098,7 @@ export interface Run {
   /** Army-wide stats and resources. */
   army?: Army;
   /** Which campaign: the endless Hyrule war, Termina with its three-day cycle, or the Great Sea. */
-  campaign?: 'hyrule' | 'termina' | 'greatSea' | 'twilight' | 'skyward' | 'wild' | 'original' | 'legend' | 'phantom' | 'spirit' | 'minish' | 'random' | 'worldTour';
+  campaign?: 'hyrule' | 'termina' | 'greatSea' | 'twilight' | 'skyward' | 'wild' | 'original' | 'legend' | 'phantom' | 'spirit' | 'minish' | 'echoes' | 'random' | 'worldTour';
   /** Great Sea: the naval campaign's state. */
   sea?: SeaState;
   /** Termina: hours passed in the current three-day cycle (0-71) and resets so far. */
@@ -1183,7 +1190,9 @@ export type EventEffect =
   /** Spirit Tracks (engine/spiritRun.ts): train parts, stamps, Force Gems, passengers and freight, Lokomo duets. */
   | { kind: 'spirit'; op: string; id?: string; amount?: number }
   /** The Minish Cap (engine/minishRun.ts): Kinstone fusions, Mysterious Shells, figurines, Picolytes, the Elements. */
-  | { kind: 'minish'; op: string; id?: string; amount?: number };
+  | { kind: 'minish'; op: string; id?: string; amount?: number }
+  /** Echoes of Wisdom (engine/echoesRun.ts): Echo learning, Might Crystals, stamps, smoothies, Tri's friends. */
+  | { kind: 'echoes'; op: string; id?: string; amount?: number };
 
 /** Conditions for an event or a single choice. */
 export interface EventRequires {

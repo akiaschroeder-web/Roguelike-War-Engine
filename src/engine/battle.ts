@@ -17,6 +17,7 @@ import { decorateSpirit, enemyTrains, isTrain, layoutRail, setupRail, spBossesRe
 import { resolveSinking } from './naval';
 import { mcStartPhase, placeMicroAtStart } from './micro';
 import { decorateMinish, minishBattleStart, mnBossesRemain, mnStartPhase } from './minish';
+import { eoStartPhase } from './echoes';
 import { revertMask } from './terminaAbilities';
 import { roomFor } from './transform';
 import { canRide as canRideMount, unitTags, hasEffect, isLavaImmune, isMounted, makeEnemy, mountOf, sizeWhen, makeEnemyFromTemplate, prepareForBattle } from './units';
@@ -466,6 +467,7 @@ export function startPhase(b: Battle, team: Team): TurnStartEvent[] {
     spStartPhase(b, u, events);
     mcStartPhase(b, u, events);
     mnStartPhase(b, u, events);
+    eoStartPhase(b, u, events);
     const max = u.stats.hp;
     const tiles = footprint(u.x, u.y, u.size).map((p) => b.tiles[keyOf(b, p.x, p.y)]);
     const anchor = tiles[0];

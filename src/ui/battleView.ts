@@ -13,6 +13,7 @@ import { lgAfterMove } from '../engine/legend';
 import { hourglassLabel, phAfterMove } from '../engine/phantom';
 import { spAfterMove } from '../engine/spirit';
 import { isMicro, mcAfterMove, microSlot, unitsAt } from '../engine/micro';
+import { echoChoices, eoUnitNote } from '../engine/echoes';
 import { enemyUnload, windLabel } from '../engine/naval';
 import { sideQuestText } from '../engine/run';
 import { adjacentCaptives, checkResult, freeCaptive, mountToggleBlocked, moveUnit, toggleMount, objectiveText, spawnReinforcements, startPhase, type TurnStartEvent } from '../engine/battle';
@@ -70,6 +71,11 @@ const TERRAIN_GLYPH: Record<string, string> = {
   minishPortal: '🍄', microPassage: '·', microBridge: '⌒', microTunnel: '◌', minishDoor: '🚪', giantGrass: '⺾', waterDroplet: '💧', floatingLeaf: '🍃',
   internalWeakPoint: '◎', softEarthWall: '▦', pacciHole: '⊚', duplicationTile: '✦', windCrest: '🌬', giantMushroom: '🍄', minishVine: '⌇', spiderweb: '🕸', gustCurrent: '≋',
   puddle: '∽', giantFlower: '🌸', fallenTwig: '⟋', bookshelf: '📚', minishTable: '⊤', tallGrass: '″', raindrop: '💧', ordinaryHouse: '🏠',
+  // Echoes of Wisdom
+  unstableRift: '▒', riftBoundary: '▓', rotatedTerrain: '⤾', triFriend: '🔺', echoLearningPoint: '✧', bindHandle: '⚓', verticalWaterColumn: '⇕',
+  stampStation: '📮', glowingEnergyOrb: '🟢', riftCorruptionSource: '☣',
+  eoTable: '⊤', eoBox: '📦', eoOldBed: '🛏', eoSoftBed: '🛏', eoZeldaBed: '🛏', eoBoulder: '🪨', eoRock: '•', eoPot: '🏺', eoIceBlock: '🧊', eoTorch: '🔥',
+  eoFlyingTile: '▭', eoCloud: '☁', eoTrampoline: '⤒', eoWindCannon: '💨', eoSign: '🪧', eoCarrot: '🥕', eoMeat: '🍖', eoFish: '🐟',
 };
 
 export class BattleView {
@@ -394,7 +400,7 @@ export class BattleView {
       const here = this.hover ? unitsAt(b, this.hover.x, this.hover.y) : [];
       const u = (this.hover ? unitAt(b, this.hover.x, this.hover.y) ?? here[0] : undefined) ?? this.sel ?? undefined;
       const micros = here.filter((x) => isMicro(x) && x !== u && isSeen(b, x));
-      html = u ? unitDetails(u) + (micros.length ? `<div class="dim small">🍀 Micro units here: ${micros.map((x) => `<b class="${x.team}">${esc(x.name)}</b>${x.mcRide ? ' (riding)' : ''}`).join(', ')} — tap again to cycle</div>` : '') : `<div class="dim small help">
+      html = u ? unitDetails(u) + (eoUnitNote(this.b, u) ? `<div class="dim small">✨ ${esc(eoUnitNote(this.b, u)!)}</div>` : '') + (micros.length ? `<div class="dim small">🍀 Micro units here: ${micros.map((x) => `<b class="${x.team}">${esc(x.name)}</b>${x.mcRide ? ' (riding)' : ''}`).join(', ')} — tap again to cycle</div>` : '') : `<div class="dim small help">
         <p><b>Tap a unit</b> to select it. Blue shows where it can move; red shows what it can hit.</p>
         <p>Tap an <b>enemy</b> to see its threat range. Swords beat axes, axes beat lances, lances beat swords.</p>
         <p>Large units fill several squares. Lava burns anyone but Gorons and fliers.</p>
@@ -918,6 +924,8 @@ export class BattleView {
         const id = el?.dataset.id;
         const def = id ? ABILITIES[id] : undefined;
         if (!u || !def || unusableReason(b, u, def)) return;
+        // Echoes of Wisdom: choose which learned Echo to create.
+        if (id === 'createEcho' && !(await this.pickEcho(u))) return;
         if (needsTile(def)) {
           this.mode = 'abilityTile';
           this.abilityId = id!;
@@ -1199,6 +1207,21 @@ export class BattleView {
       this.float(u, 'BROKE!', 'crit');
       this.addLog(`💥 ${esc(u.name)}'s ${esc(weaponDef(x.weaponId)?.name ?? x.weaponId)} broke${x.into ? `! (now: ${esc(weaponDef(x.into)?.name ?? x.into)})` : '!'}`);
     }
+  }
+
+  /** The Echo Compendium picker (Create Echo): monsters and objects the summoner can afford. */
+  private pickEcho(u: Unit): Promise<boolean> {
+    const opts = echoChoices(this.b, u);
+    return new Promise((resolve) => {
+      const m = modal(`<h3>Create Echo</h3><p class="dim small">Choose an Echo (capacity cost in brackets).</p><div class="shop-list">${opts.map((o) =>
+        `<div class="shop-item"><div>${o.object ? '📦' : '👾'} ${esc(o.name)} <span class="dim small">(${o.cost})</span></div><button class="btn small" data-echo="${esc(o.id)}" ${o.ok ? '' : 'disabled'}>Create</button></div>`).join('')}</div><button class="btn" data-echo="">Cancel</button>`);
+      m.el.addEventListener('click', (e) => {
+        const btn = (e.target as HTMLElement).closest<HTMLElement>('[data-echo]');
+        if (!btn) return;
+        m.close();
+        if (btn.dataset.echo) { u.eoPick = btn.dataset.echo; resolve(true); } else resolve(false);
+      });
+    });
   }
 
   private async doCast(u: Unit, id: string, targetUid?: string, at?: Pos) {
@@ -1631,6 +1654,24 @@ const WW_TERRAIN_NOTES: Record<string, string> = {
   tallGrass: 'Tall Grass: concealment (+15 Avoid); a dense forest at Micro size (cost 2, +20 Avoid)',
   raindrop: 'A Raindrop: harmless; a falling hazard to Micro units (10% HP)',
   ordinaryHouse: 'A House: a building; a whole dungeon to Micro units (heal 10%, +20 Avoid)',
+  // Echoes of Wisdom
+  unstableRift: 'Unstable Rift: the Still World eats ordinary units (10% HP a turn; Echoes and Rift creatures are unharmed) and it spreads. Restoration repairs it',
+  riftBoundary: 'Rift Boundary: the edge between Hyrule and the Still World; nothing walks through',
+  rotatedTerrain: 'Rotated Terrain: the ground is sideways (climbing cost 2; Climbing Band and Brace help)',
+  triFriend: "Tri's Friend: stand here (or use Restoration within 2) to rescue Tri's friend and repair the Rift",
+  echoLearningPoint: 'An Echo Learning Point: stand here to learn a new Object Echo',
+  bindHandle: 'A Bind Handle: a block on a hook; a Bind from next to it drags every enemy within 2 one space toward you',
+  verticalWaterColumn: 'A Water Column: swimmers climb between elevations here (+10 Avoid)',
+  stampStation: 'A Stamp Station: stand here to stamp your card',
+  glowingEnergyOrb: 'A Glowing Energy Orb: stand here to restore 15 Swordfighter Energy (and 10 Wind-Up Energy)',
+  riftCorruptionSource: 'A Rift Corruption Source: it spawns hostile Echoes every other turn until a unit stands on it or Restoration seals it',
+  eoTable: 'A Table (Echo): elevation, +15 Hit and +10 Avoid', eoBox: 'A Wooden Box (Echo): cover, +20 Avoid and +2 DEF',
+  eoOldBed: 'An Old Bed (Echo): heals 15% a turn', eoSoftBed: 'A Soft Bed (Echo): heals 25% a turn', eoZeldaBed: "Zelda's Bed (Echo): heals 30% and 10 MP a turn",
+  eoBoulder: 'A Boulder (Echo): blocks movement', eoRock: 'A Small Rock (Echo)', eoPot: 'A Pot (Echo): a Micro unit here is hidden',
+  eoIceBlock: 'An Ice Block (Echo): an obstacle that melts', eoTorch: 'A Torch (Echo): lights the field, burns adjacent enemies',
+  eoFlyingTile: 'A Flying Tile (Echo): a platform over anything', eoCloud: 'A Cloud (Echo): a temporary platform over anything (+10 Avoid)',
+  eoTrampoline: 'A Trampoline (Echo): +2 MOV for whoever starts a turn here', eoWindCannon: 'A Wind Cannon (Echo): pushes light enemies within 3 away',
+  eoSign: 'A Wooden Sign (Echo): light cover (+10 Avoid, +1 DEF)', eoCarrot: 'A Carrot (Echo): lures beasts', eoMeat: 'Meat (Echo): lures monsters', eoFish: 'Grilled Fish (Echo): lures aquatic monsters',
 };
 
 /** Abilities shown in the Abilities menu (forecast-only modifiers are excluded). */

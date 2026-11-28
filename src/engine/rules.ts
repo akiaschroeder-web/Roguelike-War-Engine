@@ -47,6 +47,11 @@ const SPECIAL = (open: number, water = INF, rough = 2, gap = INF) => ({
   minishPortal: open, microPassage: INF, microBridge: water, microTunnel: open, minishDoor: INF, giantGrass: open, waterDroplet: open, floatingLeaf: water,
   internalWeakPoint: open, softEarthWall: INF, pacciHole: open, duplicationTile: open, windCrest: open, giantMushroom: open, minishVine: rough, spiderweb: open,
   gustCurrent: open, puddle: open, giantFlower: open, fallenTwig: open, bookshelf: INF, minishTable: INF, tallGrass: open, raindrop: open, ordinaryHouse: INF,
+  // Echoes of Wisdom: the Still World's spaces and the Object Echoes (per-unit exceptions live in echoes.ts eoTileCost: Echoes cross rifts, platforms span water)
+  unstableRift: open, riftBoundary: INF, rotatedTerrain: rough, triFriend: open, echoLearningPoint: open, bindHandle: INF, verticalWaterColumn: water,
+  stampStation: open, glowingEnergyOrb: open, riftCorruptionSource: open,
+  eoTable: open, eoBox: rough, eoOldBed: open, eoSoftBed: open, eoZeldaBed: open, eoBoulder: INF, eoRock: open, eoPot: open, eoIceBlock: INF, eoTorch: open,
+  eoFlyingTile: open, eoCloud: open, eoTrampoline: open, eoWindCannon: INF, eoSign: open, eoCarrot: open, eoMeat: open, eoFish: open,
 });
 export const MOVE_COSTS: Record<MoveType, Record<Terrain, number>> = {
   foot:    { plain: 1, forest: 2, mountain: 3, water: INF, wall: INF, fort: 1, lava: 2, ...SPECIAL(1) },
@@ -247,6 +252,16 @@ export const TERRAIN_BONUS: Record<Terrain, { avoid: number; def: number; heal: 
   giantFlower: { avoid: 0, def: 0, heal: 0 }, fallenTwig: { avoid: 0, def: 0, heal: 0 }, bookshelf: { avoid: 0, def: 0, heal: 0 },
   minishTable: { avoid: 0, def: 0, heal: 0 }, tallGrass: { avoid: 15, def: 0, heal: 0 }, raindrop: { avoid: 0, def: 0, heal: 0 },
   ordinaryHouse: { avoid: 0, def: 0, heal: 0 },
+  // Echoes of Wisdom (beds heal through engine/echoes.ts, so the summoner's gear and pajamas count)
+  unstableRift: { avoid: -10, def: 0, heal: 0 }, riftBoundary: { avoid: 0, def: 0, heal: 0 }, rotatedTerrain: { avoid: 5, def: 0, heal: 0 },
+  triFriend: { avoid: 0, def: 0, heal: 0 }, echoLearningPoint: { avoid: 0, def: 0, heal: 0 }, bindHandle: { avoid: 0, def: 0, heal: 0 },
+  verticalWaterColumn: { avoid: 10, def: 0, heal: 0 }, stampStation: { avoid: 0, def: 0, heal: 0 }, glowingEnergyOrb: { avoid: 0, def: 0, heal: 0 },
+  riftCorruptionSource: { avoid: -10, def: 0, heal: 0 },
+  eoTable: { avoid: 10, def: 0, heal: 0 }, eoBox: { avoid: 20, def: 2, heal: 0 }, eoOldBed: { avoid: 0, def: 0, heal: 0 }, eoSoftBed: { avoid: 0, def: 0, heal: 0 },
+  eoZeldaBed: { avoid: 0, def: 0, heal: 0 }, eoBoulder: { avoid: 0, def: 0, heal: 0 }, eoRock: { avoid: 5, def: 0, heal: 0 }, eoPot: { avoid: 5, def: 0, heal: 0 },
+  eoIceBlock: { avoid: 0, def: 0, heal: 0 }, eoTorch: { avoid: 0, def: 0, heal: 0 }, eoFlyingTile: { avoid: 0, def: 0, heal: 0 }, eoCloud: { avoid: 10, def: 0, heal: 0 },
+  eoTrampoline: { avoid: 0, def: 0, heal: 0 }, eoWindCannon: { avoid: 0, def: 0, heal: 0 }, eoSign: { avoid: 10, def: 1, heal: 0 },
+  eoCarrot: { avoid: 0, def: 0, heal: 0 }, eoMeat: { avoid: 0, def: 0, heal: 0 }, eoFish: { avoid: 0, def: 0, heal: 0 },
 };
 
 /** Water-like spaces: swimmers move through them, others can't. */
@@ -452,6 +467,34 @@ export const SPECIAL_TERRAIN: Record<Exclude<Terrain, BaseTerrain>, { name: stri
   tallGrass: { name: 'Tall Grass', color: '#6ab04a' },
   raindrop: { name: 'Raindrop', color: '#a0c8e8' },
   ordinaryHouse: { name: 'House', color: '#b0906a' },
+  unstableRift: { name: 'Unstable Rift', color: '#3a2a5a' },
+  riftBoundary: { name: 'Rift Boundary', color: '#1a0a2a' },
+  rotatedTerrain: { name: 'Rotated Terrain', color: '#7a6a9a' },
+  triFriend: { name: "Tri's Friend", color: '#f0e060' },
+  echoLearningPoint: { name: 'Echo Learning Point', color: '#a0e0d0' },
+  bindHandle: { name: 'Bind Handle', color: '#c0a060' },
+  verticalWaterColumn: { name: 'Water Column', color: '#5aa0e0' },
+  stampStation: { name: 'Stamp Station', color: '#d07a5a' },
+  glowingEnergyOrb: { name: 'Energy Orb', color: '#a0f0a0' },
+  riftCorruptionSource: { name: 'Rift Corruption Source', color: '#8a2a8a' },
+  eoTable: { name: 'Table (Echo)', color: '#b08a5a' },
+  eoBox: { name: 'Wooden Box (Echo)', color: '#a07a4a' },
+  eoOldBed: { name: 'Old Bed (Echo)', color: '#c0a0a0' },
+  eoSoftBed: { name: 'Soft Bed (Echo)', color: '#e0c0d0' },
+  eoZeldaBed: { name: "Zelda's Bed (Echo)", color: '#f0d0f0' },
+  eoBoulder: { name: 'Boulder (Echo)', color: '#7a7a7a' },
+  eoRock: { name: 'Small Rock (Echo)', color: '#9a9a9a' },
+  eoPot: { name: 'Pot (Echo)', color: '#b07050' },
+  eoIceBlock: { name: 'Ice Block (Echo)', color: '#c0e8f8' },
+  eoTorch: { name: 'Torch (Echo)', color: '#f0a040' },
+  eoFlyingTile: { name: 'Flying Tile (Echo)', color: '#c0b0e0' },
+  eoCloud: { name: 'Cloud (Echo)', color: '#f0f0ff' },
+  eoTrampoline: { name: 'Trampoline (Echo)', color: '#e06080' },
+  eoWindCannon: { name: 'Wind Cannon (Echo)', color: '#80c0c0' },
+  eoSign: { name: 'Wooden Sign (Echo)', color: '#c0a070' },
+  eoCarrot: { name: 'Carrot (Echo)', color: '#f09030' },
+  eoMeat: { name: 'Meat (Echo)', color: '#c05040' },
+  eoFish: { name: 'Grilled Fish (Echo)', color: '#d0a060' },
 };
 
 /** Lava damage at the start of a unit's turn (as % of max HP). */

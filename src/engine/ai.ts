@@ -3,6 +3,7 @@ import { computeMoves, distanceField, footDist, keyOf, posOf, unitDist, type Mov
 import { LAVA_DAMAGE_PCT, TERRAIN_BONUS, WATERY } from './rules';
 import { hasEffect, isLavaImmune } from './units';
 import { wildIgnores } from './wildGear';
+import { eoTauntFilter } from './echoes';
 import type { Battle, Pos, Unit } from './types';
 
 export interface AIPlan {
@@ -37,6 +38,9 @@ export function planAction(b: Battle, unit: Unit): AIPlan {
     // Era of the Wild disguises: monster masks, Gerudo and Yiga outfits, skeletal disguises.
     && !wildIgnores(unit, u, unitDist(unit, u), b.turn));
   const friends = b.units.filter((u) => u.team === unit.team && u !== unit);
+  // Echoes of Wisdom: a Ribbitune's Taunting Croak draws the attention of foes within 2.
+  const taunted = eoTauntFilter(unit, foes);
+  if (taunted !== foes) foes.splice(0, foes.length, ...taunted);
   const lavaPenalty = (k: number) => (b.tiles[k] === 'lava' && !isLavaImmune(unit) ? LAVA_DAMAGE_PCT / 4 : 0);
 
   // Healing

@@ -8,6 +8,7 @@ import { lgCanUseItem, lgHealItemMult, lgItemTiles, lgOnBlast, useLegendItem } f
 import { phHealItemMult, phItemTiles, phOnBlast, usePhantomItem } from './phantom';
 import { spOnBlast, useSpiritItem } from './spirit';
 import { MN_FREE_ITEMS, mnOnBlast, useMinishItem } from './minish';
+import { EO_FREE_ITEMS, eoHealItemMult, eoOnBlast, useEchoesItem } from './echoes';
 import { ITEMS, TEMPLATES } from '../data/registry';
 import { useFairy, type LevelUp } from './combat';
 import { footDist, inBounds, tilesInRange } from './grid';
@@ -142,7 +143,7 @@ export function useItem(b: Battle, u: Unit, index: number, rng: RNG, at?: Pos): 
   const res: ItemResult = { item: def, heals: [], hits: [], stunned: [], statuses: [], lines: [], levelUps: [] };
   let xp = 0;
   if (def.kind === 'heal' || def.kind === 'fullHeal') {
-    const amount = Math.min(def.kind === 'fullHeal' ? u.stats.hp : Math.ceil(def.power * ogHealItemMult(b, u) * lgHealItemMult(b, u) * phHealItemMult(b, u)), u.stats.hp - u.hp);
+    const amount = Math.min(def.kind === 'fullHeal' ? u.stats.hp : Math.ceil(def.power * ogHealItemMult(b, u) * lgHealItemMult(b, u) * phHealItemMult(b, u) * eoHealItemMult(b, u)), u.stats.hp - u.hp);
     u.hp += amount;
     if (def.kind === 'fullHeal') u.mp = u.stats.mp;
     res.heals.push({ uid: u.uid, amount });
@@ -169,6 +170,7 @@ export function useItem(b: Battle, u: Unit, index: number, rng: RNG, at?: Pos): 
     if (def.kind === 'bomb') res.lines.push(...phOnBlast(b, u, at!, def.radius ?? 0, def.power));
     if (def.kind === 'bomb') res.lines.push(...spOnBlast(b, u, at!, def.radius ?? 0));
     if (def.kind === 'bomb') res.lines.push(...mnOnBlast(b, u, at!, def.radius ?? 0));
+    if (def.kind === 'bomb') res.lines.push(...eoOnBlast(b, u, at!, def.radius ?? 0));
     if (def.element === 'fire') {
       const tiles: Pos[] = [];
       const r = def.radius ?? 0;
@@ -271,6 +273,8 @@ function useSpecial(b: Battle, u: Unit, def: ItemDef, rng: RNG, res: ItemResult,
   if (spLine !== null) { res.lines.push(spLine); return; }
   const mnLine = useMinishItem(b, u, def.id, at);
   if (mnLine !== null) { res.lines.push(mnLine); if (MN_FREE_ITEMS.has(def.id)) res.free = true; return; }
+  const eoLine = useEchoesItem(b, u, def.id, at);
+  if (eoLine !== null) { res.lines.push(eoLine); if (EO_FREE_ITEMS.has(def.id)) res.free = true; return; }
   const phLine = usePhantomItem(b, def.id);
   if (phLine !== null) { res.lines.push(phLine); return; }
   const lgLine = useLegendItem(b, u, def.id, rng, tpTarget, at);

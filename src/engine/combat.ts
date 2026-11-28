@@ -15,6 +15,7 @@ import { lgAfterCombat, lgAfterHit, lgCannotAttack, lgDefense, lgExtraAttack, lg
 import { phAfterCombat, phAfterHit, phCannotAttack, phMods, phMultiplier, phOnKill, phRangeBonus } from './phantom';
 import { mcCannotWield, mcHit, mcMods, mcMultiplier } from './micro';
 import { mnAfterCombat, mnAfterHit, mnCannotAttack, mnInterceptor, mnMods, mnMultiplier, mnOnKill, mnSaveFromDeath } from './minish';
+import { eoAfterHit, eoCannotAttack, eoMods, eoMultiplier, eoOnKill } from './echoes';
 import { spAfterCombat, spAfterHit, spCannotAttack, spHealMult, spInterceptor, spMods, spMultiplier, spOnKill, spSaveFromDeath } from './spirit';
 
 const rangeBonus = (u: Unit, w: WeaponDef) => wwRangeBonus(u, w) + tpRangeBonus(u, w) + ssRangeBonus(u, w) + wildRangeBonus(u, w) + ogRangeBonus(u, w) + lgRangeBonus(u, w) + phRangeBonus(u, w);
@@ -226,6 +227,9 @@ export function situational(b: Battle, u: Unit, pos: Pos, foe: Unit, initiating:
   const mc = mcMods(b, u, pos);
   mn.hit += mc.hit; mn.avoid += mc.avoid; mn.def += mc.def; mn.skl += mc.skl;
   for (const k of ['str', 'mag', 'skl', 'spd', 'def', 'res', 'hit', 'avoid', 'crit', 'dmg'] as const) ww[k] += tp[k] + ss[k] + wd[k] + og[k] + lg[k] + ph[k] + sp[k] + mn[k];
+  // Echoes of Wisdom: formations, desert and river commanders, platforms, groups.
+  const eo = eoMods(b, u, pos, foe, initiating, WEAPONS[u.weapons[0]]);
+  for (const k of ['str', 'mag', 'skl', 'spd', 'def', 'res', 'hit', 'avoid', 'crit', 'dmg'] as const) ww[k] += eo[k];
   const vm = vesselMods(b, u);
   m.str += ww.str + vm.str; m.mag += ww.mag; m.skl += ww.skl; m.spd += ww.spd; m.def += ww.def + vm.def; m.res += ww.res + vm.res;
   m.hit += ww.hit + vm.hit; m.avoid += ww.avoid + vm.avoid; m.crit += ww.crit; m.dmg += ww.dmg + vm.dmg;
@@ -247,6 +251,7 @@ function sideStats(
   if (!weapon || weapon.type === 'staff' || weapon.type === 'instrument' || !canReach(weapon, d, atk) || helpless || (beaming && atk.mp < weapon.beam!) || tpCannotAttack(atk, weapon) || ssCannotAttack(b, atk, weapon, initiating) || wildCannotAttack(b, atk, weapon, initiating, def, foeWeapon) || ogCannotAttack(atk) || lgCannotAttack(atk, def, d) || phCannotAttack(b, atk, def, d, initiating) || spCannotAttack(atk, weapon) || mnCannotAttack(b, atk, def, weapon)) {
     return { uid: atk.uid, weaponId: weapon?.id ?? null, canAttack: false, dmg: 0, hit: 0, crit: 0, attacks: 0, triangle: 0, effective: false, block: 0, arrowId: null };
   }
+  if (eoCannotAttack(b, atk, weapon)) return { uid: atk.uid, weaponId: weapon.id, canAttack: false, dmg: 0, hit: 0, crit: 0, attacks: 0, triangle: 0, effective: false, block: 0, arrowId: null };
   const as = effectiveStats(atk);
   const ds = effectiveStats(def);
   const am = situational(b, atk, atkPos, def, initiating);
@@ -296,6 +301,7 @@ function sideStats(
   dmg = Math.floor(dmg * phMultiplier(b, atk, atkPos, def, magical, weapon, d, element));
   dmg = Math.floor(dmg * spMultiplier(b, atk, atkPos, def, magical, weapon, d, element));
   dmg = Math.floor(dmg * mnMultiplier(b, atk, atkPos, def, magical, weapon, d, element));
+  dmg = Math.floor(dmg * eoMultiplier(b, atk, def, magical, weapon, element));
   // Micro vs Normal: 25% unless a weak point is open.
   dmg = Math.floor(dmg * mcMultiplier(b, atk, def, weapon));
   if (adj.finish) dmg = Math.max(dmg, def.hp);
@@ -554,6 +560,7 @@ export function resolveCombat(b: Battle, attacker: Unit, defender: Unit, rng: RN
     if (hit) phAfterHit(b, by, target, dmg, weaponDef(side.weaponId), side.element);
     if (hit) spAfterHit(b, by, target, dmg, weaponDef(side.weaponId), side.element);
     if (hit) mnAfterHit(b, by, target, dmg, weaponDef(side.weaponId), side.element);
+    if (hit) eoAfterHit(b, by, target, dmg, weaponDef(side.weaponId), side.element);
     if (killed) {
       by.kills++;
       deaths.push(target.uid);
@@ -567,6 +574,7 @@ export function resolveCombat(b: Battle, attacker: Unit, defender: Unit, rng: RN
       phOnKill(b, by, target, rng);
       spOnKill(b, by, target, rng);
       mnOnKill(b, by, target);
+      eoOnKill(b, by, target);
       killUnit(b, target);
       onKillEffects(b, by, weaponDef(side.weaponId));
       break;

@@ -13,6 +13,7 @@ import { ERA_OF_LEGEND, QUEST_ITEMS as LG_QUEST } from '../content/legend';
 import { PHANTOM_HOURGLASS, QUEST_ITEMS as PH_QUEST } from '../content/phantom';
 import { SPIRIT_TRACKS, QUEST_ITEMS as ST_QUEST } from '../content/spirit';
 import { MINISH_CAP, QUEST_ITEMS as MC_QUEST } from '../content/minish';
+import { ECHOES_OF_WISDOM, QUEST_ITEMS as EO_QUEST, resolveEchoesFallbacks } from '../content/echoes';
 import { SPECIAL_TERRAIN } from '../engine/rules';
 import type { ContentPack } from '../content/types';
 import type {
@@ -131,11 +132,14 @@ installPack(ERA_OF_LEGEND);
 installPack(PHANTOM_HOURGLASS);
 installPack(SPIRIT_TRACKS);
 installPack(MINISH_CAP);
+installPack(ECHOES_OF_WISDOM);
 // Phantom Ganon keeps his entry; his Wind Waker sword joins his drops.
 if (BOSSES.phantomGanon) BOSSES.phantomGanon.drops = [...(BOSSES.phantomGanon.drops ?? []), 'phantomGanonsSword'];
+// Echoes of Wisdom: content from packs built alongside it (the River Zora), once installed.
+resolveEchoesFallbacks(ENEMIES, ROSTERS, COMMANDERS, TEMPLATES);
 
 /** Quest items (shared quest inventory). */
-export const QUEST_ITEMS: Record<string, { id: string; name: string; desc: string }> = Object.fromEntries([...MM_QUEST, ...WW_QUEST, ...TP_QUEST, ...SS_QUEST, ...WILD_QUEST, ...OH_QUEST, ...LG_QUEST, ...PH_QUEST, ...ST_QUEST, ...MC_QUEST].map((q) => [q.id, q]));
+export const QUEST_ITEMS: Record<string, { id: string; name: string; desc: string }> = Object.fromEntries([...MM_QUEST, ...WW_QUEST, ...TP_QUEST, ...SS_QUEST, ...WILD_QUEST, ...OH_QUEST, ...LG_QUEST, ...PH_QUEST, ...ST_QUEST, ...MC_QUEST, ...EO_QUEST].map((q) => [q.id, q]));
 
 // ───────── Safe lookups ─────────
 

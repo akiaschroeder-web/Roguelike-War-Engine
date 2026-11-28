@@ -160,6 +160,13 @@ export const GROUP_SUPPORTS: GroupSupport[] = [
   { id: 'herosCompanions', name: "Hero's Companions", members: ['ezloMinish', 'navi', 'tatl', 'ciela', 'fi'], text: 'Longer support-ability range and better MP recovery: members recover 3 MP a turn and gain +10 Hit and Avoid within 3 of a hero.' },
   { id: 'forbiddenAmbitionGroup', name: 'Forbidden Ambition', members: ['vaatiHylian', 'ghirahim', 'zant'], text: 'More dark magic damage (+20%).' },
   { id: 'ancientGuardians', name: 'Ancient Guardians', members: ['mazaal', 'gohdan', 'eox'], text: 'More construct defence (allied constructs take 15% less damage) and resistance to disabling effects (no Stun, Root or Freeze).' },
+  // Echoes of Wisdom (docs/echoes-of-wisdom-pack.md section 15; United Waters and False Creation are in DEFERRED_GROUPS_EOW below)
+  { id: 'primeEnergy', name: 'Prime Energy', members: ['zeldaEoW', 'linkEoW', 'tri'], text: '+3 STR, MAG and RES; Echoes cost 1 less capacity.' },
+  { id: 'royalCouncil', name: 'Royal Council', members: ['kingEoW', 'generalWright', 'ministerLefte', 'impaEoW'], text: 'More morale and CP recovery: +1 CP at the start of battle, +5 morale after victories, and members +2 DEF and RES.' },
+  { id: 'mechanicalMasters', name: 'Mechanical Masters', members: ['dampeEoW', 'robbie', 'mineru'], text: 'Constructs and Automatons +4 DEF and SKL.' },
+  { id: 'mountainBrotherhood', name: 'Mountain Brotherhood', members: ['darston', 'conde', 'yeto'], text: 'More obstacle destruction and cold resistance: members +2 DEF, half ice damage.' },
+  { id: 'desertCommand', name: 'Desert Command', members: ['chiefSeera', 'dohna', 'urbosa'], text: 'Allied Gerudo +2 STR and SPD.' },
+  { id: 'clockworkArmy', name: 'Clockwork Army', members: ['techtite', 'tocktorok', 'gizmol', 'highTekuBaba', 'roboblin', 'goldfinch'], text: 'Automatons spend 25% less Wind-Up Energy.' },
   { id: 'demonKings', name: 'The Demon Kings', members: ['demise', 'ganondorf', 'ganondorfWW', 'ganondorfTP', 'ganondorfWild'], text: 'Dark damage +25%.' },
 ];
 
@@ -168,3 +175,10 @@ export function convoSet(ta: string, tb: string, form?: string): ConvoSet | unde
   const k = pairKey(ta, tb);
   return form ? SUPPORT_CONVOS[`${k}#${form}`] : SUPPORT_CONVOS[k];
 }
+
+/** Echoes of Wisdom groups whose members come with packs built in parallel (Queen Oren from A Link Between Worlds,
+ *  Shadow Link from Four Swords): append them to GROUP_SUPPORTS once those templates exist. */
+export const DEFERRED_GROUPS_EOW: GroupSupport[] = [
+  { id: 'unitedWatersEoW', name: 'United Waters', members: ['dradd', 'kushara', 'oren'], text: 'Better aquatic stats for both Zora races: aquatic allies +2 DEF, RES and SPD.' },
+  { id: 'falseCreation', name: 'False Creation', members: ['nullEoW', 'tekom', 'shadowLink'], text: 'Stronger temporary summons: allied Echoes +3 STR and MAG.' },
+];

@@ -17,6 +17,8 @@ import { applySpiritEffect, inSpiritRoute, spiritAfterBattle, spiritBattleSetup,
 import { spiritBeforeFinish } from './spirit';
 import { applyMinishEffect, inMinishRoute, minishAfterBattle, minishBattleSetup, minishBossFor, minishCampVisit, minishDecorateMap, minishRegionOptions, minishStart, minishStartRegion, minishTreasure } from './minishRun';
 import { minishBeforeFinish } from './minish';
+import { applyEchoesEffect, echoesAfterBattle, echoesBattleSetup, echoesBossFor, echoesCampVisit, echoesDecorateMap, echoesRegionOptions, echoesStart, echoesStartRegion, echoesTreasure, inEchoesRoute } from './echoesRun';
+import { echoesBeforeFinish } from './echoes';
 import { microBeforeFinish } from './micro';
 import { applyWildEffect, returnBoss, wildAfterBattle, wildBattleSetup, wildCampVisit, wildDecorateMap, wildOnRecruit, wildRecruitWeight, wildRegionOptions, wildRestBonus, wildStart } from './wildRun';
 import { canWield, type LevelUp } from './combat';
@@ -57,13 +59,13 @@ export function commanderOf(run: Run): CommanderDef {
 
 /** Where each campaign begins (Hyrule: the commander's home region). */
 function startRegionFor(camp: string, home: WorldId, run: { commanderId: string; regionsVisited: string[] }): WorldId {
-  return camp === 'termina' ? 'clockTown' : camp === 'greatSea' ? 'outsetIsland' : camp === 'twilight' ? 'ordonProvince' : camp === 'skyward' ? 'skyloft' : camp === 'wild' ? 'greatPlateau' : camp === 'original' ? originalStartRegion(run) : camp === 'legend' ? legendStartRegion(run) : camp === 'phantom' ? phantomStartRegion() : camp === 'spirit' ? spiritStartRegion() : camp === 'minish' ? minishStartRegion() : WORLDS[home]?.campaign || home === 'hyruleCastle' || !WORLDS[home] ? 'hyruleField' : home;
+  return camp === 'termina' ? 'clockTown' : camp === 'greatSea' ? 'outsetIsland' : camp === 'twilight' ? 'ordonProvince' : camp === 'skyward' ? 'skyloft' : camp === 'wild' ? 'greatPlateau' : camp === 'original' ? originalStartRegion(run) : camp === 'legend' ? legendStartRegion(run) : camp === 'phantom' ? phantomStartRegion() : camp === 'spirit' ? spiritStartRegion() : camp === 'minish' ? minishStartRegion() : camp === 'echoes' ? echoesStartRegion() : WORLDS[home]?.campaign || home === 'hyruleCastle' || !WORLDS[home] ? 'hyruleField' : home;
 }
 
 /** World Tour order: the commander's home campaign first, then the others in release order. */
-export const TOUR_ORDER: TourCampaign[] = ['hyrule', 'termina', 'greatSea', 'twilight', 'skyward', 'wild', 'original', 'legend', 'phantom', 'spirit', 'minish'];
+export const TOUR_ORDER: TourCampaign[] = ['hyrule', 'termina', 'greatSea', 'twilight', 'skyward', 'wild', 'original', 'legend', 'phantom', 'spirit', 'minish', 'echoes'];
 
-export function newRun(seed: number, commanderId: string, campaign?: 'hyrule' | 'termina' | 'greatSea' | 'twilight' | 'skyward' | 'wild' | 'original' | 'legend' | 'phantom' | 'spirit' | 'minish' | 'random' | 'worldTour', tourActs = 2): RunWithEvent {
+export function newRun(seed: number, commanderId: string, campaign?: 'hyrule' | 'termina' | 'greatSea' | 'twilight' | 'skyward' | 'wild' | 'original' | 'legend' | 'phantom' | 'spirit' | 'minish' | 'echoes' | 'random' | 'worldTour', tourActs = 2): RunWithEvent {
   const rng = new RNG(seed);
   const cmd = COMMANDERS.find((c) => c.heroId === commanderId) ?? COMMANDERS[0];
   const first: TourCampaign = (cmd.campaign as TourCampaign | undefined) ?? 'hyrule';
@@ -104,6 +106,7 @@ export function newRun(seed: number, commanderId: string, campaign?: 'hyrule' | 
   if (camp === 'phantom') withRng(run, (r2) => { phantomStart(run, r2); phantomDecorateMap(run, run.map, r2); });
   if (camp === 'spirit') withRng(run, (r2) => { spiritStart(run, r2); spiritDecorateMap(run, run.map, r2); });
   if (camp === 'minish') withRng(run, (r2) => { minishStart(run, r2); minishDecorateMap(run, run.map, r2); });
+  if (camp === 'echoes') withRng(run, (r2) => { echoesStart(run, r2); echoesDecorateMap(run, run.map, r2); });
   if (camp === 'greatSea') {
     run.sea = newSea();
     run.questItems = [];
@@ -251,7 +254,7 @@ function bossPower(b: BossDef): number {
 
 function bossFor(run: Run, rng: RNG, node: MapNode): BossDef {
   // Original Hyrule: every Level has its own boss (the Second Quest moves them around).
-  const level = originalBossFor(run, node) ?? legendBossFor(run, node) ?? phantomBossFor(run, node) ?? spiritBossFor(run, node) ?? minishBossFor(run, node);
+  const level = originalBossFor(run, node) ?? legendBossFor(run, node) ?? phantomBossFor(run, node) ?? spiritBossFor(run, node) ?? minishBossFor(run, node) ?? echoesBossFor(run, node);
   if (level) return level;
   // Not canon: anyone can be a boss, even someone already in your army.
   // After the free-for-all point, bosses come from every region.
@@ -310,12 +313,14 @@ export function enterNode(run: RunWithEvent, nodeId: string): void {
         const permanents = rng.shuffle(Object.keys(PERMANENT_ITEMS)).slice(0, 2);
         wildCampVisit(run);
         minishCampVisit(run);
+        echoesCampVisit(run);
         run.event = { type: 'shop', weapons, gear, items, permanents, sold: [] };
         break;
       }
       case 'camp':
         wildCampVisit(run);
         minishCampVisit(run);
+        echoesCampVisit(run);
         run.event = { type: 'camp' };
         break;
       case 'blacksmith': {
@@ -338,6 +343,8 @@ export function enterNode(run: RunWithEvent, nodeId: string): void {
         if (run.campaign === 'spirit') (run as RunWithEvent).lastSail = spLines;
         const mnLines = minishTreasure(run, rng, run.event);
         if (run.campaign === 'minish') (run as RunWithEvent).lastSail = mnLines;
+        const eoLines = echoesTreasure(run, rng, run.event);
+        if (run.campaign === 'echoes') (run as RunWithEvent).lastSail = eoLines;
         const q = (run.questItems ??= []);
         const shards = q.filter((x) => x.startsWith('triforceShard')).length;
         if (shards < 8 && (q.includes('incredibleChart') || q.includes('triforceChart'))) {
@@ -424,6 +431,7 @@ export function startBattle(run: RunWithEvent, uids: string[]): void {
     phantomBattleSetup(run, run.battle, rng);
     spiritBattleSetup(run, run.battle, rng);
     minishBattleSetup(run, run.battle, rng);
+    echoesBattleSetup(run, run.battle, rng);
     if (run.questItems?.includes('piratesCharm') && run.battle.cp !== undefined) { run.battle.cp++; run.battle.cpMax = (run.battle.cpMax ?? 0) + 1; }
   });
 }
@@ -438,7 +446,7 @@ export const FREE_FOR_ALL_REGION = 4;
 
 export function isFreeForAll(run: Run): boolean {
   // The World Tour keeps each campaign's own enemies.
-  return !run.tour && run.act >= FREE_FOR_ALL_REGION && !inOriginalLevels(run) && !inLegendRoutes(run) && !inPhantomRoute(run) && !inSpiritRoute(run) && !inMinishRoute(run);
+  return !run.tour && run.act >= FREE_FOR_ALL_REGION && !inOriginalLevels(run) && !inLegendRoutes(run) && !inPhantomRoute(run) && !inSpiritRoute(run) && !inMinishRoute(run) && !inEchoesRoute(run);
 }
 
 /** A force drawn from the entire cast: any monster, soldier, hero, villain or boss. */
@@ -593,6 +601,8 @@ export interface BattleSummary {
   spirit?: string[];
   /** The Minish Cap: Kinstones, shells, Elements, the Picori Blade and the cast's work. */
   minish?: string[];
+  /** Echoes of Wisdom: the Echo Compendium (any campaign), Rifts, Tri, stamps and the cast's work. */
+  echoes?: string[];
   /** Support ranks reached this battle. */
   supportUps: { a: string; b: string; aUid: string; bUid: string; rank: SupportRank }[];
 }
@@ -605,6 +615,7 @@ export function finishBattle(run: RunWithEvent): BattleSummary {
   legendBeforeFinish(b);
   phantomBeforeFinish(b);
   spiritBeforeFinish(b);
+  echoesBeforeFinish(b);
   minishBeforeFinish(b);
   microBeforeFinish(b);
   const won = b.result === 'won';
@@ -787,7 +798,8 @@ export function finishBattle(run: RunWithEvent): BattleSummary {
   const phantomLines = withRng(run, (rng) => phantomAfterBattle(run, b, won, rng));
   const spiritLines = withRng(run, (rng) => spiritAfterBattle(run, b, won, rng));
   const minishLines = withRng(run, (rng) => minishAfterBattle(run, b, won, rng));
-  return { won, rupees, fallen, kills, drops, supportUps, sideQuest, retreated: !won && !!b.retreat, dungeon, found, joined, army, twilight: twilightLines, skyward: skywardLines, wild: wildLines, original: originalLines, legend: legendLines, phantom: phantomLines, spirit: spiritLines, minish: minishLines };
+  const echoesLines = withRng(run, (rng) => echoesAfterBattle(run, b, won, rng));
+  return { won, rupees, fallen, kills, drops, supportUps, sideQuest, retreated: !won && !!b.retreat, dungeon, found, joined, army, twilight: twilightLines, skyward: skywardLines, wild: wildLines, original: originalLines, legend: legendLines, phantom: phantomLines, spirit: spiritLines, minish: minishLines, echoes: echoesLines };
 }
 
 export interface ArmyReport {
@@ -1010,6 +1022,8 @@ function applyEffect(run: Run, e: EventEffect, rng: RNG): string | null {
       return applySpiritEffect(run, e, rng);
     case 'minish':
       return applyMinishEffect(run, e, rng);
+    case 'echoes':
+      return applyEchoesEffect(run, e, rng);
     case 'support': {
       const s = (run.supports ??= {});
       for (let i = 0; i < run.roster.length; i++)
@@ -1052,6 +1066,7 @@ export const TOUR_NAMES: Record<TourCampaign, string> = {
   phantom: 'The World of the Ocean King (Phantom Hourglass)',
   spirit: 'New Hyrule (Spirit Tracks)',
   minish: 'Hyrule in the Era of the Minish (The Minish Cap)',
+  echoes: 'Hyrule and the Still World (Echoes of Wisdom)',
 };
 
 export function offerRegions(run: RunWithEvent): void {
@@ -1090,6 +1105,10 @@ export function offerRegions(run: RunWithEvent): void {
     }
     if (run.campaign === 'minish') {
       const t = minishRegionOptions(run, rng);
+      if (t.length) { run.event = { type: 'region', options: t }; return; }
+    }
+    if (run.campaign === 'echoes') {
+      const t = echoesRegionOptions(run, rng);
       if (t.length) { run.event = { type: 'region', options: t }; return; }
     }
     if (run.campaign === 'wild' && legAct(run) + 1 < FREE_FOR_ALL_REGION + 5) {
@@ -1231,6 +1250,7 @@ function enterTourCampaign(run: RunWithEvent, camp: TourCampaign): void {
     if (camp === 'phantom') phantomStart(run, rng);
     if (camp === 'spirit') spiritStart(run, rng);
     if (camp === 'minish') minishStart(run, rng);
+    if (camp === 'echoes') echoesStart(run, rng);
     if (camp === 'greatSea') {
       const sea = (run.sea ??= newSea());
       run.questItems ??= [];
@@ -1251,6 +1271,7 @@ function enterTourCampaign(run: RunWithEvent, camp: TourCampaign): void {
     phantomDecorateMap(run, run.map, rng);
     spiritDecorateMap(run, run.map, rng);
     minishDecorateMap(run, run.map, rng);
+    echoesDecorateMap(run, run.map, rng);
   });
 }
 
@@ -1278,7 +1299,7 @@ export function advanceRegion(run: RunWithEvent, region: WorldId): void {
   run.regionsVisited.push(region);
   run.currentNodeId = null;
   run.event = undefined;
-  withRng(run, (rng) => { run.map = generateRegionMap(rng, run.act, region); randomizeWorlds(run, rng); wildDecorateMap(run, run.map, rng); phantomDecorateMap(run, run.map, rng); spiritDecorateMap(run, run.map, rng); minishDecorateMap(run, run.map, rng); });
+  withRng(run, (rng) => { run.map = generateRegionMap(rng, run.act, region); randomizeWorlds(run, rng); wildDecorateMap(run, run.map, rng); phantomDecorateMap(run, run.map, rng); spiritDecorateMap(run, run.map, rng); minishDecorateMap(run, run.map, rng); echoesDecorateMap(run, run.map, rng); });
   run.rupees += 150;
 }
 
