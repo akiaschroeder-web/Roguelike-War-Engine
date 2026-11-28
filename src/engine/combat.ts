@@ -16,6 +16,7 @@ import { phAfterCombat, phAfterHit, phCannotAttack, phMods, phMultiplier, phOnKi
 import { mcCannotWield, mcHit, mcMods, mcMultiplier } from './micro';
 import { mnAfterCombat, mnAfterHit, mnCannotAttack, mnInterceptor, mnMods, mnMultiplier, mnOnKill, mnSaveFromDeath } from './minish';
 import { spAfterCombat, spAfterHit, spCannotAttack, spHealMult, spInterceptor, spMods, spMultiplier, spOnKill, spSaveFromDeath } from './spirit';
+import { lrAfterCombat, lrAfterHit, lrCannotAttack, lrInterceptor, lrMods, lrMultiplier, lrOnKill, lrSaveFromDeath } from './lorule';
 
 const rangeBonus = (u: Unit, w: WeaponDef) => wwRangeBonus(u, w) + tpRangeBonus(u, w) + ssRangeBonus(u, w) + wildRangeBonus(u, w) + ogRangeBonus(u, w) + lgRangeBonus(u, w) + phRangeBonus(u, w);
 import { cannonsDown, isVessel, vesselMods } from './naval';
@@ -225,6 +226,8 @@ export function situational(b: Battle, u: Unit, pos: Pos, foe: Unit, initiating:
   const mn = mnMods(b, u, pos, foe, initiating, WEAPONS[u.weapons[0]]);
   const mc = mcMods(b, u, pos);
   mn.hit += mc.hit; mn.avoid += mc.avoid; mn.def += mc.def; mn.skl += mc.skl;
+  const lr = lrMods(b, u, pos, foe, initiating, WEAPONS[u.weapons[0]]);
+  for (const k of ['str', 'mag', 'skl', 'spd', 'def', 'res', 'hit', 'avoid', 'crit', 'dmg'] as const) mn[k] += lr[k];
   for (const k of ['str', 'mag', 'skl', 'spd', 'def', 'res', 'hit', 'avoid', 'crit', 'dmg'] as const) ww[k] += tp[k] + ss[k] + wd[k] + og[k] + lg[k] + ph[k] + sp[k] + mn[k];
   const vm = vesselMods(b, u);
   m.str += ww.str + vm.str; m.mag += ww.mag; m.skl += ww.skl; m.spd += ww.spd; m.def += ww.def + vm.def; m.res += ww.res + vm.res;
@@ -244,7 +247,7 @@ function sideStats(
   const d = unitDist({ ...atk, ...atkPos }, { ...def, ...defPos });
   const helpless = !initiating && isHelpless(atk);
   const beaming = !!weapon?.beam && d > 1;
-  if (!weapon || weapon.type === 'staff' || weapon.type === 'instrument' || !canReach(weapon, d, atk) || helpless || (beaming && atk.mp < weapon.beam!) || tpCannotAttack(atk, weapon) || ssCannotAttack(b, atk, weapon, initiating) || wildCannotAttack(b, atk, weapon, initiating, def, foeWeapon) || ogCannotAttack(atk) || lgCannotAttack(atk, def, d) || phCannotAttack(b, atk, def, d, initiating) || spCannotAttack(atk, weapon) || mnCannotAttack(b, atk, def, weapon)) {
+  if (!weapon || weapon.type === 'staff' || weapon.type === 'instrument' || !canReach(weapon, d, atk) || helpless || (beaming && atk.mp < weapon.beam!) || tpCannotAttack(atk, weapon) || ssCannotAttack(b, atk, weapon, initiating) || wildCannotAttack(b, atk, weapon, initiating, def, foeWeapon) || ogCannotAttack(atk) || lgCannotAttack(atk, def, d) || phCannotAttack(b, atk, def, d, initiating) || spCannotAttack(atk, weapon) || mnCannotAttack(b, atk, def, weapon) || lrCannotAttack(b, atk, def, weapon, d)) {
     return { uid: atk.uid, weaponId: weapon?.id ?? null, canAttack: false, dmg: 0, hit: 0, crit: 0, attacks: 0, triangle: 0, effective: false, block: 0, arrowId: null };
   }
   const as = effectiveStats(atk);
@@ -296,6 +299,7 @@ function sideStats(
   dmg = Math.floor(dmg * phMultiplier(b, atk, atkPos, def, magical, weapon, d, element));
   dmg = Math.floor(dmg * spMultiplier(b, atk, atkPos, def, magical, weapon, d, element));
   dmg = Math.floor(dmg * mnMultiplier(b, atk, atkPos, def, magical, weapon, d, element));
+  dmg = Math.floor(dmg * lrMultiplier(b, atk, atkPos, def, magical, weapon, d, element));
   // Micro vs Normal: 25% unless a weak point is open.
   dmg = Math.floor(dmg * mcMultiplier(b, atk, def, weapon));
   if (adj.finish) dmg = Math.max(dmg, def.hp);
@@ -515,7 +519,7 @@ export function resolveCombat(b: Battle, attacker: Unit, defender: Unit, rng: RN
       const line = tpSaveFromDeath(b, target);
       if (line) { dmg = target.hp - 1; saved = 'triforce'; b.log.push(line); }
       else {
-        const ws = wildSaveFromDeath(b, target, by) ?? ogSaveFromDeath(target) ?? lgSaveFromDeath(b, target) ?? spSaveFromDeath(b, target) ?? mnSaveFromDeath(b, target);
+        const ws = wildSaveFromDeath(b, target, by) ?? ogSaveFromDeath(target) ?? lgSaveFromDeath(b, target) ?? spSaveFromDeath(b, target) ?? mnSaveFromDeath(b, target) ?? lrSaveFromDeath(b, target);
         if (ws) { dmg = target.hp - 1; saved = 'triforce'; graceHeal = ws.heal; b.log.push(ws.line); }
       }
     }
@@ -554,6 +558,7 @@ export function resolveCombat(b: Battle, attacker: Unit, defender: Unit, rng: RN
     if (hit) phAfterHit(b, by, target, dmg, weaponDef(side.weaponId), side.element);
     if (hit) spAfterHit(b, by, target, dmg, weaponDef(side.weaponId), side.element);
     if (hit) mnAfterHit(b, by, target, dmg, weaponDef(side.weaponId), side.element);
+    if (hit) lrAfterHit(b, by, target, dmg, weaponDef(side.weaponId), side.element);
     if (killed) {
       by.kills++;
       deaths.push(target.uid);
@@ -567,6 +572,7 @@ export function resolveCombat(b: Battle, attacker: Unit, defender: Unit, rng: RN
       phOnKill(b, by, target, rng);
       spOnKill(b, by, target, rng);
       mnOnKill(b, by, target);
+      lrOnKill(b, by, target, rng);
       killUnit(b, target);
       onKillEffects(b, by, weaponDef(side.weaponId));
       break;
@@ -629,7 +635,7 @@ export function resolveCombat(b: Battle, attacker: Unit, defender: Unit, rng: RN
     }
   }
   const landed2 = { atk: strikes.filter((s) => s.by === attacker.uid && !s.splash).reduce((n, s) => n + s.dmg, 0), def: strikes.filter((s) => s.by === defender.uid && !s.splash).reduce((n, s) => n + s.dmg, 0) };
-  for (const x of [...wwAfterCombat(b, attacker, defender), ...tpAfterCombat(b, attacker, defender), ...ssAfterCombat(b, attacker, defender, fc.attacker.arrowId, landed2), ...wildAfterCombat(b, attacker, defender, fc.attacker.arrowId, landed2), ...ogAfterCombat(b, attacker, defender, fc.attacker.arrowId, landed2), ...lgAfterCombat(b, attacker, defender, landed2, rng), ...phAfterCombat(b, attacker, defender, landed2), ...spAfterCombat(b, attacker, defender, landed2), ...mnAfterCombat(b, attacker, defender, landed2)]) {
+  for (const x of [...wwAfterCombat(b, attacker, defender), ...tpAfterCombat(b, attacker, defender), ...ssAfterCombat(b, attacker, defender, fc.attacker.arrowId, landed2), ...wildAfterCombat(b, attacker, defender, fc.attacker.arrowId, landed2), ...ogAfterCombat(b, attacker, defender, fc.attacker.arrowId, landed2), ...lgAfterCombat(b, attacker, defender, landed2, rng), ...phAfterCombat(b, attacker, defender, landed2), ...spAfterCombat(b, attacker, defender, landed2), ...mnAfterCombat(b, attacker, defender, landed2), ...lrAfterCombat(b, attacker, defender, landed2)]) {
     strikes.push({ by: x.by, target: x.uid, hit: true, crit: false, dmg: x.dmg, heal: 0, targetHp: x.hp, byHp: 0, killed: x.killed, blocked: false, splash: true });
     if (x.killed && !deaths.includes(x.uid)) deaths.push(x.uid);
   }
@@ -700,5 +706,5 @@ export function findInterceptor(b: Battle, attacker: Unit, target: Unit, weaponI
     || (p.skills.includes('royalGuardDeku') && royal(target) && unitDist(p, target) <= 1)
     || (p.skills.includes('captainsRightHand') && target.isCommander && unitDist(p, target) <= 1)
     || (p.skills.includes('skyShield') && CLASSES[target.classId]?.moveType === 'flying' && unitDist(p, target) <= 1)
-    || sacredDutyCovers(p, target) || wildInterceptor(b, p, target) || spInterceptor(b, p, target) || mnInterceptor(b, p, target)));
+    || sacredDutyCovers(p, target) || wildInterceptor(b, p, target) || spInterceptor(b, p, target) || mnInterceptor(b, p, target) || lrInterceptor(b, p, target)));
 }

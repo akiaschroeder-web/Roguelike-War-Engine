@@ -11,6 +11,7 @@ import { legendStatus } from '../engine/legendRun';
 import { phantomStatus } from '../engine/phantomRun';
 import { spiritStatus } from '../engine/spiritRun';
 import { doMinishCamp, MINISH_FACILITIES, minishCampOptions, minishOf, minishStatus } from '../engine/minishRun';
+import { doLoruleCamp, LORULE_FACILITIES, loruleCampOptions, loruleStatus } from '../engine/loruleRun';
 import { canWield, type LevelUp } from '../engine/combat';
 import { randomSeed } from '../engine/rng';
 import {
@@ -321,7 +322,7 @@ export class App {
         <div class="page">
           <div class="page-head"><button class="btn" data-nav="back">← Back</button><h1>Choose your Commander</h1><span></span></div>
           <p class="dim center-text">Each commander brings their own army and a special bonus. If the commander falls, the campaign is over.</p>
-          ${(['hyrule', 'termina', 'greatSea', 'twilight', 'skyward', 'wild', 'original', 'legend', 'phantom', 'spirit', 'minish'] as const).map((pack) => `<h2 class="pack-head">${pack === 'minish' ? 'The Minish Cap · Hyrule in the Era of the Minish' : pack === 'spirit' ? 'Spirit Tracks · New Hyrule' : pack === 'phantom' ? 'Phantom Hourglass · The World of the Ocean King' : pack === 'hyrule' ? 'Ocarina of Time · Hyrule' : pack === 'termina' ? "Majora's Mask · Termina" : pack === 'greatSea' ? 'The Wind Waker · The Great Sea' : pack === 'twilight' ? 'Twilight Princess · Twilight Hyrule' : pack === 'skyward' ? 'Skyward Sword · The Sky' : pack === 'wild' ? 'Era of the Wild · Hyrule Reborn' : pack === 'legend' ? 'Era of Legend · Hyrule, Koholint, Holodrum and Labrynna' : 'The Legend of Zelda & Zelda II · Original Hyrule'}</h2>
+          ${(['hyrule', 'termina', 'greatSea', 'twilight', 'skyward', 'wild', 'original', 'legend', 'phantom', 'spirit', 'minish', 'lorule'] as const).map((pack) => `<h2 class="pack-head">${pack === 'lorule' ? 'A Link Between Worlds · Hyrule and Lorule' : pack === 'minish' ? 'The Minish Cap · Hyrule in the Era of the Minish' : pack === 'spirit' ? 'Spirit Tracks · New Hyrule' : pack === 'phantom' ? 'Phantom Hourglass · The World of the Ocean King' : pack === 'hyrule' ? 'Ocarina of Time · Hyrule' : pack === 'termina' ? "Majora's Mask · Termina" : pack === 'greatSea' ? 'The Wind Waker · The Great Sea' : pack === 'twilight' ? 'Twilight Princess · Twilight Hyrule' : pack === 'skyward' ? 'Skyward Sword · The Sky' : pack === 'wild' ? 'Era of the Wild · Hyrule Reborn' : pack === 'legend' ? 'Era of Legend · Hyrule, Koholint, Holodrum and Labrynna' : 'The Legend of Zelda & Zelda II · Original Hyrule'}</h2>
           <div class="card-grid">${COMMANDERS.filter((c) => (c.campaign ?? 'hyrule') === pack).map((c) => {
             const t = TEMPLATES[c.heroId];
             const army = c.units.map((id) => TEMPLATES[id]);
@@ -338,7 +339,7 @@ export class App {
           <div class="run-options">
             <h3>Campaign options</h3>
             <div class="opt-row"><span class="dim small">Campaign</span><select data-opt="campaign">
-              <option value="">Commander's home${chosen ? ` (${({ hyrule: 'Hyrule', termina: 'Termina', greatSea: 'the Great Sea', twilight: 'Twilight Hyrule', skyward: 'the Sky', wild: 'Hyrule Reborn', original: 'Original Hyrule', legend: 'the Era of Legend', phantom: 'the World of the Ocean King', spirit: 'New Hyrule', minish: 'the Era of the Minish' } as const)[COMMANDERS.find((c) => c.heroId === chosen)?.campaign ?? 'hyrule']})` : ''}</option>
+              <option value="">Commander's home${chosen ? ` (${({ hyrule: 'Hyrule', termina: 'Termina', greatSea: 'the Great Sea', twilight: 'Twilight Hyrule', skyward: 'the Sky', wild: 'Hyrule Reborn', original: 'Original Hyrule', legend: 'the Era of Legend', phantom: 'the World of the Ocean King', spirit: 'New Hyrule', minish: 'the Era of the Minish', lorule: 'Hyrule and Lorule' } as const)[COMMANDERS.find((c) => c.heroId === chosen)?.campaign ?? 'hyrule']})` : ''}</option>
               <option value="hyrule" ${choices.campaign === 'hyrule' ? 'selected' : ''}>Hyrule: the endless war</option>
               <option value="termina" ${choices.campaign === 'termina' ? 'selected' : ''}>Termina: three days until the Moon falls</option>
               <option value="greatSea" ${choices.campaign === 'greatSea' ? 'selected' : ''}>The Great Sea: sail a 7×7 chart of islands and fleets</option>
@@ -350,6 +351,7 @@ export class App {
               <option value="phantom" ${choices.campaign === 'phantom' ? 'selected' : ''}>The World of the Ocean King: the Phantom Hourglass, the Temple and the four seas</option>
               <option value="spirit" ${choices.campaign === 'spirit' ? 'selected' : ''}>New Hyrule: the Spirit Tracks, the five realms, the Tower of Spirits and the Demon Train</option>
               <option value="minish" ${choices.campaign === 'minish' ? 'selected' : ''}>The Era of the Minish: sixteen regions, Kinstones, the Four Sword and Micro battles</option>
+              <option value="lorule" ${choices.campaign === 'lorule' ? 'selected' : ''}>Hyrule and Lorule: two kingdoms, wall merging, Ravio's rentals and the Seven Sages</option>
               <option value="random" ${choices.campaign === 'random' ? 'selected' : ''}>Random: any region, any enemy, any event</option>
               <option value="worldTour" ${choices.campaign === 'worldTour' ? 'selected' : ''}>World Tour: every campaign in turn, a few regions in each</option></select></div>
             ${choices.campaign === 'worldTour' ? `<div class="opt-row"><span class="dim small">World Tour: regions per campaign</span><select data-opt="tourActs">${[1, 2, 3, 4, 5].map((n) => `<option value="${n}" ${(choices.tourActs ?? '2') === String(n) ? 'selected' : ''}>${n}</option>`).join('')}</select></div>` : ''}
@@ -437,6 +439,8 @@ export class App {
           return `<div class="tb-res" title="${esc(s.sea)} · Phantom Hourglass time reserve (Sands of Hours raise it; it refills between battles) · Spirit Gems (Power · Wisdom · Courage: 10 for level 1, 20 for level 2) · deepest Temple of the Ocean King floor · sacred metals for the Phantom Sword · ship parts"><span class="dim small">${esc(s.sea)}</span> <span class="dim small">Hourglass</span> <b>⌛${s.energy}</b> <span class="dim small">Gems</span> <b title="Power ${s.gems[0]} (Leaf Lv ${s.levels[0]}) · Wisdom ${s.gems[1]} (Neri Lv ${s.levels[1]}) · Courage ${s.gems[2]} (Ciela Lv ${s.levels[2]})">🔴${s.gems[0]} 🔵${s.gems[1]} 🟡${s.gems[2]}</b> <span class="dim small">Temple</span> <b>B${s.floor}</b> ${s.sword ? '<b title="The Phantom Sword">⚔</b>' : `<span class="dim small">Metals</span> <b>${s.metals}/3</b>`} <span class="dim small">Parts</span> <b>${s.parts}</b></div>`; })() : ''}
         ${run.campaign === 'minish' ? (() => { const s = minishStatus(run);
           return `<div class="tb-res" title="${esc(s.line)} · Kinstone pieces (Green · Blue · Red · Gold: fuse two halves of a colour) · Mysterious Shells (5 for a figurine) · Elements (they reforge the Picori Blade) · the blade · figurines this campaign"><span class="dim small">${esc(s.line)}</span> <span class="dim small">Kinstones</span> <b>🟢${s.kinstones[0]} 🔵${s.kinstones[1]} 🔴${s.kinstones[2]} 🟡${s.kinstones[3]}</b> <span class="dim small">Shells</span> <b>🐚${s.shells}</b> <span class="dim small">Elements</span> <b>${s.elements}/4</b> <span class="dim small">${esc(s.sword)}</span> <span class="dim small">Figurines</span> <b>${s.figurines}</b></div>`; })() : ''}
+        ${run.campaign === 'lorule' ? (() => { const s = loruleStatus(run);
+          return `<div class="tb-res" title="${esc(s.line)} · the kingdom you are in · Baby Maiamai rescued (every 10: a Nice upgrade at the Maiamai Nursery) · Nice tools · Ravio's rentals out · Sages freed · Master Ore"><span class="dim small">${esc(s.line)} · ${esc(s.kingdom)}</span> <span class="dim small">Maiamai</span> <b>🐙${s.maiamai}/100</b>${s.niceReady ? ` <b title="Nice upgrades ready">✨${s.niceReady}</b>` : ''} <span class="dim small">Nice</span> <b>${s.nice}</b> <span class="dim small">Rentals</span> <b>🐰${s.rentals}</b> <span class="dim small">Sages</span> <b>${s.sages}/7</b> <span class="dim small">Ore</span> <b>${s.ore}</b></div>`; })() : ''}
         ${run.campaign === 'spirit' ? (() => { const s = spiritStatus(run);
           return `<div class="tb-res" title="${esc(s.line)} · Force Gems (every 3 restore a branch line: a merchant or a recruit) · Elder Niko's Stamp Book (5, 10, 15 and 20 stamps win prizes) · highest Tower of Spirits floor · rail maps · train parts"><span class="dim small">${esc(s.line)}</span> <span class="dim small">Force Gems</span> <b>💠${s.gems}</b> ${s.book ? `<span class="dim small">Stamps</span> <b>${s.stamps}/20</b>` : ''} <span class="dim small">Tower</span> <b>F${s.floor}</b> <span class="dim small">Rail Maps</span> <b>${s.maps}/5</b> <span class="dim small">Parts</span> <b>${s.parts}</b></div>`; })() : ''}
         ${run.clock ? (() => { const c = clockLabel(run); return `<div class="tb-clock ${c.hoursLeft <= 12 ? 'bad' : c.day === 3 ? 'warn' : ''}" title="The Moon falls when the third day ends."><span class="dim small">Day ${c.day} ${c.night ? '☾' : '☀'}</span> <b>${c.time}</b> <span class="dim small">${c.hoursLeft}h left</span></div>
@@ -837,6 +841,7 @@ export class App {
         ${summary.legend?.length ? `<div class="res-drops"><div class="dim small">Era of Legend</div>${summary.legend.map((l) => `<div>${esc(l)}</div>`).join('')}</div>` : ''}
         ${summary.phantom?.length ? `<div class="res-drops"><div class="dim small">Phantom Hourglass</div>${summary.phantom.map((l) => `<div>${esc(l)}</div>`).join('')}</div>` : ''}
         ${summary.minish?.length ? `<div class="res-drops"><div class="dim small">The Minish Cap</div>${summary.minish.map((l) => `<div>${esc(l)}</div>`).join('')}</div>` : ''}
+        ${summary.lorule?.length ? `<div class="res-drops"><div class="dim small">Hyrule and Lorule</div>${summary.lorule.map((l) => `<div>${esc(l)}</div>`).join('')}</div>` : ''}
         ${summary.spirit?.length ? `<div class="res-drops"><div class="dim small">Spirit Tracks</div>${summary.spirit.map((l) => `<div>${esc(l)}</div>`).join('')}</div>` : ''}
         <div class="res-army-stats">${armyReportHtml(summary.army)}</div>
         ${summary.fallen.length ? `<div class="res-fallen"><span class="dim">Fallen:</span> ${summary.fallen.map((u) => `${token(u, 28)} ${esc(u.name)}`).join(' ')}</div>` : '<div class="dim">No losses.</div>'}
@@ -1203,7 +1208,7 @@ export class App {
       <div class="page">
         <h1>Treasure Chest</h1>
         <p class="dim center-text">Da-na-na-naaa! Choose one.${run.bonus === 'extraTreasure' ? ' <span class="badge gold">Hero’s Expedition: +1 choice</span>' : ''}</p>
-        ${(run.campaign === 'phantom' || run.campaign === 'spirit' || run.campaign === 'minish') && run.lastSail?.length ? `<div class="sail-log small">${run.lastSail.map((l) => `<div>🪝 ${esc(l)}</div>`).join('')}</div>` : ''}
+        ${(run.campaign === 'phantom' || run.campaign === 'spirit' || run.campaign === 'minish' || run.campaign === 'lorule') && run.lastSail?.length ? `<div class="sail-log small">${run.lastSail.map((l) => `<div>🪝 ${esc(l)}</div>`).join('')}</div>` : ''}
         <div class="choice-grid">${ev.rewards.map((r, i) => `<button class="choice" data-nav="take" data-i="${i}"><span class="badge">${label(r)}</span>${itemLine(r.id)}</button>`).join('')}
           <button class="choice" data-nav="rupees"><b class="rupee">₹${ev.rupees}</b><span>Take the Rupees instead.</span></button>
         </div>
@@ -1272,6 +1277,7 @@ export class App {
   private wildFacilitiesHtml(where: 'camp' | 'shop' | 'smith'): string {
     const run = this.run!;
     if (run.campaign === 'minish') return this.minishFacilitiesHtml(where);
+    if (run.campaign === 'lorule') return this.loruleFacilitiesHtml(where);
     const opts = wildCampOptions(run, where);
     if (!opts.length) return '';
     const w = wildOf(run);
@@ -1291,6 +1297,19 @@ export class App {
     const groups = [...new Set(opts.map((o) => o.facility))];
     return `<h3>The Minish <span class="dim small">Kinstone fusions ${minishOf(run).fusions} · figurines ${minishOf(run).figurines.length}</span></h3>
       ${groups.map((g) => `<details class="wild-facility"><summary><b>${MINISH_FACILITIES[g].icon} ${esc(MINISH_FACILITIES[g].name)}</b></summary><div class="shop-list">${opts.filter((o) => o.facility === g).map((o, i) => {
+        const sel = o.select ? `<select data-wsel="${esc(o.key)}-${i}">${o.select.map((c) => `<option value="${esc(c.id)}">${esc(c.label)}</option>`).join('')}</select>` : '';
+        return `<div class="shop-item"><div>${esc(o.label)}<div class="dim small">${esc(o.desc)}</div></div><span>${sel}<button class="btn small" data-nav="wildcamp" data-key="${esc(o.key)}" data-sel="${o.select ? `${esc(o.key)}-${i}` : ''}" data-where="${where}" ${o.ok ? '' : 'disabled'}>Go</button></span></div>`;
+      }).join('')}</div></details>`).join('')}`;
+  }
+
+  /** A Link Between Worlds camp facilities (section 11), shown as expansions of the camp, shop and blacksmith. */
+  private loruleFacilitiesHtml(where: 'camp' | 'shop' | 'smith'): string {
+    const run = this.run!;
+    const opts = loruleCampOptions(run, where);
+    if (!opts.length) return '';
+    const groups = [...new Set(opts.map((o) => o.facility))];
+    return `<h3>Hyrule and Lorule <span class="dim small">₹${run.rupees}</span></h3>
+      ${groups.map((g) => `<details class="wild-facility"><summary><b>${LORULE_FACILITIES[g].icon} ${esc(LORULE_FACILITIES[g].name)}</b></summary><div class="shop-list">${opts.filter((o) => o.facility === g).map((o, i) => {
         const sel = o.select ? `<select data-wsel="${esc(o.key)}-${i}">${o.select.map((c) => `<option value="${esc(c.id)}">${esc(c.label)}</option>`).join('')}</select>` : '';
         return `<div class="shop-item"><div>${esc(o.label)}<div class="dim small">${esc(o.desc)}</div></div><span>${sel}<button class="btn small" data-nav="wildcamp" data-key="${esc(o.key)}" data-sel="${o.select ? `${esc(o.key)}-${i}` : ''}" data-where="${where}" ${o.ok ? '' : 'disabled'}>Go</button></span></div>`;
       }).join('')}</div></details>`).join('')}`;
@@ -1325,6 +1344,21 @@ export class App {
           this.save();
           rerender();
           if (mline) { sfx('secret'); const m = modal(`<p>${esc(mline)}</p><button class="btn primary" data-close>OK</button>`, { dismissable: true }); void m; }
+          return;
+        }
+        if (run.campaign === 'lorule') {
+          const lo = loruleCampOptions(run, where).find((o) => o.key === key);
+          if (!lo) return;
+          const larg = el.dataset.sel ? (this.root.querySelector<HTMLSelectElement>(`[data-wsel="${el.dataset.sel}"]`)?.value ?? undefined) : undefined;
+          let luid: string | undefined;
+          if (lo.pick) { const picked = await this.unitPicker(esc(lo.label), lo.pick, () => ''); if (!picked) return; luid = picked; }
+          const lrng = new RNG(run.rngState);
+          const lline = doLoruleCamp(run, key, lrng, luid, larg);
+          run.rngState = lrng.state;
+          this.save();
+          rerender();
+          const m = modal(`<p>${esc(lline ?? 'That didn\'t work (not enough Rupees, or nobody can use it).')}</p><button class="btn primary" data-close>OK</button>`, { dismissable: true }); void m;
+          if (lline) sfx('secret');
           return;
         }
         const opt = wildCampOptions(run, where).find((o) => o.key === key);

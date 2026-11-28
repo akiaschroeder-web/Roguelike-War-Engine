@@ -47,6 +47,9 @@ const SPECIAL = (open: number, water = INF, rough = 2, gap = INF) => ({
   minishPortal: open, microPassage: INF, microBridge: water, microTunnel: open, minishDoor: INF, giantGrass: open, waterDroplet: open, floatingLeaf: water,
   internalWeakPoint: open, softEarthWall: INF, pacciHole: open, duplicationTile: open, windCrest: open, giantMushroom: open, minishVine: rough, spiderweb: open,
   gustCurrent: open, puddle: open, giantFlower: open, fallenTwig: open, bookshelf: INF, minishTable: INF, tallGrass: open, raindrop: open, ordinaryHouse: INF,
+  // A Link Between Worlds (wall-merged units travel through walls: engine/lorule.ts lrTileCost)
+  mergeWall: INF, wallCrack: open, portraitFrame: open, tornadoLift: open, icePlatform: open, maiamaiSpot: open, rupeeTrap: open, gemBarrier: INF,
+  darknessSwitch: open, energyOrb: open,
 });
 export const MOVE_COSTS: Record<MoveType, Record<Terrain, number>> = {
   foot:    { plain: 1, forest: 2, mountain: 3, water: INF, wall: INF, fort: 1, lava: 2, ...SPECIAL(1) },
@@ -247,6 +250,11 @@ export const TERRAIN_BONUS: Record<Terrain, { avoid: number; def: number; heal: 
   giantFlower: { avoid: 0, def: 0, heal: 0 }, fallenTwig: { avoid: 0, def: 0, heal: 0 }, bookshelf: { avoid: 0, def: 0, heal: 0 },
   minishTable: { avoid: 0, def: 0, heal: 0 }, tallGrass: { avoid: 15, def: 0, heal: 0 }, raindrop: { avoid: 0, def: 0, heal: 0 },
   ordinaryHouse: { avoid: 0, def: 0, heal: 0 },
+  // A Link Between Worlds
+  mergeWall: { avoid: 0, def: 0, heal: 0 }, wallCrack: { avoid: 0, def: 0, heal: 0 }, portraitFrame: { avoid: 0, def: 0, heal: 0 },
+  tornadoLift: { avoid: 0, def: 0, heal: 0 }, icePlatform: { avoid: -5, def: 0, heal: 0 }, maiamaiSpot: { avoid: 0, def: 0, heal: 0 },
+  rupeeTrap: { avoid: 0, def: 0, heal: 0 }, gemBarrier: { avoid: 0, def: 0, heal: 0 }, darknessSwitch: { avoid: 0, def: 0, heal: 0 },
+  energyOrb: { avoid: 0, def: 0, heal: 0 },
 };
 
 /** Water-like spaces: swimmers move through them, others can't. */
@@ -452,6 +460,16 @@ export const SPECIAL_TERRAIN: Record<Exclude<Terrain, BaseTerrain>, { name: stri
   tallGrass: { name: 'Tall Grass', color: '#6ab04a' },
   raindrop: { name: 'Raindrop', color: '#a0c8e8' },
   ordinaryHouse: { name: 'House', color: '#b0906a' },
+  mergeWall: { name: 'Mergeable Wall', color: '#8a7a9a' },
+  wallCrack: { name: 'Wall Crack', color: '#c06ad0' },
+  portraitFrame: { name: 'Portrait Frame', color: '#c0a050' },
+  tornadoLift: { name: 'Tornado Lift', color: '#a0d0c0' },
+  icePlatform: { name: 'Ice Platform', color: '#c8e8f8' },
+  maiamaiSpot: { name: 'Maiamai Hiding Spot', color: '#e08ac0' },
+  rupeeTrap: { name: 'Rupees', color: '#5ad05a' },
+  gemBarrier: { name: 'Gemstone Barrier', color: '#9a5ad0' },
+  darknessSwitch: { name: 'Darkness Switch', color: '#3a3a5a' },
+  energyOrb: { name: 'Energy Orb', color: '#f0e070' },
 };
 
 /** Lava damage at the start of a unit's turn (as % of max HP). */

@@ -13,6 +13,7 @@ import { lgAfterMove } from '../engine/legend';
 import { hourglassLabel, phAfterMove } from '../engine/phantom';
 import { spAfterMove } from '../engine/spirit';
 import { isMicro, mcAfterMove, microSlot, unitsAt } from '../engine/micro';
+import { lrAfterWalk } from '../engine/lorule';
 import { enemyUnload, windLabel } from '../engine/naval';
 import { sideQuestText } from '../engine/run';
 import { adjacentCaptives, checkResult, freeCaptive, mountToggleBlocked, moveUnit, toggleMount, objectiveText, spawnReinforcements, startPhase, type TurnStartEvent } from '../engine/battle';
@@ -70,6 +71,9 @@ const TERRAIN_GLYPH: Record<string, string> = {
   minishPortal: '🍄', microPassage: '·', microBridge: '⌒', microTunnel: '◌', minishDoor: '🚪', giantGrass: '⺾', waterDroplet: '💧', floatingLeaf: '🍃',
   internalWeakPoint: '◎', softEarthWall: '▦', pacciHole: '⊚', duplicationTile: '✦', windCrest: '🌬', giantMushroom: '🍄', minishVine: '⌇', spiderweb: '🕸', gustCurrent: '≋',
   puddle: '∽', giantFlower: '🌸', fallenTwig: '⟋', bookshelf: '📚', minishTable: '⊤', tallGrass: '″', raindrop: '💧', ordinaryHouse: '🏠',
+  // A Link Between Worlds
+  mergeWall: '▤', wallCrack: '⚡', portraitFrame: '🖼', tornadoLift: '🌪', icePlatform: '❄', maiamaiSpot: '🐚', rupeeTrap: '💎', gemBarrier: '◆',
+  darknessSwitch: '◐', energyOrb: '✪',
 };
 
 export class BattleView {
@@ -1084,6 +1088,8 @@ export class BattleView {
     }
     const dest = path[path.length - 1] ?? u;
     moveUnit(u, dest.x, dest.y, Math.max(0, path.length - 1));
+    const lb = lrAfterWalk(this.b, u, path); // A Link Between Worlds: wall merging, River Zora surfacing, Maiamai and Energy Orbs
+    if (lb) this.addLog(`🖼 ${esc(lb)}`);
     this.mode = prev;
   }
 
@@ -1631,6 +1637,17 @@ const WW_TERRAIN_NOTES: Record<string, string> = {
   tallGrass: 'Tall Grass: concealment (+15 Avoid); a dense forest at Micro size (cost 2, +20 Avoid)',
   raindrop: 'A Raindrop: harmless; a falling hazard to Micro units (10% HP)',
   ordinaryHouse: 'A House: a building; a whole dungeon to Micro units (heal 10%, +20 Avoid)',
+  // A Link Between Worlds
+  mergeWall: 'A Mergeable Wall: an obstacle; wall-merged units travel through it as paintings',
+  wallCrack: 'A Wall Crack: slip through to any other Wall Crack (the other kingdom\'s side of the field)',
+  portraitFrame: 'A Portrait Frame: holds a painted prisoner; stand next to it to free them',
+  tornadoLift: 'A Tornado Lift: the wind throws you onto high ground up to 4 spaces away',
+  icePlatform: 'An Ice Platform: a temporary crossing (Pengators slide faster on ice)',
+  maiamaiSpot: 'A Maiamai Hiding Spot: step on it to rescue a Baby Maiamai',
+  rupeeTrap: 'Rupees! Or a trap disguised as Rupees (Thief Girl can tell)',
+  gemBarrier: 'A Gemstone Barrier: a gem-covered obstacle',
+  darknessSwitch: 'A Darkness Switch: the lights go out around it',
+  energyOrb: 'An Energy Orb: step on it to restore 10 MP and STA',
 };
 
 /** Abilities shown in the Abilities menu (forecast-only modifiers are excluded). */
