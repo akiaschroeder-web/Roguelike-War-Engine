@@ -180,6 +180,12 @@ export function mcAfterMove(b: Battle, u: Unit): string | null {
   }
   syncRiders(b);
   if (!u.micro) return null;
+  // A Micro unit that ends its move on a normal-sized ally hitches a ride automatically, and stays
+  // aboard turn after turn until it moves off on its own (or hops off).
+  if (!u.mcRide) {
+    const h = b.units.find((x) => x.team === u.team && !x.micro && x.hp > 0 && sharesTile(u, x));
+    if (h) { u.mcRide = { host: h.uid, dx: u.x - h.x, dy: u.y - h.y }; return `${u.name} hops onto ${h.name}.`; }
+  }
   const t = tileAt(b, u.x, u.y);
   if (t === 'giantGrass') { addStatus(u, 'veiled', 1); return `${u.name} disappears into the giant grass.`; }
   if (t === 'waterDroplet' && moveTypeOf(u) !== 'flying' && u.hp > 1) { const d = Math.min(u.hp - 1, Math.ceil(u.stats.hp * 0.1)); u.hp -= d; return `${u.name} is splashed by a water droplet (−${d}).`; }

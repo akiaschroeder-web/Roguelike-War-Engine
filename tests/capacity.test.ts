@@ -69,3 +69,29 @@ describe('fairy companions', () => {
     if (!b.units.some((u) => u !== navi && !u.micro && u.team === 'player' && navi.x >= u.x && navi.x < u.x + u.size && navi.y >= u.y && navi.y < u.y + u.size)) expect(microSheltered(b, navi)).toBe(false);
   });
 });
+
+import { moveUnit, startPhase } from '../src/engine/battle';
+import { mcAfterMove } from '../src/engine/micro';
+import { computeMoves, posOf } from '../src/engine/grid';
+describe('hitching a ride', () => {
+  it('lasts across turns until the rider moves off', () => {
+    const run = newRun(5, 'link', 'hyrule') as RunWithEvent;
+    enterNode(run, (availableNodes(run).find((n) => n.type === 'battle') ?? availableNodes(run)[0]).id);
+    run.event = undefined;
+    startBattle(run, run.roster.map((u) => u.uid));
+    const b = run.battle!;
+    const navi = b.units.find((u) => u.templateId === 'navi')!;
+    expect(navi.mcRide).toBeTruthy();
+    for (let t = 0; t < 3; t++) {
+      const host = b.units.find((u) => u.uid === navi.mcRide?.host)!;
+      const k = [...computeMoves(b, host).reach.keys()].find((k) => { const p = posOf(b, k); return p.x !== host.x || p.y !== host.y; })!;
+      const p = posOf(b, k);
+      moveUnit(host, p.x, p.y, 1); mcAfterMove(b, host);
+      expect(navi.mcRide?.host).toBe(host.uid);
+      expect(navi.x >= host.x && navi.x < host.x + host.size && navi.y >= host.y && navi.y < host.y + host.size).toBe(true);
+      for (const u of b.units) { u.moved = false; u.acted = false; }
+      startPhase(b, 'enemy'); startPhase(b, 'player');
+      expect(navi.mcRide).toBeTruthy();
+    }
+  });
+});
