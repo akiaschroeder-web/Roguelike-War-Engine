@@ -103,6 +103,20 @@ PACKS = {
         'Gohdan': 'gohdan', 'Eox': 'eox', 'Koloktos': 'koloktos', 'Gyorg (MM)': 'gyorg', 'Mountain Minish Blacksmith': 'mountainMinishBlacksmith',
         'Goron Warrior': 'goronWarrior', 'Town Minish Tinkerer': 'townMinishTinkerer', 'Steward Construct': 'stewardConstruct',
     }),
+    'lorule': dict(doc='docs/link-between-worlds-pack.md', start='## 12. Supports', end='### Groups', suffix='Lorule', game='lorule',
+        # "Each Sage × every other Sage A", expanded (pairs listed above keep their own rank).
+        extra='- Gulley × Osfala A\n- Gulley × Seres A\n- Gulley × Oren A\n- Gulley × Rosso A\n- Gulley × Irene A\n- Gulley × Impa A\n- Osfala × Seres A\n- Osfala × Oren A\n- Osfala × Rosso A\n- Osfala × Irene A\n- Osfala × Impa A\n- Seres × Oren A\n- Seres × Rosso A\n- Seres × Irene A\n- Seres × Impa A\n- Oren × Rosso A\n- Oren × Irene A\n- Oren × Impa A\n- Rosso × Irene A\n- Rosso × Impa A\n- Irene × Impa A', names={
+        'Link': 'linkALBW', 'ALBW Link': 'linkALBW', 'Zelda': 'zeldaALBW', 'Hilda': 'hilda', 'Ravio': 'ravio', 'Yuga': 'yuga', 'Yuga Ganon': 'yugaGanon',
+        'Sheerow': 'sheerow', 'Gramps': 'gramps', 'Mother Maiamai': 'motherMaiamai', 'Baby Maiamai': 'babyMaiamai', 'Lorulean Blacksmith': 'loruleanBlacksmith',
+        'Thief Girl': 'thiefGirl', 'Gulley': 'gulley', 'Osfala': 'osfala', 'Seres': 'seres', 'Oren': 'oren', 'Rosso': 'rosso', 'Irene': 'irene', 'Impa': 'impaALBW',
+        'Hero of Legend': 'heroOfLegend', 'Hero of Time': 'link', "Link's Uncle": 'linksUncle', 'Beedle': 'beedle', 'Tingle': 'tingle', 'Linebeck': 'linebeck',
+        'Midna': 'midnaImp', 'Tetra': 'tetra', 'Minish Cap Zelda': 'zeldaMC', 'Ganondorf': 'ganondorf', 'Agahnim': 'agahnim', 'Vaati': 'vaatiHylian',
+        'Ghirahim': 'ghirahim', 'Phantom Ganon': 'phantomGanon', "Hero's Shade": 'herosShade', 'Swiftblade the First': 'swiftbladeFirst', 'Syrup': 'syrup',
+        'Koume': 'koume', 'Kotake': 'kotake', 'Ruto': 'ruto', 'Mipha': 'mipha', 'Rutela': 'rutela', 'King Zora': 'kingZora', 'Darunia': 'darunia',
+        'Biggoron': 'biggoron', 'Melari': 'melari', 'Smith': 'smith', 'Sahasrahla': 'sahasrahla', 'Nabooru': 'nabooru', 'Flute Boy': 'fluteBoy',
+        'Stalblind': 'stalblind', 'Blind the Thief': 'blind', 'Gemesaur King': 'gemesaurKing', 'Helmasaur King': 'helmasaurKing', 'Gigabari': 'gigabari',
+        'Barinade': 'barinade',
+    }),
 }
 SKIP = {'Epona', 'Four Giants', 'OOT Potion Shopkeeper', 'OoT Potion Shopkeeper', 'Cubus Sisters'}
 CANON = {'ghirahimTrue': 'ghirahim', 'imprisonedArmed': 'imprisoned', 'imprisonedFlying': 'imprisoned', 'ganon': 'ganondorf', 'sheik': 'zelda',

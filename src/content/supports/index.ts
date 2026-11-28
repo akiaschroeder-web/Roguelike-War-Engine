@@ -10,12 +10,13 @@ import { SUPPORT_REGISTRY_LEGEND } from './registryLegend';
 import { SUPPORT_REGISTRY_PHANTOM } from './registryPhantom';
 import { SUPPORT_REGISTRY_SPIRIT } from './registrySpirit';
 import { SUPPORT_REGISTRY_MINISH } from './registryMinish';
+import { SUPPORT_REGISTRY_LORULE } from './registryLorule';
 import { CONVOS as EXAMPLES } from './convos/examples';
 import { WRITTEN } from './written';
 
 export type { SupportPairDef };
 /** Every registered pairing, all packs. */
-export const SUPPORT_REGISTRY: SupportPairDef[] = [...BASE_REGISTRY, ...SUPPORT_REGISTRY_SS, ...SUPPORT_REGISTRY_WILD, ...SUPPORT_REGISTRY_ORIGINAL, ...SUPPORT_REGISTRY_AOL, ...SUPPORT_REGISTRY_LEGEND, ...SUPPORT_REGISTRY_PHANTOM, ...SUPPORT_REGISTRY_SPIRIT, ...SUPPORT_REGISTRY_MINISH];
+export const SUPPORT_REGISTRY: SupportPairDef[] = [...BASE_REGISTRY, ...SUPPORT_REGISTRY_SS, ...SUPPORT_REGISTRY_WILD, ...SUPPORT_REGISTRY_ORIGINAL, ...SUPPORT_REGISTRY_AOL, ...SUPPORT_REGISTRY_LEGEND, ...SUPPORT_REGISTRY_PHANTOM, ...SUPPORT_REGISTRY_SPIRIT, ...SUPPORT_REGISTRY_MINISH, ...SUPPORT_REGISTRY_LORULE];
 
 export type SupportLine = ['a' | 'b' | 'n', string];
 export type SupportRankKey = 'C' | 'B' | 'A' | 'S';
@@ -160,6 +161,20 @@ export const GROUP_SUPPORTS: GroupSupport[] = [
   { id: 'herosCompanions', name: "Hero's Companions", members: ['ezloMinish', 'navi', 'tatl', 'ciela', 'fi'], text: 'Longer support-ability range and better MP recovery: members recover 3 MP a turn and gain +10 Hit and Avoid within 3 of a hero.' },
   { id: 'forbiddenAmbitionGroup', name: 'Forbidden Ambition', members: ['vaatiHylian', 'ghirahim', 'zant'], text: 'More dark magic damage (+20%).' },
   { id: 'ancientGuardians', name: 'Ancient Guardians', members: ['mazaal', 'gohdan', 'eox'], text: 'More construct defence (allied constructs take 15% less damage) and resistance to disabling effects (no Stun, Root or Freeze).' },
+  // A Link Between Worlds (docs/link-between-worlds-pack.md section 12) and the River Zora (docs/river-zora.md)
+  { id: 'courageRestored', name: 'Courage Restored', members: ['linkALBW', 'zeldaALBW', 'ravio'], text: 'More sacred damage (+15%) and morale (+10 Hit, +5 Avoid).' },
+  { id: 'betweenKingdoms', name: 'Between Kingdoms', members: ['zeldaALBW', 'hilda', 'linkALBW', 'ravio'], text: 'Cheaper world travel and wall merging: Wall Merge and its upkeep cost 25% less MP.' },
+  { id: 'sagesUnited', name: 'Sages United', members: ['gulley', 'osfala', 'seres', 'oren', 'rosso', 'irene', 'impaALBW'], text: '+4 MAG and RES; their support spells cost 25% less MP.' },
+  { id: 'hopeForLorule', name: 'Hope for Lorule', members: ['hilda', 'ravio', 'thiefGirl'], text: 'Better survival and item recovery: +2 DEF and RES.' },
+  { id: 'businessPartners', name: 'Business Partners', members: ['ravio', 'beedle', 'tingle', 'linebeck'], text: 'Lower prices: Ravio\'s Shop 15% cheaper while all four are in the army.' },
+  { id: 'veteranMasters', name: 'Veteran Masters', members: ['gramps', 'herosShade', 'swiftbladeFirst'], text: 'Better techniques and counters: +3 SKL and +5 Crit; sword techniques cost 20% less STA.' },
+  { id: 'forbiddenSorcery', name: 'Forbidden Sorcery', members: ['yuga', 'agahnim', 'vaatiHylian'], text: 'More magic damage (+15%).' },
+  { id: 'familyReunion', name: 'Family Reunion', members: ['motherMaiamai', 'babyMaiamai'], need: 5, text: 'Mother Maiamai and four Baby Maiamai: the Maiamai regenerate 10% HP a turn.' },
+  { id: 'riverPack', name: 'River Pack', members: ['riverZora', 'riverZoraWarrior', 'riverZoraHunter', 'riverZoraGuardian', 'riverZoraSorcerer', 'riverZoraChieftain'], need: 3, text: 'Any three River Zora: +2 STR and MAG near one another.' },
+  { id: 'riverHuntingParty', name: 'River Hunting Party', members: ['riverZoraWarrior', 'riverZoraHunter', 'riverZoraGuardian'], text: '+15 Hit and Avoid near water.' },
+  { id: 'mastersOfTheCurrent', name: 'Masters of the Current', members: ['riverZoraChieftain', 'riverZoraSorcerer'], text: 'Their floods last 2 more turns.' },
+  { id: 'riverRoyalty', name: 'River Royalty', members: ['oren', 'riverZoraChieftain'], text: 'Every allied River Zora gains +3 DEF and RES.' },
+  { id: 'unitedWaters', name: 'United Waters', members: ['riverZora', 'zoraWarrior'], need: 2, text: 'Any River Zora with any Sea Zora: both races +2 SKL and SPD while swimming.' },
   { id: 'demonKings', name: 'The Demon Kings', members: ['demise', 'ganondorf', 'ganondorfWW', 'ganondorfTP', 'ganondorfWild'], text: 'Dark damage +25%.' },
 ];
 
