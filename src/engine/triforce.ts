@@ -842,7 +842,7 @@ export function castTriforce(b: Battle, u: Unit, def: AbilityDef, rng: RNG, targ
       if (!climb(b, u, onto)) return null;
       const ms = totemMembers(b, u);
       out.warped = { from: { x: u.x, y: u.y }, to: { x: u.x, y: u.y } };
-      out.lines.push(`${u.name} climbs onto ${onto.name}: a Totem ${ms.length} high${totemArtOf(ms[0]) ? ' — the Tri Force Heroes!' : ''}.`);
+      out.lines.push(`${u.name} climbs onto ${onto.name}: a Totem ${ms.length} high${totemArtOf(ms[0]) ? ' — the Tri Force Heroes!' : '.'}`);
       if (ms.length >= 3) st.coop++;
       return out;
     }
