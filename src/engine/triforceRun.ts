@@ -202,6 +202,8 @@ export function triforceBattleSetup(run: Run, b: Battle, rng: RNG) {
   const main = b.units.find((u) => u.isBoss && u.team === 'enemy');
   if (!main) return;
   const id = main.bossId ?? '';
+  // The Woodlands' boss is the campaign's first: it fights below the doc's full strength.
+  if (TF_ROUTE.indexOf(b.world) === 0) { for (const k of ['str', 'mag', 'skl', 'spd', 'def', 'res'] as const) main.stats[k] = Math.round(main.stats[k] * 0.72); main.stats.hp = main.hp = Math.round(main.stats.hp * 0.7); }
   for (const e of ESCORTS[id] ?? []) spawnNear(b, e, main, Math.max(1, main.level - 1), rng);
   const copies = BOSS_COPIES[b.world] ?? 0;
   for (let i = 0; i < copies; i++) {

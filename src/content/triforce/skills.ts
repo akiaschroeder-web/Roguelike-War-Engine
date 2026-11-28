@@ -8,7 +8,7 @@ export const SKILLS: SkillDef[] = [
   k('heroicAgility', 'Heroic Agility', '+3 SPD and SKL while another hero (a Tri Force Hero or one of the Links) is within 2.'),
   k('heroicStrength', 'Heroic Strength', '+3 STR and DEF while another hero (a Tri Force Hero or one of the Links) is within 2.'),
   k('fashionableInspiration', 'Fashionable Inspiration', 'Allies within 2 get 20% more from their outfits\' stat bonuses (at least +1 to each). Not while she is cursed.'),
-  k('hytopianAuthority', 'Hytopian Authority', 'More army morale and material rewards: allies within 3 gain +5 Hit; after each victory the army gains morale and an extra material.'),
+  k('hytopianAuthority', 'Hytopian Authority', 'More army morale and material rewards: allies within 3 gain +5 Hit and +2 STR and DEF and recover 5% HP at the start of each turn; after each victory the army gains morale and an extra material.'),
   k('expertTailoringSkill', 'Expert Tailoring', 'Repairs and briefly enhances allied clothing (Expert Tailoring): lifts Fashion Curses and adds +3 DEF and RES for 2 turns.'),
   k('fashionCurseSkill', 'Fashion Curse', 'Can disable an enemy\'s clothing bonuses (Fashion Curse); her hits curse the target\'s outfit for a turn 25% of the time.'),
   // ── Monsters ──
@@ -25,6 +25,6 @@ export const SKILLS: SkillDef[] = [
   k('electricBrood', 'Electric Brood', 'Summons an electrified Buzz Blob every other turn (four at most); blobs within 2 gain +3 STR and MAG.'),
   k('livingGlacier', 'Living Glacier', 'Ice armour: 40% less damage until fire breaks it (fire deals 50% more, then the armour is gone for 2 turns). Its projectiles freeze.'),
   k('desertSovereign', 'Desert Sovereign', 'Wind currents push enemies within 2 back a space at the start of its turn; attacks from high ground (+20% damage against units on the ground).'),
-  k('spectralReaper', 'Spectral Reaper', 'Turns intangible on odd turns (immune to physical attacks); on even turns it strikes hard (+50% damage).'),
+  k('spectralReaper', 'Spectral Reaper', 'On the enemy side it turns intangible on odd turns (immune to physical attacks); on even turns it strikes hard (+50% damage).'),
   k('perfectCamouflage', 'Perfect Camouflage', 'Invisible until it attacks or is revealed (Light Armor, a hit, or an enemy next to it); hidden again when no enemy is near.'),
 ];

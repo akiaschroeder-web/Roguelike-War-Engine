@@ -4,7 +4,7 @@ import type { CommanderDef } from '../../engine/types';
 // alternative loadout below instead (engine/triforceRun.ts triforceLoadout).
 export const COMMANDERS: CommanderDef[] = [
   { heroId: 'kingTuft', armyName: 'The Court of Hytopia', units: ['styla', 'hyruleKnight'], bonus: 'hytopianCrafting', campaign: 'triforce',
-    bonusText: 'Battles yield 30% more crafting materials.', startingItems: ['redPotion'] },
+    bonusText: 'Battles yield 30% more crafting materials.', startingItems: ['redPotion', 'jackOfHearts', 'jackOfHearts', 'swordSuit'] },
   { heroId: 'ladyMaud', armyName: "The Drablands Witch's Court", units: ['grimRepoe', 'keeleon'], bonus: 'fashionTyranny', campaign: 'triforce',
     bonusText: 'Equipment-disabling effects the army inflicts on enemies (Fashion Curse, Grand Curse…) last 1 turn longer.' },
 ];

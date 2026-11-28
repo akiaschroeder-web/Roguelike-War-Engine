@@ -99,8 +99,8 @@ export const REGION_BOSSES: Record<string, string[]> = {
 
 // Regional rosters: the three new monsters and the returning Drablands monsters (section 2).
 export const ROSTERS: Record<string, string[]> = {
-  woodlandsTF: ['octorok', 'keese', 'moblin', 'buzzBlob', 'keeleon', 'rope', 'tektite'],
-  riversideTF: ['octorok', 'skullfish', 'leever', 'buzzBlob', 'keeleon', 'tektite', 'terrorpin'],
+  woodlandsTF: ['octorok', 'keese', 'octorok', 'buzzBlob', 'chuchuGreen', 'rope', 'tektite'],
+  riversideTF: ['octorok', 'skullfish', 'leever', 'buzzBlob', 'octorok', 'tektite', 'terrorpin'],
   volcanoTF: ['keeleon', 'keese', 'hokkubokku', 'aeralfos', 'beamos', 'tektite'],
   iceCavernTF: ['freezard', 'miniFreezard', 'keese', 'wizzrobe', 'hokkubokku', 'tektite'],
   fortressTF: ['ballChainSoldier', 'moblin', 'totemArmos', 'wizzrobe', 'beamos', 'stalfos', 'gimos'],

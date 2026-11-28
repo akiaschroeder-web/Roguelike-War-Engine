@@ -269,11 +269,12 @@ function spacesUnder(b: Battle, u: Unit): string[] {
   const lines: string[] = [];
   const k = keyOf(b, u.x, u.y);
   const t = b.tiles[k];
-  if (t === 'elevatedSwitch' && isElevated(b, u)) {
+  const stack = totemMembers(b, u);
+  if (t === 'elevatedSwitch' && stack.some((m) => isElevated(b, m))) {
     b.tiles[k] = 'plain';
     for (const e of b.units.filter((x) => x.team !== u.team)) buff(e, 'tfSwitchDown', 'Gates lowered', 2, { def: -3, res: -3 });
-    if (u.tfStack) { st.coop++; st.found.push('friendlyToken'); }
-    lines.push(`${u.name} reaches the Elevated Switch${u.tfStack ? ' from the Totem' : ''}: the enemy's gates drop (−3 DEF and RES for 2 turns).`);
+    if (stack.length > 1) { st.coop++; st.found.push('friendlyToken'); }
+    lines.push(`${stack[stack.length - 1].name} reaches the Elevated Switch${stack.length > 1 ? ' from the Totem' : ''}: the enemy's gates drop (−3 DEF and RES for 2 turns).`);
   }
   if (t === 'outfitPedestal') {
     b.tiles[k] = 'plain';
