@@ -173,7 +173,9 @@ export type Terrain = BaseTerrain | 'cracked' | 'timeBlock' | 'timeGap' | 'bridg
   | 'puddle' | 'giantFlower' | 'fallenTwig' | 'bookshelf' | 'minishTable' | 'tallGrass' | 'raindrop' | 'ordinaryHouse'
   // Four Swords & Four Swords Adventures battlefield spaces (engine/fourswords.ts; the Gnat Passage is the Micro Passage)
   | 'forceGemDeposit' | 'forceBarrier' | 'fourPersonSwitch' | 'formationSwitch' | 'cooperativeBlock' | 'itemPedestal' | 'fairyPedestal'
-  | 'magneticPillar' | 'fsDarkPortal' | 'shadowMirrorGate' | 'giantBombZone' | 'royalJewelPedestal' | 'sanctuarySeal';
+  | 'magneticPillar' | 'fsDarkPortal' | 'shadowMirrorGate' | 'giantBombZone' | 'royalJewelPedestal' | 'sanctuarySeal'
+  // A Link Between Worlds battlefield spaces (engine/lorule.ts; the Sand Pillar is Spirit Tracks')
+  | 'mergeWall' | 'wallCrack' | 'portraitFrame' | 'tornadoLift' | 'icePlatform' | 'maiamaiSpot' | 'rupeeTrap' | 'gemBarrier' | 'darknessSwitch' | 'energyOrb';
 
 export type Team = 'player' | 'enemy';
 
@@ -394,6 +396,8 @@ export interface WeaponDef {
   mc?: string[];
   /** Four Swords effects handled by engine/fourswords.ts (Level 2 tools, the Trident, the Shadow Sword). */
   fs?: string[];
+  /** A Link Between Worlds and River Zora effects handled by engine/lorule.ts (painting, wind, Nice upgrades…). */
+  lb?: string[];
 }
 
 /** Era of the Wild weapon effects (section 13). */
@@ -462,6 +466,8 @@ export interface GearDef {
   mc?: string[];
   /** Four Swords effects (the Gnat Hat, the Hero's Medal, the Shadow Mirror…) handled by engine/fourswords.ts. */
   fs?: string[];
+  /** A Link Between Worlds and River Zora effects (Ravio's Bracelet, Hint Glasses…) handled by engine/lorule.ts. */
+  lb?: string[];
 }
 
 export type GearEffect =
@@ -647,7 +653,7 @@ export interface WorldDef {
   terrainNames: Record<BaseTerrain, string>;
   terrainColors: Record<BaseTerrain, string>;
   /** Regions of the Termina campaign (with the three-day cycle). */
-  campaign?: 'termina' | 'greatSea' | 'twilight' | 'skyward' | 'wild' | 'original' | 'legend' | 'phantom' | 'spirit' | 'minish' | 'fourswords';
+  campaign?: 'termina' | 'greatSea' | 'twilight' | 'skyward' | 'wild' | 'original' | 'legend' | 'phantom' | 'spirit' | 'minish' | 'fourswords' | 'lorule';
   /** Era of the Wild: which layer of the three-layer map. */
   layer?: 'surface' | 'sky' | 'depths';
   /** Battles here are fought at sea (vessels, wind, islands). */
@@ -767,7 +773,7 @@ export interface CommanderDef {
   bonus: CommanderBonus;
   bonusText: string;
   /** Campaign this commander starts in by default. */
-  campaign?: 'termina' | 'greatSea' | 'twilight' | 'skyward' | 'wild' | 'original' | 'legend' | 'phantom' | 'spirit' | 'minish' | 'fourswords';
+  campaign?: 'termina' | 'greatSea' | 'twilight' | 'skyward' | 'wild' | 'original' | 'legend' | 'phantom' | 'spirit' | 'minish' | 'fourswords' | 'lorule';
   /** Weapons, gear and items handed out to the army at the start (commander first). */
   startingItems?: string[];
 }
@@ -791,7 +797,9 @@ export type CommanderBonus = 'extraTreasure' | 'healing' | 'forging' | 'postBatt
   // The Minish Cap
   | 'fourSwordHero' | 'minishSage' | 'lightForceBonus' | 'masterForging' | 'royalAuthority' | 'bladeBrothers' | 'windSorcery'
   // Four Swords & Four Swords Adventures
-  | 'fourSwordLeader' | 'warriorsCourage' | 'scoutsCourage' | 'mysticCommand' | 'sanctuaryLight' | 'shadowCommand' | 'windMage' | 'darkKingsHost';
+  | 'fourSwordLeader' | 'warriorsCourage' | 'scoutsCourage' | 'mysticCommand' | 'sanctuaryLight' | 'shadowCommand' | 'windMage' | 'darkKingsHost'
+  // A Link Between Worlds
+  | 'betweenWorldsLB' | 'sacredLightLB' | 'loruleGuard' | 'rentalDiscount' | 'livingPortraitLB' | 'riverQueenLB' | 'veteranTechniques' | 'demonKingsMonsters';
 
 export type SkillId = string;
 
@@ -1067,7 +1075,7 @@ export interface RunMap {
 }
 
 /** A campaign the World Tour can visit. */
-export type TourCampaign = 'hyrule' | 'termina' | 'greatSea' | 'twilight' | 'skyward' | 'wild' | 'original' | 'legend' | 'phantom' | 'spirit' | 'minish' | 'fourswords';
+export type TourCampaign = 'hyrule' | 'termina' | 'greatSea' | 'twilight' | 'skyward' | 'wild' | 'original' | 'legend' | 'phantom' | 'spirit' | 'minish' | 'fourswords' | 'lorule';
 
 export interface Run {
   seed: number;
@@ -1100,7 +1108,7 @@ export interface Run {
   /** Army-wide stats and resources. */
   army?: Army;
   /** Which campaign: the endless Hyrule war, Termina with its three-day cycle, or the Great Sea. */
-  campaign?: 'hyrule' | 'termina' | 'greatSea' | 'twilight' | 'skyward' | 'wild' | 'original' | 'legend' | 'phantom' | 'spirit' | 'minish' | 'fourswords' | 'random' | 'worldTour';
+  campaign?: 'hyrule' | 'termina' | 'greatSea' | 'twilight' | 'skyward' | 'wild' | 'original' | 'legend' | 'phantom' | 'spirit' | 'minish' | 'fourswords' | 'lorule' | 'random' | 'worldTour';
   /** Great Sea: the naval campaign's state. */
   sea?: SeaState;
   /** Termina: hours passed in the current three-day cycle (0-71) and resets so far. */
@@ -1194,7 +1202,9 @@ export type EventEffect =
   /** The Minish Cap (engine/minishRun.ts): Kinstone fusions, Mysterious Shells, figurines, Picolytes, the Elements. */
   | { kind: 'minish'; op: string; id?: string; amount?: number }
   /** Four Swords (engine/fourswordsRun.ts): Level 2 upgrades, Force Power, the Links, Shrine Maidens, formation drill. */
-  | { kind: 'fourswords'; op: string; id?: string; amount?: number };
+  | { kind: 'fourswords'; op: string; id?: string; amount?: number }
+  /** A Link Between Worlds (engine/loruleRun.ts): rentals, Maiamai, Master Ore, Sage paintings, Yuga's fusion, the River Zora. */
+  | { kind: 'lorule'; op: string; id?: string; amount?: number };
 
 /** Conditions for an event or a single choice. */
 export interface EventRequires {

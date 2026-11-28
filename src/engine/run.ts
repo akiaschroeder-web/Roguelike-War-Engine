@@ -20,6 +20,8 @@ import { minishBeforeFinish } from './minish';
 import { applyFourSwordsEffect, fourswordsAfterBattle, fourswordsBattleSetup, fourswordsBossFor, fourswordsCampVisit, fourswordsRegionOptions, fourswordsStart, fourswordsStartRegion, fourswordsTreasure, inFourSwordsRoute } from './fourswordsRun';
 import { fourSwordsBeforeFinish } from './fourswords';
 import { microBeforeFinish } from './micro';
+import { applyLoruleEffect, inLoruleRoute, loruleAfterBattle, loruleBattleSetup, loruleBossFor, loruleCampVisit, loruleDecorateMap, loruleRegionOptions, loruleStart, loruleStartRegion, loruleTreasure } from './loruleRun';
+import { loruleBeforeFinish } from './lorule';
 import { applyWildEffect, returnBoss, wildAfterBattle, wildBattleSetup, wildCampVisit, wildDecorateMap, wildOnRecruit, wildRecruitWeight, wildRegionOptions, wildRestBonus, wildStart } from './wildRun';
 import { canWield, type LevelUp } from './combat';
 import { RNG } from './rng';
@@ -59,13 +61,13 @@ export function commanderOf(run: Run): CommanderDef {
 
 /** Where each campaign begins (Hyrule: the commander's home region). */
 function startRegionFor(camp: string, home: WorldId, run: { commanderId: string; regionsVisited: string[] }): WorldId {
-  return camp === 'termina' ? 'clockTown' : camp === 'greatSea' ? 'outsetIsland' : camp === 'twilight' ? 'ordonProvince' : camp === 'skyward' ? 'skyloft' : camp === 'wild' ? 'greatPlateau' : camp === 'original' ? originalStartRegion(run) : camp === 'legend' ? legendStartRegion(run) : camp === 'phantom' ? phantomStartRegion() : camp === 'spirit' ? spiritStartRegion() : camp === 'minish' ? minishStartRegion() : camp === 'fourswords' ? fourswordsStartRegion() : WORLDS[home]?.campaign || home === 'hyruleCastle' || !WORLDS[home] ? 'hyruleField' : home;
+  return camp === 'termina' ? 'clockTown' : camp === 'greatSea' ? 'outsetIsland' : camp === 'twilight' ? 'ordonProvince' : camp === 'skyward' ? 'skyloft' : camp === 'wild' ? 'greatPlateau' : camp === 'original' ? originalStartRegion(run) : camp === 'legend' ? legendStartRegion(run) : camp === 'phantom' ? phantomStartRegion() : camp === 'spirit' ? spiritStartRegion() : camp === 'minish' ? minishStartRegion() : camp === 'fourswords' ? fourswordsStartRegion() : camp === 'lorule' ? loruleStartRegion() : WORLDS[home]?.campaign || home === 'hyruleCastle' || !WORLDS[home] ? 'hyruleField' : home;
 }
 
 /** World Tour order: the commander's home campaign first, then the others in release order. */
-export const TOUR_ORDER: TourCampaign[] = ['hyrule', 'termina', 'greatSea', 'twilight', 'skyward', 'wild', 'original', 'legend', 'phantom', 'spirit', 'minish', 'fourswords'];
+export const TOUR_ORDER: TourCampaign[] = ['hyrule', 'termina', 'greatSea', 'twilight', 'skyward', 'wild', 'original', 'legend', 'phantom', 'spirit', 'minish', 'fourswords', 'lorule'];
 
-export function newRun(seed: number, commanderId: string, campaign?: 'hyrule' | 'termina' | 'greatSea' | 'twilight' | 'skyward' | 'wild' | 'original' | 'legend' | 'phantom' | 'spirit' | 'minish' | 'fourswords' | 'random' | 'worldTour', tourActs = 2): RunWithEvent {
+export function newRun(seed: number, commanderId: string, campaign?: 'hyrule' | 'termina' | 'greatSea' | 'twilight' | 'skyward' | 'wild' | 'original' | 'legend' | 'phantom' | 'spirit' | 'minish' | 'fourswords' | 'lorule' | 'random' | 'worldTour', tourActs = 2): RunWithEvent {
   const rng = new RNG(seed);
   const cmd = COMMANDERS.find((c) => c.heroId === commanderId) ?? COMMANDERS[0];
   const first: TourCampaign = (cmd.campaign as TourCampaign | undefined) ?? 'hyrule';
@@ -107,6 +109,7 @@ export function newRun(seed: number, commanderId: string, campaign?: 'hyrule' | 
   if (camp === 'spirit') withRng(run, (r2) => { spiritStart(run, r2); spiritDecorateMap(run, run.map, r2); });
   if (camp === 'minish') withRng(run, (r2) => { minishStart(run, r2); minishDecorateMap(run, run.map, r2); });
   if (camp === 'fourswords') withRng(run, (r2) => fourswordsStart(run, r2));
+  if (camp === 'lorule') withRng(run, (r2) => { loruleStart(run, r2); loruleDecorateMap(run, run.map, r2); });
   if (camp === 'greatSea') {
     run.sea = newSea();
     run.questItems = [];
@@ -254,7 +257,7 @@ function bossPower(b: BossDef): number {
 
 function bossFor(run: Run, rng: RNG, node: MapNode): BossDef {
   // Original Hyrule: every Level has its own boss (the Second Quest moves them around).
-  const level = originalBossFor(run, node) ?? legendBossFor(run, node) ?? phantomBossFor(run, node) ?? spiritBossFor(run, node) ?? minishBossFor(run, node) ?? fourswordsBossFor(run, node);
+  const level = originalBossFor(run, node) ?? legendBossFor(run, node) ?? phantomBossFor(run, node) ?? spiritBossFor(run, node) ?? minishBossFor(run, node) ?? fourswordsBossFor(run, node) ?? loruleBossFor(run, node);
   if (level) return level;
   // Not canon: anyone can be a boss, even someone already in your army.
   // After the free-for-all point, bosses come from every region.
@@ -314,6 +317,7 @@ export function enterNode(run: RunWithEvent, nodeId: string): void {
         wildCampVisit(run);
         minishCampVisit(run);
         fourswordsCampVisit(run);
+        loruleCampVisit(run);
         run.event = { type: 'shop', weapons, gear, items, permanents, sold: [] };
         break;
       }
@@ -321,6 +325,7 @@ export function enterNode(run: RunWithEvent, nodeId: string): void {
         wildCampVisit(run);
         minishCampVisit(run);
         fourswordsCampVisit(run);
+        loruleCampVisit(run);
         run.event = { type: 'camp' };
         break;
       case 'blacksmith': {
@@ -345,6 +350,8 @@ export function enterNode(run: RunWithEvent, nodeId: string): void {
         if (run.campaign === 'minish') (run as RunWithEvent).lastSail = mnLines;
         const fsLines = fourswordsTreasure(run, rng, run.event);
         if (run.campaign === 'fourswords') (run as RunWithEvent).lastSail = fsLines;
+        const lbLines = loruleTreasure(run, rng, run.event);
+        if (run.campaign === 'lorule') (run as RunWithEvent).lastSail = lbLines;
         const q = (run.questItems ??= []);
         const shards = q.filter((x) => x.startsWith('triforceShard')).length;
         if (shards < 8 && (q.includes('incredibleChart') || q.includes('triforceChart'))) {
@@ -432,6 +439,7 @@ export function startBattle(run: RunWithEvent, uids: string[]): void {
     spiritBattleSetup(run, run.battle, rng);
     minishBattleSetup(run, run.battle, rng);
     fourswordsBattleSetup(run, run.battle, rng);
+    loruleBattleSetup(run, run.battle, rng);
     if (run.questItems?.includes('piratesCharm') && run.battle.cp !== undefined) { run.battle.cp++; run.battle.cpMax = (run.battle.cpMax ?? 0) + 1; }
   });
 }
@@ -446,7 +454,7 @@ export const FREE_FOR_ALL_REGION = 4;
 
 export function isFreeForAll(run: Run): boolean {
   // The World Tour keeps each campaign's own enemies.
-  return !run.tour && run.act >= FREE_FOR_ALL_REGION && !inOriginalLevels(run) && !inLegendRoutes(run) && !inPhantomRoute(run) && !inSpiritRoute(run) && !inMinishRoute(run) && !inFourSwordsRoute(run);
+  return !run.tour && run.act >= FREE_FOR_ALL_REGION && !inOriginalLevels(run) && !inLegendRoutes(run) && !inPhantomRoute(run) && !inSpiritRoute(run) && !inMinishRoute(run) && !inFourSwordsRoute(run) && !inLoruleRoute(run);
 }
 
 /** A force drawn from the entire cast: any monster, soldier, hero, villain or boss. */
@@ -603,6 +611,8 @@ export interface BattleSummary {
   minish?: string[];
   /** Four Swords: Force Power, materials, the Links, the Maidens and the Royal Jewels. */
   fourswords?: string[];
+  /** A Link Between Worlds: rentals, Maiamai, Master Ore, the Sages and the cast's work. */
+  lorule?: string[];
   /** Support ranks reached this battle. */
   supportUps: { a: string; b: string; aUid: string; bUid: string; rank: SupportRank }[];
 }
@@ -617,6 +627,7 @@ export function finishBattle(run: RunWithEvent): BattleSummary {
   spiritBeforeFinish(b);
   minishBeforeFinish(b);
   fourSwordsBeforeFinish(b);
+  loruleBeforeFinish(b);
   microBeforeFinish(b);
   const won = b.result === 'won';
   const kills = b.fallen.filter((u) => u.team === 'enemy').length;
@@ -799,7 +810,8 @@ export function finishBattle(run: RunWithEvent): BattleSummary {
   const spiritLines = withRng(run, (rng) => spiritAfterBattle(run, b, won, rng));
   const minishLines = withRng(run, (rng) => minishAfterBattle(run, b, won, rng));
   const fourswordsLines = withRng(run, (rng) => fourswordsAfterBattle(run, b, won, rng));
-  return { won, rupees, fallen, kills, drops, supportUps, sideQuest, retreated: !won && !!b.retreat, dungeon, found, joined, army, twilight: twilightLines, skyward: skywardLines, wild: wildLines, original: originalLines, legend: legendLines, phantom: phantomLines, spirit: spiritLines, minish: minishLines, fourswords: fourswordsLines };
+  const loruleLines = withRng(run, (rng) => loruleAfterBattle(run, b, won, rng));
+  return { won, rupees, fallen, kills, drops, supportUps, sideQuest, retreated: !won && !!b.retreat, dungeon, found, joined, army, twilight: twilightLines, skyward: skywardLines, wild: wildLines, original: originalLines, legend: legendLines, phantom: phantomLines, spirit: spiritLines, minish: minishLines, lorule: loruleLines, fourswords: fourswordsLines };
 }
 
 export interface ArmyReport {
@@ -1024,6 +1036,8 @@ function applyEffect(run: Run, e: EventEffect, rng: RNG): string | null {
       return applyMinishEffect(run, e, rng);
     case 'fourswords':
       return applyFourSwordsEffect(run, e, rng);
+    case 'lorule':
+      return applyLoruleEffect(run, e, rng);
     case 'support': {
       const s = (run.supports ??= {});
       for (let i = 0; i < run.roster.length; i++)
@@ -1067,6 +1081,7 @@ export const TOUR_NAMES: Record<TourCampaign, string> = {
   spirit: 'New Hyrule (Spirit Tracks)',
   minish: 'Hyrule in the Era of the Minish (The Minish Cap)',
   fourswords: 'The Four Sword Sanctuary (Four Swords & Four Swords Adventures)',
+  lorule: 'Hyrule and Lorule (A Link Between Worlds)',
 };
 
 export function offerRegions(run: RunWithEvent): void {
@@ -1109,6 +1124,10 @@ export function offerRegions(run: RunWithEvent): void {
     }
     if (run.campaign === 'fourswords') {
       const t = fourswordsRegionOptions(run, rng);
+      if (t.length) { run.event = { type: 'region', options: t }; return; }
+    }
+    if (run.campaign === 'lorule') {
+      const t = loruleRegionOptions(run, rng);
       if (t.length) { run.event = { type: 'region', options: t }; return; }
     }
     if (run.campaign === 'wild' && legAct(run) + 1 < FREE_FOR_ALL_REGION + 5) {
@@ -1251,6 +1270,7 @@ function enterTourCampaign(run: RunWithEvent, camp: TourCampaign): void {
     if (camp === 'spirit') spiritStart(run, rng);
     if (camp === 'minish') minishStart(run, rng);
     if (camp === 'fourswords') fourswordsStart(run, rng);
+    if (camp === 'lorule') loruleStart(run, rng);
     if (camp === 'greatSea') {
       const sea = (run.sea ??= newSea());
       run.questItems ??= [];
@@ -1271,6 +1291,7 @@ function enterTourCampaign(run: RunWithEvent, camp: TourCampaign): void {
     phantomDecorateMap(run, run.map, rng);
     spiritDecorateMap(run, run.map, rng);
     minishDecorateMap(run, run.map, rng);
+    loruleDecorateMap(run, run.map, rng);
   });
 }
 
@@ -1298,7 +1319,7 @@ export function advanceRegion(run: RunWithEvent, region: WorldId): void {
   run.regionsVisited.push(region);
   run.currentNodeId = null;
   run.event = undefined;
-  withRng(run, (rng) => { run.map = generateRegionMap(rng, run.act, region); randomizeWorlds(run, rng); wildDecorateMap(run, run.map, rng); phantomDecorateMap(run, run.map, rng); spiritDecorateMap(run, run.map, rng); minishDecorateMap(run, run.map, rng); });
+  withRng(run, (rng) => { run.map = generateRegionMap(rng, run.act, region); randomizeWorlds(run, rng); wildDecorateMap(run, run.map, rng); phantomDecorateMap(run, run.map, rng); spiritDecorateMap(run, run.map, rng); minishDecorateMap(run, run.map, rng); loruleDecorateMap(run, run.map, rng); });
   run.rupees += 150;
 }
 

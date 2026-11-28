@@ -18,6 +18,7 @@ import { wildStaminaMult } from './wild';
 import { lgStaminaMult } from './legend';
 import { spChuFusion } from './spirit';
 import { mnStaminaAdjust } from './minish';
+import { lrStaminaAdjust } from './lorule';
 import type { AbilityDef, Battle, Element, Pos, StatusKind, Terrain, Unit, WeaponDef } from './types';
 
 declare module './types' {
@@ -505,6 +506,7 @@ export function techniqueCost(u: Unit, a: AbilityDef, bonus?: string, groups?: s
   c = Math.floor(c * ssStaminaMult(u, bonus) * wildStaminaMult(u, a.id) * lgStaminaMult(u, a));
   // The Minish Cap: Swift Technique, Swiftblade's Sword, the Blade Brothers, Faster Spin.
   c = mnStaminaAdjust(u, a, bonus, c, groups);
+  c = lrStaminaAdjust(u, a, bonus, c, groups);
   return Math.max(0, c);
 }
 

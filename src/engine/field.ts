@@ -15,6 +15,7 @@ import { decoratePhantom, phantomBattleStart } from './phantom';
 import { decorateSpirit, spiritBattleStart } from './spirit';
 import { decorateMinish, minishBattleStart } from './minish';
 import { decorateFourSwords, fourSwordsBattleStart } from './fourswords';
+import { decorateLorule, loruleBattleStart } from './lorule';
 import { GEAR, ITEMS } from '../data/registry';
 import type { Battle, Pos, Terrain, Unit, WorldId } from './types';
 
@@ -61,6 +62,9 @@ export function decorateField(b: Battle, rng: RNG, nodeType: string) {
   // Four Swords: Force Gem Deposits, switches, portals, mirrors and seals; Big Bomb fuses.
   decorateFourSwords(b, rng);
   fourSwordsBattleStart(b);
+  // A Link Between Worlds: its battlefield spaces, boss defences, the head-counting group supports.
+  decorateLorule(b, rng);
+  loruleBattleStart(b);
   // Fog of war
   b.fog = rng.chance(FOGGY[world] ?? 6);
   // Buried treasure

@@ -9,6 +9,7 @@ import { phHealItemMult, phItemTiles, phOnBlast, usePhantomItem } from './phanto
 import { spOnBlast, useSpiritItem } from './spirit';
 import { MN_FREE_ITEMS, mnOnBlast, useMinishItem } from './minish';
 import { fsAdjustItem, fsCanUseItem, fsOnBlast, useFourSwordsItem } from './fourswords';
+import { lrOnBlast, useLoruleItem } from './lorule';
 import { ITEMS, TEMPLATES } from '../data/registry';
 import { useFairy, type LevelUp } from './combat';
 import { footDist, inBounds, tilesInRange } from './grid';
@@ -174,6 +175,7 @@ export function useItem(b: Battle, u: Unit, index: number, rng: RNG, at?: Pos): 
     if (def.kind === 'bomb') res.lines.push(...spOnBlast(b, u, at!, def.radius ?? 0));
     if (def.kind === 'bomb') res.lines.push(...mnOnBlast(b, u, at!, def.radius ?? 0));
     if (def.kind === 'bomb') res.lines.push(...fsOnBlast(b, u, at!, def.radius ?? 0, def.power));
+    if (def.kind === 'bomb') res.lines.push(...lrOnBlast(b, u, at!, def.radius ?? 0));
     if (def.element === 'fire') {
       const tiles: Pos[] = [];
       const r = def.radius ?? 0;
@@ -276,6 +278,8 @@ function useSpecial(b: Battle, u: Unit, def: ItemDef, rng: RNG, res: ItemResult,
   if (spLine !== null) { res.lines.push(spLine); return; }
   const fsLine = useFourSwordsItem(b, u, def.id, at);
   if (fsLine !== null) { res.lines.push(fsLine); return; }
+  const lbLine = useLoruleItem(b, u, def.id);
+  if (lbLine !== null) { res.lines.push(lbLine); return; }
   const mnLine = useMinishItem(b, u, def.id, at);
   if (mnLine !== null) { res.lines.push(mnLine); if (MN_FREE_ITEMS.has(def.id)) res.free = true; return; }
   const phLine = usePhantomItem(b, def.id);

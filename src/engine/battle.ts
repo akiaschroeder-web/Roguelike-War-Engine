@@ -18,6 +18,7 @@ import { resolveSinking } from './naval';
 import { mcStartPhase, placeMicroAtStart } from './micro';
 import { decorateMinish, minishBattleStart, mnBossesRemain, mnStartPhase } from './minish';
 import { fsBossesRemain, fsStartPhase } from './fourswords';
+import { lrBossesRemain, lrStartPhase } from './lorule';
 import { revertMask } from './terminaAbilities';
 import { roomFor } from './transform';
 import { canRide as canRideMount, unitTags, hasEffect, isLavaImmune, isMounted, makeEnemy, mountOf, sizeWhen, makeEnemyFromTemplate, prepareForBattle } from './units';
@@ -468,6 +469,7 @@ export function startPhase(b: Battle, team: Team): TurnStartEvent[] {
     mcStartPhase(b, u, events);
     mnStartPhase(b, u, events);
     fsStartPhase(b, u, events);
+    lrStartPhase(b, u, events);
     const max = u.stats.hp;
     const tiles = footprint(u.x, u.y, u.size).map((p) => b.tiles[keyOf(b, p.x, p.y)]);
     const anchor = tiles[0];
@@ -535,7 +537,7 @@ export function checkResult(b: Battle): Battle['result'] {
   if (!enemies.length || spCapturedAll(b)) return (b.result = 'won');
   // Without the Phantom Sword the Phantoms can't be beaten: once only they are left, the floor is cleared.
   if (b.objective.type === 'rout' && phOnlyPhantomsLeft(b, enemies)) return (b.result = 'won');
-  if (b.objective.type === 'boss' && b.fallen.some((u) => u.isBoss) && !lgBossesRemain(b) && !phBossesRemain(b) && !spBossesRemain(b) && !mnBossesRemain(b) && !fsBossesRemain(b)) return (b.result = 'won');
+  if (b.objective.type === 'boss' && b.fallen.some((u) => u.isBoss) && !lgBossesRemain(b) && !phBossesRemain(b) && !spBossesRemain(b) && !mnBossesRemain(b) && !fsBossesRemain(b) && !lrBossesRemain(b)) return (b.result = 'won');
   const o = b.objective;
   if (o.type === 'survive' && b.turn > (o.turns ?? 6)) return (b.result = 'won');
   if (o.type === 'seize' && onTiles(b, 'player', o.tiles)) return (b.result = 'won');

@@ -14,6 +14,8 @@ import { PHANTOM_HOURGLASS, QUEST_ITEMS as PH_QUEST } from '../content/phantom';
 import { SPIRIT_TRACKS, QUEST_ITEMS as ST_QUEST } from '../content/spirit';
 import { MINISH_CAP, QUEST_ITEMS as MC_QUEST } from '../content/minish';
 import { FOUR_SWORDS, QUEST_ITEMS as FS_QUEST } from '../content/fourswords';
+import { LINK_BETWEEN_WORLDS, QUEST_ITEMS as LB_QUEST } from '../content/lorule';
+import { RIVER_ZORA } from '../content/riverzora';
 import { SPECIAL_TERRAIN } from '../engine/rules';
 import type { ContentPack } from '../content/types';
 import type {
@@ -138,11 +140,13 @@ for (const [ab, gear] of [['rocsJump', 'rocsFeatherL2'], ['pegasusDash', 'pegasu
   const g = ABILITIES[ab]?.grantedBy;
   if (g && !g.gear?.includes(gear)) g.gear = [...(g.gear ?? []), gear];
 }
+installPack(LINK_BETWEEN_WORLDS);
+installPack(RIVER_ZORA);
 // Phantom Ganon keeps his entry; his Wind Waker sword joins his drops.
 if (BOSSES.phantomGanon) BOSSES.phantomGanon.drops = [...(BOSSES.phantomGanon.drops ?? []), 'phantomGanonsSword'];
 
 /** Quest items (shared quest inventory). */
-export const QUEST_ITEMS: Record<string, { id: string; name: string; desc: string }> = Object.fromEntries([...MM_QUEST, ...WW_QUEST, ...TP_QUEST, ...SS_QUEST, ...WILD_QUEST, ...OH_QUEST, ...LG_QUEST, ...PH_QUEST, ...ST_QUEST, ...MC_QUEST, ...FS_QUEST].map((q) => [q.id, q]));
+export const QUEST_ITEMS: Record<string, { id: string; name: string; desc: string }> = Object.fromEntries([...MM_QUEST, ...WW_QUEST, ...TP_QUEST, ...SS_QUEST, ...WILD_QUEST, ...OH_QUEST, ...LG_QUEST, ...PH_QUEST, ...ST_QUEST, ...MC_QUEST, ...FS_QUEST, ...LB_QUEST].map((q) => [q.id, q]));
 
 // ───────── Safe lookups ─────────
 

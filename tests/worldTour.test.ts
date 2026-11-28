@@ -15,7 +15,7 @@ describe('World Tour', () => {
     expect(run.tour?.legs[0]).toBe('twilight');
     expect(new Set(run.tour?.legs)).toEqual(new Set(TOUR_ORDER));
     const seen: string[] = [run.campaign!];
-    for (let i = 0; i < 13; i++) {
+    for (let i = 0; i < 14; i++) {
       offerRegions(run);
       const opt = (run.event as { options: string[] }).options;
       expect(opt.length).toBe(1);
@@ -27,9 +27,9 @@ describe('World Tour', () => {
       if (b) expect(b.units.some((u) => u.team === 'enemy')).toBe(true);
       run.battle = undefined; run.event = undefined;
     }
-    expect(seen.slice(0, 12)).toEqual(run.tour!.legs);
-    expect(seen[12]).not.toBe(seen[11]);
-    expect(run.tour!.legs).toContain(seen[12]);
+    expect(seen.slice(0, 13)).toEqual(run.tour!.legs);
+    expect(seen[13]).not.toBe(seen[12]);
+    expect(run.tour!.legs).toContain(seen[13]);
   });
 
   it('stays in the current campaign until its regions are done', () => {
