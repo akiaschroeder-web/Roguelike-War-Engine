@@ -402,7 +402,7 @@ export class BattleView {
       const here = this.hover ? unitsAt(b, this.hover.x, this.hover.y) : [];
       const u = (this.hover ? unitAt(b, this.hover.x, this.hover.y) ?? here[0] : undefined) ?? this.sel ?? undefined;
       const micros = here.filter((x) => isMicro(x) && x !== u && isSeen(b, x));
-      html = u ? unitDetails(u) + (micros.length ? `<div class="dim small">🍀 Micro units here: ${micros.map((x) => `<b class="${x.team}">${esc(x.name)}</b>${x.mcRide ? ' (riding)' : ''}`).join(', ')} — tap again to cycle</div>` : '') : `<div class="dim small help">
+      html = u ? unitDetails(u) + (micros.length ? `<div class="dim small">🍀 Micro units here: ${micros.map((x) => `<b class="${x.team}">${esc(x.name)}</b>${x.mcRide ? ' (riding)' : ''}`).join(', ')} — tap the tile to choose who moves (riders go with their host; use the 🍀 button to move one on its own)</div>` : '') : `<div class="dim small help">
         <p><b>Tap a unit</b> to select it. Blue shows where it can move; red shows what it can hit.</p>
         <p>Tap an <b>enemy</b> to see its threat range. Swords beat axes, axes beat lances, lances beat swords.</p>
         <p>Large units fill several squares. Lava burns anyone but Gorons and fliers.</p>
@@ -530,7 +530,9 @@ export class BattleView {
       const sel = this.sel;
       const mountBtn = sel && mountOf(sel) && canRide(sel)
         ? (() => { const why = mountToggleBlocked(this.b, sel); return `<button class="btn" data-act="mount" ${why ? `disabled title="${esc(why)}"` : ''}>🐎 ${sel.mounted === false ? 'Mount' : 'Dismount'}</button>`; })() : '';
-      html = `<button class="btn" data-act="cancel">Cancel</button>${mountBtn}<span class="dim small">Choose a destination, or tap the unit to stay put.</span>`;
+      const riders = this.b.units.filter((r) => sel && r.mcRide?.host === sel.uid && r.team === 'player' && !r.acted && !r.npc);
+      const riderBtns = this.mode === 'select' ? riders.map((r) => `<button class="btn small" data-act="pickRider" data-uid="${r.uid}">🍀 ${esc(r.name)} instead</button>`).join('') : '';
+      html = `<button class="btn" data-act="cancel">Cancel</button>${mountBtn}${riderBtns}<span class="dim small">Choose a destination, or tap the unit to stay put.${riders.length ? ` ${esc(riders.map((r) => r.name).join(', '))} ride${riders.length === 1 ? 's' : ''} along.` : ''}</span>`;
     } else if (m === 'action' && this.sel) {
       html = `
         ${this.attackTargets(this.sel).length ? '<button class="btn primary" data-act="attack">Attack</button>' : ''}
@@ -701,6 +703,28 @@ export class BattleView {
     this.mode = 'select';
   }
 
+  /** Ask which of the units sharing a tile to command. */
+  private chooseUnit(units: Unit[], host?: Unit): Promise<Unit | undefined> {
+    return new Promise((resolve) => {
+      const label = (x: Unit) => {
+        const riders = units.filter((r) => r.mcRide?.host === x.uid).map((r) => r.name);
+        const note = x.mcRide ? ` · riding ${esc(units.find((h) => h.uid === x.mcRide!.host)?.name ?? '')}` : riders.length ? ` · carrying ${esc(riders.join(', '))}` : '';
+        return `<button class="item-row" data-pick="${x.uid}"><b>${token(x, 28)} ${esc(x.name)}</b><span class="dim small">Lv ${x.level} · HP ${x.hp}/${x.stats.hp}${note}</span></button>`;
+      };
+      const ordered = host ? [host, ...units.filter((x) => x !== host)] : units;
+      const m = modal(`<h3>Who moves?</h3><div class="dim small">These units share this space.</div><div class="item-list">${ordered.map(label).join('')}</div>
+        <div class="center-text"><button class="btn" data-close>Cancel</button></div>`, { dismissable: true });
+      let done = false;
+      const finish = (v?: Unit) => { if (done) return; done = true; m.close(); resolve(v); };
+      m.el.addEventListener('click', (e) => {
+        const t = e.target as HTMLElement;
+        const btn = t.closest('[data-pick]') as HTMLElement | null;
+        if (btn) finish(units.find((x) => x.uid === btn.dataset.pick));
+        else if (t === m.el || t.closest('[data-close]')) finish(undefined);
+      });
+    });
+  }
+
   /** The unit a tap on this tile means: Micro units share tiles, so prefer the one the current mode can use. */
   private pickAt(p: Pos): Unit | undefined {
     const all = unitsAt(this.b, p.x, p.y);
@@ -738,6 +762,17 @@ export class BattleView {
     this.hover = p;
 
     if (this.mode === 'idle') {
+      // Several of your units on one tile (Micro units share spaces): a Micro unit riding the big one
+      // goes with it, so the big unit is the default; otherwise ask which one to command.
+      const ready = unitsAt(b, p.x, p.y).filter((x) => x.team === 'player' && !x.acted && !x.npc);
+      if (ready.length >= 2) {
+        const host = ready.find((x) => !isMicro(x));
+        const loose = ready.filter((x) => isMicro(x) && x.mcRide?.host !== host?.uid);
+        const pick = host && !loose.length ? host : await this.chooseUnit(ready, host);
+        if (pick) this.selectUnit(pick);
+        this.renderAll();
+        return;
+      }
       if (u && u.team === 'player' && !u.acted && !u.npc) this.selectUnit(u);
       else if (u && u.team === 'enemy' && isSeen(b, u)) {
         if (this.inspect.has(u.uid)) this.inspect.delete(u.uid);
@@ -879,6 +914,11 @@ export class BattleView {
       case 'cancel':
         this.deselect();
         return;
+      case 'pickRider': {
+        const r = this.b.units.find((x) => x.uid === el?.dataset.uid);
+        if (r) { this.deselect(); this.selectUnit(r); this.renderAll(); }
+        return;
+      }
       case 'undo':
         if (this.sel && this.origin) {
           this.sel.x = this.origin.x;
